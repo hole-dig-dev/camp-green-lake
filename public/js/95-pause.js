@@ -250,4 +250,5 @@ if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,apply
   SINK_LIVE,spawnSinkhole,inSinkhole,sinkPulling:()=>sinkPulling,sinkRescueT:()=>sinkRescueT,
   sinkholes:()=>[...SINK_LIVE.values()].map(s=>({id:s.id,x:+s.x.toFixed(1),z:+s.z.toFixed(1),r:+s.r.toFixed(1),stage:s.stage,hd:s.hole?+s.hole.d.toFixed(2):0,myTrapT:+s.myTrapT.toFixed(1),solo:!!s.soloBot})),
   vState:()=>({st:vSt,name:vStateName(),t:vStT,grace:vGraceT,cool:vCool}),vulturesEnabled:v=>v===undefined?vulturesEnabled:(vulturesEnabled=!!v),fallDamage,
-  JAVV:()=>JAVV,JAV_LOCAL,JR,javSwing};
+  JAVV:()=>JAVV,JAV_LOCAL,JR,javSwing,
+  LIONV,LIONL,lionPinT:()=>lionPinT,lionSwing};

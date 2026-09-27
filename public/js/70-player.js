@@ -38,6 +38,7 @@ function updatePlayer(dt){
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
+  if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);

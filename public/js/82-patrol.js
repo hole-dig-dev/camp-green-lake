@@ -154,7 +154,7 @@ function updateCurfew(dt){
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
 const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
-function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise}}
+function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light}}
 function stepSoloMonsters(dt){
   if(online())return;const ev=[];SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
@@ -186,6 +186,7 @@ function monEvent(e){
     case 'blink':if(mine){zeroniSting(e.front?1.4:0.6);if(e.front)jumpScare()}break;
     case 'drop':if(mine&&S.ko)toast('Madame Zeroni let go of you.','good',2500);break;
     case 'gone':if(mine&&S.ko){S.ko=0.01;toast('Madame Zeroni dragged you off the edge of the lake. You wake up in the nurse\'s office.','bad',5000)}break;
+    default:lionEvent(e);   // anything this switch doesn't know about is one of the mountain lion's events (see 85-lion.js)
   }
 }
 

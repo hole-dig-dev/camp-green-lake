@@ -218,6 +218,132 @@
     return true;
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina };
+  /* ---- mountain lion: one apex predator, out during a short pre-curfew window (or spawned from the console).
+     It never sets foot in camp. It picks the most vulnerable camper outside the fence, stalks in from behind
+     their facing (freezing the instant they could see it), circles at mid-range to cut off the way home, and
+     only pounces from close range when it's sure it's unseen -- real damage, not an instant kill. Getting faced
+     down, mobbed by friends, or hit enough times with a shovel drives it off. Runs on the server when online and
+     locally for solo play (see stepSoloLion in 85-lion.js), exactly like stepMonsters above. */
+  const LION_WIN_START = DAYMS - 3 * 60000, LION_WIN_END = DAYMS - 70000; // ~2 min window, clear of the 60s curfew siren
+  const LION_HP = 260;              // total damage it soaks up (shovel swats -- see lionSwat) before fleeing for good
+  const LION_SWAT_DMG = 9;          // one shovel hit's worth, applied by lionSwat()
+  const LION_SPAWN_R = 55;          // natural spawn: this far from its first target, already at stalking range
+  const LION_STALK_D = 16;          // preferred standoff while stalking, behind the target
+  const LION_STALK_SPD = 3.2, LION_CIRCLE_SPD = 5.6, LION_BURST_SPD = 8.8, LION_POUNCE_SPD = 13.5, LION_LEAVE_SPD = 8;
+  const LION_POUNCE_MIN = 6, LION_POUNCE_MAX = 9;   // it only lunges from this range, and only when unseen
+  const LION_BITE_R = 1.7;          // contact distance for the lunge to land
+  const LION_DMG = 35;              // one pounce's damage; hurt() is called by the victim's own client (like Zeroni's 'down')
+  const LION_PIN_TIME = 1.6;        // seconds pinned in place after a pounce lands
+  const LION_COOLDOWN = 10;         // seconds before it will try another pounce on the same stalk
+  const LION_GIVEUP = 14;           // seconds waiting near a hole rim before giving up on a target it can't reach
+  const LION_RETARGET = 6;          // how often it re-scores every camper for the most vulnerable one
+  const LION_FLEE_TIME = 7;         // temporary backoff after being deterred (faced down, mobbed, flashlit)
+  const LION_VIEW_COS = 0.35;       // roughly a 140 deg cone in front of the target counts as "could see it coming"
+  const LION_MOB_R = 15, LION_MOB_N = 2; // "several campers together" = this many friends within this range of the target
+  const CAMP_GATE = { x: -5, z: 41 }; // near the fence gate; it predicts a run for camp heads roughly here
+  const LION_MODES = ['stalk', 'circle', 'pounce', 'pin', 'flee', 'leave']; // wire-format encoding of L.mode -- see monSnapshot() in server.js
+
+  function lionCampDist(x, z) { return Math.hypot(Math.max(-40 - x, 0, x - 30), Math.max(27 - z, 0, z - 56)); }
+  // how much p is oriented toward point (fx,fz): 1 = dead ahead, -1 = straight behind them
+  function lionFacingCos(p, fx, fz) { const dx = fx - p.x, dz = fz - p.z, d = Math.hypot(dx, dz) || 0.01; return (dx * Math.sin(p.fa) + dz * Math.cos(p.fa)) / d; }
+  // vulnerability score: alone beats crowded, hurt beats healthy, distracted/noisy beats alert, heavy loot beats empty-handed,
+  // far from the fence beats close to it. Tuned by feel, not simulation -- see the numbers above each term.
+  function lionScore(p, outs) {
+    if (p.dn || p.hd) return -1e9; // can't target someone already down, or hidden down a hole deep enough to be safe
+    let iso = 60; for (const q of outs) { if (q === p || q.dn) continue; const d = Math.hypot(p.x - q.x, p.z - q.z); if (d < iso) iso = d; }
+    let s = iso;
+    if (p.hp != null) s += Math.max(0, 55 - p.hp) * 0.8;
+    if (p.an === 2) s += 25;             // digging: back half-turned, focused on the hole
+    s += (p.nz || 0) * 22;               // noisy: shouting, sprinting, chatting
+    if (p.cy != null && p.cy >= 0) s += 28; // hauling something heavy: slow, hands full
+    s += Math.min(lionCampDist(p.x, p.z), 220) * 0.12;
+    return s;
+  }
+  function lionPick(outs) { let best = null, bs = -1e9; for (const p of outs) { const s = lionScore(p, outs); if (s > bs) { bs = s; best = p; } } return best; }
+  function lionSpawn(L, outs, atX, atZ) {
+    const p = atX != null ? nearest(outs.filter(p => !p.dn && !p.hd), atX, atZ) : lionPick(outs.filter(p => !p.dn && !p.hd));
+    Object.assign(L, { active: true, hp: LION_HP, mode: 'stalk', tgt: p ? p.id : null, pounceCd: 2, waitT: 0, fleeT: 0, retargetT: 0, circleDir: Math.random() < 0.5 ? 1 : -1 });
+    if (atX != null) { L.x = atX; L.z = atZ; }
+    else { const a = (p ? p.fa : 0) + Math.PI + (Math.random() - 0.5) * 0.8; L.x = clamp((p ? p.x : 0) + Math.sin(a) * LION_SPAWN_R, -EDGE + 5, EDGE - 5); L.z = clamp((p ? p.z : -40) + Math.cos(a) * LION_SPAWN_R, -EDGE + 5, EDGE - 5); }
+    L.h = p ? Math.atan2(p.x - L.x, p.z - L.z) : 0;
+  }
+  // move L toward (x,z) at speed sp, never into camp; returns the distance that was left. Also faces it that way.
+  function lionMove(L, x, z, sp, dt) {
+    const dx = x - L.x, dz = z - L.z, d = Math.hypot(dx, dz); if (d < 0.05) return d;
+    L.h = Math.atan2(dx, dz);
+    const s = Math.min(d, sp * dt), nx = clamp(L.x + dx / d * s, -EDGE + 3, EDGE - 3), nz = clamp(L.z + dz / d * s, -EDGE + 3, EDGE - 3);
+    if (!inCamp(nx, nz)) { L.x = nx; L.z = nz; }
+    return d;
+  }
+  function lionLeave(L, dt, ev) {
+    if (L.mode !== 'leave') { L.mode = 'leave'; ev.push({ k: 'lionRoar', why: 'retreat' }); }
+    const ex = Math.abs(L.x) > Math.abs(L.z) ? (Math.sign(L.x) || 1) : 0, ez = ex ? 0 : (Math.sign(L.z) || 1);
+    L.x = clamp(L.x + ex * LION_LEAVE_SPD * dt, -EDGE, EDGE); L.z = clamp(L.z + ez * LION_LEAVE_SPD * dt, -EDGE, EDGE);
+    if (Math.max(Math.abs(L.x), Math.abs(L.z)) >= EDGE - 1) { L.active = false; ev.push({ k: 'lionGone' }); }
+  }
+  // L: {active,x,z,h,mode,tgt,hp,pounceCd,waitT,fleeT,pinT,retargetT,circleDir,armed,pendingSpawn}. players: like stepMonsters.
+  function stepLion(L, players, t, dt, ev) {
+    const outs = players.filter(p => !inCamp(p.x, p.z));
+    if (t < LION_WIN_START) L.armed = true; // re-arm once we're back before the window, ready for the next day's cycle
+    if (!L.active) {
+      if (L.pendingSpawn) { const p = L.pendingSpawn; L.pendingSpawn = null; lionSpawn(L, outs, p.x, p.z); ev.push({ k: 'lionSpawn', id: L.tgt }); return; }
+      if (L.armed && t >= LION_WIN_START && t < LION_WIN_END && outs.some(p => !p.dn && !p.hd)) { lionSpawn(L, outs); L.armed = false; ev.push({ k: 'lionSpawn', id: L.tgt }); }
+      return;
+    }
+    L.pendingSpawn = null; // only one lion at a time -- ignore a spawn command while it's already out
+    const curfew = t >= DAYMS || L.hp <= 0;
+    L.retargetT = (L.retargetT || 0) - dt;
+    let tgt = outs.find(p => p.id === L.tgt), wantLeave = L.mode === 'leave';
+    if (curfew || !outs.length) { wantLeave = true; }
+    else if (L.mode !== 'pounce' && L.mode !== 'pin' && (!tgt || tgt.dn || L.retargetT <= 0)) {
+      L.retargetT = LION_RETARGET; const p = lionPick(outs.filter(p => !p.dn));
+      if (p && p.id !== L.tgt) { L.tgt = p.id; L.waitT = 0; ev.push({ k: 'lionTarget', id: p.id }); }
+      tgt = outs.find(p => p.id === L.tgt);
+      if (!tgt) wantLeave = true;
+    }
+    if (wantLeave) return lionLeave(L, dt, ev); // lionLeave itself sets L.mode='leave' and roars once, on the first call
+    if (!tgt) return;
+    const mobbed = outs.filter(p => p !== tgt && !p.dn && Math.hypot(p.x - tgt.x, p.z - tgt.z) < LION_MOB_R).length >= LION_MOB_N;
+    const facingCos = lionFacingCos(tgt, L.x, L.z), d = Math.hypot(tgt.x - L.x, tgt.z - L.z);
+    const facedDown = facingCos > 0.5 && d < 30;                          // "look big": staring it down at close range spooks it
+    const litUp = tgt.lt && facingCos > 0.3 && d < 25;                    // a flashlight beam square on it, at night, also spooks it
+    if (tgt.hd) {                                                         // hiding down a deep hole: wait at the rim, then give up
+      L.waitT += dt; if (L.waitT > LION_GIVEUP) { L.tgt = null; L.retargetT = 0; }
+      return;
+    }
+    L.waitT = 0;
+    if ((facedDown || litUp || mobbed) && L.mode !== 'flee' && L.mode !== 'pounce' && L.mode !== 'pin') {
+      L.mode = 'flee'; L.fleeT = LION_FLEE_TIME; ev.push({ k: 'lionFlee', id: tgt.id, why: facedDown ? 'faced' : litUp ? 'lit' : 'mobbed' });
+    }
+    if (L.mode === 'flee') { L.fleeT -= dt; lionMove(L, L.x * 2 - tgt.x, L.z * 2 - tgt.z, LION_CIRCLE_SPD, dt); if (L.fleeT <= 0) L.mode = 'stalk'; return; }
+    if (L.mode === 'pin') { L.pinT -= dt; if (L.pinT <= 0) { L.mode = 'stalk'; L.pounceCd = LION_COOLDOWN; lionMove(L, L.x - Math.sin(L.h) * 3, L.z - Math.cos(L.h) * 3, LION_CIRCLE_SPD, dt); } return; }
+    if (L.mode === 'pounce') { if (lionMove(L, tgt.x, tgt.z, LION_POUNCE_SPD, dt) < LION_BITE_R) { L.mode = 'pin'; L.pinT = LION_PIN_TIME; ev.push({ k: 'pounce', id: tgt.id }); } return; }
+    L.pounceCd = Math.max(0, (L.pounceCd || 0) - dt);
+    const canSeeMe = facingCos > LION_VIEW_COS;
+    if (!canSeeMe && !mobbed && L.pounceCd <= 0 && d >= LION_POUNCE_MIN && d <= LION_POUNCE_MAX) { L.mode = 'pounce'; ev.push({ k: 'lionPounceStart', id: tgt.id }); return; }
+    if (d < LION_STALK_D * 1.4) {                                         // close enough to flank: circle to cut off the route home
+      L.mode = 'circle';
+      const gx0 = CAMP_GATE.x - tgt.x, gz0 = CAMP_GATE.z - tgt.z, gd = Math.hypot(gx0, gz0) || 1;
+      const px = -gz0 / gd, pz = gx0 / gd;                                 // perpendicular to the escape line, for the flanking offset
+      const burst = Math.sin(t / 1400 + L.x) > 0.6;                       // occasional speed bursts, not a steady orbit
+      const gx = tgt.x + gx0 / gd * 8 + px * L.circleDir * 10, gz = tgt.z + gz0 / gd * 8 + pz * L.circleDir * 10;
+      if (canSeeMe) lionMove(L, L.x - (gx - L.x) * 0.2, L.z - (gz - L.z) * 0.2, LION_CIRCLE_SPD, dt); // seen while circling: ease off a step
+      else lionMove(L, gx, gz, burst ? LION_BURST_SPD : LION_CIRCLE_SPD, dt);
+      if (Math.random() < 0.003) L.circleDir = -L.circleDir;
+    } else {
+      L.mode = 'stalk';
+      const a = tgt.fa + Math.PI;                                         // behind the target's facing
+      const sx = clamp(tgt.x + Math.sin(a) * LION_STALK_D, -EDGE + 4, EDGE - 4), sz = clamp(tgt.z + Math.cos(a) * LION_STALK_D, -EDGE + 4, EDGE - 4);
+      if (!canSeeMe) lionMove(L, sx, sz, LION_STALK_SPD, dt);              // freeze in place the instant the target could see it move
+      else L.h = Math.atan2(tgt.x - L.x, tgt.z - L.z);
+    }
+  }
+  // a shovel hit landed on it (see lionSwing()/scoop() on the client, and the 'swat' message on the server).
+  // Returns true if it counted, so the caller knows to log/broadcast it.
+  function lionSwat(L) { if (!L.active) return false; L.hp = Math.max(0, L.hp - LION_SWAT_DMG); return true; }
+
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters,
+    JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
+    LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

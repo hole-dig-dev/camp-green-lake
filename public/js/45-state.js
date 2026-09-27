@@ -25,6 +25,7 @@ let lastWarn=0;
 function scoop(){
   if(vShoo())return;   // a well-timed swing while a vulture is diving close in front of you chases it off (83-vultures.js)
   if(javSwing())return;   // a live javelina in shovel reach gets whacked instead of the ground getting dug
+  if(lionSwing())return;   // the mountain lion is in melee range: this shovel swing hits it instead of digging (see 85-lion.js)
   if(bonkSwing())return;   // a friend (or crew member) right in front of you: the swing bonks them instead (71-bonk.js)
   if(inSinkhole()){const now=performance.now();if(now-lastWarn>3000){lastWarn=now;toast('The walls are too steep and loose to dig footholds. Only a friend can pull you out.','bad')}return}
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa);

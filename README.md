@@ -100,6 +100,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `haboob [direction]` | Start a dust storm blowing in from a compass direction (`n`/`ne`/`e`/`se`/`s`/`sw`/`w`/`nw`, or a random one). Rolls in over ~1 min, closes visibility to ~8 m for 1.5-3 min, then clears over ~12 s. Everyone in camp sees it. |
 | `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |
 | `javelinas [count] [distance]` | Spawn a herd of `[30]` javelinas `[70]` m out on the lake, coming for you. Everyone sees the same herd; the camp fence keeps you safe, and two shovel hits kill one. |
+| `lion [distance]` | Spawn the mountain lion out on the lake ~40 m ahead of you. It never enters camp; it stalks whoever looks most exposed, circles to cut off the way home, and pounces when unseen. A shovel swing at melee range hits it instead of digging; enough hits (or facing it down / being in a group) drives it off. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `vultures [on\|off\|now]` | Toggle the vulture hazard, force your health low to test the warning, or `now` to skip straight to a dive. |
