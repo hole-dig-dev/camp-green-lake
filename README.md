@@ -95,7 +95,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | Command | What it does |
 |---|---|
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
-| `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 8-20 boulders fall, bounce and roll. Everyone in camp sees it. |
+| `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 10-26 boulders rain down over a few seconds (some angled in), bounce hard, ricochet and roll. Everyone in camp sees it. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `tp <x> <z>` / `tp camp` | Teleport. |
