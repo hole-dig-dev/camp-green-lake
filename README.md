@@ -95,6 +95,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 |---|---|
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
 | `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 8-20 boulders fall, bounce and roll. Everyone in camp sees it. |
+| `lion [distance]` | Spawn the mountain lion out on the lake ~40 m ahead of you. It never enters camp; it stalks whoever looks most exposed, circles to cut off the way home, and pounces when unseen. A shovel swing at melee range hits it instead of digging; enough hits (or facing it down / being in a group) drives it off. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `tp <x> <z>` / `tp camp` | Teleport. |

@@ -241,4 +241,4 @@ if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,apply
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,
   VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC,
-  LIONV,LIONL,lionPinT:()=>lionPinT};
+  LIONV,LIONL,lionPinT:()=>lionPinT,lionSwing};
