@@ -96,6 +96,58 @@ function buildMapCache(night){
   g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
   g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4));   // water truck
 }
+/* stable per-player color (index into the same CAMPER_COLORS table the 3D avatars use) + initials,
+   for the remote-player minimap markers (docs/ui-redesign-spec.md section 3, "People") */
+function playerColorHex(ci){return '#'+(CAMPER_COLORS[(ci|0)%CAMPER_COLORS.length]).toString(16).padStart(6,'0')}
+function readableOn(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(0.299*r+0.587*g+0.114*b)>140?'#2b1d12':'#fff8ea'}
+function initialsOf(name){const s=String(name||'').trim();if(!s)return'?';const parts=s.split(/\s+/);if(parts.length>=2)return(parts[0][0]+parts[1][0]).toUpperCase();return s.slice(0,2).toUpperCase()}
+
+/* ---------- minimap edge indicators (docs/ui-redesign-spec.md section 3) ----------
+   Camp, the revealed search area (or, before reveal, a pointer toward the Warden once you're
+   carrying the KB tube -- never the tube's own hidden position), the most recent active ping, and
+   remote friends get a clamped arrow marker when they're outside the visible square. Threats
+   (police/twister/Zeroni) get the same treatment. NPCs and holes never do. Collisions (two
+   indicators landing in roughly the same direction) resolve by priority -- active threat first,
+   then objective, ping, camp, friend last -- except overlapping FRIENDS collapse into one "+N"
+   marker instead of dropping the lower one. */
+const EDGE_PRIORITY={threat:0,objective:1,ping:2,camp:3,friend:4};
+function drawMapEdgeIndicators(W,night){
+  const pad=10,cxm=W/2,czm=W/2,maxX=W/2-pad,maxZ=W/2-pad;
+  const cands=[];
+  let bestThreat=null,bestThreatD=Infinity;
+  for(const tk of trucks)if(tk.active){const d=(tk.x-mcx)**2+(tk.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tk.x,z:tk.z,color:'#d12a2a'}}}
+  for(const tw of TW_LIVE.values())if(tw.s>0.05){const d=(tw.x-mcx)**2+(tw.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tw.x,z:tw.z,color:'#5a4a3a'}}}
+  if(ZER.active){const d=(ZER.x-mcx)**2+(ZER.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:ZER.x,z:ZER.z,color:'#3aa53a'}}}
+  if(bestThreat)cands.push({kind:'threat',...bestThreat});
+  if(S.revealed)cands.push({kind:'objective',x:SEARCH.x,z:SEARCH.z,color:night?'#ff6a5a':'#d12a2a',dist:true});
+  else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Warden, never the tube's real spot
+  if(PINGS.length){const p=PINGS[PINGS.length-1];cands.push({kind:'ping',x:p.x,z:p.z,color:'#'+p.color.toString(16).padStart(6,'0')})}
+  cands.push({kind:'camp',x:-5,z:41,color:night?'#EDE2C8':'#2b1d12',dist:true});
+  for(const R of remotes.values())cands.push({kind:'friend',x:R.p.g.position.x,z:R.p.g.position.z,color:playerColorHex(R.ci)});
+
+  cands.sort((a,b)=>EDGE_PRIORITY[a.kind]-EDGE_PRIORITY[b.kind]);
+  const placed=[];
+  for(const c of cands){
+    const px=wx(c.x),pz=wz(c.z);
+    if(px>=0&&pz>=0&&px<=W&&pz<=W)continue;   // on-screen already -- no indicator needed
+    const dx=px-cxm,dz=pz-czm,ang=Math.atan2(dz,dx);
+    let collided=false;
+    for(const p of placed){let da=Math.abs(ang-p.ang);if(da>Math.PI)da=2*Math.PI-da;
+      if(da<0.35){collided=true;if(c.kind==='friend'&&p.kind==='friend')p.count=(p.count||1)+1;break}}
+    if(collided)continue;
+    let t=1;if(Math.abs(dx)>1e-6)t=Math.min(t,maxX/Math.abs(dx));if(Math.abs(dz)>1e-6)t=Math.min(t,maxZ/Math.abs(dz));
+    placed.push(Object.assign({},c,{ang,ex:cxm+dx*t,ez:czm+dz*t,count:1}));
+  }
+  for(const p of placed){
+    mx.save();mx.translate(p.ex,p.ez);mx.rotate(p.ang+Math.PI/2);
+    mx.fillStyle=p.color;mx.strokeStyle=night?'#EDE2C8':'#2b1d12';mx.lineWidth=1.4;
+    mx.beginPath();mx.moveTo(0,-7);mx.lineTo(5,5);mx.lineTo(-5,5);mx.closePath();mx.fill();mx.stroke();
+    mx.restore();
+    mx.font='700 9px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.fillStyle=night?'#EDE2C8':'#2b1d12';
+    if(p.kind==='friend'&&p.count>1){mx.textBaseline='middle';mx.fillText('+'+p.count,p.ex,p.ez-11)}
+    if(p.dist){const d=Math.round(Math.hypot(p.x-mcx,p.z-mcz));mx.textBaseline='top';mx.fillText(d+'m',p.ex,p.ez+8)}
+  }
+}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
   const night=clockT()>=DAYMS;
@@ -104,9 +156,15 @@ function drawMap(){
   sx=clamp(sx,0,MAP_CACHE_RES-sw);sy=clamp(sy,0,MAP_CACHE_RES-sh);
   mx.imageSmoothingEnabled=false;mx.drawImage(mapCache,sx,sy,sw,sh,0,0,W,W);
   for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.min(9,Math.max(1.6,ws(h.r))),0,6.3);mx.fill()}
-  if(S.revealed){mx.strokeStyle='#d12a2a';mx.lineWidth=3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
-  mx.fillStyle='rgba(43,29,18,.45)';for(const b of bots){mx.beginPath();mx.arc(wx(b.p.g.position.x),wz(b.p.g.position.z),3,0,6.3);mx.fill()}
-  for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
+  if(S.revealed){mx.strokeStyle=night?'#ff6a5a':'#d12a2a';mx.lineWidth=night?3.5:3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
+  /* NPCs: smaller cream diamonds (shape, not just color, so it reads without relying on color) */
+  for(const b of bots){const X=wx(b.p.g.position.x),Z=wz(b.p.g.position.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
+    mx.save();mx.translate(X,Z);mx.rotate(Math.PI/4);mx.fillStyle=night?'#cfc4a4':'#f3e6c8';mx.strokeStyle='#2b1d12';mx.lineWidth=1.3;mx.fillRect(-3.2,-3.2,6.4,6.4);mx.strokeRect(-3.2,-3.2,6.4,6.4);mx.restore()}
+  /* remote players: stable per-player color (derived from their camper-color index) plus a 1-2
+     letter initial, so identity doesn't depend on color alone */
+  for(const R of remotes.values()){const X=wx(R.p.g.position.x),Z=wz(R.p.g.position.z);if(X<-8||Z<-8||X>W+8||Z>W+8)continue;
+    const col=playerColorHex(R.ci);mx.fillStyle=col;mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X,Z,7,0,6.3);mx.fill();mx.stroke();
+    mx.fillStyle=readableOn(col);mx.font='700 8px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(initialsOf(R.name),X,Z+0.5)}
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
@@ -114,7 +172,12 @@ function drawMap(){
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
   if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
-  {const cxp=wx(-5),czp=wz(41);if(cxp<0||czp<0||cxp>W||czp>W){const a=Math.atan2(czp-W/2,cxp-W/2),r=W/2-22;mx.fillStyle=night?'#EDE2C8':'#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
+  /* lizards: only within 25 m of the player (48 exist across the whole lake bed -- drawing them all
+     would clutter the map and reveal distant threats), small yellow hazard triangles */
+  if(S.started)for(const L of lizards){const dx=L.x-P.x,dz=L.z-P.z;if(dx*dx+dz*dz>625)continue;
+    const X=wx(L.x),Z=wz(L.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
+    mx.fillStyle='#D7BF43';mx.strokeStyle='#2b1d12';mx.lineWidth=1;mx.beginPath();mx.moveTo(X,Z-4);mx.lineTo(X+4,Z+3);mx.lineTo(X-4,Z+3);mx.closePath();mx.fill();mx.stroke()}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
+  drawMapEdgeIndicators(W,night);
 }
 
