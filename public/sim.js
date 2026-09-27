@@ -153,7 +153,7 @@
     const outs = players.filter(p => !inCamp(p.x, p.z));
     if (!J.list || !J.list.length) {
       J.natCooldown = Math.max(0, J.natCooldown - dt);
-      if (t < DAYMS && J.natCooldown <= 0) {
+      if (t < DAYMS && J.natCooldown <= 0 && !J.noNatural) { // noNatural: the event director owns natural herds
         const cand = outs.filter(p => !p.dn);
         if (cand.length && Math.random() < JAV_NAT_CHANCE * dt) spawnJavHerd(J, cand[Math.floor(Math.random() * cand.length)], JAV_COUNT, 65 + Math.random() * 40, ev);
       }
@@ -287,7 +287,7 @@
     if (t < LION_WIN_START) L.armed = true; // re-arm once we're back before the window, ready for the next day's cycle
     if (!L.active) {
       if (L.pendingSpawn) { const p = L.pendingSpawn; L.pendingSpawn = null; lionSpawn(L, outs, p.x, p.z); ev.push({ k: 'lionSpawn', id: L.tgt }); return; }
-      if (L.armed && t >= LION_WIN_START && t < LION_WIN_END && outs.some(p => !p.dn && !p.hd)) { lionSpawn(L, outs); L.armed = false; ev.push({ k: 'lionSpawn', id: L.tgt }); }
+      if (!L.noNatural && L.armed && t >= LION_WIN_START && t < LION_WIN_END && outs.some(p => !p.dn && !p.hd)) { lionSpawn(L, outs); L.armed = false; ev.push({ k: 'lionSpawn', id: L.tgt }); }
       return;
     }
     L.pendingSpawn = null; // only one lion at a time -- ignore a spawn command while it's already out

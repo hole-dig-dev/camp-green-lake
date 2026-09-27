@@ -11,7 +11,7 @@ const ENV={
   landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())}, // o.t0: a late joiner replaying a director event already in progress (see 'hello' in 65-net.js)
   // n (1-3 weeds) also comes from x/z alone, same reasoning as the seed, so every client spawns the same-size gust.
   tumbleweed:{spawn:o=>spawnTumbleweedGust(o.x,o.z,o.a,1+Math.floor(hash2(Math.round(o.x*10)+7,Math.round(o.z*10)+3)*3),(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())},
-  haboob:{spawn:o=>addHaboob(o.a,o.x,o.z)},   // o.a: compass bearing it comes from; o.x/o.z: the host's spot when they typed it (see 75-haboob.js)
+  haboob:{spawn:o=>o.dir?addHaboob(Math.atan2(-Math.cos(o.a),Math.sin(o.a)),0,0):addHaboob(o.a,o.x,o.z)},   // o.dir: from the event director, a = heading (travel direction), timed to reach the lake's middle; else the console's compass bearing it comes FROM + the host's spot   // o.a: compass bearing it comes from; o.x/o.z: the host's spot when they typed it (see 75-haboob.js)
 };
 function spawnEnv(k,o,by){
   if(!ENV[k])return false;

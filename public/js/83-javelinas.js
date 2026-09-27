@@ -35,7 +35,7 @@ const JAV_LOCAL = { list: [] }; // solo/offline herd state; stepJavelinas mutate
 
 function stepSoloJavelinas(dt) {
   if (online()) return;
-  const ev = []; SIM.stepJavelinas(JAV_LOCAL, [meSim()], clockT(), dt, ev);
+  JAV_LOCAL.noNatural = DIRECTOR_ON; const ev = []; SIM.stepJavelinas(JAV_LOCAL, [meSim()], clockT(), dt, ev);
   JAVV = JAV_LOCAL.list.map(j => [j.x, j.z, j.h, j.state]);
   for (const e of ev) javEvent(e);
 }

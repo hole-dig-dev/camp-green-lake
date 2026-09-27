@@ -72,7 +72,7 @@ test('minimum global gap between any two natural events holds', () => {
 
 test('per-kind cooldown holds: the same kind never re-fires inside its own cooldown', () => {
   const { events } = simulate(3, 72, FAR_PLAYERS, 10);
-  const cooldownMs = { twister: 60000, landslide: 90000 };
+  const cooldownMs = Object.fromEntries(Object.entries(DIRECTOR.REGISTRY).map(([k, c]) => [k, c.cooldownMs]));
   const lastByKind = {};
   for (const e of events) {
     if (lastByKind[e.kind] != null) {
@@ -182,16 +182,16 @@ test('forceEvent places the requested kind near the given point, off-camp, and s
 });
 
 test('forceEvent refuses a disabled kind', () => {
-  const state = DIRECTOR.createState();
-  const d = DIRECTOR.forceEvent(state, 'sinkhole', { x: 150, z: 150, now: 0 });
-  assert.equal(d, null, 'forceEvent should refuse a disabled kind');
+  const state = DIRECTOR.createState(), cfg = DIRECTOR.REGISTRY.sinkhole, was = cfg.enabled;
+  cfg.enabled = false; // switch one off just for this test (every kind is on by default now)
+  try { assert.equal(DIRECTOR.forceEvent(state, 'sinkhole', { x: 150, z: 150, now: 0 }), null, 'forceEvent should refuse a disabled kind'); }
+  finally { cfg.enabled = was; }
 });
 
-// haboob is disabled by default (see REGISTRY -- no branch has wired up its ENV spawn yet); these two tests flip
-// it on just for the duration of the test, same as flipping `enabled: false` -> `true` will do for real once
-// that branch lands, and flip it back off after so it doesn't leak into any other test in this file.
+// these two tests make sure haboob is on (it is by default now that its branch is merged) and put back whatever
+// it was afterwards, so they don't leak into any other test in this file.
 test('haboob (forced): map-wide placement is off the edge, not a ring around the point, and counts as major everywhere', () => {
-  DIRECTOR.REGISTRY.haboob.enabled = true;
+  const hbWas = DIRECTOR.REGISTRY.haboob.enabled; DIRECTOR.REGISTRY.haboob.enabled = true;
   try {
     const state = DIRECTOR.createState();
     const rand = mulberry32(21);
@@ -202,11 +202,11 @@ test('haboob (forced): map-wide placement is off the edge, not a ring around the
     // once active, canMajorAffect must say "blocked" EVERYWHERE, not just within DIR_MAJOR_RADIUS of the storm itself
     assert.equal(DIRECTOR.canMajorAffect(state, 0, 0, 1000), false, 'haboob should block a major at the map center');
     assert.equal(DIRECTOR.canMajorAffect(state, 590, 590, 1000), false, 'haboob should block a major clear across the map too');
-  } finally { DIRECTOR.REGISTRY.haboob.enabled = false; }
+  } finally { DIRECTOR.REGISTRY.haboob.enabled = hbWas; }
 });
 
 test('a natural roll never starts a second map-wide major while one is already active, or a local major while a haboob is up', () => {
-  DIRECTOR.REGISTRY.haboob.enabled = true;
+  const hbWas = DIRECTOR.REGISTRY.haboob.enabled; DIRECTOR.REGISTRY.haboob.enabled = true;
   try {
     const state = DIRECTOR.createState();
     state.active.push({ kind: 'haboob', x: 500, z: 500, major: true, mapWide: true, startAt: 0, expiresAt: 200000 });
@@ -214,7 +214,7 @@ test('a natural roll never starts a second map-wide major while one is already a
     const rand = mulberry32(22);
     const decisions = DIRECTOR.step(state, { now: 1000, day: 10, clockT: 0, players: FAR_PLAYERS, rand });
     for (const d of decisions) assert.ok(!d.major, `expected no new major while haboob is active, got ${d.kind}`);
-  } finally { DIRECTOR.REGISTRY.haboob.enabled = false; }
+  } finally { DIRECTOR.REGISTRY.haboob.enabled = hbWas; }
 });
 
 test('canMajorAffect reflects the active list', () => {

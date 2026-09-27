@@ -527,7 +527,7 @@ wss.on('connection', (ws, req) => {
           if (d) {
             LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: c.n, major: d.major, why: 'forced by ' + c.n });
             if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
-            // d.mode === 'monster' (javelinas/lion): TODO once that branch lands, start the server-side monster here instead of an env broadcast.
+            else dirStartMonster(d, c.x, c.z);
           } else LOG.log('directorForceFailed', { id: c.id, n: c.n, k: m.force });
         }
         break;
@@ -656,7 +656,16 @@ let javOn = false;
 function javSnapshot() { return JAV.list.map(j => [r2(j.x), r2(j.z), r2(j.h), j.state]); }
 // One call from the main tick (see below): steps the herd (host-authoritative AI, bites, natural spawns) and
 // broadcasts anything that changed. Kept as its own function so the tick body only grows by one line for this.
+// The event director picked a server-side monster ('monster' mode in public/director.js): start it around (tx,tz),
+// the camper it was aimed at. The herd spawns 50-100 m out from them; the lion spawns at the director's ring spot.
+function dirStartMonster(d, tx, tz) {
+  if (d.kind === 'javelinas') {
+    const jev = []; SIM.spawnJavHerd(JAV, { x: tx, z: tz }, SIM.JAV_COUNT, Math.min(100, Math.max(50, Math.hypot(d.x - tx, d.z - tz))), jev);
+    broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+  } else if (d.kind === 'lion') LION.pendingSpawn = { x: d.x, z: d.z };
+}
 function tickJavelinas(t, dt, players) {
+  JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
   const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
   for (const e of jev) {
     if (e.k === 'javBite') LOG.log('javBite', { id: e.id, dmg: e.dmg });
@@ -715,6 +724,7 @@ setInterval(() => {
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);
   if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
+  LION.noNatural = dirState.enabled; // ditto for the lion's own pre-curfew window
   SIM.stepLion(LION, players, t, dt, ev);
   for (const e of ev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -744,7 +754,7 @@ setInterval(() => {
   for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers })) {
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
-    // d.mode === 'monster' (javelinas/lion): TODO once that branch lands, start the server-side monster here instead of an env broadcast.
+    else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }
   }
   if (now - lastDirInfoT >= 3000 && joined().length) {
     lastDirInfoT = now;

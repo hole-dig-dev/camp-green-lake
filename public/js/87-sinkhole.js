@@ -69,7 +69,7 @@ function spawnSinkhole(x,z,seed,t0){
   if(sinkSpawned.some(p=>p.id===id)||SINK_LIVE.has(id))return;
   sinkSpawned.push({id,x,z,r:rad,t0,forced:true});
 }
-ENV.sinkhole={spawn:o=>spawnSinkhole(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,twNow())};
+ENV.sinkhole={spawn:o=>spawnSinkhole(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())};
 command('sinkhole',{usage:'sinkhole [distance]',help:'Warn, then open a big sinkhole [50] m ahead of you. Everyone sees it. A friend has to pull you out if you fall in.',
   run([d]){
     const dist=numArg(d,50,20,150),a=P.yaw+Math.PI;
@@ -232,7 +232,7 @@ function updateSinkholes(dt){
   if(!S.started){updateSoloRescues(dt);return}
   const T0=twNow(),k=Math.floor(T0/SINK_WIN),fx=P.x,fz=P.z;
   const CMAX=Math.ceil(EDGE/SINK_CELL)+1,plans=[];
-  for(let i=-CMAX;i<=CMAX;i++)for(let j=-CMAX;j<=CMAX;j++)for(const kk of[k-1,k]){const pl=sinkPlan(i,j,kk);if(pl)plans.push(pl)}
+  if(!DIRECTOR_ON)for(let i=-CMAX;i<=CMAX;i++)for(let j=-CMAX;j<=CMAX;j++)for(const kk of[k-1,k]){const pl=sinkPlan(i,j,kk);if(pl)plans.push(pl)}   // natural ones only when the event director is off
   plans.push(...sinkSpawned);
   let loud=0,nearestShakeD=1e9,shakeK=0;
   const seen=new Set();

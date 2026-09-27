@@ -50,31 +50,32 @@
       weight: 2, major: true, cooldownMs: 90000, minDay: 1, times: ['day', 'dusk'],
       ringMin: 40, ringMax: 110, lifeMs: 32000, mode: 'env', enabled: true, supportsLateJoin: true,
     },
-    /* -- disabled placeholders for hazards being built on other branches. Each has sensible-guess defaults;
-       plugging one in once its branch merges is a one-line `enabled: false` -> `enabled: true` flip, PLUS
-       (for an 'env' kind) adding the matching ENV.<kind> entry those branches add to 76-console.js. -- */
+    /* -- the other events. Each one's own natural schedule (tbPlan, sinkPlan, the haboob's hbPlan, the javelinas'
+       random roll, the lion's pre-curfew window) steps aside while DIRECTOR_ON / the server's director is on, so
+       these entries are the only natural source; `director off` hands scheduling back to those old schedules.
+       'monster' kinds are started server-side by dirStartMonster() in server.js (solo: stepSoloDirector). -- */
     tumbleweed: { // giant tumbleweed: minor, frequent, harmless-ish knockdown -- like a gentler twister
       weight: 2, major: false, cooldownMs: 40000, minDay: 1, times: ['day', 'dusk'],
-      ringMin: 50, ringMax: 140, lifeMs: 30000, mode: 'env', enabled: false, supportsLateJoin: true,
+      ringMin: 50, ringMax: 140, lifeMs: 30000, mode: 'env', enabled: true, supportsLateJoin: true,
     },
     sinkhole: { // opens a hazard in the ground and stays -- a lasting terrain feature, not a passing event
-      weight: 1, major: true, cooldownMs: 120000, minDay: 2, times: ['day', 'dusk', 'night'],
-      ringMin: 20, ringMax: 70, lifeMs: 600000, mode: 'env', enabled: false, supportsLateJoin: false,
+      weight: 1, major: true, cooldownMs: 120000, minDay: 2, times: ['day', 'dusk'],
+      ringMin: 20, ringMax: 70, lifeMs: 600000, mode: 'env', enabled: true, supportsLateJoin: false,
     },
     javelinas: { // a ~30-strong herd that charges -- server-side monster, not a client env spawn
       weight: 1, major: true, cooldownMs: 150000, minDay: 3, times: ['day', 'dusk'],
-      ringMin: 30, ringMax: 80, lifeMs: 60000, mode: 'monster', enabled: false, supportsLateJoin: false,
+      ringMin: 30, ringMax: 80, lifeMs: 60000, mode: 'monster', enabled: true, supportsLateJoin: false,
     },
     lion: { // a lone stalking mountain lion -- server-side monster, prowls dusk/night
-      weight: 1, major: true, cooldownMs: 180000, minDay: 4, times: ['dusk', 'night'],
-      ringMin: 40, ringMax: 100, lifeMs: 90000, mode: 'monster', enabled: false, supportsLateJoin: false,
+      weight: 1, major: true, cooldownMs: 180000, minDay: 4, times: ['day', 'dusk'],
+      ringMin: 40, ringMax: 100, lifeMs: 90000, mode: 'monster', enabled: true, supportsLateJoin: false,
     },
     haboob: { // map-crossing dust storm -- NOT placed near one camper (placement:'mapwide', see mapWidePlace()
       // below): it spawns off a random edge of the lake and crosses toward the middle, and while it's up it
       // counts as a major event for EVERY camper everywhere, not just within DIR_MAJOR_RADIUS of a point (see
       // the `e.mapWide` check in canMajorAffect()). Rare on purpose: the longest cooldown of any kind.
       weight: 1, major: true, mapWide: true, placement: 'mapwide', cooldownMs: 3 * SIM.CYCLE, minDay: 4, times: ['day'],
-      lifeMs: 130000, mode: 'env', enabled: false, supportsLateJoin: false, // flip supportsLateJoin true once its ENV spawn takes an explicit t0, like spawnLandslide's
+      lifeMs: 130000, mode: 'env', enabled: true, supportsLateJoin: false, // flip supportsLateJoin true once its ENV spawn takes an explicit t0, like spawnLandslide's
     },
     /* vultures aren't here: they're triggered by a camper's own health dropping low, not rolled on a schedule.
        Whatever adds them should still respect the shared "one major per camper" budget before swooping in --
@@ -154,13 +155,13 @@
     let roll = rand() * total, chosen = eligible[eligible.length - 1];
     for (const cfg of eligible) { roll -= cfg.weight; if (roll <= 0) { chosen = cfg; break; } }
     let placed = null, targetId = null;
+    if (!outs.length) return []; // nobody out on the lake: nothing to put near anyone, and a storm nobody's out in is wasted
     if (chosen.placement === 'mapwide') {
       // not "near a camper" -- it crosses the whole lake, so skip the outs/ring logic below entirely. It can only
       // start while no OTHER major is running anywhere (it's about to become a major for everyone at once).
       if (chosen.major && (state.active || []).some(e => e.expiresAt > now && e.major)) return [];
       placed = mapWidePlace(0, 0, rand); // aimed through the map's middle, not at any one player
     } else {
-      if (!outs.length) return []; // nobody out on the lake to put something near -- skip this roll entirely
       for (const idx of shuffledIndices(outs.length, rand)) {
         const p = outs[idx];
         if (chosen.major && !canMajorAffect(state, p.x, p.z, now)) continue; // budget: don't pile a second major on them

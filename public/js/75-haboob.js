@@ -79,7 +79,7 @@ function hbPick(T,fx,fz){
     if(st.e<HB_INSIDE+HB_RECEDE+5)return{pl:hbForced,id:'hbF'+hbForced.t0,st};
     hbForced=null;   // fully over -- stop checking it every frame
   }
-  if(!HABOOB_NATURAL)return null;
+  if(!HABOOB_NATURAL||DIRECTOR_ON)return null;   // the event director (public/director.js) schedules haboobs while it's on
   const k=Math.floor(T/HB_WIN);
   for(const kk of[k-1,k]){
     const pl=hbPlan(kk);if(!pl)continue;

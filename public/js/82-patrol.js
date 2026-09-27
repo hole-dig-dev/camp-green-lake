@@ -168,7 +168,11 @@ function stepSoloDirector(dt){
   if(!soloDirState)soloDirState=DIRECTOR.createState();
   const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
   const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT()});
-  for(const d of decisions)if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a});
+  for(const d of decisions){
+    if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
+    else if(d.kind==='javelinas'){const ev=[];SIM.spawnJavHerd(JAV_LOCAL,{x:P.x,z:P.z},SIM.JAV_COUNT,clamp(Math.hypot(d.x-P.x,d.z-P.z),50,100),ev);for(const e of ev)javEvent(e)}
+    else if(d.kind==='lion')LIONL.pendingSpawn={x:d.x,z:d.z};   // solo: same monster starts the server does (see dirStartMonster in server.js)
+  }
 }
 function monFromServer(m){
   MONV.trucks=(Array.isArray(m.trucks)?m.trucks:[]).slice(0,4).map(a=>({x:num(a[0],-700,700,0),z:num(a[1],-700,700,0),h:num(a[2],-1e4,1e4,0),chase:a[3]===1}));

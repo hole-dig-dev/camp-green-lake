@@ -131,7 +131,7 @@ function onMsg(m){
       // means the password was right: remember it and start (or resume) the game for real.
       if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
       break;
-    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
+    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
     case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
     case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;

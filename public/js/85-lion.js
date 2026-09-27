@@ -49,7 +49,7 @@ function lionFromServer(o){
 const LIONL={active:false,armed:true,x:0,z:0,h:0,mode:'stalk',tgt:null,hp:0};
 function stepSoloLion(dt){
   if(online())return;
-  const ev=[];SIM.stepLion(LIONL,[meSim()],clockT(),dt,ev);
+  LIONL.noNatural=DIRECTOR_ON;const ev=[];SIM.stepLion(LIONL,[meSim()],clockT(),dt,ev);
   if(LIONL.active!==LIONV.active)lionSetActive(LIONL.active);
   if(LIONL.active){LIONV.x=LIONL.x;LIONV.z=LIONL.z;LIONV.h=LIONL.h;LIONV.mode=LIONL.mode;LIONV.tgt=LIONL.tgt;LIONV.hp=LIONL.hp}
   for(const e of ev)lionEvent(e);
