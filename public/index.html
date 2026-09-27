@@ -341,9 +341,13 @@ function baseH(x,z){
 
 /* ---------- renderer & scene ---------- */
 const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+/* PERF: phones and tablets (touch-first screens) get cheaper settings: a lower render resolution cap and plain
+   (not soft) shadows from a smaller shadow map. Desktops keep the original settings. */
+const LOW_POWER=matchMedia('(pointer: coarse)').matches;
+const MAX_PR=Math.min(window.devicePixelRatio||1,LOW_POWER?1.25:1.5);
+renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=LOW_POWER?T.PCFShadowMap:T.PCFSoftShadowMap;
 $('#game').appendChild(renderer.domElement);
 const canvas=renderer.domElement;
 const scene=new T.Scene();
@@ -354,7 +358,7 @@ camera.rotation.order='YXZ';scene.add(camera);
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()});
 
 const hemi=new T.HemisphereLight(0xcfe2ee,0xc28a52,0.62);scene.add(hemi);
-const sun=new T.DirectionalLight(0xfff0d2,1.05);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+const sun=new T.DirectionalLight(0xfff0d2,1.05);sun.castShadow=true;sun.shadow.mapSize.set(LOW_POWER?1024:2048,LOW_POWER?1024:2048);
 Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:170});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-0.0008;
 scene.add(sun,sun.target);
 const SUN_DIR=new T.Vector3(0.55,0.78,0.3).normalize();
@@ -439,7 +443,10 @@ const SEARCH={x:SUITCASE.x+(rng()-0.5)*9,z:SUITCASE.z+(rng()-0.5)*9,r:10};
 for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:items.length,type:rng()<0.4?'safe':'strongbox',x:p.x,z:p.z,depth:1.6+rng()*0.9,found:false})}
 
 /* ---------- terrain: detailed chunks stream in around you; one coarse mesh covers the distance ---------- */
-const CH=24, CN=Math.round(CH/RES), LOAD_R=100;
+/* PERF: level of detail. Chunks within NEAR_R of the player are built at full detail (a point every RES = 0.4 m).
+   Chunks farther out, up to LOAD_R, are built at 1/COARSE_STEP of that (a point every 1.2 m): 9x fewer triangles,
+   but holes and dirt piles still show. Before this, every chunk out to ~170 m was full detail (~660k triangles). */
+const CH=24, CN=Math.round(CH/RES), LOAD_R=100, NEAR_R=40, COARSE_STEP=3;
 const C_SAND=new T.Color(0xdcab6e),C_SAND2=new T.Color(0xc99558),C_CRACK=new T.Color(0xa87444),C_DEEP=new T.Color(0x6e3c20),C_DIRT=new T.Color(0xeec48c),C_CAMP=new T.Color(0xc4955f),tmpC=new T.Color();
 function toneAt(x,z){const crack=Math.abs(vnoise(x*0.55+40,z*0.55)-0.5)<0.035?1:0;return clamp(vnoise(x*0.18,z*0.18)*0.9+crack*2,0,3)}
 function shade(col,i,x,z,b,h,tn){
@@ -451,20 +458,23 @@ function shade(col,i,x,z,b,h,tn){
 }
 const chunks=new Map(),chunkMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
 const ckey=(i,j)=>(i+100)*1000+(j+100);
-function buildChunk(i,j){
-  const x0=i*CH,z0=j*CH,n=CN+1,g=new T.PlaneGeometry(CH,CH,CN,CN);g.rotateX(-Math.PI/2);g.translate(x0+CH/2,0,z0+CH/2);
+/* st = 1 for a full-detail chunk, COARSE_STEP for a coarse one. Each chunk remembers its own grid (C.cn cells
+   per side, C.res metres per cell), so everything that reads chunk data works with either detail level. */
+function buildChunk(i,j,st){
+  st=st||1;const old=chunks.get(ckey(i,j));if(old){scene.remove(old.m);old.g.dispose()}   // replacing a chunk at another detail level
+  const cn=CN/st,res=RES*st,x0=i*CH,z0=j*CH,n=cn+1,g=new T.PlaneGeometry(CH,CH,cn,cn);g.rotateX(-Math.PI/2);g.translate(x0+CH/2,0,z0+CH/2);
   const pos=g.attributes.position,base=new Float32Array(n*n),hts=new Float32Array(n*n),tone=new Float32Array(n*n),col=new Float32Array(n*n*3);
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const k=r*n+c,x=x0+c*RES,z=z0+r*RES,b=baseH(x,z),h=surfaceAt(x,z,b);base[k]=b;tone[k]=toneAt(x,z);hts[k]=h;pos.setY(k,h);shade(col,k,x,z,b,h,tone[k])}
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const k=r*n+c,x=x0+c*res,z=z0+r*res,b=baseH(x,z),h=surfaceAt(x,z,b);base[k]=b;tone[k]=toneAt(x,z);hts[k]=h;pos.setY(k,h);shade(col,k,x,z,b,h,tone[k])}
   g.setAttribute('color',new T.BufferAttribute(col,3));g.computeBoundingSphere();
   const m=new T.Mesh(g,chunkMat);m.receiveShadow=true;scene.add(m);
-  const C={x0,z0,base,hts,tone,col,g,m,dirty:false};chunks.set(ckey(i,j),C);return C;
+  const C={x0,z0,st,cn,res,base,hts,tone,col,g,m,dirty:false};chunks.set(ckey(i,j),C);return C;
 }
 function rebuildRegion(x0,z0,x1,z1){
-  const n=CN+1;
   for(const C of chunks.values()){
     if(C.x0>x1||C.x0+CH<x0||C.z0>z1||C.z0+CH<z0)continue;
-    const c0=clamp(Math.floor((x0-C.x0)/RES),0,CN),c1=clamp(Math.ceil((x1-C.x0)/RES),0,CN),q0=clamp(Math.floor((z0-C.z0)/RES),0,CN),q1=clamp(Math.ceil((z1-C.z0)/RES),0,CN),pos=C.g.attributes.position;
-    for(let r=q0;r<=q1;r++)for(let c=c0;c<=c1;c++){const k=r*n+c,x=C.x0+c*RES,z=C.z0+r*RES,h=surfaceAt(x,z,C.base[k]);C.hts[k]=h;pos.setY(k,h);shade(C.col,k,x,z,C.base[k],h,C.tone[k])}
+    const cn=C.cn,res=C.res,n=cn+1;
+    const c0=clamp(Math.floor((x0-C.x0)/res),0,cn),c1=clamp(Math.ceil((x1-C.x0)/res),0,cn),q0=clamp(Math.floor((z0-C.z0)/res),0,cn),q1=clamp(Math.ceil((z1-C.z0)/res),0,cn),pos=C.g.attributes.position;
+    for(let r=q0;r<=q1;r++)for(let c=c0;c<=c1;c++){const k=r*n+c,x=C.x0+c*res,z=C.z0+r*res,h=surfaceAt(x,z,C.base[k]);C.hts[k]=h;pos.setY(k,h);shade(C.col,k,x,z,C.base[k],h,C.tone[k])}
     C.dirty=true;
   }
 }
@@ -475,15 +485,22 @@ function streamChunks(fx,fz,budget){
   for(let i=ci-R;i<=ci+R;i++)for(let j=cj-R;j<=cj+R;j++){
     if(i*CH>=HALF||(i+1)*CH<=-HALF||j*CH>=HALF||(j+1)*CH<=-HALF)continue;
     const d=Math.hypot(i*CH+CH/2-fx,j*CH+CH/2-fz);
-    if(d<=LOAD_R+CH*0.72&&!chunks.has(ckey(i,j)))want.push([d,i,j]);
+    if(d>LOAD_R+CH*0.72)continue;
+    /* Pick a detail level. Coarse chunks upgrade as soon as they come within NEAR_R, but full-detail chunks only
+       drop back once they're a whole chunk farther out, so walking back and forth doesn't rebuild them over and over. */
+    const C=chunks.get(ckey(i,j)),nearD=NEAR_R+CH*0.72;
+    const st=d<=nearD?1:C&&C.st===1&&d<=nearD+CH?1:COARSE_STEP;
+    if(!C||C.st!==st)want.push([d,i,j,st]);
   }
-  if(want.length){want.sort((a,b)=>a[0]-b[0]);const nb=budget||(want[0][0]<LOAD_R*0.8?10:2);for(let k=0;k<Math.min(nb,want.length);k++)buildChunk(want[k][1],want[k][2])}
-  for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*3){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
+  if(want.length){want.sort((a,b)=>a[0]-b[0]);const nb=budget||(want[0][0]<NEAR_R*1.2?6:2);for(let k=0;k<Math.min(nb,want.length);k++)buildChunk(want[k][1],want[k][2],want[k][3])}
+  // PERF: unload chunks once they're 1.5 chunks past LOAD_R (was 3), so fewer out-of-range chunks sit in the scene.
+  for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*1.5){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
 }
 function groundAt(x,z){
   if(Math.max(Math.abs(x),Math.abs(z))>=HALF)return OUTER_Y;
   const C=chunks.get(ckey(Math.floor(x/CH),Math.floor(z/CH)));
   if(!C)return surfaceAt(x,z,baseH(x,z));
+  if(C.st!==1)return surfaceAt(x,z,baseH(x,z));   // coarse chunk: compute exactly, so nobody stands on the rougher mesh
   const n=CN+1,fx=(x-C.x0)/RES,fz=(z-C.z0)/RES,c=Math.min(Math.floor(fx),CN-1),r=Math.min(Math.floor(fz),CN-1),tx=fx-c,tz=fz-r,i=r*n+c;
   return lerp(lerp(C.hts[i],C.hts[i+1],tx),lerp(C.hts[i+n],C.hts[i+n+1],tx),tz);
 }
@@ -734,15 +751,37 @@ function updateBots(dt,now){
 }
 
 /* ---------- yellow-spotted lizards ---------- */
+/* PERF: merge a set of coloured boxes into ONE mesh, so the GPU draws it in one call instead of one per box.
+   Each box's colour is baked into a per-vertex colour attribute, which lets every merged mesh share one material.
+   parts: [[width, height, depth, colour, x, y, z], ...] */
+const mergedMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.95,metalness:0});
+function mergeBoxes(parts){
+  const pos=[],col=[],c=new T.Color();
+  for(const[w,h,d,hex,x,y,z]of parts){
+    const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(x,y,z);
+    const p=g.attributes.position.array;for(let i=0;i<p.length;i++)pos.push(p[i]);
+    c.setHex(hex);for(let i=0;i<p.length/3;i++)col.push(c.r,c.g,c.b);g.dispose();
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();g.computeBoundingSphere();
+  return g;
+}
+/* PERF: a lizard used to be 20 separate meshes (body, head, tail, 11 spots, 2 eyes, 4 legs), and there are 48 of
+   them, so lizards alone cost ~1,000 draw calls a frame (plus the shadow pass). Now each lizard is 2 meshes:
+   the body with everything that doesn't move baked in, and the tail (kept separate because it wags).
+   Both geometries are built once and shared by every lizard. */
+const LIZ_BODY=mergeBoxes([
+  [0.36,0.16,0.9,0x6f7a3a,0,0.1,0],[0.28,0.14,0.3,0x6f7a3a,0,0.12,0.56],   // body, head
+  ...Array.from({length:11},(_,i)=>[0.07,0.02,0.07,0xf2d52a,(i%3-1)*0.11,0.19,-0.35+i*0.08]),   // yellow spots
+  [0.05,0.05,0.05,0xd11a1a,-0.12,0.18,0.64],[0.05,0.05,0.05,0xd11a1a,0.12,0.18,0.64],          // red eyes
+  ...[[-1,0.3],[1,0.3],[-1,-0.3],[1,-0.3]].map(([lx,lz])=>[0.1,0.06,0.18,0x5a6330,lx*0.23,0.03,lz]),   // legs
+]);
+const LIZ_TAIL=mergeBoxes([[0.14,0.1,0.8,0x626c33,0,0,-0.4]]);
+const LIZARD_DRAW_R=130;   // PERF: lizards farther than this from the camera are hidden (they're lost in the haze anyway)
 function makeLizard(){
   const g=new T.Group();
-  const body=box(0.36,0.16,0.9,0x6f7a3a);body.position.y=0.1;g.add(body);
-  const head=box(0.28,0.14,0.3,0x6f7a3a);head.position.set(0,0.12,0.56);g.add(head);
-  const tail=new T.Group();const tm=box(0.14,0.1,0.8,0x626c33);tm.position.z=-0.4;tail.add(tm);tail.position.set(0,0.1,-0.45);g.add(tail);
-  for(let i=0;i<11;i++){const s=box(0.07,0.02,0.07,0xf2d52a);s.position.set((i%3-1)*0.11,0.19,-0.35+i*0.08);s.castShadow=false;g.add(s)}
-  for(const sx of[-1,1]){const e=box(0.05,0.05,0.05,0xd11a1a);e.position.set(sx*0.12,0.18,0.64);g.add(e)}
-  const legs=[];for(const[lx,lz]of[[-1,0.3],[1,0.3],[-1,-0.3],[1,-0.3]]){const l=box(0.1,0.06,0.18,0x5a6330);l.position.set(lx*0.23,0.03,lz);g.add(l);legs.push(l)}
-  return{g,tail,legs};
+  const body=new T.Mesh(LIZ_BODY,mergedMat);body.castShadow=true;body.receiveShadow=true;g.add(body);
+  const tail=new T.Mesh(LIZ_TAIL,mergedMat);tail.castShadow=true;tail.position.set(0,0.1,-0.45);g.add(tail);
+  return{g,tail};
 }
 const lizards=[];
 {const homes=preHoles.filter(h=>Math.hypot(h.x,h.z-20)>45).sort(()=>rng()-0.5).slice(0,48);
@@ -1226,6 +1265,7 @@ function updateLizards(dt,t){
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
     L.x=clamp(L.x,-EDGE+2,EDGE-2);L.z=clamp(L.z,-EDGE+2,EDGE-2);
     const g=L.m.g;g.position.set(L.x,groundAt(L.x,L.z)+0.02,L.z);
+    g.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);   // PERF: skip drawing far-away lizards (they still move and hunt)
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
     if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
@@ -1572,6 +1612,7 @@ function updateParty(dt,now){
   /* the lizards breakdance in an outer ring (and forget to bite anyone) */
   lizards.forEach((L,j)=>{
     const a=-PARTY.t*0.7+j/lizards.length*Math.PI*2,r=5.6;
+    L.m.g.visible=true;   // they all come to the party, even the ones that were too far away to draw
     stepTo(L.m.g,tp.x+Math.cos(a)*r,tp.z+Math.sin(a)*r,dt,8);
     L.x=L.m.g.position.x;L.z=L.m.g.position.z;L.mode='wander';
     L.m.g.position.y=groundAt(L.x,L.z)+Math.abs(Math.sin(beat*Math.PI+j))*0.45;
@@ -1920,7 +1961,26 @@ function updateCoop(dt){
 
 /* ---------- main loop ---------- */
 let last=performance.now(),tAcc=0,mapT=0;
+/* PERF: adaptive resolution. Every 2 seconds, check the real frame rate. Under 45 fps, render fewer pixels (down to
+   0.75x the screen's resolution); after 6 smooth seconds at 57+ fps, step back up toward full. Drawing fewer pixels is
+   the quickest way to get frames back on phones and older laptops. The HUD is HTML, so its text stays sharp.
+   Add #fps to the page address to see the frame rate and current resolution in the corner. */
+const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null};
+if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1 monospace;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
+function perfTick(now,gap){
+  if(gap>1500){PERF.frames=0;PERF.t0=now;return}   // tab was hidden (the game pauses): don't count that gap
+  if(!PERF.t0)PERF.t0=now;PERF.frames++;
+  const span=now-PERF.t0;if(span<2000)return;
+  PERF.fps=PERF.frames*1000/span;PERF.frames=0;PERF.t0=now;
+  let pr=PERF.pr;
+  if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
+  else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
+  else PERF.good=0;
+  if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris`;
+}
 function frame(now){
+  perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt)}else titleCamera(dt);
   updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
