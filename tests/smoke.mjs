@@ -1,0 +1,263 @@
+#!/usr/bin/env node
+// tests/smoke.mjs
+//
+// End-to-end smoke test for Camp Green Lake. Starts the real server (against a scratch data
+// directory, never the repo's own data/world.json), drives it with Playwright + headless
+// Chromium, and checks the basics actually work: the title screen renders, you can start, move,
+// dig, spawn a twister, use the developer console, and two browsers can see each other. Fails on
+// any page error or (non-whitelisted) console error. Meant to run unchanged whether
+// public/index.html is the single unsplit file or the split public/js/*.js + public/css/*.css
+// output of scripts/split-client.mjs -- that's the whole point of it.
+//
+// Usage: node tests/smoke.mjs   (also wired up as `npm test`)
+
+import { chromium } from 'playwright';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, '..');
+const CANDIDATE_PORTS = [4327, 4328, 4329];
+const LAUNCH_ARGS = ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
+
+// Console/page noise that's expected from a software GL renderer in a headless CI box and isn't a
+// real bug. Anything else logged as an error, or any uncaught page error, fails the run.
+const HARMLESS = [
+  /SwiftShader/i,
+  /GPU stall due to ReadPixels/i,
+  /Failed to load resource.*favicon/i,
+  /WebGL.*[Pp]erformance [Cc]aveat/i,
+  /Automatic fallback to software WebGL/i,
+];
+
+const steps = []; // {name, ok, detail}
+function record(name, ok, detail) { steps.push({ name, ok, detail }); }
+function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+async function waitForHealthz(port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastErr;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/healthz`);
+      if (res.ok) return;
+    } catch (e) { lastErr = e; }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  throw new Error(`server never answered /healthz on port ${port}: ${lastErr}`);
+}
+
+async function startServer() {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cgl-smoke-data-'));
+  let lastError;
+  for (const port of CANDIDATE_PORTS) {
+    const out = [];
+    const child = spawn(process.execPath, ['server.js'], {
+      cwd: ROOT,
+      env: { ...process.env, PORT: String(port), DEV_MODE: '1', DATA_DIR: dataDir, HOST_TOKEN: 'smoke-test-token' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    child.stdout.on('data', d => out.push(d.toString()));
+    child.stderr.on('data', d => out.push(d.toString()));
+    const exited = new Promise(resolve => child.once('exit', resolve));
+    let exitedEarly = false;
+    exited.then(() => { exitedEarly = true; });
+    try {
+      await Promise.race([
+        waitForHealthz(port, 5000),
+        exited.then(() => { throw new Error(`server exited early on port ${port}:\n${out.join('')}`); }),
+      ]);
+      if (exitedEarly) throw new Error(`server exited early on port ${port}:\n${out.join('')}`);
+      return { port, child, dataDir, log: () => out.join('') };
+    } catch (e) {
+      lastError = e;
+      try { child.kill(); } catch (e2) { /* already gone */ }
+    }
+  }
+  throw new Error(`could not start server on any of ${CANDIDATE_PORTS.join(', ')}: ${lastError}`);
+}
+
+// Software-rendered WebGL (swiftshader) under load can leave the page's main thread badly
+// congested for seconds at a time -- long enough that Playwright's `waitForSelector` (which
+// partly relies on layout/accessibility-tree snapshots) can time out even though the DOM state it
+// is waiting for already changed. `waitForFunction` with an explicit poll interval just re-runs a
+// plain JS predicate in the page, which is far more reliable here, so every wait in this test uses
+// that instead of a CSS-attribute selector wait.
+// The server autosaves data/world.json on a timer and again on shutdown; kill() only sends the
+// signal, it doesn't wait for that in-flight write+rename to finish, so an immediate rmSync can
+// occasionally see the directory change out from under it (ENOTEMPTY). Wait for the process to
+// actually exit, then give rmSync a couple of retries.
+async function stopServerAndCleanup(serverProc, dataDir) {
+  serverProc.kill();
+  await Promise.race([
+    new Promise(r => serverProc.once('exit', r)),
+    new Promise(r => setTimeout(r, 2000)),
+  ]);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { fs.rmSync(dataDir, { recursive: true, force: true }); return; } catch (e) {
+      if (attempt === 2) console.error(`warning: could not remove ${dataDir}: ${e.message}`);
+      else await new Promise(r => setTimeout(r, 200));
+    }
+  }
+}
+
+function waitFor(page, fn, timeoutMs, what, arg) {
+  return page.waitForFunction(fn, arg, { timeout: timeoutMs, polling: 200 })
+    .catch(e => { throw new Error(`timed out waiting for: ${what} (${e.message})`); });
+}
+
+function attachPageWatchers(page, label, errors) {
+  page.on('pageerror', err => errors.push(`[${label}] pageerror: ${err.message}`));
+  page.on('console', msg => {
+    if (msg.type() !== 'error') return;
+    const text = msg.text();
+    if (HARMLESS.some(re => re.test(text))) return;
+    errors.push(`[${label}] console.error: ${text}`);
+  });
+}
+
+async function main() {
+  const t0 = Date.now();
+  const { port, child: serverProc, dataDir, log } = await startServer();
+  record('server started', true, `port ${port}`);
+
+  const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
+  const errors = [];
+  let screenshotPath = null;
+  try {
+    // Small viewport: this is a full 3D scene rendered by Chromium's software (swiftshader) GL
+    // path in CI/headless environments -- every pixel is rasterized on the CPU, so a smaller
+    // canvas matters a lot for speed (and for not tipping over a loaded shared box).
+    const ctx1 = await browser.newContext({ viewport: { width: 800, height: 600 } });
+    const page1 = await ctx1.newPage();
+    attachPageWatchers(page1, 'p1', errors);
+
+    await page1.goto(`http://127.0.0.1:${port}/?r=1#dbg`, { waitUntil: 'load' });
+    await waitFor(page1, () => !!window.__cgl, 15000, 'window.__cgl to appear');
+    record('page loaded, window.__cgl present', true);
+
+    const titleOk = await page1.evaluate(() => {
+      const title = document.querySelector('#title'), btn = document.querySelector('#startBtn');
+      return !!title && !title.hidden && !!btn;
+    });
+    assert(titleOk, 'title screen (#title / #startBtn) did not render');
+    record('title screen renders', true);
+
+    // A real Playwright mouse click waits for the element to be visually "stable" across frames,
+    // which under software-rendered WebGL can take a very long time (the scene keeps repainting).
+    // Dispatching the click programmatically still fires the game's onclick handler, just without
+    // that (here, pointless) wait.
+    await page1.evaluate(() => document.querySelector('#startBtn').click());
+    await waitFor(page1, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start');
+    record('HUD shows after start', true);
+    await page1.waitForTimeout(400); // let the join round-trip (host flag, etc.) land
+
+    // Poll for the effect rather than trusting a fixed wall-clock wait: under software-rendered
+    // WebGL the game can run at a handful of FPS (its own frame loop drives simulated time), so a
+    // fixed short wait is unreliable -- give it a generous ceiling and stop as soon as it's true.
+    const before = await page1.evaluate(() => ({ x: window.__cgl.P.x, z: window.__cgl.P.z }));
+    await page1.keyboard.down('w');
+    let moved = 0;
+    try {
+      await waitFor(page1, b => Math.hypot(window.__cgl.P.x - b.x, window.__cgl.P.z - b.z) > 0.5, 15000, 'player to move while holding W', before);
+    } finally {
+      await page1.keyboard.up('w');
+    }
+    const after = await page1.evaluate(() => ({ x: window.__cgl.P.x, z: window.__cgl.P.z }));
+    moved = Math.hypot(after.x - before.x, after.z - before.z);
+    record('holding W moves the player', true, `${moved.toFixed(1)}m`);
+
+    // scoop() digs into a spot ~1.1m in front of wherever the player is facing, not at the
+    // player's own feet -- so the '#depth' HUD readout (which reports the hole under the
+    // player, via holeDepthHere() = baseH(P.x,P.z) - P.y) stays "0.0 ft" while you're digging
+    // and only reflects it once you're actually standing over the dug spot. Facing is locked to
+    // yaw 0 here (no mouse look), so "in front" is straight toward -z; teleport onto that exact
+    // spot afterward rather than trying to walk it (which, at software-rendered frame rates,
+    // risks over/undershooting a 1.1m target).
+    await page1.evaluate(() => { window.__cgl.runCommand('tp 0 -120'); window.__cgl.runCommand('time 13:00'); });
+    await page1.waitForTimeout(200);
+    await page1.keyboard.down('e');
+    await page1.waitForTimeout(3000); // several scoops' worth, generous for a slow software-rendered frame rate
+    await page1.keyboard.up('e');
+    await page1.evaluate(() => window.__cgl.runCommand('tp 0 -121.1'));
+    await waitFor(page1, () => document.querySelector('#depth').textContent !== '0.0 ft', 5000, 'depth readout to reflect the just-dug hole');
+    const depthText = await page1.$eval('#depth', el => el.textContent);
+    record('digging on the lake bed changes hole depth', true, depthText);
+
+    await page1.evaluate(() => window.__cgl.runCommand('twister 30'));
+    await waitFor(page1, () => window.__cgl.TW_LIVE.size > 0, 5000, 'TW_LIVE to gain an entry'); // TW_LIVE is a Map -- .size, not .length
+    const twCount = await page1.evaluate(() => window.__cgl.TW_LIVE.size);
+    record('twister command spawns a twister', true, `TW_LIVE.size=${twCount}`);
+
+    const conLogBefore = await page1.$eval('#conLog', el => el.textContent.length);
+    await page1.evaluate(() => window.__cgl.runCommand('help'));
+    const conLogAfterHelp = await page1.$eval('#conLog', el => el.textContent);
+    assert(conLogAfterHelp.length > conLogBefore, 'runCommand("help") should print to the console log');
+    record('help command prints output', true);
+
+    await page1.keyboard.press('Backquote');
+    await waitFor(page1, () => document.querySelector('#console') && !document.querySelector('#console').hidden, 5000, 'console to open on backquote');
+    record('backquote opens the console', true);
+    await page1.keyboard.press('Backquote');
+    await waitFor(page1, () => document.querySelector('#console') && document.querySelector('#console').hidden, 5000, 'console to close on backquote');
+    record('backquote closes the console', true);
+
+    // Second browser context: connect, start, and confirm each side sees the other.
+    const ctx2 = await browser.newContext({ viewport: { width: 800, height: 600 } });
+    const page2 = await ctx2.newPage();
+    attachPageWatchers(page2, 'p2', errors);
+    await page2.goto(`http://127.0.0.1:${port}/?r=1#dbg`, { waitUntil: 'load' });
+    await waitFor(page2, () => !!window.__cgl, 15000, 'window.__cgl to appear (p2)');
+    await page2.evaluate(() => document.querySelector('#startBtn').click());
+    await waitFor(page2, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start (p2)');
+
+    // Give the join broadcasts a moment to reach each other, then check both directions.
+    await waitFor(page1, () => document.querySelector('#onlineList').textContent !== 'Just you', 8000, 'p1 to see another camper');
+    await waitFor(page2, () => document.querySelector('#onlineList').textContent !== 'Just you', 8000, 'p2 to see another camper');
+    const seenByP1 = await page1.$eval('#onlineList', el => el.textContent);
+    const seenByP2 = await page2.$eval('#onlineList', el => el.textContent);
+    record('two browsers see each other', true, `p1 sees "${seenByP1}", p2 sees "${seenByP2}"`);
+
+    await ctx2.close();
+    await ctx1.close();
+
+    if (errors.length) {
+      throw new Error('page/console errors were reported:\n' + errors.map(e => '  - ' + e).join('\n'));
+    }
+  } catch (err) {
+    try {
+      const pages = browser.contexts().flatMap(c => c.pages());
+      if (pages[0]) {
+        screenshotPath = path.join(ROOT, 'tests', 'smoke-failure.png');
+        await pages[0].screenshot({ path: screenshotPath }).catch(() => {});
+      }
+    } catch (e) { /* best effort */ }
+    record('FAILED', false, err.message);
+    printSummary(Date.now() - t0);
+    if (screenshotPath) console.error(`\nScreenshot saved: ${screenshotPath}`);
+    console.error(`\nServer log:\n${log()}`);
+    await browser.close();
+    await stopServerAndCleanup(serverProc, dataDir);
+    process.exit(1);
+  }
+
+  await browser.close();
+  await stopServerAndCleanup(serverProc, dataDir);
+  printSummary(Date.now() - t0);
+  process.exit(0);
+}
+
+function printSummary(ms) {
+  console.log('\n--- smoke test summary ---');
+  for (const s of steps) console.log(`  [${s.ok ? 'PASS' : 'FAIL'}] ${s.name}${s.detail ? ' -- ' + s.detail : ''}`);
+  const failed = steps.some(s => !s.ok);
+  console.log(`${failed ? 'FAIL' : 'PASS'} (${(ms / 1000).toFixed(1)}s)`);
+}
+
+main().catch(err => {
+  console.error('smoke test crashed:', err);
+  process.exit(1);
+});

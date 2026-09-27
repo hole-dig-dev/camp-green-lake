@@ -9,7 +9,10 @@ const SIM = require('./public/sim.js');
 
 const PORT = Number(process.env.PORT) || 4300;
 const PUB = path.join(__dirname, 'public');
-const SAVE = path.join(__dirname, 'data', 'world.json');
+// DATA_DIR lets the smoke test (and anyone else) point world.json at a scratch directory
+// instead of the repo's own data/ folder, so test runs never clobber real save state.
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
+const SAVE = path.join(DATA_DIR, 'world.json');
 const MAX_CLIENTS = 40;
 const MAX_HOLES = 40000;
 const MAX_ITEM = 10000;
@@ -65,6 +68,35 @@ function sendFile(res, file, type) {
   });
 }
 
+// Static assets for the split client: public/js/*.js and public/css/*.css (produced by
+// scripts/split-client.mjs). Whitelisted extensions only; the resolved path must land inside
+// public/<subdir> so '..', absolute paths, encoded traversal (%2e%2e) and symlinks that point
+// outside public/ all 404 instead of serving anything. no-cache: the game relies on a plain
+// reload picking up new client code (see /admin/update above).
+const STATIC_DIRS = { js: { ext: '.js', type: 'text/javascript; charset=utf-8' }, css: { ext: '.css', type: 'text/css; charset=utf-8' } };
+function sendStatic(res, subdir, rawName) {
+  const dir = STATIC_DIRS[subdir];
+  let name;
+  try { name = decodeURIComponent(rawName); } catch (e) { res.writeHead(404); return res.end('not found'); }
+  if (!name || name.includes('\0') || path.extname(name) !== dir.ext) { res.writeHead(404); return res.end('not found'); }
+  const base = path.join(PUB, subdir);
+  const full = path.join(base, name);
+  // path.join already resolves '..' segments; this just confirms the result is still under base
+  // (catches absolute paths in `name`, which path.join would otherwise happily keep rooted elsewhere... it doesn't, but belt and suspenders).
+  const relToBase = path.relative(base, full);
+  if (relToBase.startsWith('..') || path.isAbsolute(relToBase)) { res.writeHead(404); return res.end('not found'); }
+  fs.realpath(full, (err, real) => {
+    if (err) { res.writeHead(404); return res.end('not found'); }
+    // Follow symlinks in our head, not just the filesystem's: reject if the real path escaped public/.
+    if (path.relative(PUB, real).startsWith('..')) { res.writeHead(404); return res.end('not found'); }
+    fs.readFile(real, (err2, buf) => {
+      if (err2) { res.writeHead(404); return res.end('not found'); }
+      res.writeHead(200, { 'content-type': dir.type, 'cache-control': 'no-cache' });
+      res.end(buf);
+    });
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = (req.url || '/').split('?')[0];
   if (url.startsWith('/admin/')) {
@@ -83,6 +115,8 @@ const server = http.createServer((req, res) => {
   if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
   if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8');
   if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8');
+  if (url.startsWith('/js/')) return sendStatic(res, 'js', url.slice('/js/'.length));
+  if (url.startsWith('/css/')) return sendStatic(res, 'css', url.slice('/css/'.length));
   res.writeHead(404, { 'content-type': 'text/plain' });
   res.end('not found');
 });
