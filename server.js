@@ -144,7 +144,7 @@ wss.on('connection', ws => {
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
-        c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -1, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
+        c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
         break;
@@ -244,6 +244,12 @@ wss.on('connection', ws => {
         // small curse events a client notices itself (breaking fragile loot)
         if (m.k === 'broke') { curse(3); broadcast(runInfo()); }
         break;
+      case 'bonk':
+        // shovel swing: squashes critters in front of the camper (results go out with the next monster update)
+        if (now - (c.bonkAt || 0) < 600) return;
+        c.bonkAt = now;
+        SIM.bonk(MON, { id: c.id, x: c.x, z: c.z, fa: c.r }, pendingEv);
+        break;
       case 'ping':
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
@@ -312,14 +318,15 @@ wss.on('connection', ws => {
 });
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
-const MON = { trucks: [], zer: null };
+const MON = { trucks: [], zer: null, mobs: [] };
+let pendingEv = [];
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 const curse = d => { world.run.curse = clamp((world.run.curse || 0) + d, 0, 100); dirty = true; };
 // flags on pos: 1 hidden in a deep hole, 2 downed, 4 flashlight, 8 crouching, 16 stuck in a hole, 32 buried by a cave-in, 64 out until morning
 function simPlayers(now) {
   return joined().filter(c => !(c.f & 64)).map(c => ({
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, a: c.a, vy: c.vy,
-    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128),
+    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128), sg: !!(c.f & 256), kt: !!(c.f & 512), on: !!(c.f & 1024),
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
   }));
@@ -386,11 +393,11 @@ setInterval(() => {
     broadcast({ t: 'psold', id: +id, v, who: p.who || [] }); broadcast(runInfo());
   }
   // monsters
-  const ev = [];
+  const ev = pendingEv; pendingEv = [];
   SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run });
-  for (const e of ev) if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
-  const on = MON.trucks.length > 0 || !!MON.zer;
-  if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null, ev });
+  for (const e of ev) { if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
+  const on = MON.trucks.length > 0 || !!MON.zer || MON.mobs.length > 0 || ev.length > 0;
+  if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag, MON.zer.held ? 1 : 0, r2(MON.zer.song || 0)] : null, mobs: SIM.packMobs(MON), ev });
   monOn = on;
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);

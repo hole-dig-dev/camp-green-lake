@@ -62,11 +62,21 @@
 
   /* ---- monsters: police trucks until 01:00, then Madame Zeroni until dawn ---- */
   // M: {trucks:[], zer:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
+  // ---- the day's monster roster: which kinds show up is random each day, and it grows with the day and the curse ----
+  const SMALL = ['hatch', 'snake', 'scorp', 'vulture'], MEDIUM = ['sir', 'sheriff'], BIG = ['kate', 'warden'];
+  const KIND = ['hatch', 'snake', 'scorp', 'vulture', 'sir', 'sheriff', 'kate', 'warden', 'trout', 'queen'];
+  function roster(seed, day, curse) {
+    const r = rnd(seed * 7 + day * 131), c = clamp(curse, 0, 100);
+    const take = (list, n) => { const a = list.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
+    const ns = Math.min(4, 1 + Math.floor(day / 2) + Math.floor(c / 40)), nm = day >= 2 ? (day >= 4 ? 2 : 1) : 0, nb = day >= 3 ? (day >= 5 || c >= 60 ? 2 : 1) : 0;
+    return [...take(SMALL, ns), ...take(MEDIUM, nm), ...take(BIG, nb)];
+  }
   function stepMonsters(M, players, t, dt, ev, opt) {
-    opt = opt || {}; const cur = opt.curfew || DAYMS, split = opt.split || NIGHT_SPLIT;
+    opt = opt || {}; const cur = opt.curfew || DAYMS, split = opt.split || NIGHT_SPLIT, run = opt.run || { seed: 1, day: 1, curse: 0, mood: 'normal' };
     const night = t >= cur, half = t < split ? 'police' : 'zeroni';
-    const outs = players.filter(p => !inCamp(p.x, p.z));
-    const want = night && outs.length ? half : null;
+    const lake = players.filter(p => !p.tn), outs = lake.filter(p => !inCamp(p.x, p.z));
+    if (!night) M.appeased = false;
+    const want = night && outs.length ? (half === 'zeroni' && M.appeased ? null : half) : null;
     if (want !== 'police') M.trucks = [];
     if (want !== 'zeroni') M.zer = null;
     if (want === 'police') {
@@ -74,10 +84,111 @@
       for (const tk of M.trucks) stepTruck(tk, outs, dt, ev);
     }
     if (want === 'zeroni') {
-      if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
-      stepZeroni(M.zer, outs, dt, ev);
+      if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null, song: 0 }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
+      stepZeroni(M.zer, outs, dt, ev, lake);
+      if (M.zer && M.zer.song >= (lake.length > 1 ? 10 : 8)) { ev.push({ k: 'appeased', x: M.zer.x, z: M.zer.z }); M.zer = null; M.appeased = true; }
     }
+    stepMobs(M, lake, outs, t, dt, ev, { cur, night, run, n: players.length });
+    if (opt.town) opt.town(M, players.filter(p => p.tn), dt, ev);
   }
+  // campers standing around doing nothing out on the lake (for Mr. Sir and the Warden)
+  function idleOf(M, p, dt) { const m = M.pm[p.id] || (M.pm[p.id] = { idle: 0, warned: 0 }); if (p.a === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } return m; }
+  const lonely = (p, all) => !all.some(o => o !== p && !o.dn && Math.hypot(o.x - p.x, o.z - p.z) < 25);
+  function spawnNear(M, k, p, dmin, dmax, extra) {
+    for (let i = 0; i < 12; i++) { const a = Math.random() * Math.PI * 2, d = dmin + Math.random() * (dmax - dmin), x = clamp(p.x + Math.cos(a) * d, -EDGE + 3, EDGE - 3), z = clamp(p.z + Math.sin(a) * d, -EDGE + 3, EDGE - 3); if (!nearCampZone(x, z)) { const m = Object.assign({ id: M.nid++, k, x, z, h: 0, y: 0, st: 0, t: 0, cd: 0 }, extra || {}); M.mobs.push(m); return m; } }
+    return null;
+  }
+  function chase(m, p, sp, dt, stop) { const dx = p.x - m.x, dz = p.z - m.z, d = Math.hypot(dx, dz) || 0.01; if (d > (stop || 0)) { const s = Math.min(d - (stop || 0), sp * dt); const nx = m.x + dx / d * s, nz = m.z + dz / d * s; if (!inCamp(nx, nz)) { m.x = nx; m.z = nz; } } m.h = Math.atan2(dx, dz); return d; }
+  function stepMobs(M, lake, outs, t, dt, ev, o) {
+    M.mobs = M.mobs || []; M.pm = M.pm || {}; M.nid = M.nid || 1; M.sp = M.sp || {};
+    const key = o.run.seed + ':' + o.run.day + ':' + Math.floor(o.run.curse / 20);
+    if (M.rkey !== key) { M.rkey = key; M.roster = roster(o.run.seed, o.run.day, o.run.curse); }
+    const has = k => M.roster.includes(k), c = clamp(o.run.curse, 0, 100) / 100, live = outs.filter(p => !p.dn), count = k => M.mobs.filter(m => m.k === k).length;
+    const tick = (k, every) => { if (M.sp[k] == null) M.sp[k] = every * Math.random(); M.sp[k] -= dt; if (M.sp[k] <= 0) { M.sp[k] = every; return true; } return false; };
+    const pickP = () => live[Math.floor(Math.random() * live.length)];
+    for (const p of lake) idleOf(M, p, dt);
+    if (live.length) {
+      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / (1 + c) / Math.sqrt(live.length))) { const p = pickP(), g = spawnNear(M, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3 + Math.floor(c * 3); i++) M.mobs.push({ id: M.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
+      if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22)) spawnNear(M, 'snake', pickP(), 14, 34, { life: 150 });
+      if (has('scorp')) for (const p of live) if (p.a === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * (1 + c) * dt) spawnNear(M, 'scorp', p, 1.4, 2.2, { life: 25 });
+      if (has('vulture') && count('vulture') < 2 + Math.floor(c * 2) && tick('vulture', 30)) { const lone = live.filter(p => lonely(p, lake)).concat(outs.filter(p => p.dn)); if (lone.length) { const p = lone[Math.floor(Math.random() * lone.length)]; const v = spawnNear(M, 'vulture', p, 30, 40, { y: 14, tgt: p.id, life: 60 }); if (v) ev.push({ k: 'caw', x: v.x, z: v.z }); } }
+      if (has('sir') && !o.night && !count('sir')) spawnNear(M, 'sir', pickP(), 40, 60, {});
+      if (has('warden') && !o.night && !count('warden')) spawnNear(M, 'warden', pickP(), 50, 70, {});
+      const kt = live.filter(p => p.kt);
+      if (has('sheriff') && t > o.cur - 90000 && kt.length && !count('sheriff')) { const s = spawnNear(M, 'sheriff', kt[0], 45, 55, {}); if (s) ev.push({ k: 'sheriff' }); }
+      if (has('kate') && o.night && !count('kate')) { const kk = spawnNear(M, 'kate', pickP(), 35, 45, {}); if (kk) ev.push({ k: 'kate' }); }
+    }
+    for (const m of M.mobs) {
+      m.t += dt; m.cd = Math.max(0, m.cd - dt);
+      const pool = (m.k === 'hatch' || m.k === 'snake' || m.k === 'scorp') ? live.filter(p => !p.on) : live;
+      const tg = nearest(pool, m.x, m.z), d = tg ? Math.hypot(tg.x - m.x, tg.z - m.z) : 1e9;
+      if (m.life != null && (m.life -= dt) <= 0) m.dead = true;
+      switch (m.k) {
+        case 'hatch':
+          if (tg && d < 14) { chase(m, tg, 5.1, dt); if (d < 0.8 && !m.cd) { m.cd = 1.2; ev.push({ k: 'bite', id: tg.id }); } } else { m.h += dt; m.x += Math.sin(m.h) * dt; m.z += Math.cos(m.h) * dt; }
+          break;
+        case 'snake':
+          if (!live.length) m.dead = true;
+          if (tg && d < 6 && !m.cd) { m.cd = 2.5; ev.push({ k: 'rattle', x: m.x, z: m.z }); }
+          if (tg && d < 1.6 && m.st !== 1) { m.st = 1; m.cd = 4; ev.push({ k: 'strike', id: tg.id }); }
+          if (m.st === 1 && m.cd <= 0) m.st = 0;
+          if (tg) m.h = Math.atan2(tg.x - m.x, tg.z - m.z);
+          break;
+        case 'scorp':
+          if (tg && d < 7) { chase(m, tg, 2.6, dt); if (d < 0.7 && !m.cd) { m.cd = 3; ev.push({ k: 'sting', id: tg.id }); } }
+          break;
+        case 'vulture': {
+          const p = outs.find(q => q.id === m.tgt);
+          if (!p || (!p.dn && !lonely(p, lake)) || p.lt) m.st = 2;
+          if (m.st === 0) { m.a = (m.a || 0) + dt * 0.8; m.x = p.x + Math.cos(m.a) * 8; m.z = p.z + Math.sin(m.a) * 8; m.h = m.a + Math.PI / 2; m.y = 12; if (m.t > 12) m.st = 1; }
+          else if (m.st === 1) { const dd = chase(m, p, 11, dt); m.y = Math.max(1, m.y - 8 * dt); if (dd < 1.4 && m.y < 2) { ev.push({ k: 'peck', id: p.id, dn: !!p.dn }); m.st = 2; } }
+          else { m.y += 6 * dt; m.x += Math.sin(m.h) * 8 * dt; m.z += Math.cos(m.h) * 8 * dt; if (m.y > 30) m.dead = true; }
+          break;
+        }
+        case 'sir': case 'warden': {
+          if (o.night || !live.length) { m.dead = true; break; }
+          // they go after whoever is standing around; otherwise they wander between campers
+          let lazy = null, li = 0; for (const p of live) { const im = M.pm[p.id]; if (im && im.idle > li && Math.hypot(p.x - m.x, p.z - m.z) < 70) { li = im.idle; lazy = p; } }
+          const warnAt = m.k === 'sir' ? 6 : 5, near = m.k === 'sir' ? 18 : 25;
+          if (lazy && li > warnAt) {
+            const dd = chase(m, lazy, m.k === 'sir' ? 3.4 : 2.8, dt, m.k === 'sir' ? 2 : 1.1), im = M.pm[lazy.id];
+            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'sir' ? 'sirWarn' : 'wardenWarn', id: lazy.id }); }
+            if (m.k === 'sir' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
+            if (m.k === 'warden' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'warden' }); im.idle = 0; im.warned = 0; }
+          } else { if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 3) { const p = pickP(); m.goal = { x: p.x + (Math.random() - 0.5) * 30, z: p.z + (Math.random() - 0.5) * 30 }; } chase(m, m.goal, 2.4, dt); }
+          break;
+        }
+        case 'sheriff': {
+          const p = nearest(live.filter(q => q.kt), m.x, m.z);
+          if (!p) { if (m.life == null) m.life = 4; m.st = 1; break; }
+          m.st = 0; m.life = null;
+          if (chase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'sheriff' }); m.dead = true; }
+          break;
+        }
+        case 'kate': {
+          if (!o.night || !live.length) { m.dead = true; break; }
+          // she only moves while nobody is looking at her
+          const watched = lake.some(p => { if (p.dn) return false; const dx = m.x - p.x, dz = m.z - p.z, dd = Math.hypot(dx, dz); if (dd > 45) return false; const vx = -Math.sin(p.vy || 0), vz = -Math.cos(p.vy || 0); return (dx * vx + dz * vz) / (dd || 1) > 0.72; });
+          m.st = watched ? 1 : 0;
+          if (!watched && tg && chase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'kate' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
+          break;
+        }
+      }
+      if ((m.k === 'hatch' || m.k === 'snake' || m.k === 'scorp') && (!tg || d > 160)) m.dead = true;
+    }
+    M.mobs = M.mobs.filter(m => !m.dead);
+  }
+  // shovel bonk: squashes small critters in front of you and scares off a diving vulture
+  function bonk(M, p, ev) {
+    const fx = Math.sin(p.fa || 0), fz = Math.cos(p.fa || 0);
+    for (const m of M.mobs || []) {
+      const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz);
+      if ((m.k === 'hatch' || m.k === 'snake' || m.k === 'scorp') && d < 2.4 && (dx * fx + dz * fz) / (d || 1) > 0.2) { m.dead = true; ev.push({ k: 'squash', kind: m.k, x: m.x, z: m.z, id: p.id }); }
+      if (m.k === 'vulture' && d < 5 && m.y < 6) { m.st = 2; ev.push({ k: 'shoo', x: m.x, z: m.z }); }
+    }
+    if (M.mobs) M.mobs = M.mobs.filter(m => !m.dead);
+  }
+  const packMobs = M => (M.mobs || []).map(m => [m.id, KIND.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, Math.round((m.y || 0) * 10) / 10, m.st | 0]);
   function nearest(list, x, z) { let b = null, bd = 1e9; for (const p of list) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b; }
   function pickPatrol(tk, outs) {
     const c = nearest(outs.filter(p => !p.dn), tk.x, tk.z) || outs[0] || { x: 0, z: -40 };
@@ -110,7 +221,12 @@
     }
     return false;
   }
-  function stepZeroni(z, outs, dt, ev) {
+  function stepZeroni(z, outs, dt, ev, lake) {
+    // the way to beat her, like Elya was supposed to: sing her the lullaby, and pick her up and carry her
+    const all = lake || outs, singers = all.filter(p => p.sg && !p.dn && Math.hypot(p.x - z.x, p.z - z.z) < 14).length, carriers = all.filter(p => p.cy === -2 && !p.dn && Math.hypot(p.x - z.x, p.z - z.z) < 2.6).length;
+    if (singers || carriers) z.song = (z.song || 0) + dt * (singers + carriers); else z.song = Math.max(0, (z.song || 0) - dt * 0.5);
+    z.held = carriers > 0;
+    if (z.held) { z.talk -= dt; if (z.talk <= 0) { z.talk = 4; ev.push({ k: 'talk' }); } return; }
     // dragging someone off toward the edge of the lake; a friend reviving them makes her let go
     if (z.drag != null) {
       const v = outs.find(p => p.id === z.drag);
@@ -120,9 +236,9 @@
       if (Math.max(Math.abs(z.x), Math.abs(z.z)) >= EDGE - 1) { ev.push({ k: 'gone', id: z.drag }); z.drag = null; }
       return;
     }
-    // she goes after whoever is closest, and noise (shouting, sprinting, chatting) counts like being 40 m closer
+    // she goes after whoever is closest; noise counts like being 40 m closer, and being alone like 35 m closer
     let tgt = null, best = 1e9;
-    for (const p of outs) { if (p.dn) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40; if (s < best) { best = s; tgt = p; } }
+    for (const p of outs) { if (p.dn) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40 - (lonely(p, all) ? 35 : 0); if (s < best) { best = s; tgt = p; } }
     z.tgt = tgt ? tgt.id : null;
     if (!tgt) return;
     let dx = tgt.x - z.x, dz = tgt.z - z.z, d = Math.hypot(dx, dz) || 0.01;
@@ -137,6 +253,6 @@
     if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, carrySpeed, stepProps, stepMonsters };
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);
