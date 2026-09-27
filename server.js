@@ -9,8 +9,8 @@ const PORT = Number(process.env.PORT) || 4300;
 const PUB = path.join(__dirname, 'public');
 const SAVE = path.join(__dirname, 'data', 'world.json');
 const MAX_CLIENTS = 40;
-const MAX_HOLES = 9000;
-const MAX_ITEM = 1000;
+const MAX_HOLES = 40000;
+const MAX_ITEM = 10000;
 const NEW_DAY_AFTER_WIN_MS = 10 * 60 * 1000;
 // Token for the admin endpoints (curl over SSH). Set HOST_TOKEN in the environment;
 // without it a random one is generated, which effectively turns the admin endpoints off.
@@ -114,13 +114,13 @@ wss.on('connection', ws => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -60, 60, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -60, 60, c.z);
+        c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a }, c.id);
         break;
       case 'dig': {
-        const x = r1(num(m.x, -54, 54, 0)), z = r1(num(m.z, -54, 54, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
+        const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
         const k = x + '|' + z;
         if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) return;
         if ((world.holes[k] || 0) >= d) return;
