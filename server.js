@@ -76,6 +76,8 @@ const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
 const CHAT_RATE = 5, CHAT_WINDOW_MS = 4000;  // chat/shout messages per connection per window
 const ENV_RATE = 4, ENV_WINDOW_MS = 5000;    // hazard spawns per connection per window (host-only already)
 const SELL_RATE = 5, SELL_WINDOW_MS = 5000;  // sell messages per connection per window
+const BONK_RATE = 3, BONK_WINDOW_MS = 2000;  // shovel bonks per connection per window (the client already waits ~0.9 s between swings)
+const BONK_RANGE = 3.2;                      // m: a bonk only lands on someone standing right next to you (client reach is 2.3 m, plus lag slack)
 const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
@@ -261,7 +263,7 @@ wss.on('connection', (ws, req) => {
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
     n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
-    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
+    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], bonkTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
   clients.set(c.id, c);
@@ -414,6 +416,17 @@ wss.on('connection', (ws, req) => {
         if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; }
         LOG.log(m.t, { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
+        break;
+      }
+      case 'bonk': {
+        // Shovel bonk: a harmless whack that sends a friend tumbling (public/js/71-bonk.js). You have to be standing
+        // right next to them, on the same level (nobody bonks into or out of a tent interior), and neither of you downed.
+        if (!withinRate(c.bonkTimes, BONK_RATE, BONK_WINDOW_MS)) return;
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, BONK_RANGE) || Math.abs(o.y - c.y) > 2 || (o.f & 2) || (c.f & 2)) return;
+        const d = Math.hypot(o.x - c.x, o.z - c.z) || 1;
+        LOG.log('bonk', { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
+        send(o, { t: 'bonked', from: c.id, by: c.n, dx: r2((o.x - c.x) / d), dz: r2((o.z - c.z) / d) });
         break;
       }
       case 'ping':
