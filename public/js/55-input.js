@@ -37,12 +37,17 @@ addEventListener('keydown',e=>{
   if(shopOpen){shopKeydown(e);return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
+  /* full-screen field map: J (unused elsewhere) opens/closes it; Escape also closes it, ahead of
+     the pause-menu Escape handling below, so J/Escape both do what the field map's own close
+     button does. Not a rebindable key -- checked on the raw physical key like backtick/Escape. */
+  if(fieldMapOpen){if(e.key==='Escape'||pk==='j'){e.preventDefault();closeFieldMap()}return}
   /* pause menu: Escape toggles it, after every menu above has had first crack at its own Escape handling.
      While it's open, every other key is swallowed here too (same pattern as the shop/dialog/blackjack blocks above). */
   if(pk==='escape'){e.preventDefault();if(PAUSE.open)closePause();else if(S.started&&!overlayBlocking())openPause();return}
   if(PAUSE.open)return;
   if(!S.started)return;
   if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  if(pk==='j'&&!e.repeat&&!uiOpen()){e.preventDefault();openFieldMap();return}
   const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
   KEYS[k]=true;
   if(k===' '||k.startsWith('arrow'))e.preventDefault();

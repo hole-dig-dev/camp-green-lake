@@ -175,6 +175,47 @@ function drawMapEdgeIndicators(W,night){
     if(p.dist){const d=Math.round(Math.hypot(p.x-mcx,p.z-mcz));mx.textBaseline='top';mx.fillText(d+'m',p.ex,p.ez+8)}
   }
 }
+/* ---------- full-screen field map (docs/ui-redesign-spec.md section 3, "Legend and full map") ----------
+   Shares the same drawing code and canvas as the minimap: opening it just resizes and reparents
+   the existing #minimap canvas into the field-map overlay (forcing the widest 520 m zoom) and
+   reparents it back on close, rather than duplicating drawMap()'s coordinate math for a second
+   canvas. J opens/closes it (see the field-map block in 55-input.js's keydown handler, ahead of
+   the pause-menu Escape handling so J/Escape both close it); uiOpen() reports it open so every
+   other interaction (digging, prompts, other overlays) is blocked while it's up, same as the
+   store/dialogue/blackjack. */
+let fieldMapOpen=false,fmPrevZoomIdx=1,fmPrevW=320,fmPrevH=320,fmPrevParent=null,fmPrevNext=null;
+const FIELD_LEGEND=[{icon:'player',label:'You',color:'#e8742a'},{icon:'teammate',label:'Friend',color:'#2f7bb8'},{icon:'pin',label:'Camp',color:'#2b1d12'},{icon:'search',label:'Objective',color:'#d12a2a'},{icon:'ping',label:'Ping',color:'#ffd23a'},{icon:'twister',label:'Threat',color:'#5a4a3a'}];
+function buildFieldLegend(){
+  const box=$('#fieldMapLegend');if(box.childElementCount)return;   // built once, it's static content
+  for(const it of FIELD_LEGEND){
+    const row=document.createElement('div');row.className='field-map-legend__row';
+    row.innerHTML=`<svg class="ui-icon" aria-hidden="true" style="color:${it.color}"><use href="#icon-${it.icon}"></use></svg><span>${it.label}</span>`;
+    box.appendChild(row);
+  }
+}
+function openFieldMap(){
+  if(fieldMapOpen||!S.started||uiOpen())return;
+  fieldMapOpen=true;releaseLock();
+  fmPrevZoomIdx=zoomIdx;zoomIdx=ZOOM_HALF.length-1;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';   // starts zoomed to 520 m
+  fmPrevW=mm.width;fmPrevH=mm.height;fmPrevParent=mm.parentNode;fmPrevNext=mm.nextSibling;
+  const big=Math.min(720,Math.floor(Math.min(innerWidth,innerHeight)*0.82));
+  mm.width=big;mm.height=big;
+  $('#fieldMapCanvasWrap').appendChild(mm);
+  buildFieldLegend();
+  $('#mapbox').hidden=true;$('#fieldMap').hidden=false;
+  drawMap();
+}
+function closeFieldMap(){
+  if(!fieldMapOpen)return;fieldMapOpen=false;
+  mm.width=fmPrevW;mm.height=fmPrevH;
+  fmPrevParent.insertBefore(mm,fmPrevNext);
+  $('#fieldMap').hidden=true;$('#mapbox').hidden=false;
+  zoomIdx=fmPrevZoomIdx;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';
+  drawMap();
+}
+$('#fieldMapClose').onclick=closeFieldMap;
+$('#mapExpandBtn').onclick=()=>{if(fieldMapOpen)closeFieldMap();else openFieldMap()};
+
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
   const night=clockT()>=DAYMS;
@@ -191,7 +232,8 @@ function drawMap(){
      letter initial, so identity doesn't depend on color alone */
   for(const R of remotes.values()){const X=wx(R.p.g.position.x),Z=wz(R.p.g.position.z);if(X<-8||Z<-8||X>W+8||Z>W+8)continue;
     const col=playerColorHex(R.ci);mx.fillStyle=col;mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X,Z,7,0,6.3);mx.fill();mx.stroke();
-    mx.fillStyle=readableOn(col);mx.font='700 8px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(initialsOf(R.name),X,Z+0.5)}
+    mx.fillStyle=readableOn(col);mx.font='700 8px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(initialsOf(R.name),X,Z+0.5);
+    if(fieldMapOpen){mx.fillStyle=night?'#EDE2C8':'#2b1d12';mx.font='700 12px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='top';mx.fillText(R.name,X,Z+11)}}
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
