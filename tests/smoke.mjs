@@ -224,6 +224,44 @@ async function main() {
     await ctx2.close();
     await ctx1.close();
 
+    // Regression test: a returning player with a saved session used to get a black screen on
+    // reload. maybeResume() (plus a second, older resume line) ran before the pause-menu section
+    // further down the script, so startGame() read pause-menu consts (e.g. SETTINGS) before they
+    // were initialised, threw "Cannot access 'SETTINGS' before initialization", and killed the
+    // rest of the script -- including the code that shows the HUD and hides the title screen.
+    // The fix moved the resume to run once, at the very end of the script. Sessions live in
+    // sessionStorage (autosaved by saveSession() every 2s), which persists across reload() within
+    // the same tab/context, so this drives it in a fresh context: start, wait out an autosave,
+    // reload, and confirm the page comes back alive and auto-resumed instead of going dark.
+    const ctx3 = await browser.newContext({ viewport: { width: 800, height: 600 } });
+    const page3 = await ctx3.newPage();
+    attachPageWatchers(page3, 'p3', errors);
+    await page3.goto(`http://127.0.0.1:${port}/?r=1#dbg`, { waitUntil: 'load' });
+    await waitFor(page3, () => !!window.__cgl, 15000, 'window.__cgl to appear (p3)');
+    await page3.evaluate(() => document.querySelector('#startBtn').click());
+    await waitFor(page3, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start (p3)');
+    await page3.waitForTimeout(3000); // saveSession()'s setInterval autosaves to sessionStorage every 2s
+
+    const errorsBeforeReload = errors.length;
+    await page3.reload({ waitUntil: 'load' });
+    await waitFor(page3, () => !!window.__cgl, 15000, 'window.__cgl to appear after reload');
+    // The old bug threw during script init, before later handlers (like mousemove, used for
+    // look/aim) were even attached -- move the mouse to make sure that path survived too.
+    await page3.mouse.move(400, 300);
+    await page3.mouse.move(420, 320);
+    await waitFor(page3, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 10000, 'HUD to show after reload (auto-resume)');
+
+    const resumedOk = await page3.evaluate(() => {
+      const title = document.querySelector('#title'), hud = document.querySelector('#hud');
+      return !!title && title.hidden && !!hud && !hud.hidden;
+    });
+    assert(resumedOk, 'saved session did not auto-resume after reload (#title should be hidden, #hud visible)');
+    const newErrors = errors.slice(errorsBeforeReload);
+    assert(newErrors.length === 0, 'page/console errors after reload:\n' + newErrors.map(e => '  - ' + e).join('\n'));
+    record('returning player auto-resumes after reload without errors', true);
+
+    await ctx3.close();
+
     if (errors.length) {
       throw new Error('page/console errors were reported:\n' + errors.map(e => '  - ' + e).join('\n'));
     }
