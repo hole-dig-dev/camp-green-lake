@@ -124,15 +124,19 @@ function updateLizards(dt,t){
    back at HEAL_RATE per second (about a minute from nearly empty to full). Running out of water drains it instead
    of healing it. Lizard bites, the police and Madame Zeroni still knock you out outright. */
 const HP_MAX=100,HEAL_DELAY=5,HEAL_RATE=1.5,THIRST_DPS=4,REVIVE_HP=40;
-let hurtFx=0;
+let hurtFx=0,hurtHoldT=0;
+/* #hurtFx timing (docs/ui-redesign-spec.md section 4): a short hold at peak brightness (<=180ms),
+   then a decay to nothing over ~500ms -- a flash, not a lingering full-screen tint. */
+const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text){
   if(!S.started||S.ko||n<=0)return;
-  S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);sfx.thud();
+  S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(S.hp<=0)knockOut(title,text);
 }
 function updateHealth(dt){
-  hurtFx=Math.max(0,hurtFx-dt*1.2);$('#hurtFx').style.opacity=hurtFx.toFixed(2);
+  if(hurtHoldT>0)hurtHoldT=Math.max(0,hurtHoldT-dt);else hurtFx=Math.max(0,hurtFx-dt*HURT_DECAY);
+  $('#hurtFx').style.opacity=hurtFx.toFixed(2);
   if(S.ko)return;
   S.hurtT+=dt;
   if(S.water<=0&&!uiOpen()&&!PARTY.on){

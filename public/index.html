@@ -4,33 +4,96 @@
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;900&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/game.css">
 
+<svg xmlns="http://www.w3.org/2000/svg" class="ui-sr-only" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="icon-seed" viewBox="0 0 24 24"><path d="M12 3c4 2 6 7 6 11a6 6 0 0 1-12 0c0-4 2-9 6-11Z"/><path d="M12 8v9"/></symbol>
+    <symbol id="icon-shovel" viewBox="0 0 24 24"><path d="M15 3 21 9l-3 3-6-6Z"/><path d="M13.5 8.5 5 17a2.8 2.8 0 0 0 0 4 2.8 2.8 0 0 0 4 0l8.5-8.5"/></symbol>
+    <symbol id="icon-shovel-long" viewBox="0 0 24 24"><path d="M17 2 22 7l-2 2-5-5Z"/><path d="M18 6 6 18"/><path d="M6 18a3 3 0 0 0 0 4 3 3 0 0 0 4 0"/></symbol>
+    <symbol id="icon-detector" viewBox="0 0 24 24"><circle cx="8" cy="17" r="4"/><path d="M11 14 20 5"/><path d="M17 2l3 3-2 2-3-3Z"/><path d="M5 20l-2 2"/></symbol>
+    <symbol id="icon-canteen" viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="13" rx="2"/><path d="M9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M10 3h4"/><path d="M6 13h12"/></symbol>
+    <symbol id="icon-sack" viewBox="0 0 24 24"><path d="M9 3h6l1 5H8Z"/><path d="M8 8c-3 3-3 8-3 9a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4c0-1 0-6-3-9Z"/></symbol>
+    <symbol id="icon-rope" viewBox="0 0 24 24"><path d="M4 4c4 2 4 4 0 6s-4 4 0 6 4 4 0 6"/><path d="M20 4c-4 2-4 4 0 6s4 4 0 6-4 4 0 6"/></symbol>
+    <symbol id="icon-onion" viewBox="0 0 24 24"><path d="M12 6c4 2 6 6 5 11a5 5 0 0 1-10 0C6 12 8 8 12 6Z"/><path d="M12 2v4"/><path d="M9 21h6"/></symbol>
+    <symbol id="icon-battery" viewBox="0 0 24 24"><rect x="3" y="8" width="16" height="8" rx="1.5"/><path d="M21 10.5v3"/><path d="M7 12h4"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 20S3 14.5 3 8.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 9 1.5C21 14.5 12 20 12 20Z"/></symbol>
+    <symbol id="icon-water" viewBox="0 0 24 24"><path d="M12 3c3 4 7 9 7 13a7 7 0 0 1-14 0c0-4 4-9 7-13Z"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M6 3v18"/><path d="M6 4h11l-3 4 3 4H6Z"/></symbol>
+    <symbol id="icon-depth" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l3 2"/><path d="M12 16v2"/></symbol>
+    <symbol id="icon-flashlight" viewBox="0 0 24 24"><path d="M8 3h6l1 4-2 2v9a2 2 0 0 1-4 0v-9l-2-2Z"/><path d="M8 7h6"/></symbol>
+    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v3"/><path d="M12 3v2"/><path d="M12 12l3 6-3-2-3 2Z"/></symbol>
+    <symbol id="icon-player" viewBox="0 0 24 24"><path d="M12 3 19 20l-7-4-7 4Z"/></symbol>
+    <symbol id="icon-teammate" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></symbol>
+    <symbol id="icon-npc" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="10" rx="2"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></symbol>
+    <symbol id="icon-lizard" viewBox="0 0 24 24"><path d="M4 15c2-3 4-3 6-1 2 2 4 2 6 0 2-2 3-2 4 0"/><path d="M18 12l3-2"/><path d="M6 16l-2 3"/><path d="M10 16l-1 3"/></symbol>
+    <symbol id="icon-twister" viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M6 10h12"/><path d="M8 15h8"/><path d="M10 20h4"/></symbol>
+    <symbol id="icon-police" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="7" rx="1.5"/><path d="M6 11V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/><circle cx="7.5" cy="18" r="1.5"/><circle cx="16.5" cy="18" r="1.5"/></symbol>
+    <symbol id="icon-zeroni" viewBox="0 0 24 24"><path d="M12 3 21 20H3Z"/><path d="M12 9v5"/><path d="M12 17v.01"/></symbol>
+    <symbol id="icon-ping" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></symbol>
+    <symbol id="icon-pin" viewBox="0 0 24 24"><path d="M12 21s7-7.5 7-12a7 7 0 0 0-14 0c0 4.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><path d="M5 21V5"/><path d="M5 5h11l-2.5 3L16 11H5"/><path d="M13 21V13"/><path d="M13 13h6l-2 2.5L19 18h-6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="M5 5l14 14"/><path d="M19 5 5 19"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  </defs>
+</svg>
+
 <div id="game"></div>
 <div id="hurtFx"></div>
 <div id="labels"></div>
 
 <div id="hud" class="hud" hidden>
-  <div id="stats" class="panel">
-    <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
-    <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
-    <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
-    <div class="meter"><span class="k" id="lvK">LV 1</span><div class="bar xp"><i id="xpBar" style="width:0"></i></div></div>
-    <div class="meter"><span class="k">Health</span><div class="bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
-    <div class="meter"><span class="k">Water</span><div class="bar" id="waterWrap"><i id="waterBar"></i></div></div>
-    <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
-    <div class="row"><span class="k" id="curK">Curfew in</span><span class="v" id="curfew">9:30</span></div>
-    <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
-    <div class="row"><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
-    <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
-    <div class="row"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
-    <div class="row"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
-    <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="bar sig"><i id="sigBar" style="width:0"></i></div></div>
-    <div id="tools"></div>
+  <div id="crosshair" class="crosshair" hidden aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M12 2.5v6M12 15.5v6M2.5 12h6M15.5 12h6"/></svg>
   </div>
+
+  <div id="hudTop" class="hud-top-row">
+    <div id="stats" class="hud-strip hud-strip--camper ui-panel">
+      <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
+      <div class="meter"><span class="k" id="lvK">LV 1</span><div class="ui-meter bar xp"><i id="xpBar" style="width:0"></i></div></div>
+      <div class="meter"><span class="k">Health</span><div class="ui-meter bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
+      <p id="hpWarn" class="hud-warn" hidden>Low health</p>
+      <div class="meter"><span class="k">Water</span><div class="ui-meter bar" id="waterWrap"><i id="waterBar"></i></div></div>
+      <p id="waterWarn" class="hud-warn" hidden>Low water</p>
+    </div>
+    <div id="hudObjective" class="hud-strip hud-strip--objective ui-panel">
+      <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
+      <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
+      <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
+      <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
+    </div>
+  </div>
+
   <div id="mapbox" class="panel">
-    <canvas id="minimap" width="320" height="320" aria-label="Map of the lake bed"></canvas>
+    <div class="map-canvas-wrap">
+      <span class="map-north" aria-hidden="true">N</span>
+      <canvas id="minimap" width="320" height="320" aria-label="Map of the lake bed"></canvas>
+    </div>
+    <div class="map-zoom" role="group" aria-label="Map zoom">
+      <button id="mapZoomOut" type="button" class="ui-button ui-button--quiet" aria-label="Zoom out">&minus;</button>
+      <span id="mapZoomLabel" class="map-zoom-label">260 m across</span>
+      <button id="mapZoomIn" type="button" class="ui-button ui-button--quiet" aria-label="Zoom in">+</button>
+    </div>
+    <button id="mapExpandBtn" class="ui-button ui-button--quiet ui-button--sm map-expand-btn" type="button">
+      <svg class="ui-icon" aria-hidden="true"><use href="#icon-search"></use></svg>Field map
+    </button>
     <div id="online"><b>At camp</b><span id="onlineList">Just you</span></div>
   </div>
+
+  <div id="hudSupplies" class="hud-strip hud-strip--supplies ui-panel">
+    <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
+    <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
+    <div class="row" id="onionRow"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
+    <div class="row" id="battRow"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
+    <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="ui-meter sig"><i id="sigBar" style="width:0"></i></div></div>
+  </div>
+
+  <div id="hudTools" class="hud-strip hud-strip--tools ui-panel"><div id="tools"></div></div>
+
   <div id="prompt" class="panel" hidden></div>
+  <div id="depthChip" class="hud-depth-chip" hidden><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
   <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · B push-to-talk</div>
@@ -42,13 +105,18 @@
 </div>
 
 <div id="title" class="overlay">
-  <div class="card">
+  <div class="card title-card">
     <h1 class="stencil">Camp Green Lake<small>There is no lake. Only holes.</small></h1>
-    <p>Dig five-foot holes in the dry lake bed. Sell what you find to Mr. Sir, buy better gear, and keep away from the yellow-spotted lizards. Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot. The lake is huge, but be back inside the camp fence by curfew, or the police come looking for you.</p>
+    <p class="title-premise">Dig five-foot holes in the dry lake bed and sell what you find to Mr. Sir. Keep away from the yellow-spotted lizards, and be back inside the camp fence before curfew.</p>
+    <div class="title-objectives">
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-shovel"></use></svg><b>Dig</b><span>Five feet deep, five feet across.</span></div>
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-seed"></use></svg><b>Sell</b><span>Trade finds to Mr. Sir for seeds.</span></div>
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-clock"></use></svg><b>Be back by curfew</b><span>Or the police come looking.</span></div>
+    </div>
     <div class="field">
       <label for="nick">Your camp nickname</label>
       <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
-      <button id="startBtn" disabled>Start digging</button>
+      <button id="startBtn" class="ui-button ui-button--primary" disabled>Start digging</button>
     </div>
     <div class="field" id="campWrap" hidden>
       <label for="campPass">Camp password</label>
@@ -56,29 +124,42 @@
     </div>
     <p class="fine" id="campErr" hidden></p>
     <div id="lobby">Connecting to camp…</div>
-    <div class="controls">
-      <div><kbd>WASD</kbd> walk, <kbd>Shift</kbd> run</div>
-      <div><kbd>Click</kbd> lock mouse to look</div>
-      <div><kbd>Hold click</kbd> or <kbd>E</kbd> dig</div>
-      <div><kbd>F</kbd> talk / buy / sell</div>
-      <div><kbd>Q</kbd> eat an onion</div>
-      <div><kbd>1</kbd>–<kbd>5</kbd> shout at friends</div>
-      <div><kbd>V</kbd> first / third person</div>
-      <div><kbd>C</kbd> crouch (hide from police)</div>
+    <p class="fine title-legend">Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot -- the curse on the lake only breaks when someone finds it.</p>
+    <div class="controls" id="controlsEssential">
+      <div><kbd class="ui-kbd">WASD</kbd> walk, <kbd class="ui-kbd">Shift</kbd> run</div>
+      <div><kbd class="ui-kbd">Click</kbd> lock mouse to look</div>
+      <div><kbd class="ui-kbd">Hold click</kbd> or <kbd class="ui-kbd">E</kbd> dig</div>
+      <div><kbd class="ui-kbd">F</kbd> talk / buy / sell</div>
+      <div><kbd class="ui-kbd">V</kbd> first / third person</div>
     </div>
+    <details class="controls-more">
+      <summary class="ui-button ui-button--quiet ui-button--sm">Show all controls</summary>
+      <div class="controls">
+        <div><kbd class="ui-kbd">Q</kbd> eat an onion</div>
+        <div><kbd class="ui-kbd">1</kbd>–<kbd class="ui-kbd">5</kbd> shout at friends</div>
+        <div><kbd class="ui-kbd">C</kbd> crouch (hide from police)</div>
+      </div>
+    </details>
     <p class="fine">Anyone with this page open shows up in your camp. Share the link and dig together.</p>
   </div>
 </div>
 
 <div id="dlg" class="panel" hidden role="dialog" aria-labelledby="dlgName">
-  <div class="dlg-top"><div class="dlg-name" id="dlgName"></div><button id="dlgClose" type="button">Esc · Leave</button></div>
+  <div class="dlg-top"><div class="dlg-name" id="dlgName"></div><button id="dlgClose" class="ui-button ui-button--quiet ui-button--sm" type="button">Esc · Leave</button></div>
   <p id="dlgText"></p>
   <div id="dlgOpts"></div>
 </div>
 
 <div id="cards" class="overlay" hidden>
   <div class="felt" role="dialog" aria-labelledby="cardsTitle">
-    <div class="head"><h2 id="cardsTitle">D Tent Blackjack</h2><span class="seedpill"><strong id="bjSeeds">0</strong> seeds</span></div>
+    <div class="head">
+      <h2 id="cardsTitle">D Tent Blackjack</h2>
+      <div class="head-pills">
+        <span class="seedpill"><svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg><strong id="bjSeeds">0</strong> seeds</span>
+        <span class="seedpill bet-pill" id="bjBetPill" hidden>Bet <strong id="bjBetHeader">0</strong></span>
+      </div>
+    </div>
+    <p class="bj-status" id="bjStatus" role="status"></p>
     <p class="xray" id="bjSay"></p>
     <div class="hand"><div class="lbl">X-Ray (dealer)<b id="bjDealerTot"></b></div><div class="row-cards" id="bjDealer"></div></div>
     <div class="hand"><div class="lbl">You<b id="bjYouTot"></b></div><div class="row-cards" id="bjYou"></div></div>
@@ -91,22 +172,66 @@
       <button class="chip c50" data-v="50" id="chip50" type="button">50</button>
       <button class="chip call" data-v="all" id="chipAll" type="button">ALL IN</button>
       <span class="betline">Bet <strong id="bjBet">10</strong></span>
-      <button id="bjDeal" type="button">Deal</button>
+      <button id="bjDeal" class="ui-button ui-button--primary" type="button">Deal</button>
     </div>
     <div class="bj-actions" id="bjActs" hidden>
-      <button id="bjHit" type="button">Hit</button><button id="bjStand" type="button">Stand</button><button id="bjDouble" type="button">Double</button>
+      <button id="bjHit" class="ui-button ui-button--secondary" type="button">Hit</button>
+      <button id="bjStand" class="ui-button ui-button--secondary" type="button">Stand</button>
+      <button id="bjDouble" class="ui-button ui-button--secondary" type="button">Double</button>
     </div>
     <p class="keys">Keys: H hit · S stand · D double · Esc leave. Blackjack pays 3 to 2. Dealer stands on 17.</p>
-    <button id="bjLeave" class="ghost" type="button">Leave the tent</button>
+    <button id="bjLeave" class="ui-button ui-button--quiet" type="button">Leave the tent</button>
   </div>
 </div>
 
 <div id="shop" class="overlay" hidden>
-  <div class="card" role="dialog" aria-labelledby="shopTitle">
-    <h2 id="shopTitle">Wreck Room Store</h2>
-    <div class="seedline"><span>You have</span><span><strong id="shopSeeds">0</strong> seeds</span></div>
-    <div id="shopList"></div>
-    <button id="shopClose">Back to digging</button>
+  <section class="shop-frame ui-panel" role="dialog" aria-modal="true"
+           aria-labelledby="shopTitle" aria-describedby="shopFlavor">
+    <header class="shop-head">
+      <div>
+        <p class="eyebrow">Camp Green Lake · Supply counter</p>
+        <h2 id="shopTitle">Wreck Room Store</h2>
+        <p id="shopFlavor">Mr. Sir says a better shovel still owes him five feet.</p>
+      </div>
+      <div class="shop-head-actions">
+        <div class="seedline" aria-label="Your sunflower seeds">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>
+          <span><strong id="shopSeeds">0</strong> seeds</span>
+        </div>
+        <button id="shopClose" class="ui-button ui-button--quiet" type="button" aria-label="Close store">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg>Close
+        </button>
+      </div>
+    </header>
+
+    <div class="shop-body">
+      <div class="shop-catalog">
+        <div id="shopTabs" class="shop-tabs" role="tablist" aria-label="Supply categories"></div>
+        <div id="shopList" class="shop-grid" role="listbox" aria-label="Store items"></div>
+      </div>
+      <aside id="shopDetail" class="shop-detail" aria-live="polite">
+        <div id="shopDetailContent"></div>
+        <div id="shopConfirm" class="shop-confirm" hidden></div>
+        <p id="shopFeedback" class="shop-feedback" role="status"></p>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<div id="fieldMap" class="overlay field-map-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="fieldMapTitle">
+  <div class="field-map-frame ui-panel">
+    <header class="field-map-head">
+      <div>
+        <p class="eyebrow">Full survey</p>
+        <h2 id="fieldMapTitle">Field Map</h2>
+      </div>
+      <button id="fieldMapClose" class="ui-button ui-button--quiet" type="button" aria-label="Close field map">
+        <svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg>Close
+      </button>
+    </header>
+    <div id="fieldMapCanvasWrap" class="field-map-canvas-wrap"></div>
+    <div id="fieldMapLegend" class="field-map-legend" aria-label="Map legend"></div>
+    <p class="fine">Press <kbd class="ui-kbd">J</kbd> or <kbd class="ui-kbd">Esc</kbd> to close.</p>
   </div>
 </div>
 
@@ -124,11 +249,12 @@
 </div>
 
 <div id="fired" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--fired">
+    <p class="eyebrow">Dismissed</p>
     <h2>Fired</h2>
     <p id="firedText"></p>
-    <p>The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
-    <button id="firedBtn">Start a new run</button>
+    <p class="fine">The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
+    <button id="firedBtn" class="ui-button ui-button--danger">Start a new run</button>
   </div>
 </div>
  <div id="console" hidden><div id="conLog" aria-live="polite"></div><div id="conRow"><b>&gt;</b><input id="conIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type a command (help lists them). Esc closes."></div></div>
@@ -137,7 +263,8 @@
 <div id="scare"></div>
 
 <div id="ko" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--ko">
+    <p class="eyebrow">Hazard</p>
     <h2 id="koTitle">Bitten</h2>
     <p id="koText">A yellow-spotted lizard got you.</p>
     <p class="fine" id="koFine">Waking up in the nurse's office…</p>
@@ -145,11 +272,12 @@
 </div>
 
 <div id="win" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--win">
+    <p class="eyebrow">Rainfall</p>
     <h2>It's raining</h2>
     <p id="winText">Someone dug up the suitcase.</p>
     <p class="fine">For the first time in over a hundred years, rain is falling on Camp Green Lake. The curse is broken. You can keep digging if you want.</p>
-    <button id="winClose">Keep digging</button>
+    <button id="winClose" class="ui-button ui-button--primary">Keep digging</button>
   </div>
 </div>
 

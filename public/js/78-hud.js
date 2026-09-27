@@ -3,7 +3,12 @@
 /* ---------- HUD + minimap ---------- */
 const hud={seeds:$('#seeds'),water:$('#waterBar'),wrap:$('#waterWrap'),depth:$('#depth'),sack:$('#sack'),onions:$('#onions'),tools:$('#tools'),det:$('#detector'),sig:$('#sigBar'),prompt:$('#prompt')};
 let hudT=0,lastTools='';
-const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow'),back:$('#back')};
+const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),curIcon:$('#curfewIcon'),backRow:$('#backRow'),back:$('#back')};
+const hw={hpWarn:$('#hpWarn'),waterWarn:$('#waterWarn'),onionRow:$('#onionRow'),battRow:$('#battRow'),depthChip:$('#depthChip'),crosshair:$('#crosshair')};
+/* bottom-right tool glyphs: icon + a visually-hidden accessible label, per spec 4 ("hide tool
+   names behind icons plus accessible labels"). Falls back to a small text badge for anything not
+   in this table rather than silently dropping it. */
+const TOOL_ICON={'Spade':'shovel','Rusty shovel':'shovel','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zero is helping':'teammate',onion:'onion'};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
@@ -23,19 +28,33 @@ function updateHUD(){
   hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
+  let curWarn=false;
   {const t=clockT();hc.clock.textContent=clockText();
-   if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
-   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';hc.cur.classList.toggle('warn',!!CUR.hunter)}
+   if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);curWarn=left<60}
+   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';curWarn=!!CUR.hunter}
+   hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
-  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';hq.hpWrap.classList.toggle('low',hp<0.3)}
-  const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';hud.wrap.classList.toggle('low',w<0.25);
+  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';const low=hp<0.3;hq.hpWrap.classList.toggle('low',low);hw.hpWarn.hidden=!low}
+  const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
+  {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
+   hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
+  hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
   const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
+  hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
+  hw.battRow.hidden=!(S.light||S.batt<30);
   const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
-  if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){const s=document.createElement('span');if(t==='onion'){s.className='onion';s.textContent='Onion breath'}else s.textContent=t;hud.tools.appendChild(s)}}
-  hud.det.hidden=!S.up.detector;hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
+  if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
+    const label=t==='onion'?'Onion breath':t,icon=TOOL_ICON[t];
+    const s=document.createElement('span');s.setAttribute('title',label);
+    if(icon){s.className='tool-badge'+(t==='onion'?' onion':'');s.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-${icon}"></use></svg><span class="ui-sr-only">${label}</span>`}
+    else{s.className='tool-badge--text';s.textContent=label}
+    hud.tools.appendChild(s);
+  }}
+  hud.det.hidden=!(S.up.detector&&S.detOn);hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
+  updateCrosshair();
   const s=nearSpot();
   const sinkSh=inSinkhole();
   if(sinkSh&&!uiOpen()){hud.prompt.innerHTML='';hud.prompt.append(document.createTextNode(sinkTrappedText(sinkSh)));hud.prompt.hidden=false}
@@ -46,29 +65,179 @@ function updateHUD(){
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
 }
+/* static four-stroke reticle: never moves or redraws, just toggles hidden/active (docs/ui-redesign-
+   spec.md section 4). Visible only while the mouse is actually captured for look -- hidden on
+   touch devices (no pointer lock there) and while any overlay/menu has focus. */
+function updateCrosshair(){
+  const show=S.started&&!S.ko&&!isTouch&&!uiOpen()&&!PAUSE.open&&lockOk();
+  hw.crosshair.hidden=!show;
+  if(show)hw.crosshair.classList.toggle('active',digHeld||!!nearSpot());
+}
 function idxAt(x,z){const c=clamp(Math.round((x+HALF)/RES),0,N-1),r=clamp(Math.round((z+HALF)/RES),0,N-1);return r*N+c}
 const mm=$('#minimap'),mx=mm.getContext('2d');
-/* the map follows you and shows a 260 m square; camp is labelled on the edge when it's off the map */
-const MV=130;let mcx=0,mcz=20;
+/* the map follows you, north stays up (world -z is north, +z draws down -- P.fa's own rotation
+   already accounts for this, see drawMap's player arrow). Three zoom levels, expressed as full
+   visible width; MV is the current HALF-width in metres. Default index 1 = 260 m, matching the
+   map's pre-redesign fixed view (docs/ui-redesign-spec.md section 3). */
+const ZOOM_HALF=[65,130,260];
+let zoomIdx=1,MV=ZOOM_HALF[zoomIdx];
+let mcx=0,mcz=20;
 function wx(x){return (x-mcx+MV)/(MV*2)*mm.width}
 function wz(z){return (z-mcz+MV)/(MV*2)*mm.width}
 function ws(v){return v/(MV*2)*mm.width}
+function setMapZoom(i){
+  const ni=clamp(i,0,ZOOM_HALF.length-1);if(ni===zoomIdx)return;
+  zoomIdx=ni;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';
+  $('#mapZoomOut').disabled=zoomIdx===ZOOM_HALF.length-1;$('#mapZoomIn').disabled=zoomIdx===0;
+  drawMap();
+}
+$('#mapZoomOut').onclick=()=>setMapZoom(zoomIdx+1);   // out = wider view = bigger half-width
+$('#mapZoomIn').onclick=()=>setMapZoom(zoomIdx-1);
+$('#mapZoomOut').disabled=zoomIdx===ZOOM_HALF.length-1;$('#mapZoomIn').disabled=zoomIdx===0;
+/* wheel-to-zoom, without letting the page behind the overlay scroll */
+$('#mapbox').addEventListener('wheel',e=>{e.preventDefault();setMapZoom(zoomIdx+(e.deltaY>0?1:-1))},{passive:false});
+
+/* ---------- static map cache (docs/ui-redesign-spec.md section 3, "Performance") ----------
+   Terrain tint, the boundary, and every camp building are fixed world geometry -- cache them once
+   in an offscreen 1024x1024 canvas covering the whole world (-HALF..HALF on both axes) instead of
+   redrawing them at 5 Hz. Each live draw just blits the visible rectangle out of this cache, then
+   layers dynamic holes/people/threats/pings on top at the same 5 Hz cadence as before. */
+const MAP_CACHE_RES=1024,MAP_SCALE=MAP_CACHE_RES/(HALF*2);
+const ccx=x=>(x+HALF)*MAP_SCALE,ccz=z=>(z+HALF)*MAP_SCALE,ccs=v=>v*MAP_SCALE;
+function makeOffscreenCanvas(w,h){
+  if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);
+  const c=document.createElement('canvas');c.width=w;c.height=h;return c;   // fallback: detached <canvas>
+}
+let mapCache=null,mapCacheCtx=null,mapCacheNight=null;
+function buildMapCache(night){
+  if(!mapCache){mapCache=makeOffscreenCanvas(MAP_CACHE_RES,MAP_CACHE_RES);mapCacheCtx=mapCache.getContext('2d')}
+  const g=mapCacheCtx;mapCacheNight=night;
+  g.clearRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);
+  g.fillStyle=night?'#161f1c':'#b98a5e';g.fillRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);   // beyond EDGE
+  g.fillStyle=night?'#26332d':'#d9a86c';g.fillRect(ccx(-EDGE),ccz(-EDGE),ccs(EDGE*2),ccs(EDGE*2));   // lake bed
+  g.strokeStyle=night?'rgba(237,226,200,.08)':'rgba(43,29,18,.10)';g.lineWidth=1;g.setLineDash([3,5]);
+  for(let gx=Math.ceil(-EDGE/50)*50;gx<=EDGE;gx+=50){g.beginPath();g.moveTo(ccx(gx),ccz(-EDGE));g.lineTo(ccx(gx),ccz(EDGE));g.stroke()}
+  for(let gz=Math.ceil(-EDGE/50)*50;gz<=EDGE;gz+=50){g.beginPath();g.moveTo(ccx(-EDGE),ccz(gz));g.lineTo(ccx(EDGE),ccz(gz));g.stroke()}
+  g.setLineDash([]);
+  g.fillStyle=night?'#3a463d':'#c4955f';g.fillRect(ccx(-40),ccz(27),ccs(70),ccs(29));
+  g.strokeStyle=night?'rgba(237,226,200,.5)':'rgba(43,29,18,.55)';g.lineWidth=2;g.strokeRect(ccx(-40),ccz(27),ccs(70),ccs(29));
+  g.fillStyle=night?'#4f5c4f':'#8d8f69';for(const t of TENTS)g.fillRect(ccx(t.x-t.hw),ccz(t.z-t.hd),ccs(t.hw*2),ccs(t.hd*2));
+  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Warden's cabin
+  g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
+  g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4));   // water truck
+}
+/* stable per-player color (index into the same CAMPER_COLORS table the 3D avatars use) + initials,
+   for the remote-player minimap markers (docs/ui-redesign-spec.md section 3, "People") */
+function playerColorHex(ci){return '#'+(CAMPER_COLORS[(ci|0)%CAMPER_COLORS.length]).toString(16).padStart(6,'0')}
+function readableOn(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(0.299*r+0.587*g+0.114*b)>140?'#2b1d12':'#fff8ea'}
+function initialsOf(name){const s=String(name||'').trim();if(!s)return'?';const parts=s.split(/\s+/);if(parts.length>=2)return(parts[0][0]+parts[1][0]).toUpperCase();return s.slice(0,2).toUpperCase()}
+
+/* ---------- minimap edge indicators (docs/ui-redesign-spec.md section 3) ----------
+   Camp, the revealed search area (or, before reveal, a pointer toward the Warden once you're
+   carrying the KB tube -- never the tube's own hidden position), the most recent active ping, and
+   remote friends get a clamped arrow marker when they're outside the visible square. Threats
+   (police/twister/Zeroni) get the same treatment. NPCs and holes never do. Collisions (two
+   indicators landing in roughly the same direction) resolve by priority -- active threat first,
+   then objective, ping, camp, friend last -- except overlapping FRIENDS collapse into one "+N"
+   marker instead of dropping the lower one. */
+const EDGE_PRIORITY={threat:0,objective:1,ping:2,camp:3,friend:4};
+function drawMapEdgeIndicators(W,night){
+  const pad=10,cxm=W/2,czm=W/2,maxX=W/2-pad,maxZ=W/2-pad;
+  const cands=[];
+  let bestThreat=null,bestThreatD=Infinity;
+  for(const tk of trucks)if(tk.active){const d=(tk.x-mcx)**2+(tk.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tk.x,z:tk.z,color:'#d12a2a'}}}
+  for(const tw of TW_LIVE.values())if(tw.s>0.05){const d=(tw.x-mcx)**2+(tw.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tw.x,z:tw.z,color:'#5a4a3a'}}}
+  if(ZER.active){const d=(ZER.x-mcx)**2+(ZER.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:ZER.x,z:ZER.z,color:'#3aa53a'}}}
+  if(bestThreat)cands.push({kind:'threat',...bestThreat});
+  if(S.revealed)cands.push({kind:'objective',x:SEARCH.x,z:SEARCH.z,color:night?'#ff6a5a':'#d12a2a',dist:true});
+  else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Warden, never the tube's real spot
+  if(PINGS.length){const p=PINGS[PINGS.length-1];cands.push({kind:'ping',x:p.x,z:p.z,color:'#'+p.color.toString(16).padStart(6,'0')})}
+  cands.push({kind:'camp',x:-5,z:41,color:night?'#EDE2C8':'#2b1d12',dist:true});
+  for(const R of remotes.values())cands.push({kind:'friend',x:R.p.g.position.x,z:R.p.g.position.z,color:playerColorHex(R.ci)});
+
+  cands.sort((a,b)=>EDGE_PRIORITY[a.kind]-EDGE_PRIORITY[b.kind]);
+  const placed=[];
+  for(const c of cands){
+    const px=wx(c.x),pz=wz(c.z);
+    if(px>=0&&pz>=0&&px<=W&&pz<=W)continue;   // on-screen already -- no indicator needed
+    const dx=px-cxm,dz=pz-czm,ang=Math.atan2(dz,dx);
+    let collided=false;
+    for(const p of placed){let da=Math.abs(ang-p.ang);if(da>Math.PI)da=2*Math.PI-da;
+      if(da<0.35){collided=true;if(c.kind==='friend'&&p.kind==='friend')p.count=(p.count||1)+1;break}}
+    if(collided)continue;
+    let t=1;if(Math.abs(dx)>1e-6)t=Math.min(t,maxX/Math.abs(dx));if(Math.abs(dz)>1e-6)t=Math.min(t,maxZ/Math.abs(dz));
+    placed.push(Object.assign({},c,{ang,ex:cxm+dx*t,ez:czm+dz*t,count:1}));
+  }
+  for(const p of placed){
+    mx.save();mx.translate(p.ex,p.ez);mx.rotate(p.ang+Math.PI/2);
+    mx.fillStyle=p.color;mx.strokeStyle=night?'#EDE2C8':'#2b1d12';mx.lineWidth=1.4;
+    mx.beginPath();mx.moveTo(0,-7);mx.lineTo(5,5);mx.lineTo(-5,5);mx.closePath();mx.fill();mx.stroke();
+    mx.restore();
+    mx.font='700 9px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.fillStyle=night?'#EDE2C8':'#2b1d12';
+    if(p.kind==='friend'&&p.count>1){mx.textBaseline='middle';mx.fillText('+'+p.count,p.ex,p.ez-11)}
+    if(p.dist){const d=Math.round(Math.hypot(p.x-mcx,p.z-mcz));mx.textBaseline='top';mx.fillText(d+'m',p.ex,p.ez+8)}
+  }
+}
+/* ---------- full-screen field map (docs/ui-redesign-spec.md section 3, "Legend and full map") ----------
+   Shares the same drawing code and canvas as the minimap: opening it just resizes and reparents
+   the existing #minimap canvas into the field-map overlay (forcing the widest 520 m zoom) and
+   reparents it back on close, rather than duplicating drawMap()'s coordinate math for a second
+   canvas. J opens/closes it (see the field-map block in 55-input.js's keydown handler, ahead of
+   the pause-menu Escape handling so J/Escape both close it); uiOpen() reports it open so every
+   other interaction (digging, prompts, other overlays) is blocked while it's up, same as the
+   store/dialogue/blackjack. */
+let fieldMapOpen=false,fmPrevZoomIdx=1,fmPrevW=320,fmPrevH=320,fmPrevParent=null,fmPrevNext=null;
+const FIELD_LEGEND=[{icon:'player',label:'You',color:'#e8742a'},{icon:'teammate',label:'Friend',color:'#2f7bb8'},{icon:'pin',label:'Camp',color:'#2b1d12'},{icon:'search',label:'Objective',color:'#d12a2a'},{icon:'ping',label:'Ping',color:'#ffd23a'},{icon:'twister',label:'Threat',color:'#5a4a3a'}];
+function buildFieldLegend(){
+  const box=$('#fieldMapLegend');if(box.childElementCount)return;   // built once, it's static content
+  for(const it of FIELD_LEGEND){
+    const row=document.createElement('div');row.className='field-map-legend__row';
+    row.innerHTML=`<svg class="ui-icon" aria-hidden="true" style="color:${it.color}"><use href="#icon-${it.icon}"></use></svg><span>${it.label}</span>`;
+    box.appendChild(row);
+  }
+}
+function openFieldMap(){
+  if(fieldMapOpen||!S.started||uiOpen())return;
+  fieldMapOpen=true;releaseLock();
+  fmPrevZoomIdx=zoomIdx;zoomIdx=ZOOM_HALF.length-1;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';   // starts zoomed to 520 m
+  fmPrevW=mm.width;fmPrevH=mm.height;fmPrevParent=mm.parentNode;fmPrevNext=mm.nextSibling;
+  const big=Math.min(720,Math.floor(Math.min(innerWidth,innerHeight)*0.82));
+  mm.width=big;mm.height=big;
+  $('#fieldMapCanvasWrap').appendChild(mm);
+  buildFieldLegend();
+  $('#mapbox').hidden=true;$('#fieldMap').hidden=false;
+  drawMap();
+}
+function closeFieldMap(){
+  if(!fieldMapOpen)return;fieldMapOpen=false;
+  mm.width=fmPrevW;mm.height=fmPrevH;
+  fmPrevParent.insertBefore(mm,fmPrevNext);
+  $('#fieldMap').hidden=true;$('#mapbox').hidden=false;
+  zoomIdx=fmPrevZoomIdx;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';
+  drawMap();
+}
+$('#fieldMapClose').onclick=closeFieldMap;
+$('#mapExpandBtn').onclick=()=>{if(fieldMapOpen)closeFieldMap();else openFieldMap()};
+
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
   if(haboobMap(mx,W))return;   // caught in a haboob: the map scrambles to static instead of drawing normally (see 75-haboob.js)
-  mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
-  mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
-  if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
-  mx.fillStyle='#c4955f';mx.fillRect(wx(-40),wz(27),ws(70),ws(29));
-  mx.strokeStyle='rgba(43,29,18,.55)';mx.lineWidth=2;mx.strokeRect(wx(-40),wz(27),ws(70),ws(29));
-  for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.max(1.6,ws(h.r)),0,6.3);mx.fill()}
-  mx.fillStyle='#8d8f69';for(const t of TENTS)mx.fillRect(wx(t.x-t.hw),wz(t.z-t.hd),ws(t.hw*2),ws(t.hd*2));
-  mx.fillStyle='#9b7b58';mx.fillRect(wx(12.5),wz(42.5),ws(7),ws(5));
-  mx.fillStyle='#b07650';mx.fillRect(wx(-34),wz(42),ws(8),ws(6));
-  mx.fillStyle='#4f8fb8';mx.fillRect(wx(2.5),wz(35),ws(5),ws(2.4));
-  if(S.revealed){mx.strokeStyle='#d12a2a';mx.lineWidth=3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
-  mx.fillStyle='rgba(43,29,18,.45)';for(const b of bots){mx.beginPath();mx.arc(wx(b.p.g.position.x),wz(b.p.g.position.z),3,0,6.3);mx.fill()}
-  for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
+  const night=clockT()>=DAYMS;
+  if(!mapCache||mapCacheNight!==night)buildMapCache(night);
+  let sx=ccx(mcx-MV),sy=ccz(mcz-MV),sw=ccs(MV*2),sh=ccs(MV*2);
+  sx=clamp(sx,0,MAP_CACHE_RES-sw);sy=clamp(sy,0,MAP_CACHE_RES-sh);
+  mx.imageSmoothingEnabled=false;mx.drawImage(mapCache,sx,sy,sw,sh,0,0,W,W);
+  for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.min(9,Math.max(1.6,ws(h.r))),0,6.3);mx.fill()}
+  if(S.revealed){mx.strokeStyle=night?'#ff6a5a':'#d12a2a';mx.lineWidth=night?3.5:3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
+  /* NPCs: smaller cream diamonds (shape, not just color, so it reads without relying on color) */
+  for(const b of bots){const X=wx(b.p.g.position.x),Z=wz(b.p.g.position.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
+    mx.save();mx.translate(X,Z);mx.rotate(Math.PI/4);mx.fillStyle=night?'#cfc4a4':'#f3e6c8';mx.strokeStyle='#2b1d12';mx.lineWidth=1.3;mx.fillRect(-3.2,-3.2,6.4,6.4);mx.strokeRect(-3.2,-3.2,6.4,6.4);mx.restore()}
+  /* remote players: stable per-player color (derived from their camper-color index) plus a 1-2
+     letter initial, so identity doesn't depend on color alone */
+  for(const R of remotes.values()){const X=wx(R.p.g.position.x),Z=wz(R.p.g.position.z);if(X<-8||Z<-8||X>W+8||Z>W+8)continue;
+    const col=playerColorHex(R.ci);mx.fillStyle=col;mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X,Z,7,0,6.3);mx.fill();mx.stroke();
+    mx.fillStyle=readableOn(col);mx.font='700 8px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(initialsOf(R.name),X,Z+0.5);
+    if(fieldMapOpen){mx.fillStyle=night?'#EDE2C8':'#2b1d12';mx.font='700 12px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='top';mx.fillText(R.name,X,Z+11)}}
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
@@ -77,8 +246,13 @@ function drawMap(){
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
   if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
-  mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}
-  {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
+  /* lizards: only within 25 m of the player (48 exist across the whole lake bed -- drawing them all
+     would clutter the map and reveal distant threats), small yellow hazard triangles */
+  if(S.started)for(const L of lizards){const dx=L.x-P.x,dz=L.z-P.z;if(dx*dx+dz*dz>625)continue;
+    const X=wx(L.x),Z=wz(L.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
+    mx.fillStyle='#D7BF43';mx.strokeStyle='#2b1d12';mx.lineWidth=1;mx.beginPath();mx.moveTo(X,Z-4);mx.lineTo(X+4,Z+3);mx.lineTo(X-4,Z+3);mx.closePath();mx.fill();mx.stroke()}
+  mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}   // javelina herd (server-run, see 83-javelinas.js)
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
+  drawMapEdgeIndicators(W,night);
 }
 

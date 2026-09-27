@@ -29,30 +29,220 @@ function toggleBunk(bi){
 }
 function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold tube to the Warden. Red flags mark the search area.`,'gold',6000)}
 
-/* shop */
+/* ---------- Wreck Room store (docs/ui-redesign-spec.md section 2) ---------- */
+// NOTE: the spec was written pre-split and points at 45-state.js for this; the actual store code
+// (and its `openShop`/`closeShop`/`renderShop`/`SHOP` symbols) lives here, in 50-tents.js -- this
+// file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
+// (S.up[id], S.onions, S.batt) are unchanged from before.
 const SHOP=[
-  {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45},
-  {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110},
-  {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70},
-  {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30},
-  {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60},
-  {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35},
-  {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions'},
-  {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt'},
+  {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel'},
+  {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long'},
+  {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
+  {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
+  {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
+  {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60,cat:'supplies',icon:'sack'},
+  {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
+  {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
-let shopOpen=false;
-function openShop(){shopOpen=true;releaseLock();$('#shop').hidden=false;renderShop();setTimeout(()=>$('#shopClose').focus(),30)}
-function closeShop(){shopOpen=false;$('#shop').hidden=true}
-function renderShop(){
-  $('#shopSeeds').textContent=S.seeds;const list=$('#shopList');list.textContent='';
-  for(const it of SHOP){
-    const row=document.createElement('div');row.className='shoprow';
-    const b=document.createElement('b');b.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc+(it.stack==='onions'?` You have ${S.onions}.`:it.stack==='batt'?` Battery: ${Math.round(S.batt)}%.`:'');
-    const btn=document.createElement('button');const owned=!it.stack&&S.up[it.id];
-    btn.textContent=owned?'Owned':`${it.cost} seeds`;btn.disabled=owned||S.seeds<it.cost;btn.id='buy-'+it.id;
-    btn.onclick=()=>{if(S.seeds<it.cost)return;S.seeds-=it.cost;if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax();sfx.coin();renderShop();toast(`Bought: ${it.name}`,'good',2000)};
-    row.append(b,d,btn);list.appendChild(row);
+const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'}];
+const shopCatLabel=id=>(SHOP_CATS.find(c=>c.id===id)||{}).label||'';
+let shopOpen=false,shopCat='all',shopSel='spade',shopConfirming=false,shopPrevFocus=null,shopGpTimer=null;
+const shopGp={dir:null,t:0,a:false,b:false};
+
+/* live effect text for the detail panel -- computed from real game state (not baked into SHOP)
+   so level bonuses and current counts stay accurate, per the spec's "reflect displayed totals". */
+function shopEffect(it){
+  switch(it.id){
+    case 'spade': return {label:'Scoop depth',from:'0.088 m / scoop',to:'0.15 m / scoop',note:'About 70% deeper per scoop.'};
+    case 'long': return {label:'Max hole depth',from:'5 ft',to:'8 ft'};
+    case 'detector': return {label:'Detection range',from:'No detector',to:'7 m range'};
+    case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+' (current max)',to:(160+bonus)+' (with canteen)'}}
+    case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
+    case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
+    case 'onion': return {label:'Lizard ward',from:`${S.onions} on hand`,to:'45 s protection per onion'};
+    case 'battery': return {label:'Flashlight charge',from:Math.round(S.batt)+'%',to:'100%'};
   }
+  return null;
+}
+function shopStatus(it){
+  if(it.id==='battery'&&S.batt>=100)return{kind:'full'};
+  if(!it.stack&&S.up[it.id])return{kind:'owned'};
+  if(S.seeds<it.cost)return{kind:'short',need:it.cost-S.seeds};
+  return{kind:'available'};
+}
+function shopItemsForCat(cat){return cat==='all'?SHOP:SHOP.filter(it=>it.cat===cat)}
+function shopVisibleIds(){return[...$('#shopList').children].map(el=>el.dataset.item)}
+function shopColsCount(){
+  const items=[...$('#shopList').children];if(!items.length)return 1;
+  const top0=items[0].offsetTop;let n=0;for(const it of items){if(it.offsetTop===top0)n++;else break}
+  return Math.max(1,n);
+}
+function shopFocusable(){return[...$('#shop').querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetParent!==null)}
+
+function buildShopTabs(){
+  const box=$('#shopTabs');box.textContent='';
+  for(const c of SHOP_CATS){
+    const b=document.createElement('button');b.type='button';b.className='shop-tab';b.setAttribute('role','tab');
+    b.id='shoptab-'+c.id;b.textContent=c.label;const sel=c.id===shopCat;
+    b.setAttribute('aria-selected',String(sel));b.tabIndex=sel?0:-1;
+    b.onclick=()=>setShopCategory(c.id);
+    box.appendChild(b);
+  }
+}
+function moveShopTab(dir){const i=SHOP_CATS.findIndex(c=>c.id===shopCat),n=SHOP_CATS.length;setShopCategory(SHOP_CATS[(i+dir+n)%n].id,true)}
+function setShopCategory(cat,focusTab){
+  shopCat=cat;
+  for(const b of $('#shopTabs').children){const sel=b.id==='shoptab-'+cat;b.setAttribute('aria-selected',String(sel));b.tabIndex=sel?0:-1;if(sel&&focusTab)b.focus()}
+  buildShopGrid();
+  const ids=shopVisibleIds();if(!ids.includes(shopSel))shopSel=ids[0]||null;
+  renderShopDetail();
+}
+function buildShopGrid(){
+  const list=$('#shopList');list.textContent='';
+  for(const it of shopItemsForCat(shopCat)){
+    const b=document.createElement('button');b.type='button';b.className='shop-item';b.dataset.item=it.id;
+    b.setAttribute('aria-pressed','false');b.setAttribute('aria-controls','shopDetail');
+    const icon=document.createElement('span');icon.className='shop-item__icon';icon.setAttribute('aria-hidden','true');
+    icon.innerHTML=`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`;
+    const body=document.createElement('span');body.className='shop-item__body';
+    const copy=document.createElement('span');copy.className='shop-item__copy';
+    const strong=document.createElement('strong');strong.textContent=it.name;
+    const small=document.createElement('small');small.textContent=shopCatLabel(it.cat)+' · '+it.desc;
+    copy.append(strong,small);
+    const meta=document.createElement('span');meta.className='shop-item__meta';
+    const price=document.createElement('span');price.className='shop-item__price';price.textContent=it.cost+' seeds';
+    const state=document.createElement('span');state.className='shop-item__state';
+    meta.append(price,state);body.append(copy,meta);
+    b.append(icon,body);
+    b.onclick=()=>selectShopItem(it.id,true);
+    list.appendChild(b);
+  }
+  updateShopCardStates();
+}
+function updateShopCardStates(){
+  for(const b of $('#shopList').children){
+    const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
+    const stateEl=b.querySelector('.shop-item__state');
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:'Available';
+    b.classList.toggle('is-owned',st.kind==='owned');
+    const sel=b.dataset.item===shopSel;
+    b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);
+  }
+}
+function renderShopDetail(){
+  const box=$('#shopDetailContent');box.innerHTML='';
+  const it=SHOP.find(s=>s.id===shopSel);
+  if(!it){const p=document.createElement('p');p.className='shop-empty';p.textContent='Nothing in this category yet.';box.appendChild(p);return}
+  const st=shopStatus(it);
+  const h=document.createElement('h3');h.className='shop-detail__title';
+  h.innerHTML=`<svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-${it.icon}"></use></svg>${it.name}`;
+  const desc=document.createElement('p');desc.className='shop-detail__desc';desc.textContent=it.desc;
+  box.append(h,desc);
+  const eff=shopEffect(it);
+  if(eff){
+    const wrap=document.createElement('div');wrap.className='shop-detail__effect';
+    wrap.innerHTML=`<span class="k">${eff.label}</span><span class="from">${eff.from}</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="to">${eff.to}</span>`;
+    box.appendChild(wrap);
+    if(eff.note){const n=document.createElement('p');n.className='shop-detail__note';n.textContent=eff.note;box.appendChild(n)}
+  }
+  const priceRow=document.createElement('p');priceRow.className='shop-detail__price';
+  priceRow.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>${it.cost} seeds`;
+  box.appendChild(priceRow);
+  const btn=document.createElement('button');btn.type='button';btn.id='shopBuyBtn';btn.className='ui-button ui-button--primary';
+  if(st.kind==='owned'){btn.textContent='Already issued';btn.disabled=true}
+  else if(st.kind==='full'){btn.textContent='Battery full';btn.disabled=true}
+  else if(st.kind==='short'){btn.textContent=`Need ${st.need} more seeds`;btn.disabled=true}
+  else{btn.textContent=`Buy for ${it.cost} seeds`;btn.disabled=false;btn.onclick=()=>openShopConfirm(it.id)}
+  box.appendChild(btn);
+  if(it.justBought){const badge=document.createElement('span');badge.className='ui-badge ui-badge--brass shop-detail__issued';badge.textContent='Issued';box.appendChild(badge)}
+}
+function animateShopSeeds(){const line=$('#shopSeeds').closest('.seedline');line.classList.remove('seed-pulse');void line.offsetWidth;line.classList.add('seed-pulse')}
+function openShopConfirm(id){
+  const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
+  shopConfirming=true;
+  const box=$('#shopConfirm');box.hidden=false;box.innerHTML='';
+  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} seeds. Balance after: ${S.seeds-it.cost}.`;
+  const row=document.createElement('div');row.className='shop-confirm__row';
+  const yes=document.createElement('button');yes.type='button';yes.id='shopConfirmBuy';yes.className='ui-button ui-button--primary';yes.textContent='Confirm purchase';yes.onclick=()=>buyShopItem(id);
+  const no=document.createElement('button');no.type='button';no.className='ui-button ui-button--quiet';no.textContent='Cancel';no.onclick=hideShopConfirm;
+  row.append(yes,no);box.append(p,row);$('#shopFeedback').textContent='';
+  setTimeout(()=>yes.focus(),10);
+}
+function hideShopConfirm(){
+  if(!shopConfirming)return;shopConfirming=false;const box=$('#shopConfirm');box.hidden=true;box.innerHTML='';
+  const btn=$('#shopBuyBtn');if(btn)btn.focus();
+}
+/* the one guarded purchase path -- re-checks funds/owned/full at the moment of purchase, not just
+   when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
+function buyShopItem(id){
+  const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
+  S.seeds-=it.cost;
+  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
+  sfx.coin();hideShopConfirm();it.justBought=performance.now();
+  toast(`Bought: ${it.name}`,'good',2000);
+  $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} seeds left.`;
+  animateShopSeeds();renderShop();
+  setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);
+}
+function selectShopItem(id,focus){
+  if(shopSel===id){if(focus){const el=$(`.shop-item[data-item="${CSS&&CSS.escape?CSS.escape(id):id}"]`);if(el)el.focus()}return}
+  shopSel=id;hideShopConfirm();updateShopCardStates();renderShopDetail();
+  const el=$(`.shop-item[data-item="${CSS&&CSS.escape?CSS.escape(id):id}"]`);
+  if(el){if(focus)el.focus();if(isTouch)setTimeout(()=>{const d=$('#shopDetail');if(d)d.scrollIntoView({block:'nearest'})},10)}
+}
+function moveShopGrid(key){
+  const ids=shopVisibleIds();const cur=ids.indexOf(shopSel);if(cur<0){if(ids[0])selectShopItem(ids[0],true);return}
+  const cols=shopColsCount();let next=cur;
+  if(key==='ArrowRight')next=Math.min(ids.length-1,cur+1);
+  else if(key==='ArrowLeft')next=Math.max(0,cur-1);
+  else if(key==='ArrowDown')next=Math.min(ids.length-1,cur+cols);
+  else if(key==='ArrowUp')next=Math.max(0,cur-cols);
+  selectShopItem(ids[next],true);
+}
+function trapShopTab(e){
+  const f=shopFocusable();if(!f.length)return;const first=f[0],last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+}
+/* keyboard integration point for the shop branch of the keydown handler (see 55-input.js) */
+function shopKeydown(e){
+  if(e.key==='Escape'){e.preventDefault();if(shopConfirming)hideShopConfirm();else closeShop();return}
+  if(e.key==='f'||e.key==='F'){e.preventDefault();closeShop();return}
+  if(e.key==='Tab'){trapShopTab(e);return}
+  if(shopConfirming&&$('#shopConfirm').contains(document.activeElement))return; // don't steal keys from Confirm/Cancel
+  if(document.activeElement&&document.activeElement.closest('#shopTabs')&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();moveShopTab(e.key==='ArrowRight'?1:-1);return}
+  if(!(document.activeElement&&document.activeElement.classList.contains('shop-item')))return;
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveShopGrid(e.key);return}
+  if(e.key==='Home'){e.preventDefault();const ids=shopVisibleIds();if(ids[0])selectShopItem(ids[0],true);return}
+  if(e.key==='End'){e.preventDefault();const ids=shopVisibleIds();if(ids.length)selectShopItem(ids[ids.length-1],true);return}
+}
+/* gamepad support -- only while shopOpen, per the spec: 10 Hz poll, 0.25 dead zone, 180 ms repeat */
+function pollShopGamepad(){
+  if(!shopOpen)return;
+  const pads=navigator.getGamepads?navigator.getGamepads():null;const gp=pads&&pads[0];if(!gp)return;
+  const now=performance.now(),DZ=0.25,REPEAT=180,ax=gp.axes[0]||0,ay=gp.axes[1]||0;
+  const dpadL=gp.buttons[14]&&gp.buttons[14].pressed,dpadR=gp.buttons[15]&&gp.buttons[15].pressed,dpadU=gp.buttons[12]&&gp.buttons[12].pressed,dpadD=gp.buttons[13]&&gp.buttons[13].pressed;
+  const dir=dpadL||ax<-DZ?'ArrowLeft':dpadR||ax>DZ?'ArrowRight':dpadU||ay<-DZ?'ArrowUp':dpadD||ay>DZ?'ArrowDown':null;
+  if(dir){if(shopGp.dir!==dir||now-shopGp.t>REPEAT){shopGp.dir=dir;shopGp.t=now;if(!shopConfirming)moveShopGrid(dir)}}else shopGp.dir=null;
+  const aBtn=gp.buttons[0]&&gp.buttons[0].pressed,bBtn=gp.buttons[1]&&gp.buttons[1].pressed;
+  if(aBtn&&!shopGp.a){shopGp.a=true;if(shopConfirming){const c=$('#shopConfirmBuy');if(c)c.click()}else{const b=$('#shopBuyBtn');if(b&&!b.disabled)b.click()}}else if(!aBtn)shopGp.a=false;
+  if(bBtn&&!shopGp.b){shopGp.b=true;if(shopConfirming)hideShopConfirm();else closeShop()}else if(!bBtn)shopGp.b=false;
+}
+function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
+function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
+
+function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail()}
+function openShop(){
+  shopOpen=true;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
+  buildShopTabs();buildShopGrid();
+  const ids=shopVisibleIds();if(!ids.includes(shopSel))shopSel=ids[0]||null;
+  renderShop();startShopGamepad();
+  setTimeout(()=>{const sel=shopSel?$(`.shop-item[data-item="${CSS&&CSS.escape?CSS.escape(shopSel):shopSel}"]`):null;(sel||$('#shopClose')).focus()},30);
+}
+function closeShop(){
+  shopOpen=false;hideShopConfirm();$('#shop').hidden=true;stopShopGamepad();
+  if(shopPrevFocus&&document.contains(shopPrevFocus))shopPrevFocus.focus();
+  shopPrevFocus=null;
 }
 $('#shopClose').onclick=closeShop;
 
