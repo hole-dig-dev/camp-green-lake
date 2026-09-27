@@ -189,7 +189,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   <div id="prompt" class="panel" hidden></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
-  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight</div>
+  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · B twerk</div>
 </div>
 
 <div id="title" class="overlay">
@@ -211,6 +211,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
       <div><kbd>1</kbd>–<kbd>5</kbd> shout at friends</div>
       <div><kbd>V</kbd> first / third person</div>
       <div><kbd>C</kbd> crouch (hide from police)</div>
+      <div><kbd>B</kbd> twerk</div>
     </div>
     <p class="fine">Anyone with this page open shows up in your camp. Share the link and dig together.</p>
   </div>
@@ -980,6 +981,7 @@ addEventListener('keydown',e=>{
   if(k==='q')eatOnion();
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
+  if(k==='b'&&!e.repeat)twerk();
   if(k==='v')toggleView();
   if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
@@ -1113,6 +1115,7 @@ function onMsg(m){
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
+    case 'twerk':{const R=remotes.get(m.id);if(R&&!(R.twerkT>0))R.twerkT=TWERK_SECS;break}
     case 'run':setRun(m);break;
     case 'quota':setRun(m);quotaMet();break;
     case 'grace':graceDay();break;
@@ -1151,6 +1154,7 @@ function updateRemotes(dt){
     if(dx*dx+dz*dz>100){g.position.set(R.tx,R.ty,R.tz)}else{g.position.x+=dx*k;g.position.z+=dz*k;g.position.y+=(R.ty-g.position.y)*k}
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
     R.dph=(R.dph+dt/0.42)%1;animPerson(R.p,R.anim,dt,R.dph);
+    if(R.twerkT>0){R.twerkT-=dt;twerkPose(R.p);if(R.twerkT<=0){endTwerk(R.p);const gp=g.position;fart(gp.x,gp.y,gp.z,g.rotation.y,Math.hypot(gp.x-P.x,gp.z-P.z))}}
   }
 }
 
@@ -1163,11 +1167,11 @@ function updatePlayer(dt){
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
   if(touch.id!==null){ix=touch.ix;iz=touch.iz}
-  if(uiOpen()){ix=0;iz=0}
+  if(uiOpen()||S.twerkT>0){ix=0;iz=0}
   const sprint=KEYS['shift']&&S.water>0&&S.carry==null;
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
-  const digging=digHeld&&!uiOpen()&&S.carry==null;
+  const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0);
   P.moving=false;
   if(digging){
     P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=0.42;P.digPh=(P.digT%iv)/iv;
@@ -1192,6 +1196,7 @@ function updatePlayer(dt){
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
   animPerson(me,P.anim,dt,P.digPh);
+  if(S.twerkT>0){S.twerkT-=dt;twerkPose(me);if(S.twerkT<=0){endTwerk(me);fart(P.x,P.y,P.z,me.g.rotation.y,0);S.noise=1}}
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
@@ -1898,6 +1903,37 @@ function updateLights(dt){
   for(let i=1;i<FL.length;i++){const e=lit[i-1];if(!e){aimLight(FL[i],0,0,0,0,0,0,false);continue}const g=e.R.p.g;const r=g.rotation.y;aimLight(FL[i],g.position.x,g.position.y+1.5,g.position.z,Math.sin(r),-0.15,Math.cos(r),true)}
 }
 
+/* ---- twerk (B): shake it for a couple of seconds, then an audible fart and a little green cloud ---- */
+const TWERK_SECS=2.4;
+function twerk(){if(!S.started||S.ko||S.twerkT>0||uiOpen()||S.carry!=null)return;S.twerkT=TWERK_SECS;digHeld=false;S.noise=1;wsSend({t:'twerk'})}
+function twerkPose(p){
+  const ph=performance.now()/1000*20,b=Math.abs(Math.sin(ph));
+  p.upper.rotation.x=0.95;p.upper.rotation.y=Math.sin(ph*0.5)*0.12;p.upper.rotation.z=Math.sin(ph)*0.16;p.upper.position.y=0.72+b*0.08;
+  p.legL.rotation.x=-0.25;p.legR.rotation.x=-0.25;p.armL.rotation.x=-1;p.armR.rotation.x=-1;p.armL.rotation.z=0.2;
+}
+function endTwerk(p){p.upper.rotation.z=0;p.upper.rotation.y=0;p.upper.position.y=0.8}
+function fartSound(vol){
+  if(!AC||vol<=0.02)return;const t=AC.currentTime,o=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain(),lfo=AC.createOscillator(),lg=AC.createGain();
+  o.type='sawtooth';o.frequency.setValueAtTime(115,t);o.frequency.exponentialRampToValueAtTime(52,t+0.8);
+  lfo.type='square';lfo.frequency.setValueAtTime(30,t);lfo.frequency.linearRampToValueAtTime(12,t+0.8);lg.gain.value=38;lfo.connect(lg).connect(o.frequency);
+  f.type='lowpass';f.frequency.value=450;f.Q.value=7;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.55*vol,t+0.04);g.gain.setValueAtTime(0.55*vol,t+0.55);g.gain.exponentialRampToValueAtTime(0.001,t+0.9);
+  o.connect(f).connect(g).connect(master);o.start(t);lfo.start(t);o.stop(t+0.95);lfo.stop(t+0.95);noise(0.55,320,1,0.3*vol,'lowpass');
+}
+const CLOUDS=[],cloudGeo=new T.SphereGeometry(0.2,8,6);
+function fartCloud(x,y,z,ry){
+  const g=new T.Group(),bx=-Math.sin(ry),bz=-Math.cos(ry);g.position.set(x+bx*0.35,y+0.72,z+bz*0.35);
+  for(let i=0;i<7;i++){const m=new T.Mesh(cloudGeo,new T.MeshBasicMaterial({color:0x86d44f,transparent:true,opacity:0.65,depthWrite:false}));m.position.set((Math.random()-0.5)*0.35,(Math.random()-0.3)*0.25,(Math.random()-0.5)*0.35);
+    m.userData.v=new T.Vector3(bx*0.5+(Math.random()-0.5)*0.35,0.2+Math.random()*0.3,bz*0.5+(Math.random()-0.5)*0.35);g.add(m)}
+  scene.add(g);CLOUDS.push({g,t:0});
+}
+function updateClouds(dt){
+  for(let i=CLOUDS.length-1;i>=0;i--){const c=CLOUDS[i];c.t+=dt;const k=Math.min(1,c.t/2.2);
+    for(const m of c.g.children){m.position.addScaledVector(m.userData.v,dt);m.scale.setScalar(1+k*2.4);m.material.opacity=0.65*(1-k)}
+    if(k>=1){scene.remove(c.g);for(const m of c.g.children)m.material.dispose();CLOUDS.splice(i,1)}}
+}
+function fart(x,y,z,ry,dist){fartCloud(x,y,z,ry);fartSound(clamp(1.2-dist/45,0,1))}
+
 /* ---- everything above, once a frame ---- */
 let luckyT=0;
 function updateCoop(dt){
@@ -1923,7 +1959,7 @@ let last=performance.now(),tAcc=0,mapT=0;
 function frame(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt)}else titleCamera(dt);
-  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
+  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateClouds(dt);updateRain(dt);updateDetector(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
@@ -1947,6 +1983,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startG
 if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('carry')){P.x=20;P.z=-10;P.yaw=0;P.y=groundAt(P.x,P.z);addProp(9990,'safe',P.x,P.z-1.6);S.carry=9990;S.sack=['cap','jar','locket'];setRun({day:2,bank:140,quota:SIM.quotaFor(2,1)});PROG.xp=700;addXP(1)}
   if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
+  if(h.includes('twerk')){P.x=20;P.z=-10;P.y=groundAt(P.x,P.z);P.fa=0;P.yaw=Math.PI/2;P.pitch=0.2;S.twerkT=60;setTimeout(()=>fart(P.x,P.y,P.z,0,0),600)}
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }

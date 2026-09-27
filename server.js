@@ -239,6 +239,12 @@ wss.on('connection', ws => {
         world.clock = { off: num(m.off, -1e13, 1e13, 0), paused: m.paused === true, pt: num(m.pt, 0, 12 * 60 * 1000, 0) }; dirty = true;
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
+      case 'twerk':
+        // emote: everyone nearby sees it and hears the fart at the end (and so does Zeroni)
+        if (Date.now() - (c.twerkAt || 0) < 2000) return;
+        c.twerkAt = Date.now(); c.nz = 1; c.chatAt = Date.now();
+        broadcast({ t: 'twerk', id: c.id }, c.id);
+        break;
       case 'say':
         c.nz = 1; c.chatAt = Date.now();
         broadcast({ t: 'say', id: c.id, i: num(m.i, 0, 4, 0) | 0 }, c.id);
