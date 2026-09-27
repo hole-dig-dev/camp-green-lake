@@ -49,6 +49,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/70-player.js` | player movement/physics, camera, health and healing |
 | `public/js/72-twisters.js` | twisters: schedule, pull/suck-up/ragdoll, visuals, sound |
 | `public/js/74-landslide.js` | landslides: deterministic boulder physics, hits, warnings |
+| `public/js/75-haboob.js` | haboob dust storm: deterministic schedule, wall visuals, fog/light blend, sound |
 | `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
 | `public/js/78-hud.js` | HUD panel and minimap |
 | `public/js/80-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |

@@ -9,7 +9,7 @@ const ENV={
   // seed comes from x/z alone (not the clock), so every client hashes the exact same seed from the exact same
   // shared numbers -- only t0 (each client's own twNow() at the moment it hears about it) can drift a little.
   landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,twNow())},
-  haboob:{spawn:o=>addHaboob(o.a)},   // o.a carries the compass bearing (radians) it comes from; o.x/o.z are unused (see 75-haboob.js)
+  haboob:{spawn:o=>addHaboob(o.a,o.x,o.z)},   // o.a: compass bearing it comes from; o.x/o.z: the host's spot when they typed it (see 75-haboob.js)
 };
 function spawnEnv(k,o,by){
   if(!ENV[k])return false;
@@ -71,8 +71,8 @@ command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off 
 const HB_BRG={n:0,ne:Math.PI/4,e:Math.PI/2,se:Math.PI*3/4,s:Math.PI,sw:Math.PI*5/4,w:Math.PI*3/2,nw:Math.PI*7/4};
 command('haboob',{usage:'haboob [direction]',help:'Start a dust storm blowing in from a compass direction (n/ne/e/se/s/sw/w/nw), or a random one. Everyone sees it.',
   run([d]){const k=(d||'').toLowerCase();if(k&&!(k in HB_BRG))throw new Error('Direction must be one of n, ne, e, se, s, sw, w, nw.');
-    const a=k?HB_BRG[k]:Math.random()*Math.PI*2;
-    spawnEnv('haboob',{x:0,z:0,a});if(online())wsSend({t:'env',k:'haboob',x:0,z:0,a});
+    const a=k?HB_BRG[k]:Math.random()*Math.PI*2,o={x:P.x,z:P.z,a};   // spawn point = wherever the host is standing right now
+    spawnEnv('haboob',o);if(online())wsSend({t:'env',k:'haboob',...o});
     return`Dust storm rolling in from the ${compass(Math.sin(a)*100,-Math.cos(a)*100)}.`}});   // same fromVec math as hbCalc's warning toast in 75-haboob.js
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});

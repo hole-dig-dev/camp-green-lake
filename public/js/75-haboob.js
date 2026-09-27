@@ -33,7 +33,11 @@ let HABOOB_NATURAL=true;            // OFF SWITCH for the natural schedule: the 
 function hbFromVec(brg){return[Math.sin(brg),-Math.cos(brg)]}
 
 /* one natural plan per HB_WIN window: does a haboob happen, and which way does it come from. Same trick as
-   twPlan()/lsPlan(): a window index hashed with a fixed seed, so every camper computes the identical answer. */
+   twPlan()/lsPlan(): a window index hashed with a fixed seed, so every camper computes the identical answer.
+   Unlike twisters, this ISN'T scaled by (1-nightF()) -- a haboob at night (with flashlights and headlights the
+   only light poking through) is allowed on purpose. It's safe to allow: hbBlend() only ever blends a copy of
+   whatever colour the night code already picked THIS frame, so a night haboob never fights or overwrites the
+   night sky/fog -- it just darkens and dusts it further, the same way it darkens and dusts a daytime sky. */
 function hbPlan(k){
   const r=mulberry32((k*2654435761^HB_SEED)>>>0);r();
   if(r()>HB_CHANCE)return null;
@@ -41,9 +45,17 @@ function hbPlan(k){
   const span=(HB_WARN+HB_INSIDE+HB_RECEDE)*1000,slack=Math.max(HB_WIN-span-20000,0);   // leave room so the whole event fits inside its own window
   return{brg,t0:k*HB_WIN+r()*slack};
 }
-/* a storm made on demand (console / ENV). Ignores the natural schedule/flag entirely -- it's a separate, one-off event. */
+/* a storm made on demand (console / ENV). Ignores the natural schedule/flag entirely -- it's a separate, one-off
+   event. ox,oz: the spawn point (the host's own position when they typed the command) -- t0 is picked so the storm
+   is exactly HB_SPAWN_DIST out from THAT point right now, same idea as spawnAhead() for twisters/landslides. Using
+   the transmitted spawn point (not each client's own position) matters: every client must derive the same t0, or
+   the front ends up in a different place for each of them. */
 let hbForced=null;
-function addHaboob(brg){hbForced={brg,t0:twNow()}}
+const HB_SPAWN_DIST=HB_WARN_DIST;   // a freshly-triggered storm starts right at the edge of the warning window
+function addHaboob(brg,ox,oz){
+  const[frx,frz]=hbFromVec(brg),vx=-frx,vz=-frz,pu=ox*vx+oz*vz;
+  hbForced={brg,t0:twNow()-(pu-HB_SPAWN_DIST)*1000/HB_SPEED};
+}
 
 /* where the front is, right now, relative to one point (the player). Pure function of (plan, shared time, x, z) --
    no state at all, so it can't drift between clients or get stuck if a client joins mid-storm.
@@ -85,15 +97,16 @@ const hbTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=
     const rg=x.createRadialGradient(px,py,0,px,py,r);rg.addColorStop(0,`rgba(160,110,60,${0.25+Math.random()*0.3})`);rg.addColorStop(1,'rgba(160,110,60,0)');
     x.fillStyle=rg;x.beginPath();x.arc(px,py,r,0,6.3);x.fill()}
   const t=new T.CanvasTexture(c);t.wrapS=T.RepeatWrapping;t.wrapT=T.ClampToEdgeWrapping;return t})();
-function hbMat(op){return new T.MeshBasicMaterial({map:hbTex,color:0xffffff,transparent:true,opacity:op,depthWrite:false,side:T.DoubleSide,fog:false})}
+function hbMat(tex,op){return new T.MeshBasicMaterial({map:tex,color:0xffffff,transparent:true,opacity:op,depthWrite:false,side:T.DoubleSide,fog:false})}
 const HB_PLANE=new T.PlaneGeometry(1,1,1,10);   // extra height segments so the vertex shader can undulate the top edge
 const hbWall=new T.Group();hbWall.visible=false;scene.add(hbWall);
 const hbLayers=[[1,0.85,2.2],[0.72,0.7,1.6],[0.5,0.55,1.1]].map(([sc,op,speed])=>{   // three depths: back/mid/front, each a bit smaller & fainter
-  const m=hbMat(op),mesh=new T.Mesh(HB_PLANE,m);mesh.renderOrder=2;
+  const tex=hbTex.clone();tex.needsUpdate=true;   // its own offset, so the three layers scroll at their own speed instead of sharing one
+  const m=hbMat(tex,op),mesh=new T.Mesh(HB_PLANE,m);mesh.renderOrder=2;
   m.onBeforeCompile=sh=>{sh.uniforms.uTime=hbU.uTime;sh.uniforms.uSeed={value:sc*7.3};
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;uniform float uSeed;')
       .replace('#include <begin_vertex>','#include <begin_vertex>\nfloat top=uv.y;transformed.x+=sin(uTime*0.6+position.x*0.015+uSeed)*top*top*9.0;transformed.z+=cos(uTime*0.5+position.x*0.02+uSeed)*top*top*6.0;')};
-  hbWall.add(mesh);return{mesh,sc,speed};
+  hbWall.add(mesh);return{mesh,sc,speed,tex};
 });
 const hbU={uTime:{value:0}};
 
@@ -121,7 +134,7 @@ function hbVisual(offset,vx,vz,dt){
   const h=60+180*near,w=500+900*near;                                // grows from a distant sliver into a towering, wide wall
   hbWall.position.set(wx,groundAt(wx,wz)+h*0.42,wz);hbWall.rotation.y=ang;
   hbLayers.forEach((l,i)=>{l.mesh.scale.set(w*l.sc,h*l.sc,1);l.mesh.position.set(0,0,(1-l.sc)*40);   // deeper layers sit a touch further back for parallax
-    l.mesh.material.opacity=(0.25+0.65*near)*[1,0.85,0.7][i];hbTex.offset.x=(hbTex.offset.x+dt*l.speed*0.02)%1});
+    l.mesh.material.opacity=(0.25+0.65*near)*[1,0.85,0.7][i];l.tex.offset.x=(l.tex.offset.x+dt*l.speed*0.02)%1});
 }
 function hbDustUpdate(dt,vx,vz,F){
   if(F<0.04){hbDustMesh.visible=false;return}
