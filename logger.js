@@ -10,6 +10,8 @@
 //
 // Event types and fields:
 //   join            {id,n}                             camper connected
+//   joinRejected    {id?,ip,n?,reason,badJoins?}         a socket was refused: wrong camp password, too many
+//                                                        connections from that address, or a connection-rate limit
 //   leave           {id,n}                              camper disconnected
 //   pos             {id,n,x,y,z,a,hp,wt,f,down,camp}    position snapshot, ~2s per camper (a = anim state 0-4,
 //                                                        f = raw client flag bits, down/camp = booleans)
@@ -32,6 +34,10 @@
 //   quota           {met,bank,quota,day}                 curfew quota check
 //   grace           {}                                   crew got here too late in the day to be checked
 //   fired           {bank,quota}                          crew missed quota; the run resets
+//   sleep           {id,n,on}                             a camper lay down in (on:true) or got out of (on:false)
+//                                                          a bunk
+//   daybreak        {asleep}                              every joined camper was asleep in a bunk; the night was
+//                                                          skipped straight to dawn (asleep = how many campers)
 //   mobsOn/mobsOff  {kind}                               police trucks / Madame Zeroni appear or leave for the night
 //   spot / lost     {id,n,x,z}                            a police truck spotted / lost a camper
 //   down            {id,n,x,z,by}                         knocked down by police or Zeroni ("by")
@@ -43,8 +49,13 @@
 //   lizChase        {id,n,liz,x,z,dist}                    lizard #liz started chasing camper n from dist metres
 //   lizBite         {id,n,liz,x,z}                          lizard #liz bit camper n
 //   twWarn          {id,n,x,z,twx,twz,dist,dir}            twister warning shown to a camper
+//   twSuckUp        {id,n,x,z,twx,twz,s}                    a twister's core caught a camper and started pulling
+//                                                           them up (before the throw)
 //   twThrow         {id,n,x,z,twx,twz,dmg}                  a twister threw a camper
 //   found           {id,n,item,type,value,x,z,heavy,kb}     dug up an item
+//   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
+//   tentExit        {id,n,tent,name,x,z}                    stepped back outside a tent
+//   pause           {id,n,action}                           used the pause menu (action: 'restart' or 'quit')
 //   cmd             {id,n,line,reply,error}                developer console command: who ran what, and the result
 //   err             {id,n,msg,src,line,col,stack}           client JS error (window.onerror / unhandledrejection)
 //   perf            {id,n,fps,pr,gpu,sw}                    client fps / render pixel ratio / GPU name, ~10s

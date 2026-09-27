@@ -4,6 +4,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const SIM = require('./public/sim.js');
 const LOG = require('./logger.js'); // play-test event logging (data/logs/*.jsonl); PLAYLOG=0 turns it off
@@ -21,10 +22,53 @@ const NEW_DAY_AFTER_WIN_MS = 10 * 60 * 1000;
 // DEV_MODE=1 (the play-test server): every camper gets host powers, so anyone testing can use the in-game
 // console and admin panel. Never set it on the server your friends play on.
 const DEV_MODE = process.env.DEV_MODE === '1';
-const HOST_TOKEN = process.env.HOST_TOKEN || require('crypto').randomBytes(24).toString('hex');
+const HOST_TOKEN = process.env.HOST_TOKEN || crypto.randomBytes(24).toString('hex');
 const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
 const CHAT_RANGE = 30, HELP_RANGE = 3.5;
+
+/* ---- public-internet guards -------------------------------------------------------------------------------
+   PUBLIC=1 means "this server is reachable off the tailnet" (e.g. behind Tailscale Funnel) and turns on the
+   stricter defaults below. ALLOW_OPEN=1 is the explicit opt-out of the password requirement that comes with it.
+   CAMP_PASSWORD (optional even off PUBLIC) gates joining; unset means the old behind-Tailscale-only behaviour. */
+const PUBLIC = process.env.PUBLIC === '1';
+const ALLOW_OPEN = process.env.ALLOW_OPEN === '1';
+const CAMP_PASSWORD = process.env.CAMP_PASSWORD || '';
+if (PUBLIC && DEV_MODE) { console.error('Refusing to start: DEV_MODE=1 gives every camper host powers and cannot be combined with PUBLIC=1.'); process.exit(1); }
+if (PUBLIC && !CAMP_PASSWORD && !ALLOW_OPEN) { console.error('Refusing to start: PUBLIC=1 needs CAMP_PASSWORD=<something> set (or ALLOW_OPEN=1 to run it without one on purpose).'); process.exit(1); }
+if (DEV_MODE) console.warn('\n*** DEV_MODE=1: every camper gets host powers (console, clock, hazard spawns). Never run this on a server friends connect to. ***\n');
+
+// Behind Tailscale Funnel every socket/request arrives from 127.0.0.1; Funnel sets X-Forwarded-For to the real
+// caller's address. Trust its first hop when present, else fall back to the raw connection (local/tailnet-direct use).
+function clientIp(req) { const xff = req.headers['x-forwarded-for']; return xff ? String(xff).split(',')[0].trim() : (req.socket.remoteAddress || 'unknown'); }
+// Fixed-length hash compare so string length/content never leaks through timing.
+function safeEqual(a, b) { const ah = crypto.createHash('sha256').update(String(a)).digest(), bh = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(ah, bh); }
+// Sliding-window rate limiter for a per-connection hit array (pos/dig/ping/chat/etc.).
+function withinRate(hits, limit, windowMs) { const now = Date.now(); while (hits.length && now - hits[0] > windowMs) hits.shift(); if (hits.length >= limit) return false; hits.push(now); return true; }
+// Same, but keyed by IP into a shared Map (HTTP requests, new WS connections).
+function ipWithinRate(map, key, limit, windowMs) { let hits = map.get(key); if (!hits) { hits = []; map.set(key, hits); } return withinRate(hits, limit, windowMs); }
+
+const MAX_PER_IP = 4;                        // simultaneous sockets from one address
+const MAX_CONNS_PER_IP_PER_MIN = 10;         // new socket attempts per address per minute
+const JOIN_TIMEOUT_MS = 15000;               // sockets that never send a valid join get dropped
+const MAX_BAD_JOINS = 5;                     // wrong-password attempts before we hang up on a socket
+const HTTP_RATE = 120, HTTP_WINDOW_MS = 60000; // HTTP requests per address per minute
+const MAX_DIG_DIST = 6;                      // can't report a dig farther than this from your last known position
+const MAX_PLACE_DIST = 14;                   // ditto for dropped bags (props are placed at the dig site)
+const DIG_RATE = 8, DIG_WINDOW_MS = 1000;    // digs per connection per window
+const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
+const CHAT_RATE = 5, CHAT_WINDOW_MS = 4000;  // chat/shout messages per connection per window
+const ENV_RATE = 4, ENV_WINDOW_MS = 5000;    // hazard spawns per connection per window (host-only already)
+const SELL_RATE = 5, SELL_WINDOW_MS = 5000;  // sell messages per connection per window
+const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
+
+const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
+const ipHttpWindow = new Map(); // ip -> recent HTTP request timestamps
+setInterval(() => { // drop windows nobody's touched in a couple minutes so these maps don't grow forever
+  const cutoff = Date.now() - 120000;
+  for (const [ip, hits] of ipConnWindow) if (!hits.length || hits[hits.length - 1] < cutoff) ipConnWindow.delete(ip);
+  for (const [ip, hits] of ipHttpWindow) if (!hits.length || hits[hits.length - 1] < cutoff) ipHttpWindow.delete(ip);
+}, 60000);
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const num = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? clamp(v, a, b) : d; };
@@ -59,34 +103,58 @@ function save() {
 }
 setInterval(() => { if (Object.keys(world.recent).length) dirty = true; save(); }, 15000);
 
-function sendFile(res, file, type) {
+// CSP: 'self' for scripts/styles/connect plus the CDN/font hosts and inline <script>/<style> the game actually
+// uses; wss:/ws: spelled out (not just relying on 'self') since that's what the spec asked us to pin down.
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
+  "img-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'none'; object-src 'none'";
+function securityHeaders(res, isHtml) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  if (isHtml) { res.setHeader('Content-Security-Policy', CSP); res.setHeader('X-Frame-Options', 'DENY'); }
+}
+function sendFile(res, file, type, headOnly) {
   fs.readFile(path.join(PUB, file), (err, buf) => {
-    if (err) { res.writeHead(500); return res.end('missing game file'); }
+    if (err) { res.writeHead(500); return res.end('missing game file'); } // never echo fs error details to a client
+    securityHeaders(res, type.startsWith('text/html'));
     res.writeHead(200, { 'content-type': type, 'cache-control': 'no-cache' });
-    res.end(buf);
+    res.end(headOnly ? undefined : buf);
   });
 }
 
 const server = http.createServer((req, res) => {
-  const url = (req.url || '/').split('?')[0];
-  if (url.startsWith('/admin/')) {
-    // Admin controls for the host, used over SSH: curl -H 'x-admin: <token>' localhost:4300/admin/who
-    if (req.headers['x-admin'] !== HOST_TOKEN) { res.writeHead(404); return res.end('not found'); }
-    const q = new URL(req.url, 'http://x').searchParams;
-    res.writeHead(200, { 'content-type': 'application/json' });
-    if (url === '/admin/who') return res.end(JSON.stringify([...clients.values()].map(c => ({ id: c.id, n: c.n, joined: c.joined, host: c.host, v: c.v || 0 }))));
-    if (url === '/admin/sethost') { const n = cleanName(q.get('name')).toLowerCase(); if (!world.hostNames.includes(n)) world.hostNames.push(n); dirty = true; for (const c of clients.values()) if (c.n.toLowerCase() === n) { c.host = true; send(c, { t: 'host', on: true }); } return res.end(JSON.stringify(world.hostNames)); }
-    if (url === '/admin/refresh') { broadcast({ t: 'reset' }); return res.end('{"ok":true}'); }
-    // Tell open pages to save their progress and reload into the newest version.
-    if (url === '/admin/update') { broadcast({ t: 'update' }); return res.end('{"ok":true}'); }
-    return res.end('{}');
+  try {
+    if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
+    const ip = clientIp(req);
+    if (!ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
+    const url = (req.url || '/').split('?')[0];
+    if (url.startsWith('/admin/')) {
+      // Admin controls for the host, over SSH only: curl -H 'x-admin: <token>' localhost:4300/admin/who
+      // A request that went through Funnel/any reverse proxy always carries X-Forwarded-For; refuse those
+      // outright, correct token or not, so the admin surface is unreachable from the network no matter what.
+      if (req.headers['x-forwarded-for']) { res.writeHead(404); return res.end('not found'); }
+      if (!safeEqual(req.headers['x-admin'] || '', HOST_TOKEN)) { res.writeHead(404); return res.end('not found'); }
+      const q = new URL(req.url, 'http://x').searchParams;
+      securityHeaders(res, false);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      if (url === '/admin/who') return res.end(JSON.stringify([...clients.values()].map(c => ({ id: c.id, n: c.n, joined: c.joined, host: c.host, v: c.v || 0 }))));
+      if (url === '/admin/sethost') { const n = cleanName(q.get('name')).toLowerCase(); if (!world.hostNames.includes(n)) world.hostNames.push(n); dirty = true; for (const c of clients.values()) if (c.n.toLowerCase() === n) { c.host = true; send(c, { t: 'host', on: true }); } return res.end(JSON.stringify(world.hostNames)); }
+      if (url === '/admin/refresh') { broadcast({ t: 'reset' }); return res.end('{"ok":true}'); }
+      // Tell open pages to save their progress and reload into the newest version.
+      if (url === '/admin/update') { broadcast({ t: 'update' }); return res.end('{"ok":true}'); }
+      return res.end('{}');
+    }
+    if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
+    if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
+    if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');
+    if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
+    securityHeaders(res, false);
+    res.writeHead(404, { 'content-type': 'text/plain' });
+    res.end('not found');
+  } catch (e) {
+    console.error('http handler error:', e && e.message);
+    try { res.writeHead(500, { 'content-type': 'text/plain' }); res.end('server error'); } catch (e2) { /* headers already sent */ }
   }
-  if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
-  if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
-  if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8');
-  if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8');
-  res.writeHead(404, { 'content-type': 'text/plain' });
-  res.end('not found');
 });
 
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8192 }); // raised from 2048 for batched play-test log messages
@@ -117,40 +185,86 @@ function broadcast(msg, exceptId) {
   for (const c of clients.values()) if (c.joined && c.id !== exceptId) send(c, s);
 }
 function joined() { return [...clients.values()].filter(c => c.joined); }
+function broadcastSleep() { const js = joined(); broadcast({ t: 'sleepstat', asleep: js.filter(c => c.sleeping).length, total: js.length }); }
+// If it's night and every connected camper is asleep in a bunk, everyone skips straight to dawn (06:00, clock t=0).
+// This mirrors the host clock change above: set world.clock, then broadcast it the same way.
+function maybeSkipNight() {
+  const js = joined();
+  if (!js.length || SIM.clockT(world.clock, Date.now()) < SIM.DAYMS) return;
+  if (!js.every(c => c.sleeping)) return;
+  world.clock = { off: -Date.now(), paused: false, pt: 0 }; dirty = true;
+  broadcast({ t: 'clock', ...world.clock });
+  broadcast({ t: 'daybreak' });
+  LOG.log('daybreak', { asleep: js.length });
+  for (const c of js) c.sleeping = false;
+  broadcastSleep();
+}
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
   if (clients.size >= MAX_CLIENTS) { ws.close(1013, 'camp is full'); return; }
-  const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, lastPosLogT: 0, logTokens: 30, lastLog: Date.now() };
+  const ip = clientIp(req);
+  let perIp = 0; for (const cl of clients.values()) if (cl.ip === ip) perIp++;
+  if (perIp >= MAX_PER_IP) { LOG.log('joinRejected', { ip, reason: 'too many connections from this address' }); ws.close(1013, 'too many connections from this address'); return; }
+  if (!ipWithinRate(ipConnWindow, ip, MAX_CONNS_PER_IP_PER_MIN, 60000)) { LOG.log('joinRejected', { ip, reason: 'slow down' }); ws.close(1013, 'slow down'); return; }
+  const c = {
+    id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
+    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
+    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
+    lastPosLogT: 0, logTokens: 30, lastLog: Date.now(), // play-test logging (see logger.js)
+  };
   clients.set(c.id, c);
-  send(c, {
-    t: 'hello', id: c.id, day: world.day,
-    holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
-    got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
-    bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
-    peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
-  });
+  // A camper who never joins (never sends a valid 'join', e.g. wrong/no password, or just sits on the title screen) doesn't get to hold a socket open forever.
+  const joinTimer = setTimeout(() => { if (!c.joined) { try { ws.close(4000, 'join timeout'); } catch (e) { /* already closing */ } } }, JOIN_TIMEOUT_MS);
+
+  function sendHello() {
+    send(c, {
+      t: 'hello', id: c.id, day: world.day,
+      holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
+      got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
+      bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+      peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
+      mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
+    });
+  }
+  // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
+  // nothing (not even that a game exists) until it proves it knows the password in 'join'.
+  if (c.authed) sendHello(); else send(c, { t: 'needpass' });
 
   ws.on('pong', () => { c.alive = true; });
+  // Without a listener here, a malformed frame (oversized, bad opcode, broken utf8, ...) emits an unlistened
+  // 'error' on this socket and takes the whole Node process down with it. Log it and let 'close' clean up.
+  ws.on('error', e => console.error('ws error from', ip, ':', e && e.message));
   ws.on('message', raw => {
+   try {
     const now = Date.now();
     c.tokens = Math.min(80, c.tokens + (now - c.last) * 0.04); c.last = now;
     if (c.tokens < 1) return;
     c.tokens -= 1;
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
-    if (!m || typeof m !== 'object') return;
+    if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
 
     if (m.t === 'join') {
+      if (!c.authed) {
+        if (!safeEqual(String(m.p || ''), CAMP_PASSWORD)) {
+          c.badJoins++;
+          LOG.log('joinRejected', { id: c.id, ip: c.ip, n: cleanName(m.n), reason: 'wrong camp password', badJoins: c.badJoins });
+          send(c, { t: 'joinrejected', reason: 'Wrong camp password' });
+          if (c.badJoins >= MAX_BAD_JOINS) ws.close(4001, 'too many attempts');
+          return;
+        }
+        c.authed = true; sendHello(); // now, and only now, does this socket learn about the world
+      }
       c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
-      c.host = DEV_MODE || m.host === HOST_TOKEN || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
+      c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
       if (!c.joined) {
-        c.joined = true; LOG.log('join', { id: c.id, n: c.n }); broadcast({ t: 'join', ...peerInfo(c) }, c.id);
+        c.joined = true; clearTimeout(joinTimer); LOG.log('join', { id: c.id, n: c.n }); broadcast({ t: 'join', ...peerInfo(c) }, c.id);
         const r = world.recent[c.n.toLowerCase()];
         if (m.fresh === true && r && Date.now() - r.at < RECENT_MS) send(c, { t: 'restore', sc: r.sc, x: r.x, z: r.z });
         world.run.peak = Math.max(world.run.peak, joined().length); dirty = true;
@@ -174,7 +288,9 @@ wss.on('connection', ws => {
         }
         break;
       case 'dig': {
+        if (!withinRate(c.digTimes, DIG_RATE, DIG_WINDOW_MS)) return; // digging faster than a shovel can move
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
+        if (Math.hypot(x - c.x, z - c.z) > MAX_DIG_DIST) return; // no teleport-digging across the map
         const k = x + '|' + z;
         if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) return;
         if ((world.holes[k] || 0) >= d) return;
@@ -191,8 +307,11 @@ wss.on('connection', ws => {
         break;
       }
       case 'sell': {
-        // Selling at Mr. Sir's truck pays the team bank toward today's quota.
-        const v = num(m.v, 0, 3000, 0) | 0; if (!v) return;
+        // Selling at Mr. Sir's truck pays the team bank toward today's quota. The client reports its own sack's
+        // value (client-authoritative, known issue) — MAX_SELL_V and the rate limit just cap the damage a hacked
+        // client can do per message and per second, they don't verify the sack was honestly earned.
+        if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
+        const v = num(m.v, 0, MAX_SELL_V, 0) | 0; if (!v) return;
         world.run.bank += v; dirty = true;
         LOG.log('sell', { id: c.id, n: c.n, v });
         broadcast(runInfo());
@@ -211,9 +330,11 @@ wss.on('connection', ws => {
         // A camper got caught and dropped their sack. Anyone can pick it up.
         const items = (Array.isArray(m.items) ? m.items : []).filter(t => LOOT_KEYS.includes(t)).slice(0, 12);
         if (!items.length) return;
+        const x = r2(num(m.x, -600, 600, 0)), z = r2(num(m.z, -600, 600, 0));
+        if (Math.hypot(x - c.x, z - c.z) > MAX_PLACE_DIST) return; // dropped where you actually are, not across the map
         const ids = Object.keys(world.bags); if (ids.length >= MAX_BAGS) delete world.bags[ids[0]];
-        const id = nextObj++; world.bags[id] = { x: r2(num(m.x, -600, 600, 0)), z: r2(num(m.z, -600, 600, 0)), items, n: c.n }; dirty = true;
-        LOG.log('bagDrop', { id: c.id, n: c.n, x: world.bags[id].x, z: world.bags[id].z, items });
+        const id = nextObj++; world.bags[id] = { x, z, items, n: c.n }; dirty = true;
+        LOG.log('bagDrop', { id: c.id, n: c.n, x, z, items });
         broadcast({ t: 'bag', id, ...world.bags[id] });
         break;
       }
@@ -241,10 +362,12 @@ wss.on('connection', ws => {
         break;
       }
       case 'ping':
+        if (!withinRate(c.pingTimes, PING_RATE, PING_WINDOW_MS)) return; // no flooding the map with pings
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
       case 'chat': {
         // Proximity chat: only campers within earshot see it.
+        if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return;
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
         LOG.log('chat', { id: c.id, n: c.n, s });
@@ -275,16 +398,25 @@ wss.on('connection', ws => {
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
       }
+      case 'sleep':
+        // A camper lay down in (or got out of) a bunk. If it's night and EVERY joined camper is asleep, skip to dawn.
+        c.sleeping = m.on === true;
+        LOG.log('sleep', { id: c.id, n: c.n, on: c.sleeping });
+        broadcastSleep();
+        maybeSkipNight();
+        break;
       case 'env': {
-        // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only. The server just
-        // relays it; every client builds the same hazard from the kind, position and heading.
+        // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only (verified below)
+        // — everyone else's console can't reach here at all — plus a rate limit against a compromised host client.
         if (!c.host || typeof m.k !== 'string' || !/^[a-z]{1,16}$/.test(m.k)) return;
+        if (!withinRate(c.envTimes, ENV_RATE, ENV_WINDOW_MS)) return;
         const x = r1(num(m.x, -600, 600, 0)), z = r1(num(m.z, -600, 600, 0)), a = num(m.a, -10, 10, 0);
         LOG.log('env', { id: c.id, n: c.n, k: m.k, x, z, a });
         broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
       case 'say':
+        if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
         LOG.log('shout', { id: c.id, n: c.n, i: num(m.i, 0, 4, 0) | 0 });
         broadcast({ t: 'say', id: c.id, i: num(m.i, 0, 4, 0) | 0 }, c.id);
@@ -319,20 +451,30 @@ wss.on('connection', ws => {
         break;
       }
     }
+   } catch (e) { console.error('message handler error:', e && e.message); } // one bad message from one camper never takes the server down
   });
   ws.on('close', () => {
+    clearTimeout(joinTimer);
     clients.delete(c.id);
     if (kbHolder === c.id && !world.kb) {
       // The camper walked off with the gold tube without reporting it: put it back in the ground.
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
-    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); }
+    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); }
   });
 });
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
 const MON = { trucks: [], zer: null };
+// Wire format for the 'mon' field, shared by the periodic broadcast and the 'hello' a (re)connecting
+// client gets. A fresh connection has to see the CURRENT truth here, not just wait for the next change:
+// the periodic broadcast only fires on the tick a monster appears or disappears, so a client that wasn't
+// connected at that exact moment (dropped and reconnected, or just joined) would otherwise never learn
+// monsters are gone and keep rendering whatever it saw last.
+function monSnapshot() {
+  return { trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null };
+}
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 let policeOn = false, zerOn = false, lastMonLogT = 0;
 function simPlayers(now) {
@@ -398,7 +540,7 @@ setInterval(() => {
     lastMonLogT = now;
     LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null });
   }
-  if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null, ev });
+  if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);

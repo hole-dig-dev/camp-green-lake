@@ -95,6 +95,7 @@ function oneLine(r) {
   const head = `${wallTime(r.ts)} [${r.gt}] ${r.t}`.padEnd(28);
   switch (r.t) {
     case 'join': return `${head}${r.n} joined camp`;
+    case 'joinRejected': return `${head}rejected ${r.n ? r.n + ' ' : ''}(${r.ip}): ${r.reason}${r.badJoins ? ' (attempt ' + r.badJoins + ')' : ''}`;
     case 'leave': return `${head}${r.n} left camp`;
     case 'pos': return `${head}${r.n} @ (${r.x},${r.z}) hp${r.hp} wt${r.wt}${r.down ? ' DOWN' : ''}${r.camp ? ' in-camp' : ''}`;
     case 'chat': return `${head}${r.n}: ${r.s}`;
@@ -107,8 +108,14 @@ function oneLine(r) {
     case 'lizChase': return `${head}lizard #${r.liz} started chasing ${r.n} from ${r.dist} m @ (${r.x},${r.z})`;
     case 'lizBite': return `${head}lizard #${r.liz} bit ${r.n} @ (${r.x},${r.z})`;
     case 'twWarn': return `${head}${r.n} warned of a twister ${r.dist} m to the ${r.dir} @ (${r.x},${r.z})`;
+    case 'twSuckUp': return `${head}a twister's core caught ${r.n} @ (${r.x},${r.z})`;
     case 'twThrow': return `${head}a twister threw ${r.n} for ${r.dmg} dmg @ (${r.x},${r.z})`;
     case 'found': return `${head}${r.n} found ${r.type} (${r.value} seeds)${r.heavy ? ' [heavy]' : ''}${r.kb ? ' [KB tube]' : ''} @ (${r.x},${r.z})`;
+    case 'tentEnter': return `${head}${r.n} went into ${r.name} @ (${r.x},${r.z})`;
+    case 'tentExit': return `${head}${r.n} left ${r.name} @ (${r.x},${r.z})`;
+    case 'sleep': return `${head}${r.n} ${r.on ? 'lay down in a bunk' : 'got up'}`;
+    case 'daybreak': return `${head}whole camp asleep (${r.asleep}) — night skipped to dawn`;
+    case 'pause': return `${head}${r.n} used the pause menu: ${r.action}`;
     case 'propGrab': return `${head}${r.n} started hauling a ${r.type} @ (${r.x},${r.z})`;
     case 'propSpawn': return `${head}${r.n} dug up a heavy ${r.type} @ (${r.x},${r.z})`;
     case 'propSold': return `${head}sold a ${r.type} for ${r.v} seeds (carried by ${(r.who || []).join(', ') || '?'})`;
