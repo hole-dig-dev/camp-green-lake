@@ -2079,7 +2079,7 @@ function updateLandslides(dt){
   for(let i=lsBursts.length-1;i>=0;i--)if((T0-lsBursts[i].t0)/1000>=LS_LIFE)lsBursts.splice(i,1);
 
   for(const bu of lsBursts)if(!bu.warned&&S.started&&Math.hypot(bu.x-fx,bu.z-fz)<LS_WARN_R){
-    bu.warned=true;toast('Rockslide! Boulders coming from Big Thumb!','bad',5000);
+    bu.warned=true;logEv('lsWarn',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),lsx:+bu.x.toFixed(1),lsz:+bu.z.toFixed(1)});toast('Rockslide! Boulders coming from Big Thumb!','bad',5000);
   }
 
   lsHitT=Math.max(0,lsHitT-dt);
