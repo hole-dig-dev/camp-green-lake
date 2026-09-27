@@ -101,7 +101,7 @@ function broadcast(msg, exceptId) {
   for (const c of clients.values()) if (c.joined && c.id !== exceptId) send(c, s);
 }
 function joined() { return [...clients.values()].filter(c => c.joined); }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
 function runInfo() { const r = world.run, n = Math.max(r.peak, joined().length, 1); return { t: 'run', day: r.day, bank: r.bank, quota: SIM.quotaFor(r.day, n, r.sentence, r.mood), curse: r.curse || 0, mood: r.mood, site: r.site, sentence: r.sentence || 1, seed: r.seed, served: (world.meta && world.meta.served) || 0 }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -110,7 +110,7 @@ wss.on('connection', ws => {
   const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true };
   clients.set(c.id, c);
   send(c, {
-    t: 'hello', id: c.id, day: world.day,
+    t: 'hello', id: c.id, day: world.day, fin: world.run.fin && world.run.fin.on ? world.run.fin : null, finNow: Date.now(),
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
@@ -129,7 +129,7 @@ wss.on('connection', ws => {
     if (!m || typeof m !== 'object') return;
 
     if (m.t === 'join') {
-      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
+      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0; c.u = num(m.u, 0, 5, 0) | 0;
       c.host = m.host === HOST_TOKEN || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       const pr = world.players[c.n.toLowerCase()];
@@ -146,7 +146,7 @@ wss.on('connection', ws => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 10, c.y); c.z = num(m.z, -620, 620, c.z);
+        c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 80, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
@@ -275,6 +275,29 @@ wss.on('connection', ws => {
         broadcast({ t: 'props', list: [[id, p.x, p.z, p.n || 0]] });
         break;
       }
+      case 'zback': {
+        // piggyback Madame Zeroni during the finale
+        const f = world.run.fin; if (!f || !f.on) return;
+        if (m.on === true) { if (f.holder != null || Math.hypot(c.x - f.zx, c.z - f.zz) > 3.5) return; f.holder = c.id; }
+        else { if (f.holder !== c.id) return; f.holder = null; f.zx = c.x; f.zz = c.z; }
+        dirty = true; broadcast({ t: 'finale', fin: f, now: Date.now() });
+        break;
+      }
+      case 'curseBroken': {
+        // sung to at the top of Big Thumb: the carrier (or someone right next to them) must be up there
+        const f = world.run.fin; if (!f || !f.on) return;
+        const h = clients.get(f.holder); if (!h || h.y < SIM.THUMB.y0 + SIM.THUMB.h - 3 || Math.hypot(c.x - h.x, c.z - h.z) > 10) return;
+        f.on = false; broadcast({ t: 'curseBroken', by: c.n });
+        setTimeout(() => endSentence(true), 15000);
+        break;
+      }
+      case 'boost': case 'pullUp': {
+        // climbing Big Thumb together: boost the friend above you, or pull the friend below you up to your ledge
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, 4.5)) return;
+        send(o, { t: m.t === 'boost' ? 'boosted' : 'pulledUp', by: c.n, y: num(m.y, -40, 80, 0) });
+        break;
+      }
       case 'bonk':
         // shovel swing: squashes critters in front of the camper (results go out with the next monster update)
         if (now - (c.bonkAt || 0) < 600) return;
@@ -374,12 +397,9 @@ function endOfDay() {
   if (world.run.bank >= q.quota) {
     world.run.bank -= q.quota; dirty = true;
     if (world.run.day >= SIM.DAYS) {
-      // sentence served: the crew is released. Next sentence is longer and harder.
-      const done = world.run.sentence || 1;
-      world.meta = world.meta || { served: 0, best: 0 }; world.meta.served++; world.meta.best = Math.max(world.meta.best, done);
-      world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, meta: world.meta, run: freshRun(done + 1) });
-      gotSet = new Set(); kbHolder = null; save();
-      broadcast({ t: 'served', sentence: done, next: done + 1 });
+      // the sentence is served, but the curse still has to be broken: the finale starts tonight
+      world.run.fin = { on: true, start: Date.now(), waterAt: 0, holder: null, zx: 0, zz: 24 }; dirty = true;
+      broadcast({ ...runInfo(), t: 'finale', fin: world.run.fin, now: Date.now() });
       return;
     }
     world.run.day++; world.run.peak = joined().length;
@@ -392,9 +412,26 @@ function endOfDay() {
     broadcast({ t: 'fired', bank: got, quota: q.quota });
   }
 }
+function endSentence(broken) {
+  // the crew is released; if they broke the curse too, that's the true ending. Next sentence is harder.
+  const done = world.run.sentence || 1;
+  world.meta = world.meta || { served: 0, best: 0, broken: 0 }; world.meta.served++; world.meta.best = Math.max(world.meta.best, done); if (broken) world.meta.broken = (world.meta.broken || 0) + 1;
+  world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, meta: world.meta, run: freshRun(done + 1) });
+  gotSet = new Set(); kbHolder = null; dirty = true; save();
+  broadcast({ t: 'served', sentence: done, next: done + 1, broken: !!broken });
+}
+function finTick(now) {
+  const f = world.run.fin; if (!f || !f.on) return;
+  const h = f.holder != null ? clients.get(f.holder) : null;
+  if (f.holder != null && (!h || !h.joined || (h.f & 66))) { if (h) { f.zx = h.x; f.zz = h.z; } f.holder = null; broadcast({ t: 'finale', fin: f, now: Date.now() }); }
+  if (h) { f.zx = h.x; f.zz = h.z; }
+  // the flood starts once Madame Zeroni reaches the mountain (or after a while anyway)
+  if (!f.waterAt && (Math.hypot(f.zx - SIM.THUMB.x, f.zz - SIM.THUMB.z) < SIM.THUMB.mound + 4 || now - f.start > 150000)) { f.waterAt = now; broadcast({ t: 'finale', fin: f, now: Date.now() }); }
+  if (f.waterAt && SIM.waterAt(f, now) > SIM.THUMB.y0 + SIM.THUMB.h + 2) { f.on = false; broadcast({ t: 'finaleLost' }); endSentence(false); }
+}
 function dawn() {
   // a new morning: the Warden picks today's mood and dig site; anyone out cold wakes up in the nurse's office
-  Object.assign(world.run, SIM.rollDay(world.run.seed, world.run.day, world.run.curse)); dirty = true;
+  Object.assign(world.run, SIM.rollDay(world.run.seed, world.run.day, world.run.curse, world.run.sentence)); dirty = true;
   for (const id in world.props) if (world.props[id].type === 'body') delete world.props[id];
   for (const k in world.breaches) { const b = world.breaches[k]; if (!b.closed) world.holes[k] = Math.min(world.holes[k] || 0, 1); }
   world.breaches = {}; world.rot = []; layCache.key = '';
@@ -404,9 +441,10 @@ setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
   const t = SIM.clockT(world.clock, now), cur = SIM.curfewT(world.run.day);
   if (lastT < cur && t >= cur) endOfDay();
-  else if (lastT - t > SIM.CYCLE / 2) dawn();
+  else if (lastT - t > SIM.CYCLE / 2 && !(world.run.fin && world.run.fin.on)) dawn();
   lastT = t;
   if (t < cur && joined().length) world.run.played = (world.run.played || 0) + dt;
+  finTick(now);
   const players = simPlayers(now);
   // heavy loot and bodies being carried
   const sold = SIM.stepProps(world.props, players, dt);
@@ -429,7 +467,7 @@ setInterval(() => {
   }
   // monsters
   const ev = pendingEv; pendingEv = [];
-  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
+  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, finale: !!(world.run.fin && world.run.fin.on), town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
   for (const e of ev) { if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
   const on = MON.trucks.length > 0 || !!MON.zer || MON.mobs.length > 0 || ev.length > 0;
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag, MON.zer.held ? 1 : 0, r2(MON.zer.song || 0)] : null, mobs: SIM.packMobs(MON), ev });

@@ -21,6 +21,8 @@
     stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' },
     fullmoon: { name: 'Full moon', desc: 'Madame Zeroni is out all night. No police.' },
     digday: { name: 'Dig day', desc: 'Double quota, but Mr. Sir pays double.' },
+    inspection: { name: 'Inspection day', desc: 'The Warden walks the lake all day. Look busy.' },
+    swarm: { name: 'Hatching day', desc: 'Lizard hatchlings everywhere, twice as many.' },
   };
   // dig sites the Warden assigns: farther means richer and more dangerous
   const SITES = {
@@ -30,9 +32,10 @@
   };
   function rnd(seed) { let a = seed | 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function pickW(r, w) { let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return Object.keys(w)[0]; }
-  function rollDay(seed, day, curse) {
+  function rollDay(seed, day, curse, sentence) {
     const r = rnd(seed * 31 + day * 977), c = clamp(curse, 0, 100) / 100;
-    const mood = day === 1 ? 'normal' : pickW(r, { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 1 + c, fullmoon: 0.6 + c, digday: 0.8 });
+    const hard = (sentence || 1) >= 2 ? 1 : 0;
+    const mood = day === 1 ? 'normal' : pickW(r, { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 1 + c, fullmoon: 0.6 + c, digday: 0.8, inspection: hard * (1 + c), swarm: hard * (1 + c) });
     const site = pickW(r, { near: [5, 3, 2, 1, 1][day - 1] || 1, ruins: [1, 3, 3, 3, 2][day - 1] || 2, thumb: [0.2, 1, 2, 3, 4][day - 1] || 4 });
     return { mood, site };
   }
@@ -76,7 +79,7 @@
     const night = t >= cur, half = t < split ? 'police' : 'zeroni';
     const lake = players.filter(p => !p.tn), outs = lake.filter(p => !inCamp(p.x, p.z));
     if (!night) M.appeased = false;
-    const want = night && outs.length ? (half === 'zeroni' && M.appeased ? null : half) : null;
+    const want = night && outs.length && !opt.finale ? (half === 'zeroni' && M.appeased ? null : half) : null;
     if (want !== 'police') M.trucks = [];
     if (want !== 'zeroni') M.zer = null;
     if (want === 'police') {
@@ -103,13 +106,16 @@
     M.mobs = M.mobs || []; M.pm = M.pm || {}; M.nid = M.nid || 1; M.sp = M.sp || {};
     const key = o.run.seed + ':' + o.run.day + ':' + Math.floor(o.run.curse / 20);
     if (M.rkey !== key) { M.rkey = key; M.roster = roster(o.run.seed, o.run.day, o.run.curse); }
-    const has = k => M.roster.includes(k), c = clamp(o.run.curse, 0, 100) / 100, live = outs.filter(p => !p.dn), count = k => M.mobs.filter(m => m.k === k).length;
+    const has = k => M.roster.includes(k) || (k === 'warden' && o.run.mood === 'inspection') || (k === 'hatch' && o.run.mood === 'swarm'), c = clamp(o.run.curse, 0, 100) / 100, live = outs.filter(p => !p.dn), count = k => M.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (M.sp[k] == null) M.sp[k] = every * Math.random(); M.sp[k] -= dt; if (M.sp[k] <= 0) { M.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];
     for (const p of lake) idleOf(M, p, dt);
     if (live.length) {
-      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / (1 + c) / Math.sqrt(live.length))) { const p = pickP(), g = spawnNear(M, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3 + Math.floor(c * 3); i++) M.mobs.push({ id: M.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
+      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / (1 + c) / Math.sqrt(live.length) / (o.run.mood === 'swarm' ? 2 : 1))) { const p = pickP(), g = spawnNear(M, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3 + Math.floor(c * 3); i++) M.mobs.push({ id: M.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
       if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22)) spawnNear(M, 'snake', pickP(), 14, 34, { life: 150 });
+      // Sam's onion fields always have snakes in the grass, whatever the day's roster
+      const inField = live.filter(p => Math.hypot(p.x - 170, p.z + 420) < 120);
+      if (inField.length && count('snake') < 6 + 2 * live.length && tick('fsnake', 9)) spawnNear(M, 'snake', inField[Math.floor(Math.random() * inField.length)], 8, 22, { life: 120 });
       if (has('scorp')) for (const p of live) if (p.a === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * (1 + c) * dt) spawnNear(M, 'scorp', p, 1.4, 2.2, { life: 25 });
       if (has('vulture') && count('vulture') < 2 + Math.floor(c * 2) && tick('vulture', 30)) { const lone = live.filter(p => lonely(p, lake)).concat(outs.filter(p => p.dn)); if (lone.length) { const p = lone[Math.floor(Math.random() * lone.length)]; const v = spawnNear(M, 'vulture', p, 30, 40, { y: 14, tgt: p.id, life: 60 }); if (v) ev.push({ k: 'caw', x: v.x, z: v.z }); } }
       if (has('sir') && !o.night && !count('sir')) spawnNear(M, 'sir', pickP(), 40, 60, {});
@@ -254,6 +260,9 @@
   }
 
   // ---- the buried town of Green Lake: a new layout of dark rooms under the lake every day ----
+  // Big Thumb: a mound with a stone thumb on top; the finale is carrying Madame Zeroni up it while the lake floods
+  const THUMB = { x: 170, z: -500, r: 8, y0: 14, h: 50, mound: 32, ledges: [26, 38, 50] };
+  const waterAt = (fin, now) => !fin || !fin.waterAt ? -2 : -1 + (now - fin.waterAt) / 1000 * 0.3;
   const TOWN = { X: 2000, Z: 0, N: 6, C: 14, Y: -30, H: 4 };
   const ROOM_NAMES = ['Schoolhouse', "Sheriff's office", 'Jail', 'General store', 'Church', "Sam's boat shed", 'Saloon', 'Post office', "Kate's house", 'Barbershop', 'Stable', 'Bank', 'Onion cellar', 'Doctor\'s office', 'Hotel'];
   const TLOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
@@ -314,6 +323,6 @@
       m.cd = Math.max(0, (m.cd || 0) - dt);
     }
   }
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ };
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);
