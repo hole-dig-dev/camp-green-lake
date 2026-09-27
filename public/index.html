@@ -22,6 +22,8 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .tag.npc .nm{background:rgba(95,122,58,.8)}
 .tag .bubble{font:600 16px/1.15 var(--ui);background:var(--canvas);color:var(--ink);padding:6px 10px;border-radius:10px;border:2px solid var(--ink);max-width:240px;white-space:normal;text-align:center;box-shadow:0 3px 0 rgba(43,29,18,.35)}
 .tag .bubble:empty{display:none}
+/* proximity voice: a green glow on the name tag of whoever the mic thinks is currently talking */
+.tag.speaking .nm{box-shadow:0 0 0 2px #4ade80,0 0 9px 3px rgba(74,222,128,.85)}
 
 .hud[hidden]{display:none!important}
 .panel{background:var(--canvas);border:2px solid var(--ink);border-radius:4px;box-shadow:0 4px 0 rgba(43,29,18,.4)}
@@ -75,6 +77,11 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .toast.good{background:var(--leaf);color:#f6f0dc}
 @keyframes tin{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
 #keys{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:600 14px/1.3 var(--ui);color:#fff8e8;text-shadow:0 1px 2px rgba(0,0,0,.6);letter-spacing:.03em;max-width:calc(100vw - 32px)}
+/* proximity voice HUD: mic on/off, PTT-vs-open-mic, mute-everyone -- stacked bottom right, out of the way of #keys */
+#voiceBox{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#voiceBox button{font:700 13px/1 var(--ui);text-transform:none;letter-spacing:.02em;padding:7px 11px;box-shadow:0 2px 0 var(--ink);background:var(--canvas-2);color:var(--ink)}
+#voiceBtn[aria-pressed="true"]{background:#3fae5a;color:#fff8ea}
+#voiceBtn.speaking{box-shadow:0 0 0 3px #4ade80,0 2px 0 var(--ink)}
 
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:24px;overflow:auto}
 .overlay[hidden]{display:none}
@@ -202,7 +209,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   <div id="prompt" class="panel" hidden></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
-  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight</div>
+  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · B push-to-talk</div>
+  <div id="voiceBox">
+    <button id="voiceBtn" type="button" aria-pressed="false" title="Turn on proximity voice chat (asks for mic access)">Voice off</button>
+    <button id="voiceModeBtn" type="button" hidden title="Switch between push-to-talk and always-on mic">Push-to-talk (hold B)</button>
+    <button id="voiceMuteBtn" type="button" hidden title="Mute everyone else's voice without muting game sound">Mute voices</button>
+  </div>
 </div>
 
 <div id="title" class="overlay">
@@ -1039,12 +1051,13 @@ addEventListener('keydown',e=>{
   if(k==='v')toggleView();
   if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
+  if(k==='b'&&!e.repeat&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(true);
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}
   if(k>='1'&&k<='5')shout(+k-1);
   if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
 });
-addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false});
-addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false;if(k==='b'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
+addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i})}
 function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
@@ -1126,7 +1139,7 @@ function addRemote(m){
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
-function removeRemote(id){const R=remotes.get(id);if(!R)return null;scene.remove(R.p.g);R.L.el.remove();labeled.splice(labeled.indexOf(R.L),1);remotes.delete(id);renderOnline();return R}
+function removeRemote(id){const R=remotes.get(id);if(!R)return null;scene.remove(R.p.g);R.L.el.remove();labeled.splice(labeled.indexOf(R.L),1);remotes.delete(id);dropVoicePeer(id);renderOnline();return R}
 function applyDig(x,z,d,rebuild){
   x=r1(num(x,-EDGE,EDGE,0));z=r1(num(z,-EDGE,EDGE,0));d=num(d,0,EIGHT_FT,0);
   let h=holeNear(x,z,0.06);
@@ -1145,6 +1158,7 @@ function onMsg(m){
   switch(m.t){
     case 'hello':{
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
+      if(Array.isArray(m.iceServers)&&m.iceServers.length)ICE_SERVERS=m.iceServers;
       for(const id of [...remotes.keys()])removeRemote(id);
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
@@ -1185,6 +1199,7 @@ function onMsg(m){
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
+    case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;
     case 'host':net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);break;
     case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
     case 'clock':setClock(m);break;
@@ -2196,6 +2211,154 @@ function updateCoop(dt){
   if(myLevel()>=8&&(luckyT-=dt)<=0){luckyT=1.3;let best=null,bd=36;for(const it of items){if(it.found||LOOT[it.type].key)continue;const d2=(it.x-P.x)**2+(it.z-P.z)**2;if(d2<bd){bd=d2;best=it}}if(best){const y=groundAt(best.x,best.z);puff(best.x,y+0.1,best.z,best.x,best.z,3)}}
 }
 
+/* ============================================================
+   PROXIMITY VOICE CHAT
+   WebRTC peer-to-peer audio mesh, signaled over the existing game WebSocket ('rtc' messages, relayed
+   server-side to one target). Positional audio: each remote voice runs through a WebAudio PannerNode
+   whose position we update from that player's rendered model position every frame, with the WebAudio
+   listener following the camera. Only connect to campers within VOICE_CONNECT m; drop past VOICE_DROP m
+   (hysteresis) so the mesh doesn't try to hold N^2 connections on a full camp -- someone that far away
+   is inaudible anyway. Voice is opt-in: mic access is only requested when the player turns it on, and a
+   peer only answers another's offer while its own voice is on (see handleRtc).
+   ============================================================ */
+let ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'}]; // replaced by the server's hello.iceServers (adds TURN if configured there)
+const VOICE_CONNECT=60, VOICE_DROP=80; // meters: open a connection / tear one down (gap avoids flapping at the edge)
+const VOICE_REF_DIST=4, VOICE_MAX_DIST=36; // panner falloff, tuned close to the text CHAT_RANGE (30m) on the server
+const VOICE_STALE_MS=6000; // an offer nobody answered (the other side's voice is off): drop it and retry later
+const SPEAK_LVL=0.045; // RMS level above which we consider someone "speaking" for the glow indicator
+const VOX={enabled:false,mode:'ptt',muted:false,localStream:null,peers:new Map(),selfSrc:null,selfAnalyser:null,selfBuf:null};
+let voiceMaster=null; // a sub-bus under the game's master gain, so pressing M mutes voice along with everything else
+function ensureVoiceBus(){if(voiceMaster)return;initAudio();voiceMaster=AC.createGain();voiceMaster.gain.value=VOX.muted?0:1;voiceMaster.connect(master)}
+function sendRtc(to,d){wsSend({t:'rtc',to,d})}
+function updateVoiceHud(){
+  const b=$('#voiceBtn');b.textContent=VOX.enabled?'Voice on':'Voice off';b.setAttribute('aria-pressed',VOX.enabled?'true':'false');
+  $('#voiceModeBtn').hidden=!VOX.enabled;$('#voiceModeBtn').textContent=VOX.mode==='ptt'?'Push-to-talk (hold B)':'Open mic (always on)';
+  $('#voiceMuteBtn').hidden=!VOX.enabled;$('#voiceMuteBtn').textContent=VOX.muted?'Unmute voices':'Mute voices';
+}
+function setMicTransmitting(on){if(VOX.localStream)for(const t of VOX.localStream.getAudioTracks())t.enabled=on}
+function setupSelfAnalyser(){
+  try{ensureVoiceBus();VOX.selfSrc=AC.createMediaStreamSource(VOX.localStream);VOX.selfAnalyser=AC.createAnalyser();VOX.selfAnalyser.fftSize=512;
+    VOX.selfSrc.connect(VOX.selfAnalyser);VOX.selfBuf=new Uint8Array(VOX.selfAnalyser.frequencyBinCount); // analysis tap only -- never connected onward, or you'd hear yourself
+  }catch(e){}
+}
+async function setVoiceEnabled(on){
+  if(on===VOX.enabled)return;
+  if(on){
+    ensureVoiceBus();
+    try{VOX.localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
+    catch(e){toast('Microphone access was denied, so proximity voice stays off. Check your browser\'s site permissions to turn it on.','bad',5000);return}
+    VOX.enabled=true;setMicTransmitting(VOX.mode==='open');setupSelfAnalyser();voiceProximityTick();
+  }else{
+    VOX.enabled=false;for(const id of[...VOX.peers.keys()])dropVoicePeer(id);
+    if(VOX.localStream){for(const t of VOX.localStream.getTracks())t.stop();VOX.localStream=null}
+    if(VOX.selfSrc){try{VOX.selfSrc.disconnect()}catch(e){}VOX.selfSrc=null;VOX.selfAnalyser=null}
+    $('#voiceBtn').classList.remove('speaking');
+  }
+  updateVoiceHud();
+}
+function makeVoicePeer(id,initiator){
+  const pc=new RTCPeerConnection({iceServers:ICE_SERVERS});
+  const peer={pc,state:'connecting',audioEl:null,panner:null,gain:null,analyser:null,levelBuf:null,level:0,pendingIce:[],createdAt:performance.now()};
+  if(VOX.localStream)for(const t of VOX.localStream.getTracks())pc.addTrack(t,VOX.localStream);
+  pc.onicecandidate=e=>{if(e.candidate)sendRtc(id,{k:'ice',c:e.candidate.toJSON()})};
+  pc.ontrack=e=>setupRemoteVoiceAudio(peer,e.streams[0]);
+  pc.onconnectionstatechange=()=>{peer.state=pc.connectionState;if(pc.connectionState==='failed'||pc.connectionState==='closed')dropVoicePeer(id)};
+  VOX.peers.set(id,peer);
+  if(initiator)negotiateVoice(peer,id);
+  return peer;
+}
+async function negotiateVoice(peer,id){
+  try{const offer=await peer.pc.createOffer();await peer.pc.setLocalDescription(offer);sendRtc(id,{k:'offer',sdp:offer.sdp})}catch(e){}
+}
+async function handleRtc(from,d){
+  if(from<0||!d||typeof d!=='object'||!VOX.enabled)return; // voice off: don't answer, so nobody hears you without opting in
+  let peer=VOX.peers.get(from);
+  if(d.k==='offer'){
+    if(!peer)peer=makeVoicePeer(from,false);
+    try{
+      await peer.pc.setRemoteDescription({type:'offer',sdp:d.sdp});
+      for(const c of peer.pendingIce)try{await peer.pc.addIceCandidate(c)}catch(e){}
+      peer.pendingIce.length=0;
+      const answer=await peer.pc.createAnswer();await peer.pc.setLocalDescription(answer);sendRtc(from,{k:'answer',sdp:answer.sdp});
+    }catch(e){}
+  }else if(peer&&d.k==='answer'){
+    try{await peer.pc.setRemoteDescription({type:'answer',sdp:d.sdp})}catch(e){}
+  }else if(peer&&d.k==='ice'&&d.c){
+    if(peer.pc.remoteDescription)try{await peer.pc.addIceCandidate(d.c)}catch(e){}else peer.pendingIce.push(d.c);
+  }
+}
+function setupRemoteVoiceAudio(peer,stream){
+  // Chrome quirk: a remote WebRTC stream can stay silent through WebAudio alone unless it's also attached
+  // to a live <audio> element. We mute that element (WebAudio, via the panner, is what the player hears).
+  const audioEl=document.createElement('audio');audioEl.autoplay=true;audioEl.muted=true;audioEl.srcObject=stream;audioEl.style.display='none';
+  document.body.appendChild(audioEl);audioEl.play().catch(()=>{});peer.audioEl=audioEl;
+  ensureVoiceBus();
+  const src=AC.createMediaStreamSource(stream);
+  const panner=AC.createPanner();panner.panningModel='HRTF';panner.distanceModel='linear';panner.refDistance=VOICE_REF_DIST;panner.maxDistance=VOICE_MAX_DIST;panner.rolloffFactor=1;
+  const gain=AC.createGain();gain.gain.value=1;
+  const analyser=AC.createAnalyser();analyser.fftSize=512;
+  src.connect(panner).connect(gain).connect(voiceMaster);panner.connect(analyser);
+  peer.panner=panner;peer.gain=gain;peer.analyser=analyser;peer.levelBuf=new Uint8Array(analyser.frequencyBinCount);
+}
+function dropVoicePeer(id){
+  const peer=VOX.peers.get(id);if(!peer)return;VOX.peers.delete(id);
+  try{peer.pc.close()}catch(e){}
+  if(peer.audioEl){peer.audioEl.srcObject=null;peer.audioEl.remove()}
+  if(peer.panner)try{peer.panner.disconnect()}catch(e){}
+  if(peer.gain)try{peer.gain.disconnect()}catch(e){}
+  const R=remotes.get(id);if(R)R.L.el.classList.remove('speaking');
+}
+function voiceProximityTick(){
+  if(!VOX.enabled)return;
+  for(const[id,R]of remotes){
+    const dist=Math.hypot(R.p.g.position.x-P.x,R.p.g.position.z-P.z);
+    const peer=VOX.peers.get(id);
+    if(!peer){if(dist<VOICE_CONNECT&&net.id<id)makeVoicePeer(id,true)} // lower id offers, so both sides never offer at once
+    else if(dist>VOICE_DROP)dropVoicePeer(id);
+    else if(!peer.pc.remoteDescription&&performance.now()-peer.createdAt>VOICE_STALE_MS)dropVoicePeer(id); // unanswered offer: retry next tick
+  }
+  for(const id of[...VOX.peers.keys()])if(!remotes.has(id))dropVoicePeer(id); // they left/reloaded
+}
+setInterval(voiceProximityTick,500);
+const voxFwd=new T.Vector3();
+function updateVoice(now){
+  if(!AC)return;
+  if(VOX.peers.size){
+    const lp=AC.listener,cp=camera.position;
+    if(lp.positionX){lp.positionX.value=cp.x;lp.positionY.value=cp.y;lp.positionZ.value=cp.z}else lp.setPosition(cp.x,cp.y,cp.z);
+    camera.getWorldDirection(voxFwd);
+    if(lp.forwardX){lp.forwardX.value=voxFwd.x;lp.forwardY.value=voxFwd.y;lp.forwardZ.value=voxFwd.z;lp.upX.value=0;lp.upY.value=1;lp.upZ.value=0}
+    else lp.setOrientation(voxFwd.x,voxFwd.y,voxFwd.z,0,1,0);
+    for(const[id,peer]of VOX.peers){
+      const R=remotes.get(id);if(!R)continue;
+      const pos=R.p.g.position;
+      if(peer.panner){
+        if(peer.panner.positionX){peer.panner.positionX.value=pos.x;peer.panner.positionY.value=pos.y+1.4;peer.panner.positionZ.value=pos.z}
+        else peer.panner.setPosition(pos.x,pos.y+1.4,pos.z);
+      }
+      if(peer.analyser){
+        peer.analyser.getByteTimeDomainData(peer.levelBuf);
+        let sum=0;for(const v of peer.levelBuf){const d=v-128;sum+=d*d}
+        peer.level=Math.sqrt(sum/peer.levelBuf.length)/128;
+      }
+      R.L.el.classList.toggle('speaking',peer.level>SPEAK_LVL);
+    }
+  }
+  if(VOX.selfAnalyser){
+    const track=VOX.localStream&&VOX.localStream.getAudioTracks()[0];
+    let speaking=false;
+    if(track&&track.enabled){
+      VOX.selfAnalyser.getByteTimeDomainData(VOX.selfBuf);
+      let sum=0;for(const v of VOX.selfBuf){const d=v-128;sum+=d*d}
+      speaking=Math.sqrt(sum/VOX.selfBuf.length)/128>SPEAK_LVL;
+    }
+    $('#voiceBtn').classList.toggle('speaking',speaking);
+  }
+}
+$('#voiceBtn').onclick=()=>setVoiceEnabled(!VOX.enabled);
+$('#voiceModeBtn').onclick=()=>{VOX.mode=VOX.mode==='ptt'?'open':'ptt';if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud()};
+$('#voiceMuteBtn').onclick=()=>{VOX.muted=!VOX.muted;if(voiceMaster)voiceMaster.gain.value=VOX.muted?0:1;updateVoiceHud()};
+
 /* ---------- main loop ---------- */
 let last=performance.now(),tAcc=0,mapT=0;
 /* PERF: adaptive resolution. Every 2 seconds, check the real frame rate. Under 45 fps, render fewer pixels (down to
@@ -2227,7 +2390,7 @@ function frame(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
   updateTwisters(dt);
-  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
+  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateVoice(now);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
@@ -2254,6 +2417,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot};
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC};
 })();
 </script>

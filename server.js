@@ -25,6 +25,18 @@ const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
 const CHAT_RANGE = 30, HELP_RANGE = 3.5;
 
+/* ---- proximity voice: WebRTC signaling relay ---- */
+// SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
+// (checked in the message handler) instead of loosening the limit for everyone. maxPayload below must cover it.
+const RTC_MAX = 8192, GEN_MAX = 1024;
+// STUN only by default (no TURN server exists yet). Set ICE_SERVERS to a JSON array of RTCIceServer objects,
+// e.g. '[{"urls":"turn:host:3478","username":"u","credential":"p"}]', to add a TURN server later.
+const ICE_SERVERS = (() => {
+  const base = [{ urls: 'stun:stun.l.google.com:19302' }];
+  try { const extra = JSON.parse(process.env.ICE_SERVERS || '[]'); if (Array.isArray(extra)) return base.concat(extra); } catch (e) { /* bad env, fall back to STUN */ }
+  return base;
+})();
+
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const num = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? clamp(v, a, b) : d; };
 const r1 = v => Math.round(v * 10) / 10;
@@ -87,7 +99,7 @@ const server = http.createServer((req, res) => {
   res.end('not found');
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 2048 });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: RTC_MAX });
 const clients = new Map();
 let nextId = 1;
 let kbHolder = null, kbItem = -1; // who is carrying the KB tube (not yet reported)
@@ -108,7 +120,7 @@ wss.on('connection', ws => {
   const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true };
   clients.set(c.id, c);
   send(c, {
-    t: 'hello', id: c.id, day: world.day,
+    t: 'hello', id: c.id, day: world.day, iceServers: ICE_SERVERS,
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
@@ -124,6 +136,10 @@ wss.on('connection', ws => {
     c.tokens -= 1;
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m !== 'object') return;
+    // 'rtc' (WebRTC signaling) gets its own bigger size allowance and costs extra tokens; every other
+    // message type stays capped small so one big frame can't be smuggled in under a different type.
+    if (m.t === 'rtc') { if (raw.length > RTC_MAX || c.tokens < 2) return; c.tokens -= 2; }
+    else if (raw.length > GEN_MAX) return;
 
     if (m.t === 'join') {
       c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
@@ -215,6 +231,14 @@ wss.on('connection', ws => {
       case 'ping':
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
+      case 'rtc': {
+        // Proximity voice signaling: relay an SDP offer/answer or ICE candidate to exactly one joined peer,
+        // with the sender's id attached so the recipient knows who it's from. Never broadcast.
+        const to = clients.get(num(m.to, 0, 1e9, -1) | 0);
+        if (!to || !to.joined || to === c || !m.d || typeof m.d !== 'object') return;
+        send(to, { t: 'rtc', from: c.id, d: m.d });
+        break;
+      }
       case 'chat': {
         // Proximity chat: only campers within earshot see it.
         const s = cleanChat(m.s); if (!s) return;
