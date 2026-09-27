@@ -35,21 +35,28 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | File | Responsibility |
 |---|---|
 | `public/js/10-core.js` | seeded RNG, world constants, renderer/scene/camera, sky |
-| `public/js/20-terrain.js` | dug holes, buried-loot seeding, streaming terrain chunks |
-| `public/js/30-world.js` | static camp geometry (tents, cabins, signs, trees) |
-| `public/js/40-people.js` | camper avatars, remote players, name/speech labels |
-| `public/js/50-npcs.js` | Mr. Sir, the Warden, D Tent crew |
-| `public/js/60-lizards.js` | yellow-spotted lizards |
-| `public/js/65-fx.js` | dirt particle FX, WebAudio sound effects/music |
-| `public/js/75-digging.js` | mutable player/session state, digging, world interactions, input |
-| `public/js/80-title.js` | title screen and the start-game flow |
-| `public/js/85-net.js` | WebSocket client, remote player reconciliation, health |
-| `public/js/90-hazards.js` | twisters, the ENV hazard registry, the developer console |
-| `public/js/92-hud.js` | HUD panel and minimap |
-| `public/js/94-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |
-| `public/js/96-patrol.js` | the shared clock/curfew and cop patrols, Madame Zeroni |
-| `public/js/97-coop.js` | leveling, team quota, heavy loot, dropped sacks, helping downed/stuck friends, pings/chat, flashlight, the once-a-frame tick that drives all of it |
-| `public/js/99-boot.js` | the requestAnimationFrame loop, boot-time hooks, debug exports |
+| `public/js/15-terrain.js` | dug holes, buried-loot seeding, streaming terrain chunks (near/far detail levels) |
+| `public/js/20-world.js` | static camp geometry: fenced compound, tents and their interiors, cabins, signs, Big Thumb |
+| `public/js/25-people.js` | camper avatars, name/speech labels |
+| `public/js/30-npcs.js` | Mr. Sir, the Warden, the D Tent crew (including tent breaks) |
+| `public/js/35-lizards.js` | yellow-spotted lizards |
+| `public/js/40-fx.js` | dirt particles, item pops, rain, WebAudio sound effects |
+| `public/js/45-state.js` | player/session state, digging, world interactions (use/F) |
+| `public/js/50-tents.js` | entering/leaving tents, bunks, sleeping |
+| `public/js/55-input.js` | keyboard/mouse/touch input (with the key-remap layer) |
+| `public/js/60-title.js` | title screen, camp password, session save/resume, start-game flow |
+| `public/js/65-net.js` | WebSocket client, remote players, server messages, play-test log batching |
+| `public/js/70-player.js` | player movement/physics, camera, health and healing |
+| `public/js/72-twisters.js` | twisters: schedule, pull/suck-up/ragdoll, visuals, sound |
+| `public/js/74-landslide.js` | landslides: deterministic boulder physics, hits, warnings |
+| `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
+| `public/js/78-hud.js` | HUD panel and minimap |
+| `public/js/80-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |
+| `public/js/82-patrol.js` | shared clock/curfew, police patrols, Madame Zeroni |
+| `public/js/84-coop.js` | levels, team quota, heavy loot, dropped sacks, helping friends, pings/chat, flashlight, co-op tick |
+| `public/js/86-voice.js` | WebRTC proximity voice chat and positional audio |
+| `public/js/90-loop.js` | the requestAnimationFrame main loop |
+| `public/js/95-pause.js` | pause menu, settings, key rebinding; then the final session resume and debug exports (must stay last) |
 
 **The global-scope rule.** These are classic scripts, not ES modules -- no `type="module"`, no
 `import`/`export`. Top-level `const`/`let`/`class`/`function` in a classic <script> at the
