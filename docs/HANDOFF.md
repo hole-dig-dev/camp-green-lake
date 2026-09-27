@@ -19,7 +19,7 @@ Written by the Claude Code session that ran on JT's mini PC ("minipc") all day, 
 
 | What | Where |
 |---|---|
-| Repo | `github.com/jth458/camp-green-lake` |
+| Repo | `github.com/hole-dig-dev/camp-green-lake` |
 | **Test link** (JT plays here) | `https://minipc.tail46206f.ts.net:8445`, PM2 app `camp-green-lake-test`, runs `jt/next` from `~/camp-green-lake` on the mini PC, `DEV_MODE=1` (everyone is host). Tailnet-only (JT's Tailscale devices). |
 | Main link | `https://minipc.tail46206f.ts.net:8444`, PM2 app `camp-green-lake`, runs `main` from `~/camp-green-lake-live`. Friends' link eventually. |
 | Auto-update | cron on the mini PC every 2 min: `~/cgl-autopull.sh` fast-forwards `~/camp-green-lake` to `origin/jt/next`, runs `npm install` if package files changed, restarts the test app. Log: `~/cgl-autopull.log`. **So pushing to `jt/next` = deploying to JT's test link.** |
