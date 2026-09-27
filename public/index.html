@@ -439,7 +439,10 @@ const SEARCH={x:SUITCASE.x+(rng()-0.5)*9,z:SUITCASE.z+(rng()-0.5)*9,r:10};
 for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:items.length,type:rng()<0.4?'safe':'strongbox',x:p.x,z:p.z,depth:1.6+rng()*0.9,found:false})}
 
 /* ---------- terrain: detailed chunks stream in around you; one coarse mesh covers the distance ---------- */
-const CH=24, CN=Math.round(CH/RES), LOAD_R=100;
+/* PERF: level of detail. Chunks within NEAR_R of the player are built at full detail (a point every RES = 0.4 m).
+   Chunks farther out, up to LOAD_R, are built at 1/COARSE_STEP of that (a point every 1.2 m): 9x fewer triangles,
+   but holes and dirt piles still show. Before this, every chunk out to ~170 m was full detail (~660k triangles). */
+const CH=24, CN=Math.round(CH/RES), LOAD_R=100, NEAR_R=40, COARSE_STEP=3;
 const C_SAND=new T.Color(0xdcab6e),C_SAND2=new T.Color(0xc99558),C_CRACK=new T.Color(0xa87444),C_DEEP=new T.Color(0x6e3c20),C_DIRT=new T.Color(0xeec48c),C_CAMP=new T.Color(0xc4955f),tmpC=new T.Color();
 function toneAt(x,z){const crack=Math.abs(vnoise(x*0.55+40,z*0.55)-0.5)<0.035?1:0;return clamp(vnoise(x*0.18,z*0.18)*0.9+crack*2,0,3)}
 function shade(col,i,x,z,b,h,tn){
@@ -451,20 +454,23 @@ function shade(col,i,x,z,b,h,tn){
 }
 const chunks=new Map(),chunkMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
 const ckey=(i,j)=>(i+100)*1000+(j+100);
-function buildChunk(i,j){
-  const x0=i*CH,z0=j*CH,n=CN+1,g=new T.PlaneGeometry(CH,CH,CN,CN);g.rotateX(-Math.PI/2);g.translate(x0+CH/2,0,z0+CH/2);
+/* st = 1 for a full-detail chunk, COARSE_STEP for a coarse one. Each chunk remembers its own grid (C.cn cells
+   per side, C.res metres per cell), so everything that reads chunk data works with either detail level. */
+function buildChunk(i,j,st){
+  st=st||1;const old=chunks.get(ckey(i,j));if(old){scene.remove(old.m);old.g.dispose()}   // replacing a chunk at another detail level
+  const cn=CN/st,res=RES*st,x0=i*CH,z0=j*CH,n=cn+1,g=new T.PlaneGeometry(CH,CH,cn,cn);g.rotateX(-Math.PI/2);g.translate(x0+CH/2,0,z0+CH/2);
   const pos=g.attributes.position,base=new Float32Array(n*n),hts=new Float32Array(n*n),tone=new Float32Array(n*n),col=new Float32Array(n*n*3);
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const k=r*n+c,x=x0+c*RES,z=z0+r*RES,b=baseH(x,z),h=surfaceAt(x,z,b);base[k]=b;tone[k]=toneAt(x,z);hts[k]=h;pos.setY(k,h);shade(col,k,x,z,b,h,tone[k])}
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){const k=r*n+c,x=x0+c*res,z=z0+r*res,b=baseH(x,z),h=surfaceAt(x,z,b);base[k]=b;tone[k]=toneAt(x,z);hts[k]=h;pos.setY(k,h);shade(col,k,x,z,b,h,tone[k])}
   g.setAttribute('color',new T.BufferAttribute(col,3));g.computeBoundingSphere();
   const m=new T.Mesh(g,chunkMat);m.receiveShadow=true;scene.add(m);
-  const C={x0,z0,base,hts,tone,col,g,m,dirty:false};chunks.set(ckey(i,j),C);return C;
+  const C={x0,z0,st,cn,res,base,hts,tone,col,g,m,dirty:false};chunks.set(ckey(i,j),C);return C;
 }
 function rebuildRegion(x0,z0,x1,z1){
-  const n=CN+1;
   for(const C of chunks.values()){
     if(C.x0>x1||C.x0+CH<x0||C.z0>z1||C.z0+CH<z0)continue;
-    const c0=clamp(Math.floor((x0-C.x0)/RES),0,CN),c1=clamp(Math.ceil((x1-C.x0)/RES),0,CN),q0=clamp(Math.floor((z0-C.z0)/RES),0,CN),q1=clamp(Math.ceil((z1-C.z0)/RES),0,CN),pos=C.g.attributes.position;
-    for(let r=q0;r<=q1;r++)for(let c=c0;c<=c1;c++){const k=r*n+c,x=C.x0+c*RES,z=C.z0+r*RES,h=surfaceAt(x,z,C.base[k]);C.hts[k]=h;pos.setY(k,h);shade(C.col,k,x,z,C.base[k],h,C.tone[k])}
+    const cn=C.cn,res=C.res,n=cn+1;
+    const c0=clamp(Math.floor((x0-C.x0)/res),0,cn),c1=clamp(Math.ceil((x1-C.x0)/res),0,cn),q0=clamp(Math.floor((z0-C.z0)/res),0,cn),q1=clamp(Math.ceil((z1-C.z0)/res),0,cn),pos=C.g.attributes.position;
+    for(let r=q0;r<=q1;r++)for(let c=c0;c<=c1;c++){const k=r*n+c,x=C.x0+c*res,z=C.z0+r*res,h=surfaceAt(x,z,C.base[k]);C.hts[k]=h;pos.setY(k,h);shade(C.col,k,x,z,C.base[k],h,C.tone[k])}
     C.dirty=true;
   }
 }
@@ -475,15 +481,22 @@ function streamChunks(fx,fz,budget){
   for(let i=ci-R;i<=ci+R;i++)for(let j=cj-R;j<=cj+R;j++){
     if(i*CH>=HALF||(i+1)*CH<=-HALF||j*CH>=HALF||(j+1)*CH<=-HALF)continue;
     const d=Math.hypot(i*CH+CH/2-fx,j*CH+CH/2-fz);
-    if(d<=LOAD_R+CH*0.72&&!chunks.has(ckey(i,j)))want.push([d,i,j]);
+    if(d>LOAD_R+CH*0.72)continue;
+    /* Pick a detail level. Coarse chunks upgrade as soon as they come within NEAR_R, but full-detail chunks only
+       drop back once they're a whole chunk farther out, so walking back and forth doesn't rebuild them over and over. */
+    const C=chunks.get(ckey(i,j)),nearD=NEAR_R+CH*0.72;
+    const st=d<=nearD?1:C&&C.st===1&&d<=nearD+CH?1:COARSE_STEP;
+    if(!C||C.st!==st)want.push([d,i,j,st]);
   }
-  if(want.length){want.sort((a,b)=>a[0]-b[0]);const nb=budget||(want[0][0]<LOAD_R*0.8?10:2);for(let k=0;k<Math.min(nb,want.length);k++)buildChunk(want[k][1],want[k][2])}
-  for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*3){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
+  if(want.length){want.sort((a,b)=>a[0]-b[0]);const nb=budget||(want[0][0]<NEAR_R*1.2?6:2);for(let k=0;k<Math.min(nb,want.length);k++)buildChunk(want[k][1],want[k][2],want[k][3])}
+  // PERF: unload chunks once they're 1.5 chunks past LOAD_R (was 3), so fewer out-of-range chunks sit in the scene.
+  for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*1.5){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
 }
 function groundAt(x,z){
   if(Math.max(Math.abs(x),Math.abs(z))>=HALF)return OUTER_Y;
   const C=chunks.get(ckey(Math.floor(x/CH),Math.floor(z/CH)));
   if(!C)return surfaceAt(x,z,baseH(x,z));
+  if(C.st!==1)return surfaceAt(x,z,baseH(x,z));   // coarse chunk: compute exactly, so nobody stands on the rougher mesh
   const n=CN+1,fx=(x-C.x0)/RES,fz=(z-C.z0)/RES,c=Math.min(Math.floor(fx),CN-1),r=Math.min(Math.floor(fz),CN-1),tx=fx-c,tz=fz-r,i=r*n+c;
   return lerp(lerp(C.hts[i],C.hts[i+1],tx),lerp(C.hts[i+n],C.hts[i+n+1],tx),tz);
 }
