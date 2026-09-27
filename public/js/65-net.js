@@ -3,6 +3,7 @@
 /* ---------- multiplayer (WebSocket to the camp server) ---------- */
 const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:'',needPass:false,passOk:false,awaitingJoin:false};
 const remotes=new Map();
+let DIRINFO=null; // last 'dirinfo' snapshot from the server (see the 'events' console command in 76-console.js)
 function wsSend(o){if(net.ws&&net.ws.readyState===1)try{net.ws.send(JSON.stringify(o))}catch(e){}}
 let HOST='',PASS='';
 try{
@@ -73,6 +74,10 @@ function onMsg(m){
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
       monFromServer(m.mon||{trucks:[],zer:null});
+      // event director state: whether it's running, and any of its events already in progress (twister can't be
+      // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
+      if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
+      if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
       maybeResume();break;
@@ -121,7 +126,9 @@ function onMsg(m){
       // means the password was right: remember it and start (or resume) the game for real.
       if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
       break;
-    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
+    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
+    case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
+    case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;
     case 'sleepstat':SLEEP.asleep=num(m.asleep,0,80,0)|0;SLEEP.total=num(m.total,0,80,1)|0;break;
     case 'daybreak':S.inBed=null;toast('Morning already - everyone in camp was asleep.','good',4500);break;

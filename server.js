@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const SIM = require('./public/sim.js');
+const DIRECTOR = require('./public/director.js'); // event director: picks natural hazards on a shared budget (see that file)
 const LOG = require('./logger.js'); // play-test event logging (data/logs/*.jsonl); PLAYLOG=0 turns it off
 
 const PORT = Number(process.env.PORT) || 4300;
@@ -102,6 +103,7 @@ if (!world.recent || typeof world.recent !== 'object') world.recent = {};
 if (!Array.isArray(world.hostNames)) world.hostNames = [];
 if (!world.clock || typeof world.clock !== 'object') world.clock = { off: 0, paused: false, pt: 0 };
 if (!world.run || typeof world.run !== 'object') world.run = freshRun();
+if (!world.director || typeof world.director !== 'object') world.director = { on: true }; // persisted so a restart doesn't silently disable it
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
@@ -194,6 +196,7 @@ const server = http.createServer((req, res) => {
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
     if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');
     if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
+    if (url === '/director.js') return sendFile(res, 'director.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
     // split client files (see scripts/split-client.mjs): whitelisted, resolved strictly inside public/
     if (url.startsWith('/js/')) return sendStatic(res, 'js', url.slice('/js/'.length));
     if (url.startsWith('/css/')) return sendStatic(res, 'css', url.slice('/css/'.length));
@@ -277,6 +280,8 @@ wss.on('connection', (ws, req) => {
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
+      dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
+      dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -478,6 +483,24 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
+      case 'dir': {
+        // Host console: "director on|off" toggles the whole event director; "event <kind>" forces one placement.
+        if (!c.host) return;
+        if (typeof m.on === 'boolean') {
+          world.director.on = dirState.enabled = m.on; dirty = true;
+          LOG.log('directorToggle', { id: c.id, n: c.n, on: m.on });
+          broadcast({ t: 'dir', on: m.on }); // everyone, including the host who asked, so they all gate the same way
+        } else if (typeof m.force === 'string' && /^[a-z]{1,16}$/.test(m.force)) {
+          const now = Date.now();
+          const d = DIRECTOR.forceEvent(dirState, m.force, { x: c.x, z: c.z, now });
+          if (d) {
+            LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: c.n, major: d.major, why: 'forced by ' + c.n });
+            if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
+            // d.mode === 'monster' (javelinas/lion): TODO once that branch lands, start the server-side monster here instead of an env broadcast.
+          } else LOG.log('directorForceFailed', { id: c.id, n: c.n, k: m.force });
+        }
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
@@ -531,8 +554,10 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-/* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
+/* ---- shared rules, 10 times a second: heavy loot, night monsters, the quota at curfew, and the event director ---- */
 const MON = { trucks: [], zer: null };
+const dirState = DIRECTOR.createState(); dirState.enabled = world.director.on; // one director for the whole camp; the server is its only authority
+let lastDirInfoT = 0; // throttle for the 'dirinfo' status broadcast (host "events" command reads it)
 // Wire format for the 'mon' field, shared by the periodic broadcast and the 'hello' a (re)connecting
 // client gets. A fresh connection has to see the CURRENT truth here, not just wait for the next change:
 // the periodic broadcast only fires on the tick a monster appears or disappears, so a client that wasn't
@@ -608,6 +633,18 @@ setInterval(() => {
   }
   if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;
+  // event director: one shared budget for natural hazards (see public/director.js). Decisions go out through the
+  // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
+  const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers })) {
+    LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
+    if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
+    // d.mode === 'monster' (javelinas/lion): TODO once that branch lands, start the server-side monster here instead of an env broadcast.
+  }
+  if (now - lastDirInfoT >= 3000 && joined().length) {
+    lastDirInfoT = now;
+    broadcast({ t: 'dirinfo', ...DIRECTOR.describe(dirState, now, world.run.day, Math.max(1, joined().length)) });
+  }
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
 

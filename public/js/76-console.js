@@ -8,7 +8,7 @@ const ENV={
   twister:{spawn:o=>addTwister(o.x,o.z,o.a)},
   // seed comes from x/z alone (not the clock), so every client hashes the exact same seed from the exact same
   // shared numbers -- only t0 (each client's own twNow() at the moment it hears about it) can drift a little.
-  landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,twNow())},
+  landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())}, // o.t0: a late joiner replaying a director event already in progress (see 'hello' in 65-net.js)
 };
 function spawnEnv(k,o,by){
   if(!ENV[k])return false;
@@ -78,6 +78,30 @@ command('tent',{usage:'tent <A|B|D|C|out>',help:'Teleport straight into (or out 
   run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a tent.';exitTent();return'Stepped outside.'}
     const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such tent. Try A, B, D or C.');
     if(inTent())exitTent();enterTent(ti);return`Inside ${TENTS[ti].name}.`}});
+
+/* ---------- event director commands (see public/director.js) ---------- */
+command('director',{usage:'director on|off',help:'Toggle the event director. Off brings back the old independent twister/landslide schedules.',
+  run([a]){a=(a||'').toLowerCase();if(a!=='on'&&a!=='off')throw new Error('Usage: director on|off');const on=a==='on';
+    DIRECTOR_ON=on;if(online())wsSend({t:'dir',on});else{soloDirState=soloDirState||DIRECTOR.createState();soloDirState.enabled=on}
+    return`Director ${on?'on':'off'}.${on?'':' Old natural twister/landslide schedules are back.'}`}});
+command('event',{usage:'event <kind>',help:'Force the director to place one event near you now.',
+  run([k]){const kinds=Object.keys(DIRECTOR.REGISTRY);k=(k||'').toLowerCase();
+    if(!DIRECTOR.REGISTRY[k])throw new Error(`Usage: event <kind>. Try: ${kinds.join(', ')}`);
+    if(!DIRECTOR.REGISTRY[k].enabled)throw new Error(`"${k}" isn't wired up yet (disabled in the registry until its branch lands).`);
+    if(online()){wsSend({t:'dir',force:k});return`Asked the director for a ${k} nearby. Watch the lake.`}
+    soloDirState=soloDirState||DIRECTOR.createState();
+    const d=DIRECTOR.forceEvent(soloDirState,k,{x:P.x,z:P.z,now:Date.now()});
+    if(!d)return`Couldn't find a legal spot for ${k} (camp may be in the way -- try moving out onto the lake).`;
+    if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a});
+    return`${k} placed near you.`}});
+command('events',{usage:'events',help:'Show the director\'s state: next roll, cooldowns, active events, intensity.',
+  run(){
+    const fmt=d=>{const cds=Object.entries(d.cooldowns).filter(([,s])=>s>0).map(([k,s])=>`${k} ${s}s`).join(', ')||'none';
+      const act=d.active.map(a=>`${a.k}@${a.x},${a.z} (${a.age}s old)`).join('; ')||'none';
+      return`Director ${d.on?'ON':'OFF'}. Next roll ~${d.nextIn}s. Intensity ${d.intensity}x. Cooldowns: ${cds}. Active: ${act}.`};
+    if(online())return DIRINFO?fmt(DIRINFO):'No director info from the server yet -- wait a few seconds and try again.';
+    soloDirState=soloDirState||DIRECTOR.createState();
+    return fmt(DIRECTOR.describe(soloDirState,Date.now(),RUN.day,1))}});
 
 /* detector */
 let beepT=0,sig=0;
