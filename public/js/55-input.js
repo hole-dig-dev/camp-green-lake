@@ -34,7 +34,7 @@ addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
   if(!$('#fired').hidden)return;
   if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
-  if(shopOpen){if(e.key==='Escape'||e.key==='f'||e.key==='F'){e.preventDefault();closeShop()}return}
+  if(shopOpen){shopKeydown(e);return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
   /* pause menu: Escape toggles it, after every menu above has had first crack at its own Escape handling.

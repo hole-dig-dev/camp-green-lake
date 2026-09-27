@@ -189,14 +189,86 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .controls kbd{font:700 13px/1 var(--ui);background:var(--ink);color:var(--canvas);padding:3px 6px;border-radius:2px;min-width:14px;text-align:center}
 #lobby{font-size:15px;font-weight:600;color:var(--leaf)}
 
-#shop .card{max-width:520px}
-#shop h2,#win h2,#ko h2{font:900 40px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
-.shoprow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid rgba(43,29,18,.25)}
-.shoprow b{font-size:20px}
-.shoprow span{font-size:15px;color:var(--ink-soft);grid-column:1}
-.shoprow button{grid-row:1/3;grid-column:2;font-size:17px;padding:10px 12px;min-width:112px}
-.seedline{display:flex;justify-content:space-between;align-items:baseline;font-size:16px}
-.seedline strong{font:900 30px/1 var(--display);color:var(--jump-deep)}
+#win h2,#ko h2{font:900 40px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
+.seedline{display:flex;align-items:baseline;gap:6px;font-size:16px}
+.seedline strong{font:900 30px/1 var(--display);color:var(--jump-deep);font-variant-numeric:tabular-nums}
+
+/* =====================================================================
+   Wreck Room store (docs/ui-redesign-spec.md section 2)
+   ===================================================================== */
+#shop{padding-inline:16px}
+.shop-frame{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden;padding:0}
+.shop-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:2px dashed var(--ink-soft);flex:none}
+.shop-head .eyebrow{margin:0 0 2px;font:700 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.shop-head h2{font:900 clamp(26px,4vw,36px)/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:2px 0;color:var(--jump-deep)}
+.shop-head p#shopFlavor{margin:0;font-size:14px;color:var(--ink-soft);max-width:44ch}
+.shop-head-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
+.shop-head-actions .seedline{justify-content:flex-end}
+.seedline.seed-pulse strong{animation:seedpulse var(--dur-confirm,240ms) var(--ease-ui)}
+@keyframes seedpulse{0%{transform:scale(1)}40%{transform:scale(1.35);color:var(--brass)}100%{transform:scale(1)}}
+
+/* flex, not grid: a grid row sized "auto" next to an overflow:auto/hidden sibling resolves that
+   sibling's automatic minimum size to 0 (CSS Sizing 3.6.1), so it collapses under space pressure
+   instead of scrolling internally. Flex with explicit flex-basis + min-height:0 on both panes
+   divides the available height predictably and lets each one scroll on its own. */
+.shop-body{flex:1 1 auto;min-height:0;display:flex}
+.shop-catalog{min-width:0;min-height:0;display:flex;flex-direction:column;border-right:2px solid var(--ink);overflow:hidden;flex:3 1 0}
+.shop-tabs{display:flex;gap:4px;padding:10px 14px 0;flex:none;overflow-x:auto}
+.shop-tab{font:700 13px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;min-height:36px;border:2px solid var(--ink);border-bottom:none;border-radius:var(--r-control) var(--r-control) 0 0;background:var(--canvas-2);color:var(--ink-soft);cursor:pointer;white-space:nowrap;flex:none}
+.shop-tab[aria-selected="true"]{background:var(--canvas);color:var(--ink);font-weight:700}
+.shop-tab:focus-visible{outline:3px solid var(--water);outline-offset:-3px}
+.shop-grid{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:14px;align-content:start;align-items:start}
+/* flexbox, not a nested grid: a display:grid item inside an auto-sized parent grid track hits a
+   Chromium sizing bug where the track is sized from the wrong (too-short) intrinsic contribution,
+   so a taller card silently overlaps the next row instead of growing the track. Flex avoids it. */
+.shop-item{display:flex;align-items:flex-start;gap:10px;text-align:left;min-height:44px;padding:10px 12px;background:var(--canvas-2);border:2px solid var(--ink);border-radius:var(--r-card);cursor:pointer;box-shadow:0 3px 0 rgba(40,29,21,.25);transition:transform var(--dur-press) var(--ease-ui),box-shadow var(--dur-press) var(--ease-ui)}
+.shop-item:hover{background:#e9d7ae}
+.shop-item:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(40,29,21,.25)}
+.shop-item:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+.shop-item[aria-pressed="true"],.shop-item.is-selected{background:var(--canvas);border-color:var(--jump-deep);box-shadow:0 0 0 2px var(--jump-deep) inset,0 3px 0 rgba(40,29,21,.25)}
+.shop-item.is-owned{opacity:.85}
+.shop-item__icon{flex:none;display:flex;align-items:center;color:var(--ink-soft)}
+.shop-item.is-selected .shop-item__icon,.shop-item[aria-pressed="true"] .shop-item__icon{color:var(--jump-deep)}
+.shop-item__body{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1 1 auto}
+.shop-item__copy{display:flex;flex-direction:column;gap:1px;min-width:0}
+.shop-item__copy strong{font-size:16px;line-height:1.15}
+.shop-item__copy small{font-size:12px;color:var(--ink-soft);letter-spacing:.02em;white-space:normal}
+.shop-item__meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.shop-item__price{font:700 14px/1 var(--ui);color:var(--jump-deep);font-variant-numeric:tabular-nums}
+.shop-item__state{font:700 11px/1 var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted)}
+.shop-item.is-owned .shop-item__state{color:var(--leaf)}
+
+.shop-detail{min-width:0;min-height:0;flex:2 1 0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.shop-detail__title{display:flex;align-items:center;gap:8px;margin:0;font:900 22px/1.1 var(--display);text-transform:uppercase;letter-spacing:.02em;color:var(--ink)}
+.shop-detail__desc{margin:0;font-size:15px;line-height:1.35;color:var(--ink-soft)}
+.shop-detail__effect{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;padding:8px 10px;background:var(--canvas-2);border-radius:var(--r-card);border:1px solid var(--divider)}
+.shop-detail__effect .k{font:700 11px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);width:100%}
+.shop-detail__effect .from{color:var(--ink-soft)}
+.shop-detail__effect .to{color:var(--jump-deep);font-weight:700}
+.shop-detail__note{margin:0;font-size:13px;color:var(--ink-soft);font-style:italic}
+.shop-detail__price{display:flex;align-items:center;gap:6px;margin:0;font:700 16px/1 var(--ui);color:var(--brass)}
+.shop-detail__issued{align-self:flex-start}
+.shop-empty{color:var(--ink-soft);font-size:14px}
+#shopBuyBtn{align-self:flex-start;width:100%}
+.shop-confirm{background:var(--canvas-2);border:2px solid var(--ink);border-radius:var(--r-card);padding:12px;display:flex;flex-direction:column;gap:10px;animation:panelin var(--dur-panel) var(--ease-ui)}
+@keyframes panelin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.shop-confirm__line{margin:0;font-size:14px;font-weight:600}
+.shop-confirm__row{display:flex;gap:8px;flex-wrap:wrap}
+.shop-confirm__row .ui-button{flex:1}
+.shop-feedback{margin:0;min-height:1.2em;font-size:13px;color:var(--leaf);font-weight:600}
+
+@media (max-width:700px){
+  .shop-body{flex-direction:column}
+  .shop-catalog{flex:0 1 auto;border-right:none;border-bottom:2px solid var(--ink)}
+  .shop-detail{flex:1 1 0}
+  .shop-grid{grid-template-columns:repeat(2,1fr);max-height:38vh}
+  .shop-head{padding:14px 14px 10px}
+}
+@media (max-width:420px){
+  .shop-grid{grid-template-columns:1fr}
+  .shop-head{flex-direction:column;align-items:stretch}
+  .shop-head-actions{flex-direction:row;justify-content:space-between;align-items:center}
+}
 #ko{background:rgba(120,20,10,.35)}
 #ko .card{max-width:420px;text-align:center}
 #win{background:rgba(40,60,80,.35)}
