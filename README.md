@@ -11,6 +11,9 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 - **F** talk, buy, sell, or sit down at the card table
 - **Q** eat an onion (lizards won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound
+- **Esc** pauses (a touch-screen game gets a small pause button in the HUD instead): Resume, Options, Controls, Restart (respawns you at camp; keeps your seeds, gear, and the team's progress), or Quit to title. The game keeps running for everyone else while you're paused.
+
+In Options you can adjust mouse sensitivity, invert Y, touch look speed, field of view, master/effects/music volume, shadows, render quality, and the FPS counter, and rebind every control except Esc and the console key. Settings and key bindings are saved in the browser (`localStorage`) and reload with you. WASD and the arrow keys always move you, even if you rebind them.
 
 Find the gold tube marked **KB** and take it to the Warden. She'll mark the search area with red flags. The suitcase is buried deeper than five feet, so you'll need the long-handled shovel from the Wreck Room.
 

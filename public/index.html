@@ -171,6 +171,31 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #admin button:hover{background:#5a4028}
 #admin #admT{font:900 22px/1 var(--display)}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}.pcard{animation:none}#partyBanner{animation:none}}
+
+/* ===================== PAUSE MENU (Escape) ===================== */
+#pause{z-index:60;background:rgba(30,20,10,.55)}
+#pause .card{max-width:480px;max-height:calc(100vh - 48px);overflow:auto}
+#pause h2{margin:0}
+.pausebtns{display:flex;flex-direction:column;gap:8px}
+.btn2{background:var(--canvas-2);color:var(--ink)}
+.btn2:hover{background:#d8c090}
+.optgrp{border-top:2px dashed var(--ink-soft);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.optgrp h3{margin:0;font:900 15px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.optrow{display:flex;align-items:center;gap:10px;font-size:15px}
+.optrow>span:first-child{flex:0 0 138px}
+.optrow input[type=range]{flex:1;accent-color:var(--jump)}
+.optrow output{width:44px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.optrow.chk{gap:8px}
+.optrow input[type=checkbox]{width:18px;height:18px;accent-color:var(--jump)}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{font:700 13px/1 var(--ui);text-transform:none;letter-spacing:0;padding:7px 10px;background:var(--canvas-2);color:var(--ink);box-shadow:none;border:2px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--jump);color:#fff8ea}
+.bindrow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px;padding:4px 0}
+.bindrow .keybtn{font:700 14px/1 var(--ui);text-transform:none;letter-spacing:0;padding:7px 12px;min-width:96px;background:var(--canvas-2);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.bindrow .keybtn.listening{background:var(--danger);color:#fff}
+.bindwarn{color:var(--danger);font-size:13px;margin:0}
+#tPause{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:30;font:700 18px/1 var(--ui);width:46px;height:40px;padding:0;box-shadow:0 3px 0 var(--ink);border-radius:6px}
+@media (max-width:700px){.optrow>span:first-child{flex-basis:110px;font-size:13px}}
 </style>
 
 <div id="game"></div>
@@ -314,6 +339,68 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <p id="winText">Someone dug up the suitcase.</p>
     <p class="fine">For the first time in over a hundred years, rain is falling on Camp Green Lake. The curse is broken. You can keep digging if you want.</p>
     <button id="winClose">Keep digging</button>
+  </div>
+</div>
+
+<!-- ===================== PAUSE MENU (Escape) ===================== -->
+<button id="tPause" type="button" hidden aria-label="Pause">II</button>
+<div id="pause" class="overlay" hidden role="dialog" aria-labelledby="pauseTitle">
+  <div class="card" id="pMain">
+    <h1 class="stencil" id="pauseTitle" style="font-size:clamp(36px,8vw,56px)">Paused<small>Game continues in the background</small></h1>
+    <div class="pausebtns">
+      <button id="pResume" type="button">Resume</button>
+      <button id="pOptions" type="button">Options</button>
+      <button id="pControlsBtn" type="button">Controls</button>
+      <button id="pRestart" type="button">Restart</button>
+      <button id="pQuit" type="button">Quit to title</button>
+    </div>
+  </div>
+
+  <div class="card" id="pOptionsCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Options</h2>
+    <div class="optgrp">
+      <h3>Look</h3>
+      <div class="optrow"><span>Mouse sensitivity</span><input type="range" id="oSens" min="0.2" max="3" step="0.05"><output id="oSensV"></output></div>
+      <div class="optrow chk"><input type="checkbox" id="oInvert"><span>Invert Y</span></div>
+      <div class="optrow"><span>Touch look speed</span><input type="range" id="oTouchSens" min="0.2" max="3" step="0.05"><output id="oTouchSensV"></output></div>
+      <div class="optrow"><span>Field of view</span><input type="range" id="oFov" min="50" max="100" step="1"><output id="oFovV"></output></div>
+    </div>
+    <div class="optgrp">
+      <h3>Sound</h3>
+      <div class="optrow"><span>Master</span><input type="range" id="oVolMaster" min="0" max="100" step="1"><output id="oVolMasterV"></output></div>
+      <div class="optrow"><span>Effects</span><input type="range" id="oVolFx" min="0" max="100" step="1"><output id="oVolFxV"></output></div>
+      <div class="optrow"><span>Music</span><input type="range" id="oVolMusic" min="0" max="100" step="1"><output id="oVolMusicV"></output></div>
+    </div>
+    <div class="optgrp">
+      <h3>Graphics</h3>
+      <div class="optrow chk"><input type="checkbox" id="oShadows"><span>Shadows</span></div>
+      <div class="optrow chk"><input type="checkbox" id="oFps"><span>Show FPS counter</span></div>
+      <div class="optrow"><span>Render quality</span><div class="seg" id="oQuality">
+        <button type="button" data-v="auto">Auto</button><button type="button" data-v="low">Low</button><button type="button" data-v="med">Medium</button><button type="button" data-v="high">High</button>
+      </div></div>
+    </div>
+    <div class="optgrp">
+      <h3>Key bindings</h3>
+      <div id="bindList"></div>
+      <p class="bindwarn" id="bindWarn" hidden></p>
+      <button id="bindReset" type="button" class="btn2" style="align-self:flex-start">Reset to defaults</button>
+    </div>
+    <button id="pOptBack" type="button">Back</button>
+  </div>
+
+  <div class="card" id="pControlsCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Controls</h2>
+    <div class="controls" id="pControlsList"></div>
+    <button id="pCtrlBack" type="button">Back</button>
+  </div>
+
+  <div class="card" id="pConfirmCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)" id="pConfirmTitle"></h2>
+    <p id="pConfirmText"></p>
+    <div class="pausebtns">
+      <button id="pConfirmYes" type="button"></button>
+      <button id="pConfirmNo" type="button" class="btn2">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -996,16 +1083,17 @@ function updateRain(dt){if(!rain.visible)return;const cx=camera.position.x,cz=ca
 /* ---------- audio (made in the browser, starts on your first click) ---------- */
 let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null;
 function initAudio(){
-  if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.55;master.connect(AC.destination);
+  if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=SETTINGS.volMaster;master.connect(AC.destination);
+  fxBus=AC.createGain();fxBus.gain.value=SETTINGS.volFx;fxBus.connect(master);   // pause menu: ambient + one-shot sfx share this bus, so Effects volume is independent of Music
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;const wg=AC.createGain();wg.gain.value=0.07;
   const lfo=AC.createOscillator();lfo.frequency.value=0.08;const lg=AC.createGain();lg.gain.value=0.04;lfo.connect(lg).connect(wg.gain);lfo.start();
-  wind.connect(wf).connect(wg).connect(master);wind.start();
-  const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(master);rn.start();
+  wind.connect(wf).connect(wg).connect(fxBus);wind.start();
+  const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(fxBus);rn.start();
   }catch(e){AC=null}
 }
-function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(master);s.start(t,Math.random());s.stop(t+dur+0.05)}
-function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(master);o.start(t);o.stop(t+dur+0.05)}
+function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
+function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
 const sfx={
   scoop(){noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
   clank(){tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)},
@@ -1183,7 +1271,7 @@ $('#winClose').onclick=()=>{$('#win').hidden=true};
 
 /* ---------- input ---------- */
 const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
-function releaseLock(){if(document.pointerLockElement)try{document.exitPointerLock()}catch(e){}}
+function releaseLock(){if(document.pointerLockElement){voluntaryRelease=true;try{document.exitPointerLock()}catch(e){}}}
 function lockOk(){return document.pointerLockElement===canvas}
 canvas.addEventListener('mousedown',e=>{
   if(!S.started||uiOpen()||S.ko)return;
@@ -1195,23 +1283,37 @@ addEventListener('mouseup',e=>{if(e.button===0)digHeld=false;dragLook=null});
 let dragLook=null;
 addEventListener('mousemove',e=>{
   if(!S.started)return;
-  if(lockOk()){P.yaw-=e.movementX*0.0026;P.pitch=pc(P.pitch+e.movementY*0.0022)}
-  else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004);dragLook={x:e.clientX,y:e.clientY}}
+  const iv=SETTINGS.invertY?-1:1;   // pause menu: sensitivity + invert-Y settings
+  if(lockOk()){P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
+  else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005*SETTINGS.sens;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004*SETTINGS.sens*iv);dragLook={x:e.clientX,y:e.clientY}}
 });
-document.addEventListener('pointerlockchange',()=>{if(!lockOk())digHeld=false});
+document.addEventListener('pointerlockchange',()=>{
+  if(!lockOk()){
+    digHeld=false;
+    if(voluntaryRelease)voluntaryRelease=false;   // we released it ourselves (shop/dialog/pause/etc): nothing more to do
+    else if(S.started&&!overlayBlocking())openPause();   // browser dropped the lock on its own -- almost always Escape, which many browsers swallow instead of sending us a keydown
+  }
+});
 const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here!','Water truck!'];
 addEventListener('keydown',e=>{
+  const pk=e.key.toLowerCase();   // pause menu: the raw physical key, before any rebinding is applied
   if(e.target===conIn){conKey(e);return}
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
   if(!$('#fired').hidden)return;
-  if(e.key==='Enter'&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
+  if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
   if(shopOpen){if(e.key==='Escape'||e.key==='f'||e.key==='F'){e.preventDefault();closeShop()}return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
+  /* pause menu: Escape toggles it, after every menu above has had first crack at its own Escape handling.
+     While it's open, every other key is swallowed here too (same pattern as the shop/dialog/blackjack blocks above). */
+  if(pk==='escape'){e.preventDefault();if(PAUSE.open)closePause();else if(S.started&&!overlayBlocking())openPause();return}
+  if(PAUSE.open)return;
   if(!S.started)return;
-  const k=e.key.toLowerCase();KEYS[k]=true;
+  if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
+  KEYS[k]=true;
   if(k===' '||k.startsWith('arrow'))e.preventDefault();
   if(k==='e'){
     // E is normally hold-to-dig, but at a tent door/exit/bunk it enters/leaves/lies down instead (digging
@@ -1226,12 +1328,11 @@ addEventListener('keydown',e=>{
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();
   if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
-  if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
+  if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:SETTINGS.volMaster;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}
   if(k>='1'&&k<='5')shout(+k-1);
-  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
 });
-addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false});
+addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i})}
 function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
@@ -1241,7 +1342,7 @@ const touch={id:null,ox:0,oy:0,ix:0,iz:0,lookId:null,lx:0,ly:0};
 if(isTouch){
   $('#touch').hidden=false;$('#keys').textContent='';
   canvas.addEventListener('touchstart',e=>{if(!S.started)return;for(const t of e.changedTouches){if(t.clientX<innerWidth*0.45&&touch.id===null){touch.id=t.identifier;touch.ox=t.clientX;touch.oy=t.clientY}else if(touch.lookId===null){touch.lookId=t.identifier;touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
-  canvas.addEventListener('touchmove',e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){const dx=clamp(t.clientX-touch.ox,-50,50),dy=clamp(t.clientY-touch.oy,-50,50);touch.ix=dx/50;touch.iz=-dy/50;$('#knob').style.transform=`translate(${dx}px,${dy}px)`}else if(t.identifier===touch.lookId){P.yaw-=(t.clientX-touch.lx)*0.006;P.pitch=pc(P.pitch+(t.clientY-touch.ly)*0.004);touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
+  canvas.addEventListener('touchmove',e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){const dx=clamp(t.clientX-touch.ox,-50,50),dy=clamp(t.clientY-touch.oy,-50,50);touch.ix=dx/50;touch.iz=-dy/50;$('#knob').style.transform=`translate(${dx}px,${dy}px)`}else if(t.identifier===touch.lookId){const iv=SETTINGS.invertY?-1:1;P.yaw-=(t.clientX-touch.lx)*0.006*SETTINGS.touchSens;P.pitch=pc(P.pitch+(t.clientY-touch.ly)*0.004*SETTINGS.touchSens*iv);touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
   const end=e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){touch.id=null;touch.ix=touch.iz=0;$('#knob').style.transform=''}if(t.identifier===touch.lookId)touch.lookId=null}};
   canvas.addEventListener('touchend',end);canvas.addEventListener('touchcancel',end);
   const hold=(id,on,off)=>{const b=$(id);b.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();off&&off()},{passive:false})};
@@ -1279,7 +1380,7 @@ function startGame(resume){
   me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color]});scene.add(me.g);
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
-  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();
+  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
   if(S.revealed===false&&S.reported)reveal('You');
   if(!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
@@ -1945,7 +2046,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||!$('#fired').hidden}
+function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||!$('#fired').hidden||PAUSE.open}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
@@ -2133,7 +2234,7 @@ function playStep(i,t){
   if(s===2||s===6||s===10||s===14)for(const f of CHORDS[bar])oscAt(t,f,0.13,'square',0.045,null,2400);
 }
 function scheduleMusic(){if(!AC)return;while(nextStep<AC.currentTime+0.12){playStep(stepIdx,nextStep);nextStep+=STEP;stepIdx=(stepIdx+1)%64}}
-function startMusic(){if(!AC||musicTimer)return;if(!partyBus){partyBus=AC.createGain();partyBus.gain.value=0.85;partyBus.connect(master)}if(AC.state==='suspended')AC.resume();nextStep=AC.currentTime+0.05;stepIdx=0;musicTimer=setInterval(scheduleMusic,25)}
+function startMusic(){if(!AC||musicTimer)return;if(!partyBus){partyBus=AC.createGain();partyBus.gain.value=0.85*SETTINGS.volMusic;partyBus.connect(master)}if(AC.state==='suspended')AC.resume();nextStep=AC.currentTime+0.05;stepIdx=0;musicTimer=setInterval(scheduleMusic,25)}
 function stopMusic(){clearInterval(musicTimer);musicTimer=null}
 
 function partyTarget(){if(PARTY.targetId===net.id)return me?{x:P.x,y:P.y,z:P.z}:null;const R=remotes.get(PARTY.targetId);return R?R.p.g.position:null}
@@ -2563,17 +2664,21 @@ const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null,warned:false};
    "llvmpipe"), which is roughly 10x slower. We warn the player once when that happens, because no in-game setting fixes it. */
 const GPU_NAME=(()=>{try{const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info');return String(ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER))}catch(e){return'unknown'}})();
 const SOFTWARE_GPU=/swiftshader|llvmpipe|software|basic render/i.test(GPU_NAME);
-if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1.35 monospace;white-space:pre;text-align:right;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
+/* pause menu: the element always exists now (so the Options "Show FPS" checkbox has something to toggle);
+   it stays hidden unless #fps is in the address or the setting is on -- see applyFpsVisibility(). */
+PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1.35 monospace;white-space:pre;text-align:right;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';PERF.el.hidden=!/fps/.test(location.hash);document.body.appendChild(PERF.el);
 function perfTick(now,gap){
   if(gap>1500){PERF.frames=0;PERF.t0=now;return}   // tab was hidden (the game pauses): don't count that gap
   if(!PERF.t0)PERF.t0=now;PERF.frames++;
   const span=now-PERF.t0;if(span<2000)return;
   PERF.fps=PERF.frames*1000/span;PERF.frames=0;PERF.t0=now;
-  let pr=PERF.pr;
-  if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
-  else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
-  else PERF.good=0;
-  if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  if(SETTINGS.quality==='auto'){   // fixed Low/Medium/High settings skip this adaptive step entirely (see applyQuality)
+    let pr=PERF.pr;
+    if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
+    else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
+    else PERF.good=0;
+    if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  }
   if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris\nGPU: ${GPU_NAME}`;
   if(SOFTWARE_GPU&&S.started&&!PERF.warned){PERF.warned=true;toast('Your browser is drawing the game without your graphics card, so it will be slow. In Chrome: Settings > System > turn on "Use graphics acceleration when available", then restart Chrome.','bad',15000)}
 }
@@ -2596,6 +2701,220 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass never arrives)
+
+/* =====================================================================
+   PAUSE MENU  (Escape opens/closes it; Resume, Options, Controls, Restart, Quit)
+   Everything the feature owns lives in this one section. Only a handful of one-line
+   hooks sit elsewhere: uiOpen() (so movement/digging/water-drain pause), the
+   keydown/keyup handlers (Escape + the key-remap layer), releaseLock() and the
+   pointerlockchange listener (so losing pointer lock via Escape also opens this),
+   the mouse/touch look code (sensitivity + invert Y), perfTick (fixed render quality),
+   initAudio/noise/tone/startMusic (an Effects bus separate from Music), and one line
+   in startGame() (apply saved volumes once the audio graph exists).
+   ===================================================================== */
+
+/* ---- rebindable actions: id, label shown in the UI, and the default physical key.
+   Movement (forward/back/left/right) always ALSO answers to WASD and the arrow keys,
+   no matter what they're rebound to -- see the "fixed alternative" note in rebuildRemap(). */
+const BIND_DEFS=[
+  {id:'forward',label:'Move forward',def:'w'},{id:'back',label:'Move back',def:'s'},
+  {id:'left',label:'Move left',def:'a'},{id:'right',label:'Move right',def:'d'},
+  {id:'sprint',label:'Sprint',def:'shift'},{id:'jump',label:'Jump / climb out of a hole',def:' '},
+  {id:'dig',label:'Dig (hold)',def:'e'},{id:'use',label:'Use / talk / buy / sell',def:'f'},
+  {id:'onion',label:'Eat an onion',def:'q'},{id:'detector',label:'Toggle the detector',def:'t'},
+  {id:'sound',label:'Mute sound',def:'m'},{id:'firstPerson',label:'First / third person',def:'v'},
+  {id:'crouch',label:'Crouch',def:'c'},{id:'ping',label:'Ping the map',def:'g'},
+  {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
+  {id:'shout1',label:'Shout 1',def:'1'},{id:'shout2',label:'Shout 2',def:'2'},
+  {id:'shout3',label:'Shout 3',def:'3'},{id:'shout4',label:'Shout 4',def:'4'},{id:'shout5',label:'Shout 5',def:'5'},
+];
+const RESERVED_KEYS=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','`']);
+const KEY_NAMES={' ':'Space','arrowup':'Up','arrowdown':'Down','arrowleft':'Left','arrowright':'Right','enter':'Enter','shift':'Shift','`':'`'};
+const keyLabel=k=>KEY_NAMES[k]||(k.length===1?k.toUpperCase():k);
+const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
+
+/* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
+const SETTINGS_KEY='cgl-settings';
+const SETTINGS={sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,
+  shadows:true,quality:'auto',showFps:false,binds:defaultBinds()};
+function loadSettings(){
+  try{
+    const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
+    for(const k of['sens','touchSens','fov','volMaster','volFx','volMusic'])if(Number.isFinite(o[k]))SETTINGS[k]=o[k];
+    if(typeof o.invertY==='boolean')SETTINGS.invertY=o.invertY;
+    if(typeof o.shadows==='boolean')SETTINGS.shadows=o.shadows;
+    if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
+    if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
+    if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
+  }catch(e){}
+}
+function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS))}catch(e){}}
+
+/* ---- key remap layer: turns whatever key is physically pressed into the default key name the rest
+   of the file already checks (KEYS['w'], k==='e', ...), so none of that code had to change. Rebuilt
+   whenever a binding changes. Returns null for a key that isn't bound to anything right now. */
+let REMAP=Object.create(null);
+function rebuildRemap(){
+  REMAP=Object.create(null);
+  for(const k of['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'])REMAP[k]=k;   // fixed alternative: always movement
+  for(const b of BIND_DEFS)REMAP[SETTINGS.binds[b.id]]=b.def;
+}
+const remapKey=pk=>REMAP[pk]||null;
+
+/* ---- apply settings to the live game ---- */
+let fxBus=null;
+function applyVolume(){
+  if(master)master.gain.value=muted?0:SETTINGS.volMaster;
+  if(fxBus)fxBus.gain.value=SETTINGS.volFx;
+  if(partyBus)partyBus.gain.value=0.85*SETTINGS.volMusic;
+}
+function applyFov(){camera.fov=SETTINGS.fov;camera.updateProjectionMatrix()}
+function applyShadows(){renderer.shadowMap.enabled=SETTINGS.shadows}
+const QUALITY_PR={low:0.65,med:1,high:MAX_PR};
+function applyQuality(){
+  if(SETTINGS.quality==='auto')return;   // perfTick's adaptive step takes it from here
+  const pr=QUALITY_PR[SETTINGS.quality]||MAX_PR;
+  PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight);
+}
+function applyFpsVisibility(){if(PERF.el)PERF.el.hidden=!(SETTINGS.showFps||/fps/.test(location.hash))}
+function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility()}
+
+/* ---- pause state + screens ---- */
+const PAUSE={open:false};
+let voluntaryRelease=false;
+const pauseEl=$('#pause'),pMain=$('#pMain'),pOptionsCard=$('#pOptionsCard'),pControlsCard=$('#pControlsCard'),pConfirmCard=$('#pConfirmCard');
+function overlayBlocking(){return uiOpen()||!$('#admin').hidden||!$('#win').hidden}
+function tryLock(){if(!isTouch)try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+function showPauseScreen(name){
+  stopListening();
+  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';
+}
+function openPause(){
+  if(PAUSE.open||!S.started)return;
+  PAUSE.open=true;digHeld=false;releaseLock();
+  showPauseScreen('main');pauseEl.hidden=false;
+}
+function closePause(){
+  if(!PAUSE.open)return;
+  PAUSE.open=false;pauseEl.hidden=true;tryLock();
+}
+$('#tPause').onclick=()=>{if(S.started&&!overlayBlocking())openPause()};
+if(isTouch)$('#tPause').hidden=false;
+$('#pResume').onclick=closePause;
+$('#pOptions').onclick=()=>{renderOptions();showPauseScreen('options')};
+$('#pOptBack').onclick=()=>showPauseScreen('main');
+$('#pControlsBtn').onclick=()=>{renderControlsList();showPauseScreen('controls')};
+$('#pCtrlBack').onclick=()=>showPauseScreen('main');
+function askConfirm(title,text,yesLabel,onYes){
+  $('#pConfirmTitle').textContent=title;$('#pConfirmText').textContent=text;
+  const yes=$('#pConfirmYes');yes.textContent=yesLabel;yes.onclick=onYes;
+  $('#pConfirmNo').onclick=()=>showPauseScreen('main');
+  showPauseScreen('confirm');
+}
+$('#pRestart').onclick=()=>askConfirm('Restart?',
+  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your seeds, gear, sack, onions, the team\'s quota, or the time of day -- that\'s shared with everyone at camp and already saved.',
+  'Respawn at camp',()=>{respawn();closePause()});
+$('#pQuit').onclick=()=>askConfirm('Quit to title?',
+  'Your progress is saved. You\'ll disconnect from camp and land back on the title screen -- come back any time to pick up where you left off.',
+  'Quit to title',quitToTitle);
+function quitToTitle(){
+  saveSession();
+  S.started=false;   // the existing pagehide listener also calls saveSession(); without this it would re-write the session we're about to clear
+  try{sessionStorage.removeItem('cgl-session')}catch(e){}   // so the reload lands on the title screen instead of auto-resuming
+  if(net.ws)try{net.ws.close()}catch(e){}
+  location.reload();
+}
+
+/* ---- options screen ---- */
+const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('#oTouchSens'),oTouchSensV=$('#oTouchSensV'),
+      oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
+      oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
+      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality');
+function renderOptions(){
+  oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
+  oInvert.checked=SETTINGS.invertY;
+  oTouchSens.value=SETTINGS.touchSens;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';
+  oFov.value=SETTINGS.fov;oFovV.textContent=SETTINGS.fov+'°';
+  oVolMaster.value=Math.round(SETTINGS.volMaster*100);oVolMasterV.textContent=oVolMaster.value+'%';
+  oVolFx.value=Math.round(SETTINGS.volFx*100);oVolFxV.textContent=oVolFx.value+'%';
+  oVolMusic.value=Math.round(SETTINGS.volMusic*100);oVolMusicV.textContent=oVolMusic.value+'%';
+  oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;
+  for(const b of oQuality.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.quality?'true':'false');
+  renderBindList();
+}
+oSens.oninput=()=>{SETTINGS.sens=+oSens.value;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';saveSettings()};
+oInvert.onchange=()=>{SETTINGS.invertY=oInvert.checked;saveSettings()};
+oTouchSens.oninput=()=>{SETTINGS.touchSens=+oTouchSens.value;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';saveSettings()};
+oFov.oninput=()=>{SETTINGS.fov=+oFov.value;oFovV.textContent=SETTINGS.fov+'°';applyFov();saveSettings()};
+oVolMaster.oninput=()=>{SETTINGS.volMaster=+oVolMaster.value/100;oVolMasterV.textContent=oVolMaster.value+'%';applyVolume();saveSettings()};
+oVolFx.oninput=()=>{SETTINGS.volFx=+oVolFx.value/100;oVolFxV.textContent=oVolFx.value+'%';applyVolume();saveSettings()};
+oVolMusic.oninput=()=>{SETTINGS.volMusic=+oVolMusic.value/100;oVolMusicV.textContent=oVolMusic.value+'%';applyVolume();saveSettings()};
+oShadows.onchange=()=>{SETTINGS.shadows=oShadows.checked;applyShadows();saveSettings()};
+oFps.onchange=()=>{SETTINGS.showFps=oFps.checked;applyFpsVisibility();saveSettings()};
+oQuality.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.quality=b.dataset.v;for(const c of oQuality.children)c.setAttribute('aria-pressed',c===b?'true':'false');applyQuality();saveSettings()};
+
+/* ---- key-binding capture: click a row, press a key. Conflicts get a warning but aren't blocked;
+   the fixed keys (WASD, arrows, Escape, `) can't be reassigned at all. ---- */
+const bindListEl=$('#bindList'),bindWarnEl=$('#bindWarn');
+let listeningFor=null,cancelListen=null;
+function stopListening(){if(cancelListen){document.removeEventListener('keydown',cancelListen,true);cancelListen=null}listeningFor=null}
+function conflictFor(id,key){for(const b of BIND_DEFS)if(b.id!==id&&SETTINGS.binds[b.id]===key)return b.label;return null}
+function renderBindList(){
+  stopListening();bindListEl.textContent='';bindWarnEl.hidden=true;
+  for(const b of BIND_DEFS){
+    const row=document.createElement('div');row.className='bindrow';
+    const span=document.createElement('span');span.textContent=b.label;
+    const btn=document.createElement('button');btn.type='button';btn.className='keybtn';
+    btn.textContent=keyLabel(SETTINGS.binds[b.id]);
+    btn.onclick=()=>startListening(b.id,btn);
+    row.append(span,btn);bindListEl.appendChild(row);
+  }
+}
+function startListening(id,btn){
+  if(listeningFor)return;   // one capture at a time
+  listeningFor=id;btn.classList.add('listening');btn.textContent='Press a key…';bindWarnEl.hidden=true;
+  cancelListen=e=>{
+    e.preventDefault();e.stopPropagation();
+    const key=e.key.toLowerCase();
+    stopListening();
+    if(key==='escape'){renderBindList();return}   // cancel, keep the old binding
+    if(RESERVED_KEYS.has(key)){bindWarnEl.hidden=false;bindWarnEl.textContent=`${keyLabel(key)} is fixed and can't be reassigned.`;renderBindList();return}
+    const clash=conflictFor(id,key);
+    SETTINGS.binds[id]=key;rebuildRemap();saveSettings();
+    for(const kk in KEYS)KEYS[kk]=false;digHeld=false;   // a rebind mid-hold shouldn't leave a key stuck "on"
+    renderBindList();
+    if(clash){bindWarnEl.hidden=false;bindWarnEl.textContent=`Heads up: that key was already "${clash}". It now does both.`}
+  };
+  document.addEventListener('keydown',cancelListen,true);
+}
+$('#bindReset').onclick=()=>{Object.assign(SETTINGS.binds,defaultBinds());rebuildRemap();saveSettings();renderBindList()};
+addEventListener('blur',stopListening);
+
+/* ---- controls screen: one row per action, reading the *current* binding ---- */
+const pControlsListEl=$('#pControlsList');
+function renderControlsList(){
+  pControlsListEl.textContent='';
+  let shownShout=false;
+  for(const b of BIND_DEFS){
+    if(b.id.startsWith('shout')){
+      if(shownShout)continue;shownShout=true;
+      const div=document.createElement('div');
+      div.innerHTML=BIND_DEFS.filter(d=>d.id.startsWith('shout')).map(d=>`<kbd>${keyLabel(SETTINGS.binds[d.id])}</kbd>`).join('')+' Shout 1-5';
+      pControlsListEl.appendChild(div);continue;
+    }
+    const div=document.createElement('div');
+    div.innerHTML=`<kbd>${keyLabel(SETTINGS.binds[b.id])}</kbd> ${b.label}`;
+    pControlsListEl.appendChild(div);
+  }
+  const note=document.createElement('div');note.style.cssText='grid-column:1/-1;color:var(--ink-soft);font-size:13px;padding-top:6px';
+  note.textContent='Click the game to lock the mouse and look around. WASD and the arrow keys always move you too, even when rebound.';
+  pControlsListEl.appendChild(note);
+}
+
+loadSettings();
+applySettings();
+
+{const R0=loadSession();if(R0)startGame(R0)}
 /* test hook for screenshots: #shot, #shot-fp, #shot-night, #shot-far */
 if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startGame();
   if(h.includes('far')){P.x=140;P.z=-180}
@@ -2610,6 +2929,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
 if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
-  twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull})};
+  twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
+  PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS};
 })();
 </script>
