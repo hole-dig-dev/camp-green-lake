@@ -23,6 +23,7 @@ function toast(msg,cls,ms){const el=document.createElement('div');el.className='
 /* ---------- digging ---------- */
 let lastWarn=0;
 function scoop(){
+  if(javSwing())return;   // a live javelina in shovel reach gets whacked instead of the ground getting dug
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa);
   const tx=P.x+fx*1.1,tz=P.z+fz*1.1;
   let h=holeNear(P.x,P.z,HOLE_R*0.8)||holeNear(tx,tz,1.4);

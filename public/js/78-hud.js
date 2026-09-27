@@ -72,6 +72,7 @@ function drawMap(){
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
   if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
+  mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}
   {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 }

@@ -76,6 +76,8 @@ const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
 const CHAT_RATE = 5, CHAT_WINDOW_MS = 4000;  // chat/shout messages per connection per window
 const ENV_RATE = 4, ENV_WINDOW_MS = 5000;    // hazard spawns per connection per window (host-only already)
 const SELL_RATE = 5, SELL_WINDOW_MS = 5000;  // sell messages per connection per window
+const WHACK_RATE = 6, WHACK_WINDOW_MS = 1000; // shovel swings at a javelina per connection per window (a swing lands at most every ~0.42s)
+const JAV_WHACK_MAX = 2.4;                   // generous server-side reach check for a 'whack' (latency headroom over the client's own ~1.9m check)
 const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
@@ -261,7 +263,7 @@ wss.on('connection', (ws, req) => {
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
     n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
-    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
+    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], whackTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
   clients.set(c.id, c);
@@ -277,6 +279,7 @@ wss.on('connection', (ws, req) => {
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
+      jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -478,6 +481,28 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
+      case 'javspawn': {
+        // Host-only console command ("javelinas [count] [distance]"): spawn a herd out on the lake, aimed at the
+        // caller. Self-contained (see the javelina section of sim.js) -- doesn't touch MON/stepMonsters at all.
+        if (!c.host) return;
+        if (!withinRate(c.envTimes, ENV_RATE, ENV_WINDOW_MS)) return; // shares the host hazard-spawn budget with 'env'
+        const n = num(m.n, 4, SIM.JAV_COUNT, SIM.JAV_COUNT) | 0, dist = num(m.dist, 20, 300, 70); // capped at JAV_COUNT: the client's render pool can't show more
+        const jev = []; SIM.spawnJavHerd(JAV, { x: c.x, z: c.z }, n, dist, jev);
+        LOG.log('javSpawn', { id: c.id, n: c.n, count: n, dist });
+        broadcast({ t: 'jav', list: javSnapshot(), ev: jev }); // don't wait for the next 100ms tick to tell everyone
+        break;
+      }
+      case 'whack': {
+        // A shovel swing landed on javelina `idx`. Fully server-validated: alive, in reach, not spamming.
+        if (c.f & 2) return; // can't swing while downed
+        const idx = num(m.idx, 0, SIM.JAV_COUNT - 1, -1) | 0, j = JAV.list[idx];
+        if (!j || j.state || Math.hypot(j.x - c.x, j.z - c.z) > JAV_WHACK_MAX) return;
+        if (!withinRate(c.whackTimes, WHACK_RATE, WHACK_WINDOW_MS)) return;
+        const jev = []; SIM.whackJavelina(JAV, idx, c.x, c.z, jev, c.id);
+        if (jev.some(e => e.k === 'javDeath')) LOG.log('javKill', { id: c.id, n: c.n, idx });
+        broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
@@ -540,6 +565,24 @@ const MON = { trucks: [], zer: null };
 // monsters are gone and keep rendering whatever it saw last.
 function monSnapshot() {
   return { trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null };
+}
+// Javelina herd: a separate, self-contained hazard (its rules live in their own section of sim.js, not mixed into
+// stepMonsters above). JAV.list is [] when no herd is out; otherwise a fixed-size array for that herd's lifetime,
+// so a client can address one by its stable array index ('whack'), the same idea as MON above but a herd of many.
+const JAV = { list: [] };
+let javOn = false;
+function javSnapshot() { return JAV.list.map(j => [r2(j.x), r2(j.z), r2(j.h), j.state]); }
+// One call from the main tick (see below): steps the herd (host-authoritative AI, bites, natural spawns) and
+// broadcasts anything that changed. Kept as its own function so the tick body only grows by one line for this.
+function tickJavelinas(t, dt, players) {
+  const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
+  for (const e of jev) {
+    if (e.k === 'javBite') LOG.log('javBite', { id: e.id, dmg: e.dmg });
+    else if (e.k === 'javSpawn' || e.k === 'javLeave' || e.k === 'javGone') LOG.log(e.k, { n: e.n, x: e.x != null ? r1(e.x) : undefined, z: e.z != null ? r1(e.z) : undefined });
+  }
+  const on = JAV.list.length > 0;
+  if (on || javOn) broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+  javOn = on;
 }
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 let policeOn = false, zerOn = false, lastMonLogT = 0;
@@ -608,6 +651,7 @@ setInterval(() => {
   }
   if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;
+  tickJavelinas(t, dt, players);
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
 

@@ -73,6 +73,7 @@ function onMsg(m){
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
       monFromServer(m.mon||{trucks:[],zer:null});
+      javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
       maybeResume();break;
@@ -104,6 +105,7 @@ function onMsg(m){
     case 'fired':fired(num(m.bank,0,1e7,0)|0,num(m.quota,0,1e7,0)|0);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);break;
+    case 'jav':javFromServer(m.list,m.ev);break;
     case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0));break;
     case 'props':if(Array.isArray(m.list))for(const a of m.list){const pr=PROPS.get(a[0]);if(pr){pr.x=num(a[1],-600,600,pr.x);pr.z=num(a[2],-600,600,pr.z);pr.n=num(a[3],0,40,0)|0}}break;
     case 'psold':propSold(num(m.id,0,1e5,-1)|0,num(m.v,0,1e4,0)|0,Array.isArray(m.who)?m.who:[]);break;
