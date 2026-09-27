@@ -734,15 +734,37 @@ function updateBots(dt,now){
 }
 
 /* ---------- yellow-spotted lizards ---------- */
+/* PERF: merge a set of coloured boxes into ONE mesh, so the GPU draws it in one call instead of one per box.
+   Each box's colour is baked into a per-vertex colour attribute, which lets every merged mesh share one material.
+   parts: [[width, height, depth, colour, x, y, z], ...] */
+const mergedMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.95,metalness:0});
+function mergeBoxes(parts){
+  const pos=[],col=[],c=new T.Color();
+  for(const[w,h,d,hex,x,y,z]of parts){
+    const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(x,y,z);
+    const p=g.attributes.position.array;for(let i=0;i<p.length;i++)pos.push(p[i]);
+    c.setHex(hex);for(let i=0;i<p.length/3;i++)col.push(c.r,c.g,c.b);g.dispose();
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();g.computeBoundingSphere();
+  return g;
+}
+/* PERF: a lizard used to be 20 separate meshes (body, head, tail, 11 spots, 2 eyes, 4 legs), and there are 48 of
+   them, so lizards alone cost ~1,000 draw calls a frame (plus the shadow pass). Now each lizard is 2 meshes:
+   the body with everything that doesn't move baked in, and the tail (kept separate because it wags).
+   Both geometries are built once and shared by every lizard. */
+const LIZ_BODY=mergeBoxes([
+  [0.36,0.16,0.9,0x6f7a3a,0,0.1,0],[0.28,0.14,0.3,0x6f7a3a,0,0.12,0.56],   // body, head
+  ...Array.from({length:11},(_,i)=>[0.07,0.02,0.07,0xf2d52a,(i%3-1)*0.11,0.19,-0.35+i*0.08]),   // yellow spots
+  [0.05,0.05,0.05,0xd11a1a,-0.12,0.18,0.64],[0.05,0.05,0.05,0xd11a1a,0.12,0.18,0.64],          // red eyes
+  ...[[-1,0.3],[1,0.3],[-1,-0.3],[1,-0.3]].map(([lx,lz])=>[0.1,0.06,0.18,0x5a6330,lx*0.23,0.03,lz]),   // legs
+]);
+const LIZ_TAIL=mergeBoxes([[0.14,0.1,0.8,0x626c33,0,0,-0.4]]);
+const LIZARD_DRAW_R=130;   // PERF: lizards farther than this from the camera are hidden (they're lost in the haze anyway)
 function makeLizard(){
   const g=new T.Group();
-  const body=box(0.36,0.16,0.9,0x6f7a3a);body.position.y=0.1;g.add(body);
-  const head=box(0.28,0.14,0.3,0x6f7a3a);head.position.set(0,0.12,0.56);g.add(head);
-  const tail=new T.Group();const tm=box(0.14,0.1,0.8,0x626c33);tm.position.z=-0.4;tail.add(tm);tail.position.set(0,0.1,-0.45);g.add(tail);
-  for(let i=0;i<11;i++){const s=box(0.07,0.02,0.07,0xf2d52a);s.position.set((i%3-1)*0.11,0.19,-0.35+i*0.08);s.castShadow=false;g.add(s)}
-  for(const sx of[-1,1]){const e=box(0.05,0.05,0.05,0xd11a1a);e.position.set(sx*0.12,0.18,0.64);g.add(e)}
-  const legs=[];for(const[lx,lz]of[[-1,0.3],[1,0.3],[-1,-0.3],[1,-0.3]]){const l=box(0.1,0.06,0.18,0x5a6330);l.position.set(lx*0.23,0.03,lz);g.add(l);legs.push(l)}
-  return{g,tail,legs};
+  const body=new T.Mesh(LIZ_BODY,mergedMat);body.castShadow=true;body.receiveShadow=true;g.add(body);
+  const tail=new T.Mesh(LIZ_TAIL,mergedMat);tail.castShadow=true;tail.position.set(0,0.1,-0.45);g.add(tail);
+  return{g,tail};
 }
 const lizards=[];
 {const homes=preHoles.filter(h=>Math.hypot(h.x,h.z-20)>45).sort(()=>rng()-0.5).slice(0,48);
@@ -1226,6 +1248,7 @@ function updateLizards(dt,t){
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
     L.x=clamp(L.x,-EDGE+2,EDGE-2);L.z=clamp(L.z,-EDGE+2,EDGE-2);
     const g=L.m.g;g.position.set(L.x,groundAt(L.x,L.z)+0.02,L.z);
+    g.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);   // PERF: skip drawing far-away lizards (they still move and hunt)
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
     if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
@@ -1572,6 +1595,7 @@ function updateParty(dt,now){
   /* the lizards breakdance in an outer ring (and forget to bite anyone) */
   lizards.forEach((L,j)=>{
     const a=-PARTY.t*0.7+j/lizards.length*Math.PI*2,r=5.6;
+    L.m.g.visible=true;   // they all come to the party, even the ones that were too far away to draw
     stepTo(L.m.g,tp.x+Math.cos(a)*r,tp.z+Math.sin(a)*r,dt,8);
     L.x=L.m.g.position.x;L.z=L.m.g.position.z;L.mode='wander';
     L.m.g.position.y=groundAt(L.x,L.z)+Math.abs(Math.sin(beat*Math.PI+j))*0.45;
