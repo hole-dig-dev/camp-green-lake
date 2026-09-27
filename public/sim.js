@@ -339,6 +339,39 @@
     }
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt, TRUCK, stepWanted };
+  // ---- missions (GAME_DESIGN.md): hub -> truck ride -> timed dig site -> truck leaves -> results -> hub ----
+  const MISSION = {
+    SECS: 540,              // time on site before the truck leaves (9 minutes)
+    RIDE: 4000,             // ms of truck ride from camp to the site
+    RESULTS: 12000,         // ms the results card shows before everyone is back at camp
+    HORNS: [180, 60, 30, 10], // seconds left: distant horn, engine starts, repeated horn, truck rolls
+    ROLL: 10,               // seconds left when the truck starts rolling away
+    ROLLSP: 1.3,            // how fast it rolls (m/s): a jog catches it, a slow drag doesn't
+    HALF: 75,               // the site is a square this many metres from its centre to each edge
+    BED: 3.2,               // loot within this distance of the truck counts as "in the bed"
+  };
+  function newMission(seed, trip, now) {
+    const r = rnd(seed * 17 + trip * 101);
+    let cx = 0, cz = -200;
+    for (let k = 0; k < 40; k++) {
+      const a = r() * Math.PI * 2, d = 170 + r() * 250; cx = clamp(Math.cos(a) * d, -EDGE + 90, EDGE - 90); cz = clamp(20 + Math.sin(a) * d, -EDGE + 90, EDGE - 90);
+      if (!nearCampZone(cx, cz) && Math.hypot(cx - THUMB.x, cz - THUMB.z) > THUMB.mound + MISSION.HALF + 10) break;
+    }
+    return { phase: 'ride', site: 'flats', trip, cx, cz, half: MISSION.HALF, rideEnd: now + MISSION.RIDE, endsAt: now + MISSION.RIDE + MISSION.SECS * 1000, horn: 0 };
+  }
+  // pure timing: returns events for the caller (server, or the page when solo) to act on
+  function stepMission(MS, now, ev) {
+    if (!MS || MS.phase === 'hub') return;
+    if (MS.phase === 'ride' && now >= MS.rideEnd) { MS.phase = 'site'; ev.push({ k: 'arrive' }); }
+    if (MS.phase === 'site') {
+      const left = (MS.endsAt - now) / 1000;
+      while (MS.horn < MISSION.HORNS.length && left <= MISSION.HORNS[MS.horn]) ev.push({ k: 'horn', n: MISSION.HORNS[MS.horn++] });
+      if (left <= 0) { MS.phase = 'results'; MS.resEnd = now + MISSION.RESULTS; ev.push({ k: 'depart' }); }
+    }
+    if (MS.phase === 'results' && now >= MS.resEnd) { MS.phase = 'hub'; ev.push({ k: 'home' }); }
+  }
+  const inSite = (MS, x, z) => !!MS && Math.max(Math.abs(x - MS.cx), Math.abs(z - MS.cz)) <= MS.half;
+
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt, TRUCK, stepWanted, MISSION, newMission, stepMission, inSite };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

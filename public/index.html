@@ -45,6 +45,9 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .bar.stam #stamFill{background:#e8b923}.bar.stam .gap{background:transparent}
 .bar.stam .a-heat{background:#e8742a}.bar.stam .a-burn{background:#d12a2a}.bar.stam .a-poison{background:#7b3fb5}.bar.stam .a-injury{background:#6a1e1e}.bar.stam .a-hunger{background:#8a6a3a}
 #outBanner{position:fixed;left:50%;top:calc(90px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:10px 16px;font:700 18px/1.25 var(--ui);text-align:center;max-width:calc(100vw - 32px);z-index:20}
+#ride{background:#1a120b;z-index:45}
+#results{background:rgba(20,16,12,.65);z-index:45}
+#results .card p{margin:0}
 #lookout{background:rgba(20,16,12,.8);z-index:40}
 #lookout .card{max-width:min(94vw,860px);align-items:center}
 #lkMap{width:min(86vmin,760px);height:min(86vmin,760px);border:3px solid var(--ink);border-radius:3px;background:#d9a86c;cursor:crosshair;touch-action:none}
@@ -292,6 +295,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <button data-a="curseUp">Curse +20</button><button data-a="curseDown">Curse −20</button>
     <button data-a="mood">Next mood</button><button data-a="site">Next dig site</button>
     <button data-a="day">Next day (1–5)</button><button data-a="town">Break into town</button>
+    <button data-a="misEnd">Trip: 15 s left</button><button data-a="misMore">Trip: +60 s</button>
     <button data-a="seeds">+100 crew seeds</button><button data-a="refill">Refill water + stamina</button>
     <button data-tp="camp">Go: camp</button><button data-tp="ruins">Go: Kate's ruins</button>
     <button data-tp="field">Go: onion fields</button><button data-tp="thumb">Go: Big Thumb</button>
@@ -299,6 +303,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   </div>
 </div>
 
+<div id="ride" class="overlay" hidden><div class="card"><h2 style="margin:0;font:900 34px/1 var(--display);text-transform:uppercase">On the truck</h2><p id="rideText"></p></div></div>
+<div id="results" class="overlay" hidden><div class="card"><h2 id="resTitle" style="margin:0;font:900 40px/1 var(--display);text-transform:uppercase">Trip complete</h2><div id="resBody"></div><p class="fine">Back to camp in a moment…</p></div></div>
 <div id="outBanner" class="panel" hidden>You're out cold until morning. <span id="outWho"></span></div>
 <div id="lookout" class="overlay" hidden>
   <div class="card">
@@ -723,6 +729,7 @@ const SPOTS=[
   {id:'warden',x:-30,z:39.2,r:3.6},
   {id:'cards',x:0,z:43.9,r:1.9},
   {id:'lookout',x:-24.3,z:45,r:1.5},
+  {id:'board',x:11,z:31.5,r:2.2},
 ];
 
 /* the D Tent crew (they're here even when your friends aren't) */
@@ -955,6 +962,7 @@ function nearSpot(){
 }
 function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
+  if(s.id==='board'){startTrip();return}
   if(truckAction(s))return;
   if(s.id==='revive'||s.id==='digout')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
@@ -1129,7 +1137,7 @@ function startGame(resume){
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
   me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color],suit:JUMPSUITS[mySuit()].c});scene.add(me.g);
-  meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();setTimeout(announceDay,1500);meL.n.textContent=myTag();setHat(me,myLevel());
+  meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();setTimeout(MISSIONS?missionIntro:announceDay,1500);if(MISSIONS){if(!online()){CLK.pt=SIM.DAYMS*0.45;CLK.paused=true}for(const id of ['quota','mood','site'])$('#'+id).parentElement.hidden=true;$('#curseBar').closest('.meter').hidden=true}meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
@@ -1152,10 +1160,10 @@ try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0)|(P.climb||P.ledge>0||P.onTop?4096:0)|(S.up.walkie?8192:0)|(S.up.barrow?16384:0);
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0)|(P.climb||P.ledge>0||P.onTop?4096:0)|(S.up.walkie?8192:0)|(S.up.barrow?16384:0)|(S.riding?32768:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.holdZer?-2:S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),+P.yaw.toFixed(2)];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds,sv:sackValue()});
 }
 function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
@@ -1194,6 +1202,7 @@ function onMsg(m){
       if(Array.isArray(m.rot))for(const i of m.rot)ROT.add(i|0);
       if(m.fin)setFin(m.fin,num(m.finNow,0,1e14,0));
       if(m.truck)setTruck(m.truck);
+      if(m.mission)setMission(m.mission);
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
@@ -1216,6 +1225,8 @@ function onMsg(m){
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
     case 'truck':setTruck(m);break;
+    case 'mission':setMission(m);break;
+    case 'propGone':removeProp(num(m.id,0,1e7,-1)|0);break;
     case 'tpos':if(!S.driving){WT.tx=num(m.x,-600,600,WT.tx);WT.tz=num(m.z,-600,600,WT.tz);WT.th=num(m.h,-1e3,1e3,WT.th);WT.sp=num(m.sp,-20,20,0)}break;
     case 'truckNote':truckNoteMsg(String(m.k),m);break;
     case 'truckWaterOk':S.water=waterMax();AFF.heat=0;sfx.splash();break;
@@ -1385,6 +1396,7 @@ const COOP_TXT={
   digout:s=>`Hold to dig ${s.R.name} out`+(S.digOutT>0?`… ${Math.round(S.digOutT/3*100)}%`:''),
   drop:s=>`Let go of ${s.pr.type==='body'?s.pr.name:'the '+propName(s.pr)}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>(s.pr.type==='body'?`Pick up ${s.pr.name} and carry them back inside the fence`:`Grab the ${propName(s.pr)} (${SIM.HEAVY[s.pr.type]} seeds)`)+(s.pr.n?` · ${s.pr.n} carrying`:''),
+  board:()=>MIS.phase==='hub'?'Start a trip to Lake Flats (the whole crew rides out)':'A trip is under way',
   grabZer:()=>'Pick up Madame Zeroni (then everyone sing: hold H)',
   zback:()=>'Carry Madame Zeroni on your back',
   zdrop:()=>'Put Madame Zeroni down',
@@ -1404,7 +1416,7 @@ const hq={quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   hud.seeds.textContent=S.seeds;
   {const t=clockT(),cur=curfewT();hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&t>cur-120000&&t<cur);$('#quotaK').textContent='Quota by '+hhmm(cur)}
-  {const tr=$('#truckRow');tr.hidden=WT.mode==='parked';if(!tr.hidden){const v=$('#truckV');v.textContent=WT.stuck?'STUCK':truckWanted()?'WANTED: police!':'back by '+fmtT((WT.until-Date.now())/1000);v.classList.toggle('warn',WT.stuck||truckWanted()||(WT.until-Date.now())<45000)}}
+  {const tr=$('#truckRow');tr.hidden=WT.mode==='parked'||MISSIONS;if(!tr.hidden){const v=$('#truckV');v.textContent=WT.stuck?'STUCK':truckWanted()?'WANTED: police!':'back by '+fmtT((WT.until-Date.now())/1000);v.classList.toggle('warn',WT.stuck||truckWanted()||(WT.until-Date.now())<45000)}}
   $('#curseBar').style.width=RUN.curse.toFixed(0)+'%';$('#mood').textContent=SIM.MOODS[RUN.mood].name;{const st=SIM.SITES[RUN.site];$('#site').textContent=st.name+' ×'+st.mult}
   {const mx=stamMax(),pc=v=>v.toFixed(1)+'%';$('#stamFill').style.width=pc(Math.min(S.stam,mx));$('#stamGap').style.width=pc(Math.max(0,mx-S.stam));$('#affHeat').style.width=pc(AFF.heat);$('#affBurn').style.width=pc(AFF.burn);$('#affPoison').style.width=pc(AFF.poison);$('#affInjury').style.width=pc(AFF.injury);$('#affHunger').style.width=pc(AFF.hunger)}
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
@@ -1412,7 +1424,8 @@ function updateHUD(){
   {const t=clockT();hc.clock.textContent=clockText();
    const cur=curfewT();if(t<cur){const left=(cur-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
    else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';hc.cur.classList.toggle('warn',!!CUR.hunter)}
-   const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<curfewT()&&walk>(curfewT()-t)/1000*0.85)}
+   if(MISSIONS){hc.curK.textContent=MIS.phase==='site'?'Truck leaves in':'Next trip';hc.cur.textContent=MIS.phase==='site'?fmtT(misLeft()):MIS.phase==='hub'?'trip board':'on the way';hc.cur.classList.toggle('warn',MIS.phase==='site'&&misLeft()<60)}
+   const toTruck=MISSIONS&&MIS.phase==='site';hc.backRow.firstElementChild.textContent=toTruck?'Walk to truck':'Walk to camp';const walk=(toTruck?Math.max(0,Math.hypot(P.x-WT.x,P.z-WT.z)-3):campDist(P.x,P.z))/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',toTruck?walk>misLeft()*0.85:t<curfewT()&&walk>(curfewT()-t)/1000*0.85)}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';hud.wrap.classList.toggle('low',w<0.25);
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
@@ -1476,7 +1489,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||DLG.open||BJ.open||LOOK.open||chatOpen()||!$('#fired').hidden}
+function uiOpen(){return shopOpen||DLG.open||BJ.open||LOOK.open||chatOpen()||!$('#fired').hidden||!$('#ride').hidden||!$('#results').hidden}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
@@ -1883,6 +1896,7 @@ function hunterToast(h,was){
   else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
+  if(MISSIONS){trucks.forEach(tk=>showTruck(tk,null,dt));showZeroni(null,dt);drawMobs(dt);updateNightSound();return} // no curfew, quota days or night monsters on the mission branch (yet)
   const t=clockT(),cur=curfewT(),night=t>=cur,out=!inCamp(P.x,P.z);
   if(CUR.lastT!=null&&CUR.lastT-t>SIM.CYCLE/2)soloDawn();CUR.lastT=t;
   if(CUR.phase===null)CUR.phase=night?'night':'day',CUR.warned=t>cur-60000;
@@ -2030,7 +2044,8 @@ function adminGo(where){
   P.climb=false;P.ledge=-1;P.onTop=false;S.carry=null;P.x=p[0];P.z=p[1];P.y=groundAt(P.x,P.z);P.vy=0;toast('Teleported.','',1200);
 }
 function soloAdmin(a){
-  if(a==='seeds')RUN.bank+=100;else if(a==='fill')RUN.bank=Math.max(RUN.bank,RUN.quota);else if(a==='empty')RUN.bank=0;
+  if(a==='misEnd'&&MIS.phase==='site'){MIS.endsAt=Date.now()+15000;MIS.horn=3}else if(a==='misMore'&&MIS.phase==='site')MIS.endsAt+=60000;
+  else if(a==='seeds')RUN.bank+=100;else if(a==='fill')RUN.bank=Math.max(RUN.bank,RUN.quota);else if(a==='empty')RUN.bank=0;
   else if(a==='curseUp'||a==='curseDown'){addCurse(a==='curseUp'?20:-20)}
   else if(a==='mood'){const ks=Object.keys(SIM.MOODS);RUN.mood=ks[(ks.indexOf(RUN.mood)+1)%ks.length];announceDay()}
   else if(a==='site'){const ks=Object.keys(SIM.SITES);RUN.site=ks[(ks.indexOf(RUN.site)+1)%ks.length];announceDay()}
@@ -2628,21 +2643,119 @@ function truckAction(s){
 }
 function truckSpot(){
   if(S.driving)return{id:'truckOut'};if(S.riding)return{id:'truckHop'};if(S.inTown||!WT_G)return null;
+  if(MISSIONS&&WT.mode==='parked')return null; // at camp the truck is just parked; trips start at the board
   const d=Math.hypot(WT.x-P.x,WT.z-P.z);if(d>5)return null;
   if(WT.stuck)return{id:'truckPush'};
   if(WT.mode==='parked')return nightF()>0.5||clockT()>=curfewT()?{id:'truckSteal'}:{id:'truckRent'};
   if(S.carry!=null&&PROPS.has(S.carry)&&PROPS.get(S.carry).type!=='body')return{id:'truckLoad'};
-  const f=truckFront();if(WT.driver==null&&Math.hypot(P.x-f.x,P.z-f.z)<2.4)return{id:'truckDrive'};
+  const f=truckFront();if(!MISSIONS&&WT.driver==null&&Math.hypot(P.x-f.x,P.z-f.z)<2.4)return{id:'truckDrive'};
   if(S.water<waterMax()-5&&WT.tank>=10)return{id:'truckWater'};
   return{id:'truckRide'};
 }
 const TRUCK_TXT={
   truckRent:()=>`Rent the water truck (${rentPrice()} crew seeds, 3 minutes)`,truckSteal:()=>'Hold: hotwire the water truck (the police will come)'+(S.hotT>0?`… ${Math.round(S.hotT/5*100)}%`:''),
-  truckDrive:()=>'Drive the truck',truckOut:()=>'Get out of the truck',truckRide:()=>'Hop in the back',truckHop:()=>'Hop off',
+  truckDrive:()=>'Drive the truck',truckOut:()=>'Get out of the truck',truckRide:()=>MISSIONS?'Climb aboard (only campers aboard make it home)':'Hop in the back',truckHop:()=>MISSIONS?'Hop off the truck':'Hop off',
   truckWater:()=>`Fill your canteen from the tank (${Math.round(WT.tank)}% left)`,truckLoad:()=>'Load it into the truck bed',
   truckPush:()=>'Hold: push the truck out (needs 2 campers'+(S.up.towrope?', tow rope helps':'')+')',
 };
 Object.assign(COOP_TXT,TRUCK_TXT);
+
+/* ================= missions (GAME_DESIGN.md): camp -> truck ride -> timed dig site -> truck leaves -> results -> camp ================= */
+const MISSIONS=true; // this branch plays the mission loop; the old day/night sentence is switched off
+const MSN=SIM.MISSION,MIS={phase:'hub',trip:0,cx:0,cz:0,half:MSN.HALF,rideEnd:0,endsAt:0,horn:0,skew:0,results:null};
+const misNow=()=>Date.now()-MIS.skew;
+function misLeft(){return Math.max(0,(MIS.endsAt-misNow())/1000)}
+function setMission(m){
+  const was=MIS.phase;MIS.skew=m.now?Date.now()-num(m.now,0,1e14,Date.now()):0;
+  Object.assign(MIS,{phase:['hub','ride','site','results'].includes(m.phase)?m.phase:'hub',trip:num(m.trip,0,1e5,0)|0,cx:num(m.cx,-600,600,0),cz:num(m.cz,-600,600,0),half:num(m.half,10,200,MSN.HALF),rideEnd:num(m.rideEnd,0,1e14,0),endsAt:num(m.endsAt,0,1e14,0),horn:num(m.horn,0,9,0)|0,results:m.results||null});
+  if(m.ev)missionEvent({k:m.ev,n:m.n});
+  else if(S.started){ // joining or reconnecting mid-trip
+    if(MIS.phase==='ride'&&was!=='ride')rideStart();
+    if(MIS.phase==='site'&&was!=='site')arriveSite();
+  }
+}
+function missionEvent(e){
+  if(e.k==='arrive')arriveSite();
+  else if(e.k==='horn')hornFx(e.n);
+  else if(e.k==='depart')departFx();
+  else if(e.k==='home')goHome();
+}
+/* solo: the page runs the same timing, and does what the server would do */
+function startTrip(){
+  if(MIS.phase!=='hub')return;
+  if(online()){wsSend({t:'misStart'});return}
+  Object.assign(MIS,SIM.newMission(RUN.seed,MIS.trip+1,Date.now()),{skew:0,results:null});CLK.pt=SIM.DAYMS*0.45;CLK.paused=true;rideStart();
+}
+function soloMission(dt){
+  if(online()||MIS.phase==='hub')return;const ev=[];SIM.stepMission(MIS,Date.now(),ev);
+  for(const e of ev){
+    if(e.k==='arrive'){const h=Math.atan2(-(0-MIS.cx),-(20-MIS.cz));Object.assign(WT,{x:MIS.cx,z:MIS.cz,h,tx:MIS.cx,tz:MIS.cz,th:h,sp:0,mode:'mission',driver:null,stuck:false,tank:TK.TANK})}
+    if(e.k==='depart'){
+      const aboard=S.riding&&!S.ko&&!S.out;let payout=0;const items=[];
+      if(aboard&&sackValue()){payout+=sackValue();items.push(`${S.name}'s sack: ${sackValue()}`)}
+      for(const pr of [...PROPS.values()]){if(pr.type==='body')continue;if(pr.cargo||Math.hypot(pr.x-WT.x,pr.z-WT.z)<MSN.BED){const v=SIM.HEAVY[pr.type]||0;payout+=v;items.push(`${pr.type}: ${v}`);removeProp(pr.id)}}
+      RUN.bank+=payout;saveRun();MIS.results={payout,aboard:aboard?[S.name]:[],lost:aboard?[]:[S.name],items,failed:!aboard};
+    }
+    if(e.k==='home'){Object.assign(WT,{x:TK.HOME.x,z:TK.HOME.z,h:TK.HOME.h,tx:TK.HOME.x,tz:TK.HOME.z,th:TK.HOME.h,sp:0,mode:'parked',driver:null,stuck:false,tank:TK.TANK});for(const id of [...PROPS.keys()])removeProp(id)}
+    missionEvent(e);
+  }
+  if(MIS.phase==='site'&&misLeft()<=MSN.ROLL){WT.x+=-Math.sin(WT.h)*MSN.ROLLSP*dt;WT.z+=-Math.cos(WT.h)*MSN.ROLLSP*dt;WT.tx=WT.x;WT.tz=WT.z;WT.sp=MSN.ROLLSP}
+}
+function sackValue(){return Math.round(S.sack.reduce((s,t)=>s+(LOOT[t]?LOOT[t].val:0),0)+(S.sackBonus||0))}
+/* what the players see */
+const siteFlags=new T.Group();scene.add(siteFlags);
+sign('TRIP BOARD',11,30.2,Math.PI,3.4,1.1);
+function buildSiteFlags(){
+  while(siteFlags.children.length)siteFlags.remove(siteFlags.children[0]);
+  const h=MIS.half;for(let s=-h;s<=h;s+=15)for(const[x,z]of[[MIS.cx+s,MIS.cz-h],[MIS.cx+s,MIS.cz+h],[MIS.cx-h,MIS.cz+s],[MIS.cx+h,MIS.cz+s]]){const p=cyl(0.06,0.06,2.2,5,0xdcdcdc);p.position.set(x,groundAt(x,z)+1.1,z);const f=box(0.6,0.35,0.03,0xd12a2a);f.position.set(x+0.3,groundAt(x,z)+2,z);siteFlags.add(p,f)}
+}
+function rideStart(){
+  $('#ride').hidden=false;$('#rideText').textContent=`Trip ${MIS.trip}: Mr. Sir drives the crew out to Lake Flats…`;releaseLock();
+  if(S.driving)stopDriving(true);S.riding=false;tone(70,3.5,'sawtooth',0.07,55);
+}
+function arriveSite(){
+  $('#ride').hidden=true;buildSiteFlags();S.riding=false;S.carry=null;
+  const i=online()?(net.id%8):0,a=i/8*Math.PI*2;P.x=MIS.cx+Math.cos(a)*5;P.z=MIS.cz+Math.sin(a)*5;P.y=groundAt(P.x,P.z);P.vy=0;
+  P.yaw=Math.atan2(P.x-MIS.cx,P.z-MIS.cz);
+  toast('Lake Flats. Get valuable stuff ONTO the truck, and be aboard yourself, before it leaves. Only what\'s on the truck counts.','gold',8000);
+  setTimeout(()=>toast(`The truck leaves in ${fmtT(misLeft())}. Listen for the horn. Stay inside the red flags.`,'',6000),1600);
+}
+function hornFx(n){
+  const honk=(d)=>{tone(220,d,'sawtooth',0.09,210);tone(277,d,'sawtooth',0.06,270)};
+  if(n===180){honk(1.2);toast('A distant horn. 3 minutes until the truck leaves.','',5000)}
+  else if(n===60){honk(0.5);tone(60,2.5,'sawtooth',0.08,70);toast('Mr. Sir starts the engine. 1 MINUTE. Start heading back to the truck!','bad',6000)}
+  else if(n===30){for(let k=0;k<3;k++)setTimeout(()=>honk(0.35),k*450);toast('HONK HONK HONK. 30 seconds! Get the loot and yourselves aboard!','bad',6000)}
+  else if(n===10){honk(1.5);toast('THE TRUCK IS ROLLING! Jump aboard (F at the back)!','bad',6000)}
+}
+function departFx(){
+  const R=MIS.results||{payout:0,aboard:[],lost:[],items:[],failed:true};
+  const mine=S.riding&&!S.ko&&!S.out;
+  if(mine){S.sack=[];S.sackBonus=0}else{if(S.sack.length)toast('The truck left without you. Your sack is lost.','bad',6000);else toast('The truck left without you.','bad',5000);S.sack=[];S.sackBonus=0}
+  $('#resTitle').textContent=R.failed?'Nobody made it back':'Trip complete';
+  const b=$('#resBody');b.textContent='';
+  const line=(k,v)=>{const p=document.createElement('p');const s=document.createElement('b');s.textContent=k+' ';p.append(s,document.createTextNode(v));b.appendChild(p)};
+  line('Loot delivered:',`${R.payout} seeds`+(R.items&&R.items.length?` (${R.items.slice(0,8).join(', ')})`:' (nothing made it onto the truck)'));
+  line('Made it back:',R.aboard&&R.aboard.length?R.aboard.join(', '):'nobody');
+  if(R.lost&&R.lost.length)line('Left behind:',R.lost.join(', '));
+  if(R.failed)line('','Everyone was left behind. (Later, this will fail the whole sentence.)');
+  $('#results').hidden=false;releaseLock();R.payout>0?sfx.gold():zeroniSting(0.5);
+}
+function goHome(){
+  $('#results').hidden=true;$('#ride').hidden=true;if(S.riding)S.riding=false;if(S.driving)stopDriving(true);S.carry=null;
+  while(siteFlags.children.length)siteFlags.remove(siteFlags.children[0]);
+  if(S.ko){S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0}if(S.out)wakeUp(false);
+  P.x=6;P.z=40;P.y=groundAt(P.x,P.z);P.vy=0;S.water=waterMax();S.stam=stamMax();
+  toast(`Back at camp. The crew has ${RUN.bank} seeds. The board at the Truck Yard starts the next trip.`,'good',6000);
+}
+function missionIntro(){toast('Welcome to Camp Green Lake. Walk to the TRIP BOARD next to Mr. Sir\'s truck and press F to ride out to a dig.','gold',8000)}
+function updateMission(dt){
+  soloMission(dt);
+  if(MIS.phase==='site'&&S.started&&!S.riding&&!S.driving&&!S.out&&!SIM.inSite(MIS,P.x,P.z)){
+    // the red flags mark the site: wandering out of it gets you pushed back in
+    const dx=P.x-MIS.cx,dz=P.z-MIS.cz,h=MIS.half;P.x=MIS.cx+clamp(dx,-h,h);P.z=MIS.cz+clamp(dz,-h,h);
+    if((S.fenceT=(S.fenceT||0)-dt)<=0){S.fenceT=3;toast('That\'s the edge of the dig site. The truck is back that way.','',2500)}
+  }else S.fenceT=0;
+}
 
 /* ---- the day's critters and characters (moved by sim.js; drawn here) ---- */
 const MOBV=new Map();
@@ -2768,7 +2881,7 @@ let luckyT=0;
 function updateCoop(dt){
   if(!S.started)return;
   if(clockT()<curfewT())S.dayPlay=(S.dayPlay||0)+dt;
-  updateTown(dt);updateTruck(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
+  updateMission(dt);updateTown(dt);updateTruck(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
   if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
@@ -2817,6 +2930,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
   if(h.includes('prof'))window.__prof={};
   if(h.includes('dbg2')){const d=document.createElement('div');d.style.cssText='position:fixed;left:300px;top:200px;z-index:999;background:#000;color:#0f0;font:16px monospace;padding:4px';document.body.appendChild(d);setInterval(()=>{d.textContent=`t=${tAcc.toFixed(1)} x=${P.x.toFixed(1)} y=${P.y.toFixed(1)} town=${S.inTown} hudT=${hudT.toFixed(2)}`},300)}
+  if(h.includes('trip')){setTimeout(()=>{startTrip();if(h.includes('end'))setTimeout(()=>{MIS.endsAt=Date.now()+14000;MIS.horn=2;S.sack=['jar','locket'];S.riding=true},5200)},400)}
   if(h.includes('truck')){CLK.pt=150000;CLK.paused=true;setTimeout(()=>{WT.mode='rented';WT.until=Date.now()+150000;WT.x=WT.tx=30;WT.z=WT.tz=-20;WT.h=WT.th=0;WT.driver='me';startDriving();P.yaw=0.3;P.pitch=0.25;if(h.includes('stuck'))truckGotStuck();if(h.includes('drive'))KEYS['w']=true},400)}
   if(h.includes('field')){CLK.pt=150000;CLK.paused=true;P.x=150;P.z=-400;P.yaw=0.45;P.pitch=0.12;P.y=groundAt(P.x,P.z)}
   if(h.includes('finale')){CLK.pt=SIM.curfewT(5)+20000;CLK.paused=true;setTimeout(()=>{startSoloFinale();FIN.holder='me';FIN.waterAt=Date.now()-45000;P.ledge=TH.ledges[1];P.y=P.ledge;ringTo(TH.r+1.1,Math.PI*0.75);P.yaw=Math.PI*0.75;P.pitch=0.35},400)}

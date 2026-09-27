@@ -129,7 +129,7 @@ Code today:
 
 ## 6. Implementation plan (playable checkpoints)
 
-1. **Mission loop, no new physics yet.** Hub board → board the truck → Lake Flats site with a boundary → timer and horn schedule → truck leaves → results → back to hub. Existing loot and props; payout counts only for what's in the truck bed.
+1. ✅ **Done (checkpoint 1).** **Mission loop, no new physics yet.** Hub board → board the truck → Lake Flats site with a boundary → timer and horn schedule → truck leaves → results → back to hub. Existing loot and props; payout counts only for what's in the truck bed.
    *Check: a full trip works solo and with 2 test players; left-behind players are lost; nobody aboard = mission failed.*
 2. **Physical loot.** The physics step in `sim.js`; drop, throw, catch, fragile breaks, heavy objects knocking players down; the 5 object types.
    *Check: throw a jar to a friend, a missed catch smashes it, a dropped safe rolls into a hole.*

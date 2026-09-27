@@ -21,6 +21,8 @@ const HOST_TOKEN = process.env.HOST_TOKEN || require('crypto').randomBytes(24).t
 const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
 const CHAT_RANGE = 30, HELP_RANGE = 3.5;
+// this branch runs the mission loop from GAME_DESIGN.md instead of the old day/night sentence
+const MISSIONS = true;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const num = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? clamp(v, a, b) : d; };
@@ -31,7 +33,7 @@ const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').t
 const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'sneakers', 'goldbar'];
 
 function freshRun(sentence) { const seed = (Math.random() * 1e9) | 0; return { day: 1, bank: 30, peak: 1, curse: 0, sentence: sentence || 1, seed, ...SIM.rollDay(seed, 1, 0) }; }
-function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, breaches: {}, rot: [], truck: freshTruck() }; }
+function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, breaches: {}, rot: [], truck: freshTruck(), mission: { phase: 'hub', trip: 0 } }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -45,6 +47,8 @@ if (!world.props || typeof world.props !== 'object') world.props = {};
 if (!world.breaches || typeof world.breaches !== 'object') world.breaches = {};
 if (!Array.isArray(world.rot)) world.rot = [];
 if (!world.truck || typeof world.truck !== 'object') world.truck = freshTruck();
+if (!world.mission || typeof world.mission !== 'object') world.mission = { phase: 'hub', trip: 0 };
+if (MISSIONS) { world.clock = { off: 0, paused: true, pt: SIM.DAYMS * 0.45 }; if (world.mission.phase !== 'hub') world.mission = { phase: 'hub', trip: world.mission.trip || 0 }; } // always daylight at camp; a restart mid-trip returns to camp
 function freshTruck() { const H = SIM.TRUCK.HOME; return { x: H.x, z: H.z, h: H.h, sp: 0, mode: 'parked', driver: null, until: 0, stuck: false, tank: SIM.TRUCK.TANK }; }
 function truckInfo() { const T = world.truck; return { t: 'truck', x: T.x, z: T.z, h: T.h, mode: T.mode, driver: T.driver, left: T.until ? Math.max(0, T.until - Date.now()) : 0, stuck: T.stuck, tank: T.tank }; }
 let layCache = { key: '', lay: null };
@@ -117,7 +121,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    truck: truckInfo(),
+    truck: truckInfo(), mission: { ...world.mission, now: Date.now() },
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -151,7 +155,7 @@ wss.on('connection', ws => {
     switch (m.t) {
       case 'pos':
         c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 80, c.y); c.z = num(m.z, -620, 620, c.z);
-        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
+        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0; c.sv = num(m.sv, 0, 1e5, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
@@ -302,7 +306,16 @@ wss.on('connection', ws => {
         send(o, { t: m.t === 'boost' ? 'boosted' : 'pulledUp', by: c.n, y: num(m.y, -40, 80, 0) });
         break;
       }
+      case 'misStart': {
+        // anyone at camp can send the crew out; the Warden picks a fresh patch of the lake
+        if (!MISSIONS || world.mission.phase !== 'hub') return;
+        world.mission = SIM.newMission(world.run.seed, (world.mission.trip || 0) + 1, now);
+        world.clock = { off: 0, paused: true, pt: SIM.DAYMS * 0.45 }; broadcast({ t: 'clock', ...world.clock });
+        dirty = true; broadcast(missionInfo()); broadcast({ t: 'truckNote', k: 'misStart', n: c.n });
+        break;
+      }
       case 'truckRent': case 'truckSteal': {
+        if (MISSIONS) return;
         const T = world.truck; if (T.mode !== 'parked' || !near(c, T, 6)) return;
         const night = SIM.clockT(world.clock, now) >= SIM.curfewT(world.run.day);
         if (m.t === 'truckRent') {
@@ -315,6 +328,7 @@ wss.on('connection', ws => {
         break;
       }
       case 'truckDrive': {
+        if (MISSIONS) return; // Mr. Sir drives on missions
         const T = world.truck;
         if (m.on === true) { if (T.mode === 'parked' || T.driver != null || !near(c, T, 5)) return; T.driver = c.id; }
         else if (T.driver === c.id) { T.driver = null; T.sp = 0; } else return;
@@ -362,6 +376,8 @@ wss.on('connection', ws => {
         else if (m.a === 'curseUp' || m.a === 'curseDown') { curse(m.a === 'curseUp' ? 20 : -20); broadcast(runInfo()); }
         else if (m.a === 'mood') { const ks = Object.keys(SIM.MOODS); world.run.mood = ks[(ks.indexOf(world.run.mood) + 1) % ks.length]; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
         else if (m.a === 'site') { const ks = Object.keys(SIM.SITES); world.run.site = ks[(ks.indexOf(world.run.site) + 1) % ks.length]; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
+        else if (m.a === 'misEnd' && world.mission.phase === 'site') { world.mission.endsAt = Date.now() + 15000; world.mission.horn = 3; broadcast(missionInfo()); }
+        else if (m.a === 'misMore' && world.mission.phase === 'site') { world.mission.endsAt += 60000; broadcast(missionInfo()); }
         else if (m.a === 'day') { world.run.day = world.run.day % SIM.DAYS + 1; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
         break;
       case 'disco': {
@@ -500,6 +516,45 @@ function truckTick(now, dt) {
     broadcast(truckInfo()); truckNote('returned', { was });
   }
 }
+/* ---- missions (GAME_DESIGN.md sections 4-8): the truck takes the crew out, and only what's aboard when it leaves counts ---- */
+function missionInfo() { return { t: 'mission', ...world.mission, now: Date.now() }; }
+function missionTick(now, dt) {
+  const MS = world.mission, T = world.truck, ev = [];
+  SIM.stepMission(MS, now, ev);
+  for (const e of ev) {
+    if (e.k === 'arrive') {
+      // the truck parks in the middle of the site, nose pointing home; it's the only way back
+      const h = Math.atan2(-(0 - MS.cx), -(20 - MS.cz));
+      Object.assign(T, { x: MS.cx, z: MS.cz, h, sp: 0, mode: 'mission', driver: null, stuck: false, tank: SIM.TRUCK.TANK, out: false, until: 0 });
+      broadcast(truckInfo());
+    }
+    if (e.k === 'depart') missionDepart();
+    if (e.k === 'home') {
+      Object.assign(T, freshTruck()); broadcast(truckInfo());
+      for (const id in world.props) { delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
+    }
+    dirty = true; broadcast({ ...missionInfo(), ev: e.k, n: e.n || 0 });
+  }
+  // the last seconds: the truck rolls away slowly, and you can still run and jump aboard
+  if (MS.phase === 'site' && (MS.endsAt - now) / 1000 <= SIM.MISSION.ROLL) {
+    T.x += -Math.sin(T.h) * SIM.MISSION.ROLLSP * dt; T.z += -Math.cos(T.h) * SIM.MISSION.ROLLSP * dt; T.sp = SIM.MISSION.ROLLSP;
+    broadcast({ t: 'tpos', x: r2(T.x), z: r2(T.z), h: r2(T.h), sp: T.sp });
+  }
+}
+function missionDepart() {
+  // campers riding in the truck bed make it home; everything else stays out there
+  const MS = world.mission, T = world.truck, js = joined();
+  const aboard = js.filter(c => (c.f & 32768) && !(c.f & 66)), lost = js.filter(c => !aboard.includes(c));
+  let payout = 0; const items = [];
+  for (const c of aboard) if (c.sv) { payout += c.sv; items.push(`${c.n}'s sack: ${c.sv}`); }
+  for (const id in world.props) {
+    const p = world.props[id]; if (p.type === 'body') continue;
+    if (p.cargo || Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED) { const v = SIM.HEAVY[p.type] || 0; payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
+  }
+  world.run.bank += payout;
+  MS.results = { payout, aboard: aboard.map(c => c.n), lost: lost.map(c => c.n), items, failed: aboard.length === 0 };
+  broadcast(runInfo());
+}
 function dawn() {
   world.run.angry = Math.max(0, (world.run.angry || 0) - 1);
   // a new morning: the Warden picks today's mood and dig site; anyone out cold wakes up in the nurse's office
@@ -512,11 +567,14 @@ function dawn() {
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
   const t = SIM.clockT(world.clock, now), cur = SIM.curfewT(world.run.day);
-  if (lastT < cur && t >= cur) endOfDay();
-  else if (lastT - t > SIM.CYCLE / 2 && !(world.run.fin && world.run.fin.on)) dawn();
+  if (!MISSIONS) {
+    if (lastT < cur && t >= cur) endOfDay();
+    else if (lastT - t > SIM.CYCLE / 2 && !(world.run.fin && world.run.fin.on)) dawn();
+  }
   lastT = t;
   if (t < cur && joined().length) world.run.played = (world.run.played || 0) + dt;
-  finTick(now); truckTick(now, dt);
+  if (MISSIONS) missionTick(now, dt); else finTick(now);
+  truckTick(now, dt);
   const players = simPlayers(now);
   // heavy loot and bodies being carried
   const sold = SIM.stepProps(world.props, players, dt);
@@ -539,7 +597,7 @@ setInterval(() => {
   }
   // monsters
   const ev = pendingEv; pendingEv = [];
-  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, wanted: world.truck.mode === 'stolen' || world.truck.mode === 'late' ? { x: world.truck.x, z: world.truck.z } : null, finale: !!(world.run.fin && world.run.fin.on), town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
+  if (!MISSIONS) SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, wanted: world.truck.mode === 'stolen' || world.truck.mode === 'late' ? { x: world.truck.x, z: world.truck.z } : null, finale: !!(world.run.fin && world.run.fin.on), town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
   for (const e of ev) { if (e.k === 'truckCaught') truckCaught(); if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
   const on = MON.trucks.length > 0 || !!MON.zer || MON.mobs.length > 0 || ev.length > 0;
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag, MON.zer.held ? 1 : 0, r2(MON.zer.song || 0)] : null, mobs: SIM.packMobs(MON), ev });
