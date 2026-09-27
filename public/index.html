@@ -641,6 +641,9 @@ const farU={uFocus:{value:new T.Vector2(0,12)},uR:{value:LOAD_R-3}};
 streamChunks(0,12,999);
 
 /* outer desert + mountains + Big Thumb */
+let updateThumbHaze;   // assigned inside the block below; declared out here so frame() can call it every frame
+const TH_X=185, TH_Z=-1080;   // Big Thumb's position: north side of the lake, off to the side, ~350-480 m past the ±600 edge
+                               // (hoisted out of the block below so the landslide code further down can read it too)
 {
   const mat=new T.MeshStandardMaterial({color:0xd4a266,flatShading:true,roughness:1});
   const strips=[[0,-HALF-450,HALF*2+1800,900],[0,HALF+450,HALF*2+1800,900],[-HALF-450,0,900,HALF*2],[HALF+450,0,900,HALF*2]];
@@ -650,11 +653,43 @@ streamChunks(0,12,999);
     const m=new T.Mesh(new T.CylinderGeometry(rad*(0.35+rng()*0.3),rad,h,6+Math.floor(rng()*3)),M(rng()<0.5?0xb98a5e:0xa9785a));
     m.position.set(Math.cos(a)*d,OUTER_Y+h/2-2,Math.sin(a)*d);m.rotation.y=rng()*6;scene.add(m);
   }
+  /* Big Thumb (God's Thumb, in the book): a huge rock landmark, hundreds of metres tall, well outside the playable
+     square so nobody can ever reach it -- just see it from camp and most of the lake. It's a stack of a few cheap
+     primitives (scree slope, a rounded "fist" base, banded strata ledges, the thumb shaft, a rounded tip) so it's
+     static and cheap forever: no shadows (nothing that big and that far away needs one you'd ever notice). */
+  const TH_SCREE_R=250, TH_SCREE_H=42;       // loose scree slope skirting the foot (radius/height, m)
+  const TH_BASE_R0=185, TH_BASE_R1=118, TH_BASE_H=95;  // the big rounded mass the thumb rises out of (bottom/top radius, height)
+  const TH_LEDGE_H=24, TH_LEDGE_N=4;         // strata ledges stacked above the base: height each, how many
+  const TH_SHAFT_R0=44, TH_SHAFT_R1=33, TH_SHAFT_H=175; // the thumb's own vertical column (bottom/top radius, height)
+  const TH_TIP_R=38;                          // the rounded tip ("nail") on top
+  const TH_TILT=0.05;                         // a small lean, so it doesn't read as a machined cylinder
+  const TH_HAZE=0.55;                         // how strongly it blends into the current sky/fog colour -- see thumbMat()
+  const thumbMats=[];   // {m,base} pairs refreshed against the current fog colour every frame by updateThumbHaze()
+  function thumbMat(hex){
+    // Big Thumb sits past the fog's 1000 m range (real THREE.Fog would just swallow it), so its materials skip fog
+    // entirely and updateThumbHaze() fakes the same "fades into the haze" look by hand, blending toward whatever
+    // colour scene.fog.color currently is -- which already tracks day, dusk, night and the disco party.
+    const base=new T.Color(hex);
+    const m=new T.MeshStandardMaterial({color:hex,flatShading:true,roughness:1,metalness:0,fog:false});
+    thumbMats.push({m,base});return m;
+  }
   const thumb=new T.Group();
-  const shaft=new T.Mesh(new T.CylinderGeometry(9,13,58,9),M(0xa06a44));shaft.position.y=29;
-  const tip=new T.Mesh(new T.SphereGeometry(9.2,9,6),M(0xa06a44));tip.position.y=58;
-  const base=new T.Mesh(new T.ConeGeometry(38,26,7),M(0xb07a50));base.position.y=10;
-  thumb.add(base,shaft,tip);thumb.rotation.z=0.12;thumb.scale.setScalar(1.8);thumb.position.set(160,OUTER_Y-2,-HALF-330);scene.add(thumb);
+  const scree=new T.Mesh(new T.ConeGeometry(TH_SCREE_R,TH_SCREE_H,9),thumbMat(0xc7a172));scree.position.y=TH_SCREE_H*0.5;thumb.add(scree);
+  let thy=TH_SCREE_H*0.72;
+  const thBase=new T.Mesh(new T.CylinderGeometry(TH_BASE_R1,TH_BASE_R0,TH_BASE_H,9),thumbMat(0x8c6d51));thBase.position.y=thy+TH_BASE_H*0.5;thumb.add(thBase);
+  thy+=TH_BASE_H;
+  const LEDGE_COLORS=[0x9c7a5a,0x876048];   // alternating shades so the stacked ledges read as strata bands
+  let ledgeR0=TH_BASE_R1;
+  for(let i=0;i<TH_LEDGE_N;i++){
+    const r1=lerp(TH_BASE_R1,TH_SHAFT_R0,(i+1)/TH_LEDGE_N);
+    const ledge=new T.Mesh(new T.CylinderGeometry(r1,ledgeR0,TH_LEDGE_H,9),thumbMat(LEDGE_COLORS[i%2]));
+    ledge.position.y=thy+TH_LEDGE_H*0.5;thumb.add(ledge);thy+=TH_LEDGE_H;ledgeR0=r1;
+  }
+  const thShaft=new T.Mesh(new T.CylinderGeometry(TH_SHAFT_R1,TH_SHAFT_R0,TH_SHAFT_H,9),thumbMat(0xa9835f));thShaft.position.y=thy+TH_SHAFT_H*0.5;thumb.add(thShaft);
+  thy+=TH_SHAFT_H;
+  const thTip=new T.Mesh(new T.SphereGeometry(TH_TIP_R,10,7),thumbMat(0xb99269));thTip.scale.y=0.82;thTip.position.y=thy+TH_TIP_R*0.7;thumb.add(thTip);
+  thumb.rotation.set(TH_TILT,0.3,TH_TILT*0.6);thumb.position.set(TH_X,OUTER_Y-2,TH_Z);scene.add(thumb);
+  updateThumbHaze=()=>{for(const t of thumbMats)t.m.color.copy(t.base).lerp(scene.fog.color,TH_HAZE)};
   for(let i=0;i<30;i++){
     const x=(rng()*2-1)*54,z=(rng()*2-1)*54;if(inCamp(x,z))continue;
     const rock=new T.Mesh(new T.DodecahedronGeometry(0.3+rng()*0.5,0),M(0x9c7552));
@@ -1881,12 +1916,186 @@ function twStep(dt){
   }
 }
 
+/* ---------- landslide (rockslide) hazard ---------- */
+/* Boulders come off Big Thumb (TH_X/TH_Z, above): a burst of big rocks drops out of the sky near a target spot,
+   thuds down, bounces and rolls with simple physics, and can flatten anyone caught underneath. Two ways one starts:
+   the "landslide" console command (aimed at you, shared over the env relay exactly like the twister command), and
+   natural ones that happen on their own -- picked out from the shared clock + a seed the same way natural twisters
+   are (see twPlan above), so every camper agrees on where and when without a network message, weighted to happen
+   more often on Big Thumb's side of the lake (z<0).
+   Determinism: each boulder is stepped with a FIXED timestep (LS_DT), from a seeded RNG and its spawn time, using
+   baseH() -- the pure noise height, not groundAt() -- for the ground under it. That means every camper, whatever
+   their frame rate or however late they joined, runs the exact same sequence of tiny physics steps from the exact
+   same starting numbers, and lands on the same rock in the same spot. groundAt() would disagree camper to camper
+   wherever someone's dug a hole nearby (it depends on which chunks are loaded, a per-player, per-frame thing), so
+   it's used only for the render position, to make a boulder look like it half-buries itself in a nearby hole. */
+const LS_DT=1/60;                    // physics step (s): fixed, so results don't depend on the render frame rate
+const LS_MAX_STEPS=600;              // most steps run in one real frame (10 sim-seconds) -- caps the catch-up burst for a late joiner
+const LS_N_MIN=8, LS_N_MAX=20;       // a burst is 8-20 boulders
+const LS_R_MIN=0.8, LS_R_MAX=2.5;    // boulder radius range (m)
+const LS_DROP_H=140;                 // boulders start this high above their landing spot (m) -- reads as falling off the mountain
+const LS_SPREAD=22;                  // how far apart the boulders in one burst scatter at spawn (m)
+const LS_GRAV=22;                    // gravity for boulders (m/s^2) -- a bit heavier-feeling than the player's 16
+const LS_REST=0.42;                  // bounce restitution: fraction of vertical speed kept through a bounce
+const LS_BOUNCE_FRIC=0.72;           // fraction of horizontal speed kept through a bounce (rest lost to the impact)
+const LS_ROLL_FRIC=1.1;              // rolling friction: exponential decay rate (per second) on ground speed
+const LS_SLOPE_ACCEL=9;              // how strongly a grounded boulder speeds up rolling downhill along the terrain slope
+const LS_FLING=6;                    // sideways push (m/s) every boulder gets at spawn, away from Big Thumb
+const LS_SETTLE_SPEED=0.4;           // ground speed (m/s) below which a boulder counts as "settled"
+const LS_SETTLE_TIME=1.5;            // seconds spent below LS_SETTLE_SPEED before it's fully at rest
+const LS_FADE_TIME=6;                // seconds a settled boulder takes to shrink away once it's at rest
+const LS_HURT_SPEED=2.2;             // below this speed (m/s) a boulder is too gentle to hurt you -- still solid though
+const LS_DMG_K=7;                    // damage = (speed-LS_HURT_SPEED) * radius * LS_DMG_K -- big + fast easily clears 100 (a kill)
+const LS_HIT_GRACE=1.2;              // seconds of immunity to boulders after being hit, so one rock can't hit you every frame
+const LS_TOUCH_PAD=0.55;             // added to a boulder's radius for player<->boulder collision (rough player half-width)
+const LS_SAFE_DEPTH=1.2;             // a hole deeper than this (4 ft, same threshold the twister uses) shields you from boulders
+const LS_WARN_R=90;                  // being this close (m) to a fresh burst gets you the "Rockslide!" toast
+const LS_POOL_CAP=44;                // max boulders rendered/simulated at once (about two full-size bursts)
+const LS_CELL=220;                   // natural landslides: grid square size (m) -- same idea as the twister's TW_CELL
+const LS_WIN=100000;                 // natural landslides: time window per square (ms)
+const LS_CHANCE=0.05;                // natural landslides: per-window chance for an ordinary square
+const LS_CHANCE_THUMB=0.28;          // per-window chance for a square on Big Thumb's side of the lake (z<0)
+const LS_LIFE=32;                    // seconds after t0 a landslide is considered over -- too late to bother spawning it
+
+let lsBoulders=[],lsBursts=[];         // active boulders, and the burst "events" they belong to (for the warning + minimap)
+const lsSeen=new Map();                // natural landslide plan-id -> the window k it belongs to, so each plan spawns once
+let lsHitT=0,lsRumbleNode=null,lsLastK=-1;
+const lsAxis=new T.Vector3();          // scratch vector, reused every frame so lsRender() doesn't allocate
+
+/* one burst: n boulders that share a seed and a spawn time, so anyone computing the same two numbers gets the same rocks */
+function spawnLandslide(x,z,seed,t0){
+  const r=mulberry32(seed>>>0);r();
+  const away=Math.atan2(x-TH_X,z-TH_Z);    // which way the burst rolls off the mountain, in the xz plane
+  const n=LS_N_MIN+Math.floor(r()*(LS_N_MAX-LS_N_MIN+1));
+  for(let i=0;i<n&&lsBoulders.length<LS_POOL_CAP;i++){
+    const bx=x+(r()*2-1)*LS_SPREAD,bz=z+(r()*2-1)*LS_SPREAD,rad=LS_R_MIN+r()*(LS_R_MAX-LS_R_MIN);
+    const sp=LS_FLING*(0.6+r()*0.8);
+    lsBoulders.push({dodeca:r()<0.5,r:rad,t0,simT:0,settledT:0,fadeT:0,rot:0,
+      x:bx,y:baseH(bx,bz)+LS_DROP_H+r()*30,z:bz,
+      vx:Math.sin(away)*sp+(r()-0.5)*2,vy:-2-r()*3,vz:Math.cos(away)*sp+(r()-0.5)*2});
+  }
+  lsBursts.push({x,z,t0,warned:false});
+}
+
+/* one fixed physics step for a single boulder. returns true if it bounced this step (used for the near-player thud). */
+function lsStep(b){
+  b.simT+=LS_DT;
+  if(b.settledT>=LS_SETTLE_TIME)return false;    // at rest: no more physics, just fading (handled in updateLandslides)
+  b.vy-=LS_GRAV*LS_DT;
+  b.x+=b.vx*LS_DT;b.y+=b.vy*LS_DT;b.z+=b.vz*LS_DT;
+  const gy=baseH(b.x,b.z)+b.r;                   // deterministic ground -- see the note above on baseH vs groundAt
+  let bounced=false;
+  if(b.y<=gy){
+    b.y=gy;
+    if(b.vy<-0.4){bounced=true;b.vy=-b.vy*LS_REST;b.vx*=LS_BOUNCE_FRIC;b.vz*=LS_BOUNCE_FRIC}else b.vy=0;
+    const e=0.6,gx=(baseH(b.x+e,b.z)-baseH(b.x-e,b.z))/(2*e),gz=(baseH(b.x,b.z+e)-baseH(b.x,b.z-e))/(2*e);
+    b.vx-=gx*LS_SLOPE_ACCEL*LS_DT;b.vz-=gz*LS_SLOPE_ACCEL*LS_DT;   // rolls downhill along the terrain slope
+    const fr=Math.exp(-LS_ROLL_FRIC*LS_DT);b.vx*=fr;b.vz*=fr;      // ground friction
+    const gs=Math.hypot(b.vx,b.vz);
+    b.settledT=(gs<LS_SETTLE_SPEED&&Math.abs(b.vy)<0.05)?b.settledT+LS_DT:0;
+  }else b.settledT=0;
+  b.rot+=Math.hypot(b.vx,b.vz)/b.r*LS_DT;        // rolling rotation speed matches ground speed
+  return bounced;
+}
+
+/* natural landslide: deterministic per LS_CELL square and LS_WIN time window, same trick as twPlan() for twisters */
+function lsPlan(ci,cj,k){
+  const r=mulberry32((((ci+96)*92821+(cj+96))*2246822519^(k*2654435761))>>>0);r();
+  const chance=(cj+0.5)*LS_CELL<0?LS_CHANCE_THUMB:LS_CHANCE;   // squares on Big Thumb's side roll far more often
+  if(r()>chance)return null;
+  const x=(ci+r())*LS_CELL,z=(cj+r())*LS_CELL;
+  if(Math.max(Math.abs(x),Math.abs(z))>EDGE-30||campDist(x,z)<70)return null;   // stay off the edge and away from camp
+  return{id:ci+','+cj+','+k,x,z,t0:k*LS_WIN+r()*(LS_WIN-2000),seed:((ci+512)*80021+(cj+512)*104729+k*2654435761)>>>0};
+}
+
+function lsSound(level){
+  if(!AC)return;
+  if(!lsRumbleNode){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=130;lsRumbleNode=AC.createGain();lsRumbleNode.gain.value=0;src.connect(f).connect(lsRumbleNode).connect(master);src.start()}
+  lsRumbleNode.gain.setTargetAtTime(level*0.55,AC.currentTime,0.3);
+}
+
+/* the pool: two InstancedMeshes (dodecahedron look / icosahedron look) so every boulder ever on screen is 2 draw calls */
+const LS_MAT_A=new T.MeshStandardMaterial({color:0x8a7c6a,flatShading:true,roughness:1}),LS_MAT_B=new T.MeshStandardMaterial({color:0x6f5a46,flatShading:true,roughness:1});
+const lsMeshA=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),LS_MAT_A,LS_POOL_CAP),lsMeshB=new T.InstancedMesh(new T.DodecahedronGeometry(1,0),LS_MAT_B,LS_POOL_CAP);
+for(const im of[lsMeshA,lsMeshB]){im.castShadow=im.receiveShadow=true;im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(im)}
+
+function lsRender(){
+  let ia=0,ib=0;
+  for(const b of lsBoulders){
+    const fade=b.settledT>=LS_SETTLE_TIME?clamp(1-b.fadeT/LS_FADE_TIME,0,1):1,s=b.r*fade;
+    const vy=Math.min(b.y,groundAt(b.x,b.z)+b.r*0.35);   // render-only sink: lets a settled boulder look half-buried in a hole
+    dummy.position.set(b.x,vy,b.z);
+    const gs=Math.hypot(b.vx,b.vz);
+    if(gs>0.05)dummy.quaternion.setFromAxisAngle(lsAxis.set(-b.vz/gs,0,b.vx/gs),b.rot);
+    dummy.scale.setScalar(s);dummy.updateMatrix();
+    if(b.dodeca){if(ib<LS_POOL_CAP)lsMeshB.setMatrixAt(ib++,dummy.matrix)}else if(ia<LS_POOL_CAP)lsMeshA.setMatrixAt(ia++,dummy.matrix);
+  }
+  dummy.scale.setScalar(0);dummy.updateMatrix();
+  for(;ia<LS_POOL_CAP;ia++)lsMeshA.setMatrixAt(ia,dummy.matrix);
+  for(;ib<LS_POOL_CAP;ib++)lsMeshB.setMatrixAt(ib,dummy.matrix);
+  lsMeshA.instanceMatrix.needsUpdate=true;lsMeshB.instanceMatrix.needsUpdate=true;
+}
+
+function updateLandslides(dt){
+  const T0=twNow(),k=Math.floor(T0/LS_WIN),fx=S.started?P.x:0,fz=S.started?P.z:12;
+  const ci=Math.floor(fx/LS_CELL),cj=Math.floor(fz/LS_CELL);
+  for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){
+    const pl=lsPlan(i,j,kk);if(!pl||lsSeen.has(pl.id))continue;
+    const e=(T0-pl.t0)/1000;if(e<0||e>LS_LIFE)continue;
+    lsSeen.set(pl.id,kk);spawnLandslide(pl.x,pl.z,pl.seed,pl.t0);
+  }
+  if(k!==lsLastK){lsLastK=k;for(const[id,kk]of lsSeen)if(kk<k-2)lsSeen.delete(id)}   // forget old windows so the map doesn't grow forever
+
+  let loud=0,nearBounce=false;
+  for(const b of lsBoulders){
+    const target=(T0-b.t0)/1000,steps=Math.min(LS_MAX_STEPS,Math.max(0,Math.round((target-b.simT)/LS_DT)));
+    for(let s=0;s<steps;s++)if(lsStep(b)&&steps<20&&Math.hypot(b.x-fx,b.z-fz)<45)nearBounce=true;
+    if(b.settledT>=LS_SETTLE_TIME)b.fadeT+=dt;
+    if(b.settledT<LS_SETTLE_TIME||b.fadeT<LS_FADE_TIME)loud=Math.max(loud,clamp(1-Math.hypot(b.x-fx,b.z-fz)/160,0,1));
+  }
+  if(nearBounce)sfx.thud();
+  lsSound(loud);
+  // spliced in place (not reassigned via .filter) so the arrays keep the same identity forever -- nothing else has
+  // to worry about holding a stale reference to a boulder list that got swapped out from under it
+  for(let i=lsBoulders.length-1;i>=0;i--)if(lsBoulders[i].settledT>=LS_SETTLE_TIME&&lsBoulders[i].fadeT>=LS_FADE_TIME)lsBoulders.splice(i,1);
+  for(let i=lsBursts.length-1;i>=0;i--)if((T0-lsBursts[i].t0)/1000>=LS_LIFE)lsBursts.splice(i,1);
+
+  for(const bu of lsBursts)if(!bu.warned&&S.started&&Math.hypot(bu.x-fx,bu.z-fz)<LS_WARN_R){
+    bu.warned=true;toast('Rockslide! Boulders coming from Big Thumb!','bad',5000);
+  }
+
+  lsHitT=Math.max(0,lsHitT-dt);
+  if(S.started&&!S.ko&&holeDepthHere()<=LS_SAFE_DEPTH){
+    for(const b of lsBoulders){
+      const dx=P.x-b.x,dz=P.z-b.z,d=Math.hypot(dx,dz),touch=b.r+LS_TOUCH_PAD;
+      if(d>=touch||Math.abs(P.y-b.y)>b.r+1.6)continue;
+      const speed=Math.hypot(b.vx,b.vy,b.vz);
+      if(speed>LS_HURT_SPEED){
+        if(lsHitT<=0){
+          lsHitT=LS_HIT_GRACE;
+          const dmg=Math.max(6,Math.round((speed-LS_HURT_SPEED)*b.r*LS_DMG_K));
+          const nx=d>0.05?dx/d:1,nz=d>0.05?dz/d:0,kb=Math.min(22,5+speed*1.1);
+          P.kx=nx*kb;P.kz=nz*kb;P.vy=Math.max(P.vy,4+Math.min(8,speed*0.3));P.grounded=false;
+          hurt(dmg,'Landslide','A boulder from the rockslide hit you.');
+          if(!S.ko)toast(`A boulder hit you! -${dmg} health`,'bad',3000);
+        }
+      }else{
+        const push=touch-d;if(d>0.05){P.x+=dx/d*push;P.z+=dz/d*push}else P.x+=push;   // slow/settled: just solid, push you back out
+      }
+    }
+  }
+  lsRender();
+}
+
 /* ---------- environmental hazards: one registry for everything that can be spawned on demand ---------- */
 /* ENV.<kind>.spawn({x,z,a}) builds the hazard at x,z heading a (radians). spawnEnv() is the one way to create one:
    the host's console calls it with share=true and the server relays it to every camper, who call spawnEnv() with
    the same numbers, so everyone gets the same hazard. To add a new hazard: add an ENV entry and a console command. */
 const ENV={
   twister:{spawn:o=>addTwister(o.x,o.z,o.a)},
+  // seed comes from x/z alone (not the clock), so every client hashes the exact same seed from the exact same
+  // shared numbers -- only t0 (each client's own twNow() at the moment it hears about it) can drift a little.
+  landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,twNow())},
 };
 function spawnEnv(k,o,by){
   if(!ENV[k])return false;
@@ -1943,6 +2152,8 @@ command('help',{needsGame:false,usage:'help',help:'List every command.',run(){re
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
 command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in front of you, heading your way. Everyone sees it.',
   run([d]){const dist=numArg(d,45,10,200);spawnAhead('twister',dist);return`Twister spawned ${dist} m ahead.${campDist(P.x,P.z)<50?' (Twisters fall apart near camp; walk out onto the lake to see it at full strength.)':''}`}});
+command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off Big Thumb, [50] m out from you. Everyone sees it.',
+  run([d]){const dist=numArg(d,50,15,200);spawnAhead('landslide',dist);return`Landslide triggered ${dist} m out.`}});
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
 command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',
@@ -2032,6 +2243,7 @@ function drawMap(){
   for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
+  for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
@@ -2686,7 +2898,7 @@ function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
-  updateTwisters(dt);
+  updateTwisters(dt);updateLandslides(dt);updateThumbHaze();
   updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
@@ -2930,6 +3142,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
 }
 if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
-  PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS};
+  PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
+  lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH};
 })();
 </script>
