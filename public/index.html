@@ -596,10 +596,12 @@ const TENTS=[
 ];
 const D_TENT=TENTS.find(t=>t.crew);
 function tent(t){
-  const g=new T.Group();const scl=t.crew?1.28:1.15;
-  const tg=new T.CylinderGeometry(1.7*scl,1.7*scl,4.2*scl,3);tg.rotateX(-Math.PI/2);const m=new T.Mesh(tg,M(0x8d8f69));
-  m.position.y=0.85*scl;m.castShadow=true;m.receiveShadow=true;g.add(m);
-  const flap=box(0.9,1.35,0.05,0x5a5a3e);flap.position.set(0,0.68,-2.12*scl);g.add(flap);
+  const g=new T.Group();
+  // The canvas is stretched to cover the tent's real footprint (t.hw x t.hd, the same size as the room inside),
+  // so what you see matches what you bump into. The door flap faces the middle of camp (-z), toward the lake.
+  const tg=new T.CylinderGeometry(1.7,1.7,4.2,3);tg.rotateX(-Math.PI/2);const m=new T.Mesh(tg,M(0x8d8f69));
+  m.scale.set(t.hw/1.47,t.crew?1.6:1.35,t.hd*2/4.2);m.position.y=0.85*m.scale.y;m.castShadow=true;m.receiveShadow=true;g.add(m);
+  const flap=box(1.1,1.7,0.05,0x5a5a3e);flap.position.set(0,0.85,-t.hd-0.03);g.add(flap);
   g.position.set(t.x,baseH(t.x,t.z),t.z);scene.add(g);
   solid(t.x,t.z,t.hw*2,t.hd*2);   // the outdoor footprint matches the interior room, so nobody can walk "through" the tent
 }
@@ -811,6 +813,8 @@ function updateLabels(now){
   const w=innerWidth,h=innerHeight;
   for(const L of labeled){
     if(!L.obj.visible&&L.obj.parent){L.el.style.display='none';continue}
+    // inside a tent you only see tags from inside (the rooms are underground), and outside only tags from outside
+    if((L.obj.position.y<TENT_FLOOR_Y+2)!==inTent()){L.el.style.display='none';continue}
     if(L.sayUntil&&now>L.sayUntil){L.b.textContent='';L.sayUntil=0}
     projV.set(L.obj.position.x,L.obj.position.y+L.h,L.obj.position.z);
     const dist=projV.distanceTo(camera.position);
@@ -837,7 +841,7 @@ const SPOTS=[
    These reuse the tent's real x/z, but the outdoor solid() footprint keeps anyone outside from ever standing
    close enough to trigger them by accident - they're only reachable via enterTent()/the teleport it does. */
 TENTS.forEach((t,ti)=>{
-  SPOTS.push({id:'tentdoor',ti,x:t.x,z:t.z+t.hd+1.3,r:1.2});
+  SPOTS.push({id:'tentdoor',ti,x:t.x,z:t.z-t.hd-1.3,r:1.4});   // outside, at the flap on the camp-facing side
   SPOTS.push({id:'exit',ti,x:t.x,z:t.z+t.hd-1.0,r:1.0});
 });
 BUNKS.forEach((b,bi)=>SPOTS.push({id:'bunk',bi,x:b.x,z:b.z,r:1.2}));
@@ -860,7 +864,7 @@ const bots=BOTDEF.map(d=>{
   return{d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0};
 });
 /* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
-const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z+D_TENT.hd+1.3};
+const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
 /* X-Ray always deals; everyone else gets one of D Tent's bunks (there are 6, one more than the 5 who need one) */
 const D_TENT_BUNKS=BUNKS.map((b,i)=>({b,i})).filter(o=>o.b.tent===TENTS.indexOf(D_TENT)).map(o=>o.i);
 const BOT_BUNK={};BOTDEF.filter(d=>d.n!=='X-Ray').forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[i]});
@@ -1103,8 +1107,9 @@ function use(){
 function inTent(){return S.tent!=null}
 function enterTent(ti){
   if(S.ko||uiOpen()||inTent())return;
-  const t=TENTS[ti];S.tent=ti;S.tentBack={x:t.x,z:t.z+t.hd+1.3};S.inBed=null;
-  P.x=t.x;P.z=t.z+t.hd*0.3;P.y=TENT_FLOOR_Y;P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
+  const t=TENTS[ti];S.tent=ti;S.tentBack={x:t.x,z:t.z-t.hd-1.3};S.inBed=null;
+  P.x=t.x;P.z=t.z+t.hd-1.6;P.yaw=0;P.fa=Math.PI;P.y=TENT_FLOOR_Y;   // just inside the door (E again walks back out), facing into the room
+  P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
   toast(`You duck inside ${t.name}.${t.crew?' The cards table is against the far wall.':''} Press E to go back out.`,'',3200);
 }
 function exitTent(){
