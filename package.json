@@ -4,6 +4,16 @@
   "private": true,
   "description": "Multiplayer Holes-themed digging game server",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": { "ws": "^8.18.0" }
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/smoke.mjs",
+    "split": "node scripts/split-client.mjs --write",
+    "split:check": "node scripts/split-client.mjs --check"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
 }
