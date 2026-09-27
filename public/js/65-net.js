@@ -16,7 +16,7 @@ if(PASS)campIn.value=PASS;
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel()];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
   net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water)});
@@ -112,6 +112,7 @@ function onMsg(m){
     case 'grabbed':removeBag(num(m.id,0,1e9,-1));if(Array.isArray(m.items))takeBag(m.items.slice(0,12),cleanName(m.n));break;
     case 'revived':revived(cleanName(m.by)||'A friend');break;
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
+    case 'sinkpulled':addXP(SINK_RESCUE_XP);toast(`You helped pull ${cleanName(m.by)||'a friend'} out of the sinkhole! +${SINK_RESCUE_XP} XP`,'good',2800);sfx.thud();logEv('sinkRescuer',{by:cleanName(m.by)||''});break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
     case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;

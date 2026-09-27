@@ -95,6 +95,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 |---|---|
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
 | `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 8-20 boulders fall, bounce and roll. Everyone in camp sees it. |
+| `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `tp <x> <z>` / `tp camp` | Teleport. |

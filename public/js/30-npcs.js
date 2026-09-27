@@ -49,6 +49,7 @@ function updateBots(dt,now){
   if(PARTY.on)return;
   const isNight=clockT()>=DAYMS;
   for(const b of bots){
+    if(b.sinkOverride)continue;   // off pulling someone out of a sinkhole right now (87-sinkhole.js drives him instead)
     const g=b.p.g;
     if(DLG.open&&DLG.bot===b){ /* mid-conversation: stop and face the player */
       let dr=Math.atan2(P.x-g.position.x,P.z-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*8);

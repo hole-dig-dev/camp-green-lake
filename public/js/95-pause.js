@@ -235,9 +235,14 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
+  if(h.includes('sinkwarn')){P.x=200;P.z=-40;P.yaw=0;P.pitch=0.15;spawnSinkhole(200,-70,1,twNow()-2000)}
+  if(h.includes('sinkopen')){P.x=200;P.z=-40;P.yaw=0;P.pitch=0.15;spawnSinkhole(200,-70,1,twNow()-10000)}
+  if(h.includes('sinktrap')){spawnSinkhole(200,-70,1,twNow()-10000);P.x=200;P.z=-70;P.y=groundAt(200,-70);P.yaw=0;P.pitch=-0.2}
 }
 if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,lizards,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,
-  VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC};
+  VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC,
+  SINK_LIVE,spawnSinkhole,inSinkhole,sinkPulling:()=>sinkPulling,sinkRescueT:()=>sinkRescueT,
+  sinkholes:()=>[...SINK_LIVE.values()].map(s=>({id:s.id,x:+s.x.toFixed(1),z:+s.z.toFixed(1),r:+s.r.toFixed(1),stage:s.stage,hd:s.hole?+s.hole.d.toFixed(2):0,myTrapT:+s.myTrapT.toFixed(1),solo:!!s.soloBot}))};
