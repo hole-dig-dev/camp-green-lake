@@ -128,6 +128,7 @@ function twPush(tw,d,dt){
   if(inTent())return;   // inside a tent: sheltered, even though your x/z is still technically "out there"
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
   if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
+  if(tbSt)return;                            // already stuck to a tumbleweed - one hazard at a time
   const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
   const sr=Math.max(TW_SUCK_R*tw.s,0.4);
   if(d<sr){if(twCool<=0)twStart(tw,d);return}

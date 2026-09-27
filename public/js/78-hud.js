@@ -68,6 +68,7 @@ function drawMap(){
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
+  for(const w of tbWeeds)if(!w.dead){mx.fillStyle='#6b4f2a';mx.beginPath();mx.arc(wx(w.x),wz(w.z),Math.max(2,ws(w.r)),0,6.3);mx.fill()}
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
