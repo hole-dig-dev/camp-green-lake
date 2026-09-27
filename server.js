@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const SIM = require('./public/sim.js');
+const LOG = require('./logger.js'); // play-test event logging (data/logs/*.jsonl); PLAYLOG=0 turns it off
 
 const PORT = Number(process.env.PORT) || 4300;
 const PUB = path.join(__dirname, 'public');
@@ -44,6 +45,7 @@ if (!world.run || typeof world.run !== 'object') world.run = freshRun();
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
+LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
 let dirty = false;
 let nextObj = Date.now() % 100000;
@@ -87,7 +89,23 @@ const server = http.createServer((req, res) => {
   res.end('not found');
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 2048 });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8192 }); // raised from 2048 for batched play-test log messages
+const LOG_TYPE_RE = /^[a-zA-Z]{1,16}$/, LOG_FIELD_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,15}$/;
+// Client-reported log events (case 'log' below) come from our own client code but are still untrusted input:
+// keep only plain, small fields so a modified client can't stuff arbitrary data or huge blobs into the log files.
+function sanitizeLogFields(o) {
+  const out = {};
+  for (const k in o) {
+    if (!LOG_FIELD_RE.test(k)) continue;
+    let v = o[k];
+    if (typeof v === 'string') v = v.slice(0, 600);
+    else if (Array.isArray(v)) v = v.slice(0, 20);
+    else if (typeof v === 'number') { if (!Number.isFinite(v)) continue; }
+    else if (typeof v !== 'boolean' && v !== null) continue;
+    out[k] = v;
+  }
+  return out;
+}
 const clients = new Map();
 let nextId = 1;
 let kbHolder = null, kbItem = -1; // who is carrying the KB tube (not yet reported)
@@ -105,7 +123,7 @@ function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', ws => {
   if (clients.size >= MAX_CLIENTS) { ws.close(1013, 'camp is full'); return; }
-  const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true };
+  const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, lastPosLogT: 0, logTokens: 30, lastLog: Date.now() };
   clients.set(c.id, c);
   send(c, {
     t: 'hello', id: c.id, day: world.day,
@@ -132,7 +150,7 @@ wss.on('connection', ws => {
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
       if (!c.joined) {
-        c.joined = true; broadcast({ t: 'join', ...peerInfo(c) }, c.id);
+        c.joined = true; LOG.log('join', { id: c.id, n: c.n }); broadcast({ t: 'join', ...peerInfo(c) }, c.id);
         const r = world.recent[c.n.toLowerCase()];
         if (m.fresh === true && r && Date.now() - r.at < RECENT_MS) send(c, { t: 'restore', sc: r.sc, x: r.x, z: r.z });
         world.run.peak = Math.max(world.run.peak, joined().length); dirty = true;
@@ -149,6 +167,11 @@ wss.on('connection', ws => {
         c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
+        // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
+        if (now - c.lastPosLogT >= 2000) {
+          c.lastPosLogT = now;
+          LOG.log('pos', { id: c.id, n: c.n, x: r1(c.x), y: r1(c.y), z: r1(c.z), a: c.a, hp: num(m.hp, 0, 100, 100) | 0, wt: num(m.wt, 0, 200, 100) | 0, f: c.f, down: !!(c.f & 2), camp: SIM.inCamp(c.x, c.z) });
+        }
         break;
       case 'dig': {
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
@@ -171,6 +194,7 @@ wss.on('connection', ws => {
         // Selling at Mr. Sir's truck pays the team bank toward today's quota.
         const v = num(m.v, 0, 3000, 0) | 0; if (!v) return;
         world.run.bank += v; dirty = true;
+        LOG.log('sell', { id: c.id, n: c.n, v });
         broadcast(runInfo());
         break;
       }
@@ -179,6 +203,7 @@ wss.on('connection', ws => {
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
         world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
+        LOG.log('propSpawn', { id: c.id, n: c.n, item: id, type, x: world.props[id].x, z: world.props[id].z });
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
       }
@@ -188,6 +213,7 @@ wss.on('connection', ws => {
         if (!items.length) return;
         const ids = Object.keys(world.bags); if (ids.length >= MAX_BAGS) delete world.bags[ids[0]];
         const id = nextObj++; world.bags[id] = { x: r2(num(m.x, -600, 600, 0)), z: r2(num(m.z, -600, 600, 0)), items, n: c.n }; dirty = true;
+        LOG.log('bagDrop', { id: c.id, n: c.n, x: world.bags[id].x, z: world.bags[id].z, items });
         broadcast({ t: 'bag', id, ...world.bags[id] });
         break;
       }
@@ -195,6 +221,7 @@ wss.on('connection', ws => {
         const id = num(m.id, 0, 1e9, -1) | 0, b = world.bags[id];
         if (!b || !near(c, b, HELP_RANGE)) return;
         delete world.bags[id]; dirty = true;
+        LOG.log('bagGrab', { id: c.id, n: c.n, bagId: id });
         send(c, { t: 'grabbed', id, items: b.items, n: b.n });
         broadcast({ t: 'bagGone', id }, c.id);
         break;
@@ -209,6 +236,7 @@ wss.on('connection', ws => {
         const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
         if (!o || !o.joined || o === c || !near(c, o, HELP_RANGE)) return;
         if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; }
+        LOG.log(m.t, { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
         break;
       }
@@ -219,50 +247,77 @@ wss.on('connection', ws => {
         // Proximity chat: only campers within earshot see it.
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
+        LOG.log('chat', { id: c.id, n: c.n, s });
         for (const o of clients.values()) if (o.joined && o !== c && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
         break;
       }
       case 'admin':
         // Buttons in the hidden admin panel. Only the host can use them.
         if (!c.host) return;
-        if (m.a === 'fill') { world.run.bank = runInfo().quota; dirty = true; broadcast(runInfo()); }
-        else if (m.a === 'empty') { world.run.bank = 0; dirty = true; broadcast(runInfo()); }
+        if (m.a === 'fill') { world.run.bank = runInfo().quota; dirty = true; LOG.log('admin', { id: c.id, n: c.n, a: m.a }); broadcast(runInfo()); }
+        else if (m.a === 'empty') { world.run.bank = 0; dirty = true; LOG.log('admin', { id: c.id, n: c.n, a: m.a }); broadcast(runInfo()); }
         break;
       case 'disco': {
         const now = Date.now();
         if (now < partyUntil) { send(c, { t: 'nodisco', busy: true }); return; }
         if (c.lastDisco && now - c.lastDisco < DISCO_COOLDOWN_MS) { send(c, { t: 'nodisco' }); return; }
         c.lastDisco = now; partyUntil = now + PARTY_SECS * 1000;
+        LOG.log('party', { id: c.id, n: c.n, dur: PARTY_SECS });
         broadcast({ t: 'party', id: c.id, n: c.n, dur: PARTY_SECS });
         return;
       }
-      case 'clock':
+      case 'clock': {
         // Only the host can move the camp clock (the hidden admin panel in the game).
         if (!c.host) return;
+        const prev = world.clock;
         world.clock = { off: num(m.off, -1e13, 1e13, 0), paused: m.paused === true, pt: num(m.pt, 0, 12 * 60 * 1000, 0) }; dirty = true;
+        LOG.log('clock', { id: c.id, n: c.n, off: world.clock.off, paused: world.clock.paused, pt: world.clock.pt, prevOff: prev.off, prevPaused: prev.paused, prevPt: prev.pt });
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
+      }
       case 'env': {
         // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only. The server just
         // relays it; every client builds the same hazard from the kind, position and heading.
         if (!c.host || typeof m.k !== 'string' || !/^[a-z]{1,16}$/.test(m.k)) return;
-        broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)), a: num(m.a, -10, 10, 0) }, c.id);
+        const x = r1(num(m.x, -600, 600, 0)), z = r1(num(m.z, -600, 600, 0)), a = num(m.a, -10, 10, 0);
+        LOG.log('env', { id: c.id, n: c.n, k: m.k, x, z, a });
+        broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
       case 'say':
         c.nz = 1; c.chatAt = Date.now();
+        LOG.log('shout', { id: c.id, n: c.n, i: num(m.i, 0, 4, 0) | 0 });
         broadcast({ t: 'say', id: c.id, i: num(m.i, 0, 4, 0) | 0 }, c.id);
         break;
       case 'kb':
         if (world.kb) return;
         world.kb = c.n; dirty = true; kbHolder = null;
+        LOG.log('kb', { id: c.id, n: c.n });
         broadcast({ t: 'kb', n: c.n }, c.id);
         break;
       case 'win':
         if (world.won) return;
         world.won = c.n; world.wonAt = Date.now(); dirty = true;
+        LOG.log('win', { id: c.id, n: c.n });
         broadcast({ t: 'win', n: c.n }, c.id);
         break;
+      case 'log': {
+        // Batched client-reported play-test events (see logger.js): damage/KO, lizard chases, twister
+        // warnings/throws, item finds, console commands, JS errors, fps samples, and a compact "what I see nearby"
+        // report. A separate token bucket (from the gameplay one above) so a chatty client can't crowd out play
+        // messages, and vice versa.
+        if (!Array.isArray(m.ev) || !m.ev.length) return;
+        c.logTokens = Math.min(30, c.logTokens + (now - c.lastLog) * 0.006); c.lastLog = now;
+        const items = m.ev.slice(0, 24);
+        if (c.logTokens < items.length) return;
+        c.logTokens -= items.length;
+        for (const e of items) {
+          if (!e || typeof e !== 'object' || typeof e.k !== 'string' || !LOG_TYPE_RE.test(e.k)) continue;
+          const f = sanitizeLogFields(e); delete f.k;
+          LOG.log(e.k, Object.assign({ id: c.id, n: c.n }, f));
+        }
+        break;
+      }
     }
   });
   ws.on('close', () => {
@@ -272,13 +327,14 @@ wss.on('connection', ws => {
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
-    if (c.joined) broadcast({ t: 'leave', id: c.id });
+    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); }
   });
 });
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
 const MON = { trucks: [], zer: null };
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
+let policeOn = false, zerOn = false, lastMonLogT = 0;
 function simPlayers(now) {
   return joined().map(c => ({
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy,
@@ -291,13 +347,15 @@ function endOfDay() {
   const q = runInfo(), played = world.run.played || 0;
   world.run.played = 0;
   if (!joined().length) return;
-  if (world.run.bank < q.quota && played < 180) { broadcast({ t: 'grace' }); return; } // the crew only just got here: no check today
+  if (world.run.bank < q.quota && played < 180) { LOG.log('grace', {}); broadcast({ t: 'grace' }); return; } // the crew only just got here: no check today
   if (world.run.bank >= q.quota) {
+    LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
     world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
     broadcast({ ...runInfo(), t: 'quota', met: true });
   } else {
     // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
     const got = q.bank;
+    LOG.log('fired', { bank: got, quota: q.quota });
     world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() });
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
@@ -323,8 +381,23 @@ setInterval(() => {
   // monsters
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);
-  for (const e of ev) if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
-  const on = MON.trucks.length > 0 || !!MON.zer;
+  for (const e of ev) {
+    if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
+    const cc = e.id != null ? clients.get(e.id) : null;
+    const fields = { id: e.id, n: cc && cc.n, x: cc && r1(cc.x), z: cc && r1(cc.z) };
+    if (e.by) fields.by = e.by;
+    if (e.front !== undefined) fields.front = e.front;
+    if (e.k === 'zspawn' && MON.zer) { fields.x = r1(MON.zer.x); fields.z = r1(MON.zer.z); }
+    LOG.log(e.k, fields);
+  }
+  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer;
+  if (policeNow !== policeOn) { LOG.log(policeNow ? 'mobsOn' : 'mobsOff', { kind: 'police' }); policeOn = policeNow; }
+  if (zerNow !== zerOn) { LOG.log(zerNow ? 'mobsOn' : 'mobsOff', { kind: 'zeroni' }); zerOn = zerNow; }
+  const on = policeNow || zerNow;
+  if (on && now - lastMonLogT >= 2000) {
+    lastMonLogT = now;
+    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null });
+  }
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null, ev });
   monOn = on;
   for (const c of clients.values()) c.nz *= 0.9;
@@ -341,7 +414,7 @@ setInterval(() => {
   }
 }, 30000);
 
-process.on('SIGINT', () => { dirty = true; save(); setTimeout(() => process.exit(0), 300); });
-process.on('SIGTERM', () => { dirty = true; save(); setTimeout(() => process.exit(0), 300); });
+process.on('SIGINT', () => { dirty = true; save(); LOG.flushSync(); setTimeout(() => process.exit(0), 300); });
+process.on('SIGTERM', () => { dirty = true; save(); LOG.flushSync(); setTimeout(() => process.exit(0), 300); });
 
 server.listen(PORT, '127.0.0.1', () => console.log(`Camp Green Lake listening on 127.0.0.1:${PORT}`));

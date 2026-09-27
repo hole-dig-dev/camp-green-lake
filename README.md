@@ -72,9 +72,39 @@ Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (t
 
 **Adding a spawnable hazard:** add an entry to the `ENV` registry (`ENV.sandstorm = {spawn: o => ...}`, where `o` is `{x, z, a}`) and a command that calls `spawnAhead('sandstorm', dist)`. The server relays hazards spawned by the host, so every client builds the same one.
 
+## Play-test logging
+
+Every server session writes what happened to `data/logs/<YYYY-MM-DD>.jsonl` (JSON Lines — one JSON object per
+event per line), so a person or an LLM with shell access can answer things like "did a lizard bite anyone around
+3pm?" straight from the log file. Logging is on by default (buffered and async — it never blocks the game loop
+or crashes it); set `PLAYLOG=0` to turn it off. Files roll over past ~50MB and files older than 14 days are
+deleted on startup. Secrets (`HOST_TOKEN`, the `host` field in join messages) are never logged.
+
+Every line has `ts` (wall-clock ISO time), `gt` (in-game clock "hh:mm", matching the HUD), and `t` (event type),
+plus type-specific fields. Player events carry `id` (connection id) and `n` (display name). See the comment
+block at the top of `logger.js` for the full list of event types and fields — joins/leaves, position snapshots,
+chat/shouts, damage/knockouts/revives, lizard chases and bites, twister warnings and throws, item finds, heavy
+loot, console commands, the team quota/curfew/fired cycle, police/Zeroni mode changes, client JS errors, fps
+samples, and a compact "what this client sees nearby" report (lizards, D Tent bots, remote players, twisters —
+those live client-side, so each client reports its own view).
+
+### Querying the logs: `scripts/logq.js`
+
+```sh
+node scripts/logq.js --player JT --type hurt,ko --since 15:00        # what hurt JT, from 3pm on
+node scripts/logq.js --near 120,-40 --radius 20 --since "10 min ago" # what happened near that spot recently
+node scripts/logq.js --type err --tail 20                            # the last 20 client errors
+node scripts/logq.js --summary                                       # per-player damage/KOs/finds/errors + error list
+```
+
+`--since`/`--until` take `hh:mm` (the in-game clock) or a wall-clock time / `"N min/hours ago"`. Add `--json` for
+raw JSON instead of one-liners, or `--file <path>` to read one specific log file. Run with no arguments for the
+full option list.
+
 ## How it's built
 
 - `public/index.html`: the whole game in one file. Three.js (r128) for rendering, WebAudio for sound effects and music, no build step.
 - `server.js`: a small Node server using `ws`. It relays player positions, digs, and shouts, and keeps the shared world state.
+- `logger.js` + `scripts/logq.js`: play-test event logging and its query tool (see "Play-test logging" above).
 - The lake bed is a 301×301 heightmap. Each hole is stored as a center and a depth, and the terrain around it is rebuilt when someone digs, so holes (and the dirt piles next to them) sync between players as a few bytes each.
 - Buried items come from a seeded random generator, so every player has the same camp without the server sending the item list.
