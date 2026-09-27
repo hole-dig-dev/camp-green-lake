@@ -76,6 +76,8 @@ const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
 const CHAT_RATE = 5, CHAT_WINDOW_MS = 4000;  // chat/shout messages per connection per window
 const ENV_RATE = 4, ENV_WINDOW_MS = 5000;    // hazard spawns per connection per window (host-only already)
 const SELL_RATE = 5, SELL_WINDOW_MS = 5000;  // sell messages per connection per window
+const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lion, per connection per window
+const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
 const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
@@ -260,8 +262,8 @@ wss.on('connection', (ws, req) => {
   if (!ipWithinRate(ipConnWindow, ip, MAX_CONNS_PER_IP_PER_MIN, 60000)) { LOG.log('joinRejected', { ip, reason: 'slow down' }); ws.close(1013, 'slow down'); return; }
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
-    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
-    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
+    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, hp: 100, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
+    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], swatTimes: [], lionTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
   clients.set(c.id, c);
@@ -334,6 +336,7 @@ wss.on('connection', (ws, req) => {
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
+        c.hp = num(m.hp, 0, 100, c.hp); // kept for the mountain lion's targeting (see simPlayers/lionScore in sim.js), not just the log line below
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
@@ -478,6 +481,28 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
+      case 'lion': {
+        // Host console command ("lion [distance]"): spawn the mountain lion out on the lake near the caller.
+        // Unlike ENV hazards it isn't a stateless one-shot every client can derive on its own -- it's a persistent,
+        // server-stepped predator (see SIM.stepLion) -- so this just records where to put it; the tick loop below
+        // does the actual spawning next pass, and only if one isn't already out (SIM.stepLion enforces "one at a time").
+        if (!c.host) return;
+        if (!withinRate(c.lionTimes, ENV_RATE, ENV_WINDOW_MS)) return; // same budget as other host hazard spawns
+        const x = r1(num(m.x, -600, 600, 0)), z = r1(num(m.z, -600, 600, 0));
+        LOG.log('lionSpawnCmd', { id: c.id, n: c.n, x, z });
+        LION.pendingSpawn = { x, z };
+        break;
+      }
+      case 'swat': {
+        // A shovel swing landed on the mountain lion (see lionSwing()/scoop() on the client). Sender must be alive
+        // and actually standing close enough to reach it; SIM.lionSwat applies a fixed amount of damage server-side
+        // so a hacked client can't report bigger hits, and the rate limit caps how often one client can "swing".
+        if (c.f & 2) return; // can't swing a shovel while downed
+        if (!withinRate(c.swatTimes, SWAT_RATE, SWAT_WINDOW_MS)) return;
+        if (!LION.active || Math.hypot(c.x - LION.x, c.z - LION.z) > LION_REACH) return;
+        if (SIM.lionSwat(LION)) { LOG.log('lionSwat', { id: c.id, n: c.n, hp: Math.round(LION.hp) }); lionEvQ.push({ k: 'swat', id: c.id }); }
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
@@ -533,20 +558,27 @@ wss.on('connection', (ws, req) => {
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
 const MON = { trucks: [], zer: null };
+const LION = { active: false, armed: true, x: 0, z: 0, h: 0, mode: 'stalk', tgt: null, hp: 0 }; // the one mountain lion; see SIM.stepLion
+let lionEvQ = []; // events from message handlers (a shovel swat) waiting for the next tick's broadcast -- see the 'swat' case above
 // Wire format for the 'mon' field, shared by the periodic broadcast and the 'hello' a (re)connecting
 // client gets. A fresh connection has to see the CURRENT truth here, not just wait for the next change:
 // the periodic broadcast only fires on the tick a monster appears or disappears, so a client that wasn't
 // connected at that exact moment (dropped and reconnected, or just joined) would otherwise never learn
 // monsters are gone and keep rendering whatever it saw last.
 function monSnapshot() {
-  return { trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null };
+  return {
+    trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null,
+    // [x,z,h,modeIndex,targetId,hp] -- modeIndex indexes SIM.LION_MODES; hp is sent raw (0..SIM.LION_HP) so the
+    // client doesn't need to duplicate that constant just to draw a bar or gate a sound.
+    lion: LION.active ? [r2(LION.x), r2(LION.z), r2(LION.h), Math.max(0, SIM.LION_MODES.indexOf(LION.mode)), LION.tgt, Math.round(LION.hp)] : null,
+  };
 }
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
-let policeOn = false, zerOn = false, lastMonLogT = 0;
+let policeOn = false, zerOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
   return joined().map(c => ({
-    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy,
-    hd: !!(c.f & 1), cr: !!(c.f & 8),
+    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, hp: c.hp,
+    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
   }));
@@ -589,22 +621,27 @@ setInterval(() => {
   // monsters
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);
+  if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
+  SIM.stepLion(LION, players, t, dt, ev);
   for (const e of ev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
     const cc = e.id != null ? clients.get(e.id) : null;
     const fields = { id: e.id, n: cc && cc.n, x: cc && r1(cc.x), z: cc && r1(cc.z) };
     if (e.by) fields.by = e.by;
     if (e.front !== undefined) fields.front = e.front;
+    if (e.why !== undefined) fields.why = e.why;
     if (e.k === 'zspawn' && MON.zer) { fields.x = r1(MON.zer.x); fields.z = r1(MON.zer.z); }
+    if ((e.k === 'lionSpawn' || e.k === 'pounce') && LION.active) { fields.x = r1(LION.x); fields.z = r1(LION.z); }
     LOG.log(e.k, fields);
   }
-  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer;
+  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer, lionNow = LION.active;
   if (policeNow !== policeOn) { LOG.log(policeNow ? 'mobsOn' : 'mobsOff', { kind: 'police' }); policeOn = policeNow; }
   if (zerNow !== zerOn) { LOG.log(zerNow ? 'mobsOn' : 'mobsOff', { kind: 'zeroni' }); zerOn = zerNow; }
-  const on = policeNow || zerNow;
+  if (lionNow !== lionOn) { LOG.log(lionNow ? 'mobsOn' : 'mobsOff', { kind: 'lion' }); lionOn = lionNow; }
+  const on = policeNow || zerNow || lionNow;
   if (on && now - lastMonLogT >= 2000) {
     lastMonLogT = now;
-    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null });
+    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null, lion: LION.active ? { x: r2(LION.x), z: r2(LION.z), mode: LION.mode, tgt: LION.tgt, hp: Math.round(LION.hp) } : null });
   }
   if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;

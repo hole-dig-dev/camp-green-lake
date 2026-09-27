@@ -36,6 +36,7 @@ function updatePlayerTent(dt){
 function updatePlayer(dt){
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
+  if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);

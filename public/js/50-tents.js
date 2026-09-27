@@ -58,13 +58,13 @@ $('#shopClose').onclick=closeShop;
 
 /* KO */
 function knockOut(title,text){
-  if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
+  if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
   logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   twSt=0;twStT=0;me.g.rotation.z=0;   // clears any twister suck/tumble/lie state so it can't fight the KO pose or get stuck
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;me.g.rotation.set(0,0,0)}
+function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){
