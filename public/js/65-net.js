@@ -78,6 +78,7 @@ function onMsg(m){
       // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
       if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
+      javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
       maybeResume();break;
@@ -109,6 +110,7 @@ function onMsg(m){
     case 'fired':fired(num(m.bank,0,1e7,0)|0,num(m.quota,0,1e7,0)|0);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);break;
+    case 'jav':javFromServer(m.list,m.ev);break;
     case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0));break;
     case 'props':if(Array.isArray(m.list))for(const a of m.list){const pr=PROPS.get(a[0]);if(pr){pr.x=num(a[1],-600,600,pr.x);pr.z=num(a[2],-600,600,pr.z);pr.n=num(a[3],0,40,0)|0}}break;
     case 'psold':propSold(num(m.id,0,1e5,-1)|0,num(m.v,0,1e4,0)|0,Array.isArray(m.who)?m.who:[]);break;

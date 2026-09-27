@@ -106,6 +106,118 @@
     if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters };
+  /* ---- javelina herd: a swarm event out on the lake. Self-contained (doesn't touch MON/stepMonsters above) so it
+     can be reasoned about and merged on its own. J: {list, age, noTgtT, leaving, leaveT, natCooldown}; list items:
+     {x,z,h,hp,state,biteCd,mx,mz,idx} with state 0 alive, 1 dying (tumble), 2 gone. The camp fence stops them dead,
+     same trick as the police trucks (inCamp check on the *next* position). Server owns this when online; solo play
+     runs the identical function against just the local player, same pattern as stepMonsters/stepSoloMonsters. */
+  const JAV_COUNT = 30;                          // default herd size (also the console command's default)
+  const JAV_HP = 2;                              // shovel hits to kill one
+  const JAV_SPEED = 6.3;                         // m/s: faster than walking (4.3), a bit slower than sprinting (7.2) -- sprinting to camp is a real, water-costly escape
+  const JAV_LEAVE_SPEED = 8.5;                   // m/s while running off for good (leaving/giving up)
+  const JAV_BITE_R = 1.3, JAV_BITE_CD = 1.4;     // bite range, and per-animal cooldown so 30 of them don't all bite the same tick
+  const JAV_BITE_MIN = 5, JAV_BITE_MAX = 8;      // health damage per bite (hurt() on the bitten player's own client)
+  const JAV_BITE_GAP = 0.4;                      // minimum seconds between bites landing on the SAME player, herd-wide: caps a 30-strong
+                                                  // swarm's total dps (even if a dozen physically fit in range) at ~16-20/s -- scary, not instant death
+
+  const JAV_SEP = 1.5;                           // personal space between herdmates, so 30 of them don't stack into one spot
+  const JAV_MILL_R = 8;                          // how far they circle when nobody reachable is left near their last known target
+  const JAV_GIVEUP_S = 18;                       // seconds with no reachable target before the whole herd gives up and leaves
+  const JAV_LIFE_S = 210;                        // herd leaves on its own after this long even if it's still finding people
+  const JAV_LEAVE_S = 6;                         // seconds spent visibly running off before the herd is gone for good
+  const JAV_DEATH_S = 0.9;                       // tumble/poof time after the killing hit, before the slot goes fully invisible
+  const JAV_KNOCK = 0.9;                         // metres a hit knocks a javelina back, away from whoever swung
+  const JAV_NAT_CHANCE = 1 / 480;                // natural spawn: ~1 herd every 8 minutes on average, while conditions hold
+  const JAV_NAT_COOLDOWN = 90;                   // seconds of quiet after any herd ends before another can spawn naturally
+  // Build a fresh herd of `n` javelinas roughly `dist` m out from `target` ({x,z}), aimed back at it. `target` may be
+  // null (natural spawn with nobody picked yet never calls this without one, but keep it safe): falls back to the
+  // middle of the lake. Mutates J in place and pushes a 'javSpawn' event so every client can toast a warning.
+  function spawnJavHerd(J, target, n, dist, ev) {
+    n = Math.round(clamp(n || JAV_COUNT, 4, JAV_COUNT)); dist = clamp(dist || 70, 20, 300); // capped at JAV_COUNT (30): also the client's fixed render-instance pool size
+    const cx = target ? target.x : 0, cz = target ? target.z : -40;
+    const list = [];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      let x = clamp(cx + Math.sin(a) * dist + (Math.random() - 0.5) * 12, -EDGE + 5, EDGE - 5);
+      let z = clamp(cz + Math.cos(a) * dist + (Math.random() - 0.5) * 12, -EDGE + 5, EDGE - 5);
+      if (inCamp(x, z)) { x = clamp(x, -EDGE + 5, -50); } // shouldn't happen at these distances, but never spawn inside the fence
+      list.push({ x, z, h: 0, hp: JAV_HP, state: 0, biteCd: 0, mx: x, mz: z, idx: i });
+    }
+    Object.assign(J, { list, age: 0, noTgtT: 0, leaving: false, leaveT: 0 });
+    ev.push({ k: 'javSpawn', n: list.length, x: cx, z: cz });
+  }
+  // players: [{id,x,z,dn,hd}] (same shape stepMonsters uses -- dn downed, hd hidden/crouched deep in a hole: both
+  // make you unreachable, same as they do for the police). t: clock (for "leave at night"). ev: events out.
+  function stepJavelinas(J, players, t, dt, ev) {
+    if (J.natCooldown === undefined) J.natCooldown = JAV_NAT_COOLDOWN;
+    const outs = players.filter(p => !inCamp(p.x, p.z));
+    if (!J.list || !J.list.length) {
+      J.natCooldown = Math.max(0, J.natCooldown - dt);
+      if (t < DAYMS && J.natCooldown <= 0) {
+        const cand = outs.filter(p => !p.dn);
+        if (cand.length && Math.random() < JAV_NAT_CHANCE * dt) spawnJavHerd(J, cand[Math.floor(Math.random() * cand.length)], JAV_COUNT, 65 + Math.random() * 40, ev);
+      }
+      return;
+    }
+    const reachable = outs.filter(p => !p.dn && !p.hd);
+    J.noTgtT = reachable.length ? 0 : (J.noTgtT || 0) + dt;
+    J.age = (J.age || 0) + dt;
+    J.biteGap = J.biteGap || {}; for (const k in J.biteGap) J.biteGap[k] += dt; // per-player "just got bitten" clock, herd-wide (see JAV_BITE_GAP)
+    if (!J.leaving && (J.age > JAV_LIFE_S || J.noTgtT > JAV_GIVEUP_S || t >= DAYMS)) { J.leaving = true; J.leaveT = 0; ev.push({ k: 'javLeave' }); }
+    if (J.leaving) {
+      J.leaveT = (J.leaveT || 0) + dt;
+      for (const j of J.list) {
+        if (j.state === 2) continue;
+        if (j.state === 1) { j.dT = (j.dT || 0) + dt; if (j.dT > JAV_DEATH_S) j.state = 2; continue; }
+        const d = Math.hypot(j.x, j.z) || 1; // run outward, away from camp at the middle of the lake
+        j.x = clamp(j.x + j.x / d * JAV_LEAVE_SPEED * dt, -EDGE, EDGE); j.z = clamp(j.z + j.z / d * JAV_LEAVE_SPEED * dt, -EDGE, EDGE);
+        j.h = Math.atan2(j.x / d, j.z / d);
+      }
+      if (J.leaveT > JAV_LEAVE_S) { J.list = []; J.natCooldown = JAV_NAT_COOLDOWN; ev.push({ k: 'javGone' }); }
+      return;
+    }
+    for (const j of J.list) {
+      if (j.state === 2) continue;
+      if (j.state === 1) { j.dT = (j.dT || 0) + dt; if (j.dT > JAV_DEATH_S) j.state = 2; continue; }
+      j.biteCd = Math.max(0, j.biteCd - dt);
+      let tgt = null, bd = 1e9;
+      for (const p of reachable) { const d = Math.hypot(p.x - j.x, p.z - j.z); if (d < bd) { bd = d; tgt = p; } }
+      let gx, gz;
+      if (tgt) {
+        j.mx = tgt.x; j.mz = tgt.z; // remember the last spot someone was, for milling if they slip away
+        // flank: aim a bit to this animal's own side of the target instead of dead-on, so the herd swarms rather than filing in single line
+        const ang = Math.atan2(tgt.x - j.x, tgt.z - j.z) + Math.sin(j.idx * 2.1 + J.age * 0.6) * 0.6;
+        gx = tgt.x + Math.sin(ang) * 0.3; gz = tgt.z + Math.cos(ang) * 0.3;
+        if (bd < JAV_BITE_R && j.biteCd <= 0 && (J.biteGap[tgt.id] === undefined || J.biteGap[tgt.id] >= JAV_BITE_GAP)) {
+          j.biteCd = JAV_BITE_CD; J.biteGap[tgt.id] = 0;
+          ev.push({ k: 'javBite', id: tgt.id, dmg: Math.round(JAV_BITE_MIN + Math.random() * (JAV_BITE_MAX - JAV_BITE_MIN)) });
+        }
+      } else { const ph = J.age * 0.6 + j.idx * 1.7; gx = j.mx + Math.cos(ph) * JAV_MILL_R; gz = j.mz + Math.sin(ph) * JAV_MILL_R; }
+      let dx = gx - j.x, dz = gz - j.z, d = Math.hypot(dx, dz) || 0.01;
+      let sx = 0, sz = 0;
+      for (const o of J.list) { if (o === j || o.state) continue; const ox = j.x - o.x, oz = j.z - o.z, od = Math.hypot(ox, oz); if (od < JAV_SEP && od > 0.001) { sx += ox / od * (JAV_SEP - od); sz += oz / od * (JAV_SEP - od); } }
+      let mx = dx / d + sx * 0.6, mz = dz / d + sz * 0.6, ml = Math.hypot(mx, mz) || 1;
+      const nx = j.x + mx / ml * JAV_SPEED * dt, nz = j.z + mz / ml * JAV_SPEED * dt;
+      // the fence stops them like it stops the police trucks, but sliding along it (one axis at a time) instead of
+      // freezing dead against it, so a javelina on the wrong side of camp actually walks the fence line around to you
+      if (!inCamp(nx, nz)) { j.x = clamp(nx, -EDGE, EDGE); j.z = clamp(nz, -EDGE, EDGE); }
+      else if (!inCamp(nx, j.z)) j.x = clamp(nx, -EDGE, EDGE);
+      else if (!inCamp(j.x, nz)) j.z = clamp(nz, -EDGE, EDGE);
+      j.h = Math.atan2(mx, mz);
+    }
+  }
+  // A shovel hit on javelina `idx`: (ax,az) is the striking player's position (for knockback direction), `by` their
+  // id (for the death event's XP credit). Returns false if there's nothing alive to hit there.
+  function whackJavelina(J, idx, ax, az, ev, by) {
+    const j = J.list && J.list[idx]; if (!j || j.state) return false;
+    j.hp -= 1;
+    const dx = j.x - ax, dz = j.z - az, d = Math.hypot(dx, dz) || 1;
+    const nx = j.x + dx / d * JAV_KNOCK, nz = j.z + dz / d * JAV_KNOCK;
+    if (!inCamp(nx, nz)) { j.x = clamp(nx, -EDGE, EDGE); j.z = clamp(nz, -EDGE, EDGE); }
+    if (j.hp <= 0) { j.state = 1; j.dT = 0; ev.push({ k: 'javDeath', idx, by }); } else ev.push({ k: 'javHit', idx, by });
+    return true;
+  }
+
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

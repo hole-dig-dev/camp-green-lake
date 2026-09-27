@@ -99,6 +99,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `tumbleweed [distance]` | Blow in 1-3 giant tumbleweeds ~55 m out, heading your way: comically huge, bouncy, and fast. Get in one's way and you're stuck to it, riding around until you mash Space free or get flung off. Everyone in camp sees them. |
 | `haboob [direction]` | Start a dust storm blowing in from a compass direction (`n`/`ne`/`e`/`se`/`s`/`sw`/`w`/`nw`, or a random one). Rolls in over ~1 min, closes visibility to ~8 m for 1.5-3 min, then clears over ~12 s. Everyone in camp sees it. |
 | `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |
+| `javelinas [count] [distance]` | Spawn a herd of `[30]` javelinas `[70]` m out on the lake, coming for you. Everyone sees the same herd; the camp fence keeps you safe, and two shovel hits kill one. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `vultures [on\|off\|now]` | Toggle the vulture hazard, force your health low to test the warning, or `now` to skip straight to a dive. |
