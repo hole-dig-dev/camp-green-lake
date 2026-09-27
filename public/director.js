@@ -58,9 +58,9 @@
       weight: 2, major: false, cooldownMs: 40000, minDay: 1, times: ['day', 'dusk'],
       ringMin: 50, ringMax: 140, lifeMs: 30000, mode: 'env', enabled: true, supportsLateJoin: true,
     },
-    sinkhole: { // opens a hazard in the ground and stays -- a lasting terrain feature, not a passing event
+    sinkhole: { // opens a big crater that stays open ~3.5 min, then fills back in
       weight: 1, major: true, cooldownMs: 120000, minDay: 2, times: ['day', 'dusk'],
-      ringMin: 20, ringMax: 70, lifeMs: 600000, mode: 'env', enabled: true, supportsLateJoin: false,
+      ringMin: 20, ringMax: 70, lifeMs: 225000, mode: 'env', enabled: true, supportsLateJoin: true, // ~5 s warn + 1.6 s open + 210 s open + 6 s fill (87-sinkhole.js); spawnSinkhole takes a t0, so late joiners replay it
     },
     javelinas: { // a ~30-strong herd that charges -- server-side monster, not a client env spawn
       weight: 1, major: true, cooldownMs: 150000, minDay: 3, times: ['day', 'dusk'],

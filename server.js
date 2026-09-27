@@ -523,10 +523,10 @@ wss.on('connection', (ws, req) => {
           broadcast({ t: 'dir', on: m.on }); // everyone, including the host who asked, so they all gate the same way
         } else if (typeof m.force === 'string' && /^[a-z]{1,16}$/.test(m.force)) {
           const now = Date.now();
-          const d = DIRECTOR.forceEvent(dirState, m.force, { x: c.x, z: c.z, now });
+          const hz = hazardNow(now), d = DIRECTOR.forceEvent(dirState, m.force, { x: c.x, z: c.z, now, hazardNow: hz });
           if (d) {
             LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: c.n, major: d.major, why: 'forced by ' + c.n });
-            if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
+            if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
             else dirStartMonster(d, c.x, c.z);
           } else LOG.log('directorForceFailed', { id: c.id, n: c.n, k: m.force });
         }
@@ -658,6 +658,10 @@ function javSnapshot() { return JAV.list.map(j => [r2(j.x), r2(j.z), r2(j.h), j.
 // broadcasts anything that changed. Kept as its own function so the tick body only grows by one line for this.
 // The event director picked a server-side monster ('monster' mode in public/director.js): start it around (tx,tz),
 // the camper it was aimed at. The herd spawns 50-100 m out from them; the lion spawns at the director's ring spot.
+// The shared hazard clock: the same number every client's twNow() gives (Date.now() + the camp clock offset wrapped
+// to one day, see 72-twisters.js). Director events are stamped with it, so a spawn's start time means the same thing
+// to the server, to everyone who hears it live, and to a late joiner replaying it from 'hello'.
+function hazardNow(now) { return now + SIM.wrapT(world.clock.off); }
 function dirStartMonster(d, tx, tz) {
   if (d.kind === 'javelinas') {
     const jev = []; SIM.spawnJavHerd(JAV, { x: tx, z: tz }, SIM.JAV_COUNT, Math.min(100, Math.max(50, Math.hypot(d.x - tx, d.z - tz))), jev);
@@ -751,9 +755,10 @@ setInterval(() => {
   // event director: one shared budget for natural hazards (see public/director.js). Decisions go out through the
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers })) {
+  const hz = hazardNow(now);
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz })) {
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
-    if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, dir: true });
+    if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
     else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }
   }
   if (now - lastDirInfoT >= 3000 && joined().length) {

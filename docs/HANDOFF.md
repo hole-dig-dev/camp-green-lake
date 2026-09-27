@@ -1,5 +1,9 @@
 # Handoff: Camp Green Lake (as of 2026-09-27, evening)
 
+> **Update (later the same evening):** a cloud planner session built nine new features (hazards, monsters, shovel
+> bonk, an event director) and combined them on `integration/all-events`. See `docs/FOR-CLAUDE-458.md` for what's
+> in it, how it was tested, and how to put it on the test link.
+
 Written by the Claude Code session that ran on JT's mini PC ("minipc") all day, for the Claude Code cloud sessions taking over. Read `CLAUDE.md` first (branch rules), then this, then `ARCHITECTURE.md`.
 
 ---
