@@ -36,8 +36,11 @@ function updatePlayerTent(dt){
 function updatePlayer(dt){
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
+  if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
+  if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
+  if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(inTent())return updatePlayerTent(dt);
-  const trap=isTrapped();
+  const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
   if(touch.id!==null){ix=touch.ix;iz=touch.iz}
@@ -75,7 +78,7 @@ function updatePlayer(dt){
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
-  S.water=Math.max(0,S.water-drain*dt*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1));
+  S.water=Math.max(0,S.water-drain*dt*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
@@ -101,7 +104,8 @@ function updateLizards(dt,t){
     const dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
-    else if(alive&&dp<(L.mode==='chase'?11:6.5)&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
+    // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
+    else if(alive&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
     const dx=gx-L.x,dz=gz-L.z,d=Math.hypot(dx,dz);
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}

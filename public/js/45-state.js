@@ -14,7 +14,7 @@ function toggleView(){FP=!FP;if(me)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(F
 const vm=new T.Group();
 {const hd=new T.Mesh(new T.CylinderGeometry(0.02,0.02,0.9,5),M(0x8a6440));hd.rotation.x=Math.PI/2;hd.position.z=-0.25;const bl=new T.Mesh(new T.BoxGeometry(0.22,0.02,0.26),M(0x7d8288));bl.position.z=-0.78;const sh=new T.Group();sh.rotation.x=-0.35;sh.add(hd,bl);vm.add(sh)}
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
-function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!twSt;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
+function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!twSt&&!tbSt;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}
@@ -23,6 +23,11 @@ function toast(msg,cls,ms){const el=document.createElement('div');el.className='
 /* ---------- digging ---------- */
 let lastWarn=0;
 function scoop(){
+  if(vShoo())return;   // a well-timed swing while a vulture is diving close in front of you chases it off (83-vultures.js)
+  if(javSwing())return;   // a live javelina in shovel reach gets whacked instead of the ground getting dug
+  if(lionSwing())return;   // the mountain lion is in melee range: this shovel swing hits it instead of digging (see 85-lion.js)
+  if(bonkSwing())return;   // a friend (or crew member) right in front of you: the swing bonks them instead (71-bonk.js)
+  if(inSinkhole()){const now=performance.now();if(now-lastWarn>3000){lastWarn=now;toast('The walls are too steep and loose to dig footholds. Only a friend can pull you out.','bad')}return}
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa);
   const tx=P.x+fx*1.1,tz=P.z+fz*1.1;
   let h=holeNear(P.x,P.z,HOLE_R*0.8)||holeNear(tx,tz,1.4);
@@ -64,6 +69,7 @@ function foundItem(it,h){
 function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
+  const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   const pr=propNear(2.4);if(pr)return{id:'prop',pr};
   const b=bagNear(2);if(b)return{id:'bag',b};
@@ -76,6 +82,7 @@ function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
   if(s.id==='revive')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
+  if(s.id==='sinkRescue')return; // hold F to link hands: handled every frame in updateSinkholes (87-sinkhole.js)
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
   if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}

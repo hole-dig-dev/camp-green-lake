@@ -137,7 +137,7 @@ function hunterToast(h,was){
 }
 function updateCurfew(dt){
   const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);
-  stepSoloMonsters(dt);trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
+  stepSoloMonsters(dt);stepSoloDirector(dt);trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
   if(!night){
     if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. Madame Zeroni fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
     if(t<DAYMS-60000)CUR.warned=false;
@@ -154,11 +154,25 @@ function updateCurfew(dt){
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
 const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
-function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise}}
+function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light}}
 function stepSoloMonsters(dt){
   if(online())return;const ev=[];SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
   for(const e of ev)monEvent(e);
+}
+/* solo/offline event director (see public/director.js): online, the SERVER steps this and relays decisions
+   through 'env' (server.js + the 'env' case in 65-net.js); here we run the identical logic locally and call
+   spawnEnv() ourselves. Only when DIRECTOR_ON -- off falls back to the old per-cell twPlan/lsPlan schedules. */
+function stepSoloDirector(dt){
+  if(online()||!DIRECTOR_ON)return;
+  if(!soloDirState)soloDirState=DIRECTOR.createState();
+  const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
+  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT()});
+  for(const d of decisions){
+    if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
+    else if(d.kind==='javelinas'){const ev=[];SIM.spawnJavHerd(JAV_LOCAL,{x:P.x,z:P.z},SIM.JAV_COUNT,clamp(Math.hypot(d.x-P.x,d.z-P.z),50,100),ev);for(const e of ev)javEvent(e)}
+    else if(d.kind==='lion')LIONL.pendingSpawn={x:d.x,z:d.z};   // solo: same monster starts the server does (see dirStartMonster in server.js)
+  }
 }
 function monFromServer(m){
   MONV.trucks=(Array.isArray(m.trucks)?m.trucks:[]).slice(0,4).map(a=>({x:num(a[0],-700,700,0),z:num(a[1],-700,700,0),h:num(a[2],-1e4,1e4,0),chase:a[3]===1}));
@@ -176,6 +190,7 @@ function monEvent(e){
     case 'blink':if(mine){zeroniSting(e.front?1.4:0.6);if(e.front)jumpScare()}break;
     case 'drop':if(mine&&S.ko)toast('Madame Zeroni let go of you.','good',2500);break;
     case 'gone':if(mine&&S.ko){S.ko=0.01;toast('Madame Zeroni dragged you off the edge of the lake. You wake up in the nurse\'s office.','bad',5000)}break;
+    default:lionEvent(e);   // anything this switch doesn't know about is one of the mountain lion's events (see 85-lion.js)
   }
 }
 

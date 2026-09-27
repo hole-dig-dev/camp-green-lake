@@ -3,6 +3,7 @@
 /* ---------- multiplayer (WebSocket to the camp server) ---------- */
 const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:'',needPass:false,passOk:false,awaitingJoin:false};
 const remotes=new Map();
+let DIRINFO=null; // last 'dirinfo' snapshot from the server (see the 'events' console command in 76-console.js)
 function wsSend(o){if(net.ws&&net.ws.readyState===1)try{net.ws.send(JSON.stringify(o))}catch(e){}}
 let HOST='',PASS='';
 try{
@@ -16,7 +17,7 @@ if(PASS)campIn.value=PASS;
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel()];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
   net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water)});
@@ -36,7 +37,7 @@ function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
   const p=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][ci%4],band:CAMPER_COLORS[ci]});scene.add(p.g);
-  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0};
+  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
@@ -73,6 +74,12 @@ function onMsg(m){
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
       monFromServer(m.mon||{trucks:[],zer:null});
+      // event director state: whether it's running, and any of its events already in progress (twister can't be
+      // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
+      if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
+      if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
+      javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
+      lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
       maybeResume();break;
@@ -87,7 +94,7 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;R.hp=num(m.hp,0,100,R.hp);setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
@@ -103,7 +110,8 @@ function onMsg(m){
     case 'grace':graceDay();break;
     case 'fired':fired(num(m.bank,0,1e7,0)|0,num(m.quota,0,1e7,0)|0);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
-    case 'mon':monFromServer(m);break;
+    case 'mon':monFromServer(m);lionFromServer(m);break;
+    case 'jav':javFromServer(m.list,m.ev);break;
     case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0));break;
     case 'props':if(Array.isArray(m.list))for(const a of m.list){const pr=PROPS.get(a[0]);if(pr){pr.x=num(a[1],-600,600,pr.x);pr.z=num(a[2],-600,600,pr.z);pr.n=num(a[3],0,40,0)|0}}break;
     case 'psold':propSold(num(m.id,0,1e5,-1)|0,num(m.v,0,1e4,0)|0,Array.isArray(m.who)?m.who:[]);break;
@@ -111,7 +119,9 @@ function onMsg(m){
     case 'bagGone':removeBag(num(m.id,0,1e9,-1));break;
     case 'grabbed':removeBag(num(m.id,0,1e9,-1));if(Array.isArray(m.items))takeBag(m.items.slice(0,12),cleanName(m.n));break;
     case 'revived':revived(cleanName(m.by)||'A friend');break;
+    case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
+    case 'sinkpulled':addXP(SINK_RESCUE_XP);toast(`You helped pull ${cleanName(m.by)||'a friend'} out of the sinkhole! +${SINK_RESCUE_XP} XP`,'good',2800);sfx.thud();logEv('sinkRescuer',{by:cleanName(m.by)||''});break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
     case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;
@@ -121,7 +131,9 @@ function onMsg(m){
       // means the password was right: remember it and start (or resume) the game for real.
       if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
       break;
-    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
+    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
+    case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
+    case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;
     case 'sleepstat':SLEEP.asleep=num(m.asleep,0,80,0)|0;SLEEP.total=num(m.total,0,80,1)|0;break;
     case 'daybreak':S.inBed=null;toast('Morning already - everyone in camp was asleep.','good',4500);break;

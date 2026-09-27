@@ -8,6 +8,7 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 
 - **WASD** walk, **Shift** run, **Space** jump
 - **Click** to lock the mouse, then **hold click** (or **E**) to dig
+- **Shovel bonk**: dig while a friend is right in front of you and you whack them instead. They go tumbling but take no damage (the D Tent crew just complain). No bonking inside tents, and it can't knock anyone out of a hole.
 - **F** talk, buy, sell, or sit down at the card table
 - **Q** eat an onion (lizards won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound
@@ -94,11 +95,20 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | Command | What it does |
 |---|---|
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
-| `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 8-20 boulders fall, bounce and roll. Everyone in camp sees it. |
+| `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 10-26 boulders rain down over a few seconds (some angled in), bounce hard, ricochet and roll. Everyone in camp sees it. |
+| `tumbleweed [distance]` | Blow in 1-3 giant tumbleweeds ~55 m out, heading your way: comically huge, bouncy, and fast. Get in one's way and you're stuck to it, riding around until you mash Space free or get flung off. Everyone in camp sees them. |
+| `haboob [direction]` | Start a dust storm blowing in from a compass direction (`n`/`ne`/`e`/`se`/`s`/`sw`/`w`/`nw`, or a random one). Rolls in over ~1 min, closes visibility to ~8 m for 1.5-3 min, then clears over ~12 s. Everyone in camp sees it. |
+| `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |
+| `javelinas [count] [distance]` | Spawn a herd of `[30]` javelinas `[70]` m out on the lake, coming for you. Everyone sees the same herd; the camp fence keeps you safe, and two shovel hits kill one. |
+| `lion [distance]` | Spawn the mountain lion out on the lake ~40 m ahead of you. It never enters camp; it stalks whoever looks most exposed, circles to cut off the way home, and pounces when unseen. A shovel swing at melee range hits it instead of digging; enough hits (or facing it down / being in a group) drives it off. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
+| `vultures [on\|off\|now]` | Toggle the vulture hazard, force your health low to test the warning, or `now` to skip straight to a dive. |
 | `tp <x> <z>` / `tp camp` | Teleport. |
 | `where` | Print your position. |
+| `director on\|off` | Toggle the event director (see below). Off brings back the old independent twister/landslide schedules. |
+| `event <kind>` | Force the director to place one event of `<kind>` near you now. |
+| `events` | Print the director's state: next roll, per-kind cooldowns, active events, current intensity. |
 
 Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (the play-test server does) to give everyone host powers, including the console and the hidden `sploosh` admin panel. Solo offline play can always use it.
 
@@ -106,6 +116,8 @@ Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (t
 `command('name', {usage: 'name <arg>', help: 'what it does', run(args) { ...; return 'reply'; }})`
 
 **Adding a spawnable hazard:** add an entry to the `ENV` registry (`ENV.sandstorm = {spawn: o => ...}`, where `o` is `{x, z, a}`) and a command that calls `spawnAhead('sandstorm', dist)`. The server relays hazards spawned by the host, so every client builds the same one.
+
+**The event director** (`public/director.js`) is the one place that decides which *natural* hazard happens, where, and when — on a shared budget, so twisters and landslides (and, once their branches land, tumbleweeds, sinkholes, javelinas, a mountain lion) don't all roll independent dice and stack three disasters on one camper. The server steps it every tick and relays its decisions through the same `env` message the console commands use; solo/offline play runs the identical logic locally. See "Adding an event to the director" in `ARCHITECTURE.md` for how to wire in a new kind.
 
 ## Play-test logging
 

@@ -104,7 +104,7 @@ function updateTwisters(dt){
   const ci=Math.floor(fx/TW_CELL),cj=Math.floor(fz/TW_CELL),seen=new Set();
   // which twisters are around right now: this window's and the last one's (a twister can run past its window)
   const plans=[];
-  for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)}
+  if(!DIRECTOR_ON)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)} // director owns natural twisters when on -- see public/director.js
   plans.push(...twSpawned);
   let nearest=1e9,loud=0;
   for(const pl of plans){
@@ -128,6 +128,7 @@ function twPush(tw,d,dt){
   if(inTent())return;   // inside a tent: sheltered, even though your x/z is still technically "out there"
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
   if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
+  if(tbSt)return;                            // already stuck to a tumbleweed - one hazard at a time
   const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
   const sr=Math.max(TW_SUCK_R*tw.s,0.4);
   if(d<sr){if(twCool<=0)twStart(tw,d);return}

@@ -19,6 +19,12 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
   It exports itself as `module.exports` under Node and as `root.SIM` in the browser -- see the
   last line of the file. Don't move game logic that the server also needs to care about out of
   here; anything only the client needs (rendering, input, UI) belongs in `public/js/`.
+- `public/director.js` -- the event director: decides which natural hazard (twister, landslide, and future ones)
+  happens, where, and when, on a shared budget so independent per-hazard schedules can't stack several disasters
+  on one camper. Same dual-export pattern as `sim.js`, and the same relationship to the server: `server.js`
+  `require`s it and is the one authority when online, relaying its decisions through the existing `env` message;
+  solo/offline play loads it on the page and runs the identical logic locally (`stepSoloDirector()` in
+  `public/js/82-patrol.js`). See "Adding an event to the director" below.
 - `server.js` -- a small Node + `ws` server. It serves the client files (see below), relays
   player positions/digs/chat/hazards over WebSocket, and keeps the one shared world (dug holes,
   found items, the KB tube, the suitcase, heavy props) so late joiners see the same camp. It does
@@ -30,7 +36,8 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 
 1. `https://cdnjs.cloudflare.com/.../three.min.js` (r128, from cdnjs)
 2. `sim.js`
-3. `public/js/10-core.js` ... `public/js/99-boot.js`, in ascending numeric order
+3. `director.js`
+4. `public/js/10-core.js` ... `public/js/99-boot.js`, in ascending numeric order
 
 | File | Responsibility |
 |---|---|
@@ -47,8 +54,11 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/60-title.js` | title screen, camp password, session save/resume, start-game flow |
 | `public/js/65-net.js` | WebSocket client, remote players, server messages, play-test log batching |
 | `public/js/70-player.js` | player movement/physics, camera, health and healing |
+| `public/js/71-bonk.js` | shovel bonk: whack a friend (harmless tumble), server-checked (`bonk` message) |
 | `public/js/72-twisters.js` | twisters: schedule, pull/suck-up/ragdoll, visuals, sound |
 | `public/js/74-landslide.js` | landslides: deterministic boulder physics, hits, warnings |
+| `public/js/75-tumbleweed.js` | giant tumbleweeds: deterministic bouncy physics, getting stuck to one and wriggling free, visuals, sound |
+| `public/js/75-haboob.js` | haboob dust storm: deterministic schedule, wall visuals, fog/light blend, sound |
 | `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
 | `public/js/78-hud.js` | HUD panel and minimap |
 | `public/js/80-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |
@@ -110,6 +120,35 @@ The developer console (backtick to open) registers commands the same way, one `c
 per command, e.g. `command('twister', {usage: ..., help: ..., run(args) { ...; return 'reply' }})`.
 Adding a hazard usually means one `ENV.xyz = {...}` entry plus one `command('xyz', ...)` that calls
 `spawnAhead('xyz', dist)`. See the README's "Developer console" section for the full command list.
+
+## Adding an event to the director
+
+`public/director.js` holds one `REGISTRY` entry per natural event kind (weight, cooldown, min day, allowed
+time-of-day, spawn ring, lifetime, and whether it's a `mode: 'env'` broadcast or a `mode: 'monster'` server-side
+creature). `tumbleweed`, `sinkhole`, `javelinas`, `lion` and `haboob` already have placeholder entries with
+`enabled: false` and sensible-guess defaults, for whichever branch adds each one:
+
+1. Flip that kind's `enabled: false` to `enabled: true` in `REGISTRY`.
+2. For a `mode: 'env'` kind: add its `ENV.<kind> = {spawn: o => ...}` entry in `public/js/76-console.js`, same as
+   `twister`/`landslide` already have -- that's the only client-side wiring needed, since the director broadcasts
+   through the same `env` relay every console-spawned hazard uses.
+3. For a `mode: 'monster'` kind (`javelinas`, `lion`): it isn't an `env` spawn, it's a living, chasing thing the
+   *server* has to start and step every tick, the way `sim.js`'s `stepMonsters()` already does for police trucks
+   and Madame Zeroni. Add that start/step logic, and read `d.mode === 'monster'` decisions in the `TODO` spot in
+   server.js's tick handler (and the matching spot in the `'dir'` force-event case) instead of broadcasting `env`.
+4. If the new kind has a real lifetime and a spawn function that accepts a start time (like `spawnLandslide`'s
+   `t0`, not `addTwister`'s always-now), leave `supportsLateJoin: true` so a joining camper replays it instead of
+   missing it; otherwise set `supportsLateJoin: false` and it just won't appear for a late joiner.
+
+Vultures (health-triggered, not scheduled) don't belong in `REGISTRY` at all -- whatever adds them should call
+`DIRECTOR.canMajorAffect(state, x, z, now)` before swooping in, so they still respect the "one major event per
+camper" budget instead of piling onto someone already mid-twister.
+
+Most kinds use the default `placement: 'ring'` (a spot in a ring around a randomly chosen out-on-the-lake
+camper, dodging the camp fence zone -- see `tryPlace()`). `haboob` instead uses `placement: 'mapwide'`: it isn't
+"near a camper", it's a dust storm that crosses the whole lake, so it spawns off a random edge and heads across
+(see `mapWidePlace()`), and while it's active it counts as a major event for every camper everywhere (`mapWide:
+true` on its registry entry, read by `canMajorAffect()`), not just within `DIR_MAJOR_RADIUS` of one point.
 
 ## Branch / test workflow
 

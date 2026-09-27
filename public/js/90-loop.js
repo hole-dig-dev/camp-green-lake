@@ -48,9 +48,10 @@ function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
-  updateTwisters(dt);updateLandslides(dt);updateThumbHaze();
-  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);
+  updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateThumbHaze();
+  updateBots(dt,now);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
+  updateHaboob(dt);   // final blend on top of whatever fog/sky/light the day-night/disco/win code left this frame (see 75-haboob.js)
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
   const fx=S.started?P.x:0,fz=S.started?P.z:12;

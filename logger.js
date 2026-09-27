@@ -38,12 +38,24 @@
 //                                                          a bunk
 //   daybreak        {asleep}                              every joined camper was asleep in a bunk; the night was
 //                                                          skipped straight to dawn (asleep = how many campers)
-//   mobsOn/mobsOff  {kind}                               police trucks / Madame Zeroni appear or leave for the night
+//   mobsOn/mobsOff  {kind}                               police trucks / Madame Zeroni / the mountain lion appear
+//                                                          or leave (kind: 'police'/'zeroni'/'lion')
 //   spot / lost     {id,n,x,z}                            a police truck spotted / lost a camper
 //   down            {id,n,x,z,by}                         knocked down by police or Zeroni ("by")
 //   blink/drop/gone {id,n,x,z,front?}                     Zeroni teleports near / lets go of / drags off a camper
 //   zspawn          {x,z}                                 Madame Zeroni appears for the night
-//   mon             {trucks,zer}                          periodic (~2s) position/mode snapshot while mobs are out
+//   mon             {trucks,zer,lion}                     periodic (~2s) position/mode snapshot while mobs are out
+//   lionSpawn       {id,x,z}                               the mountain lion appears (natural window, or the
+//                                                          'lion' console command); id = its first target, if any
+//   lionSpawnCmd    {id,n,x,z}                             host used the 'lion' console command
+//   lionTarget      {id,x,z}                               it switched targets to camper id
+//   lionFlee        {id,x,z,why}                            deterred into a temporary backoff (why: faced/lit/mobbed)
+//   lionSwat        {id,n,hp}                               a shovel hit landed on it; hp = its health left
+//   pounce          {id,x,z}                                its lunge connected on camper id
+//   lionPounceStart {id}                                    it committed to a pounce attempt (may still miss)
+//   lionRoar        {why}                                   it roars (a landed pounce, or why:'retreat' -- giving up
+//                                                          for good, about to leave)
+//   lionGone        {}                                      it left the map for good; the event ends
 //   hurt            {id,n,amt,hp,title,text,x,z}          damage (client-reported: only the client tracks HP)
 //   ko              {id,n,title,text,x,z}                  knocked out
 //   lizChase        {id,n,liz,x,z,dist}                    lizard #liz started chasing camper n from dist metres
@@ -52,6 +64,14 @@
 //   twSuckUp        {id,n,x,z,twx,twz,s}                    a twister's core caught a camper and started pulling
 //                                                           them up (before the throw)
 //   twThrow         {id,n,x,z,twx,twz,dmg}                  a twister threw a camper
+//   sinkWarn        {id,n,x,z,shx,shz,dist}                 sinkhole ground-shake warning shown to a camper
+//   sinkOpen        {id,n,x,z,r}                             a sinkhole's crater finished opening (client-local)
+//   sinkFellIn      {id,n,x,z}                               a camper fell into an open sinkhole
+//   sinkpull        {id,n,by,x,z}                            by finished pulling camper n out of a sinkhole (server-relayed, like 'pull')
+//   sinkRescuer     {id,n,by}                                camper n was credited XP for helping pull someone up
+//   sinkSolo        {id,n,x,z}                                nobody else online: Zero set out with a line
+//   sinkSoloRescued {id,n,x,z}                                Zero finished pulling a solo camper out
+//   sinkFilled      {id,n,x,z}                                a sinkhole finished filling back in (client-local)
 //   found           {id,n,item,type,value,x,z,heavy,kb}     dug up an item
 //   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
 //   tentExit        {id,n,tent,name,x,z}                    stepped back outside a tent

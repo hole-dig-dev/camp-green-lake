@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const SIM = require('./public/sim.js');
+const DIRECTOR = require('./public/director.js'); // event director: picks natural hazards on a shared budget (see that file)
 const LOG = require('./logger.js'); // play-test event logging (data/logs/*.jsonl); PLAYLOG=0 turns it off
 
 const PORT = Number(process.env.PORT) || 4300;
@@ -28,7 +29,7 @@ const DEV_MODE = process.env.DEV_MODE === '1';
 const HOST_TOKEN = process.env.HOST_TOKEN || crypto.randomBytes(24).toString('hex');
 const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
-const CHAT_RANGE = 30, HELP_RANGE = 3.5;
+const CHAT_RANGE = 30, HELP_RANGE = 3.5, SINK_HELP_RANGE = 5;   // sinkhole rims are big; a bit more generous than the ordinary deep-hole pull
 
 /* ---- proximity voice: WebRTC signaling relay ---- */
 // SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
@@ -76,6 +77,12 @@ const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
 const CHAT_RATE = 5, CHAT_WINDOW_MS = 4000;  // chat/shout messages per connection per window
 const ENV_RATE = 4, ENV_WINDOW_MS = 5000;    // hazard spawns per connection per window (host-only already)
 const SELL_RATE = 5, SELL_WINDOW_MS = 5000;  // sell messages per connection per window
+const BONK_RATE = 3, BONK_WINDOW_MS = 2000;  // shovel bonks per connection per window (the client already waits ~0.9 s between swings)
+const BONK_RANGE = 3.2;                      // m: a bonk only lands on someone standing right next to you (client reach is 2.3 m, plus lag slack)
+const WHACK_RATE = 6, WHACK_WINDOW_MS = 1000; // shovel swings at a javelina per connection per window (a swing lands at most every ~0.42s)
+const JAV_WHACK_MAX = 2.4;                   // generous server-side reach check for a 'whack' (latency headroom over the client's own ~1.9m check)
+const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lion, per connection per window
+const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
 const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
@@ -102,6 +109,7 @@ if (!world.recent || typeof world.recent !== 'object') world.recent = {};
 if (!Array.isArray(world.hostNames)) world.hostNames = [];
 if (!world.clock || typeof world.clock !== 'object') world.clock = { off: 0, paused: false, pt: 0 };
 if (!world.run || typeof world.run !== 'object') world.run = freshRun();
+if (!world.director || typeof world.director !== 'object') world.director = { on: true }; // persisted so a restart doesn't silently disable it
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
@@ -194,6 +202,7 @@ const server = http.createServer((req, res) => {
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
     if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');
     if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
+    if (url === '/director.js') return sendFile(res, 'director.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
     // split client files (see scripts/split-client.mjs): whitelisted, resolved strictly inside public/
     if (url.startsWith('/js/')) return sendStatic(res, 'js', url.slice('/js/'.length));
     if (url.startsWith('/css/')) return sendStatic(res, 'css', url.slice('/css/'.length));
@@ -248,7 +257,7 @@ function maybeSkipNight() {
   for (const c of js) c.sleeping = false;
   broadcastSleep();
 }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -260,8 +269,8 @@ wss.on('connection', (ws, req) => {
   if (!ipWithinRate(ipConnWindow, ip, MAX_CONNS_PER_IP_PER_MIN, 60000)) { LOG.log('joinRejected', { ip, reason: 'slow down' }); ws.close(1013, 'slow down'); return; }
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
-    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
-    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
+    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, hp: 100, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
+    digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], bonkTimes: [], whackTimes: [], swatTimes: [], lionTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
   clients.set(c.id, c);
@@ -277,6 +286,9 @@ wss.on('connection', (ws, req) => {
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
+      dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
+      dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
+      jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -332,10 +344,13 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
-        // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
+        // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
+        // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
+        // 128 a vulture has you (83-vultures.js)
         c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
+        c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;
@@ -416,6 +431,27 @@ wss.on('connection', (ws, req) => {
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
         break;
       }
+      case 'bonk': {
+        // Shovel bonk: a harmless whack that sends a friend tumbling (public/js/71-bonk.js). You have to be standing
+        // right next to them, on the same level (nobody bonks into or out of a tent interior), and neither of you downed.
+        if (!withinRate(c.bonkTimes, BONK_RATE, BONK_WINDOW_MS)) return;
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, BONK_RANGE) || Math.abs(o.y - c.y) > 2 || (o.f & 2) || (c.f & 2)) return;
+        const d = Math.hypot(o.x - c.x, o.z - c.z) || 1;
+        LOG.log('bonk', { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
+        send(o, { t: 'bonked', from: c.id, by: c.n, dx: r2((o.x - c.x) / d), dz: r2((o.z - c.z) / d) });
+        break;
+      }
+      case 'sinkpull': {
+        // A camper who was just pulled out of a sinkhole credits everyone who was actually holding on at the rim
+        // (the trapped client sends one of these per active rescuer once its own local rescue timer completes --
+        // see updateSinkholes() in 87-sinkhole.js). Same proximity check as 'pull'/'revive', just a bigger radius.
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, SINK_HELP_RANGE)) return;
+        LOG.log('sinkpull', { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
+        send(o, { t: 'sinkpulled', by: c.n });
+        break;
+      }
       case 'ping':
         if (!withinRate(c.pingTimes, PING_RATE, PING_WINDOW_MS)) return; // no flooding the map with pings
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
@@ -478,6 +514,68 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x, z, a }, c.id);
         break;
       }
+      case 'dir': {
+        // Host console: "director on|off" toggles the whole event director; "event <kind>" forces one placement.
+        if (!c.host) return;
+        if (typeof m.on === 'boolean') {
+          world.director.on = dirState.enabled = m.on; dirty = true;
+          LOG.log('directorToggle', { id: c.id, n: c.n, on: m.on });
+          broadcast({ t: 'dir', on: m.on }); // everyone, including the host who asked, so they all gate the same way
+        } else if (typeof m.force === 'string' && /^[a-z]{1,16}$/.test(m.force)) {
+          const now = Date.now();
+          const hz = hazardNow(now), d = DIRECTOR.forceEvent(dirState, m.force, { x: c.x, z: c.z, now, hazardNow: hz });
+          if (d) {
+            LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: c.n, major: d.major, why: 'forced by ' + c.n });
+            if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
+            else dirStartMonster(d, c.x, c.z);
+          } else LOG.log('directorForceFailed', { id: c.id, n: c.n, k: m.force });
+        }
+        break;
+      }
+      case 'javspawn': {
+        // Host-only console command ("javelinas [count] [distance]"): spawn a herd out on the lake, aimed at the
+        // caller. Self-contained (see the javelina section of sim.js) -- doesn't touch MON/stepMonsters at all.
+        if (!c.host) return;
+        if (!withinRate(c.envTimes, ENV_RATE, ENV_WINDOW_MS)) return; // shares the host hazard-spawn budget with 'env'
+        const n = num(m.n, 4, SIM.JAV_COUNT, SIM.JAV_COUNT) | 0, dist = num(m.dist, 20, 300, 70); // capped at JAV_COUNT: the client's render pool can't show more
+        const jev = []; SIM.spawnJavHerd(JAV, { x: c.x, z: c.z }, n, dist, jev);
+        LOG.log('javSpawn', { id: c.id, n: c.n, count: n, dist });
+        broadcast({ t: 'jav', list: javSnapshot(), ev: jev }); // don't wait for the next 100ms tick to tell everyone
+        break;
+      }
+      case 'whack': {
+        // A shovel swing landed on javelina `idx`. Fully server-validated: alive, in reach, not spamming.
+        if (c.f & 2) return; // can't swing while downed
+        const idx = num(m.idx, 0, SIM.JAV_COUNT - 1, -1) | 0, j = JAV.list[idx];
+        if (!j || j.state || Math.hypot(j.x - c.x, j.z - c.z) > JAV_WHACK_MAX) return;
+        if (!withinRate(c.whackTimes, WHACK_RATE, WHACK_WINDOW_MS)) return;
+        const jev = []; SIM.whackJavelina(JAV, idx, c.x, c.z, jev, c.id);
+        if (jev.some(e => e.k === 'javDeath')) LOG.log('javKill', { id: c.id, n: c.n, idx });
+        broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+        break;
+      }
+      case 'lion': {
+        // Host console command ("lion [distance]"): spawn the mountain lion out on the lake near the caller.
+        // Unlike ENV hazards it isn't a stateless one-shot every client can derive on its own -- it's a persistent,
+        // server-stepped predator (see SIM.stepLion) -- so this just records where to put it; the tick loop below
+        // does the actual spawning next pass, and only if one isn't already out (SIM.stepLion enforces "one at a time").
+        if (!c.host) return;
+        if (!withinRate(c.lionTimes, ENV_RATE, ENV_WINDOW_MS)) return; // same budget as other host hazard spawns
+        const x = r1(num(m.x, -600, 600, 0)), z = r1(num(m.z, -600, 600, 0));
+        LOG.log('lionSpawnCmd', { id: c.id, n: c.n, x, z });
+        LION.pendingSpawn = { x, z };
+        break;
+      }
+      case 'swat': {
+        // A shovel swing landed on the mountain lion (see lionSwing()/scoop() on the client). Sender must be alive
+        // and actually standing close enough to reach it; SIM.lionSwat applies a fixed amount of damage server-side
+        // so a hacked client can't report bigger hits, and the rate limit caps how often one client can "swing".
+        if (c.f & 2) return; // can't swing a shovel while downed
+        if (!withinRate(c.swatTimes, SWAT_RATE, SWAT_WINDOW_MS)) return;
+        if (!LION.active || Math.hypot(c.x - LION.x, c.z - LION.z) > LION_REACH) return;
+        if (SIM.lionSwat(LION)) { LOG.log('lionSwat', { id: c.id, n: c.n, hp: Math.round(LION.hp) }); lionEvQ.push({ k: 'swat', id: c.id }); }
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
@@ -531,22 +629,62 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-/* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
+/* ---- shared rules, 10 times a second: heavy loot, night monsters, the quota at curfew, and the event director ---- */
 const MON = { trucks: [], zer: null };
+const dirState = DIRECTOR.createState(); dirState.enabled = world.director.on; // one director for the whole camp; the server is its only authority
+let lastDirInfoT = 0; // throttle for the 'dirinfo' status broadcast (host "events" command reads it)
+const LION = { active: false, armed: true, x: 0, z: 0, h: 0, mode: 'stalk', tgt: null, hp: 0 }; // the one mountain lion; see SIM.stepLion
+let lionEvQ = []; // events from message handlers (a shovel swat) waiting for the next tick's broadcast -- see the 'swat' case above
 // Wire format for the 'mon' field, shared by the periodic broadcast and the 'hello' a (re)connecting
 // client gets. A fresh connection has to see the CURRENT truth here, not just wait for the next change:
 // the periodic broadcast only fires on the tick a monster appears or disappears, so a client that wasn't
 // connected at that exact moment (dropped and reconnected, or just joined) would otherwise never learn
 // monsters are gone and keep rendering whatever it saw last.
 function monSnapshot() {
-  return { trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null };
+  return {
+    trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null,
+    // [x,z,h,modeIndex,targetId,hp] -- modeIndex indexes SIM.LION_MODES; hp is sent raw (0..SIM.LION_HP) so the
+    // client doesn't need to duplicate that constant just to draw a bar or gate a sound.
+    lion: LION.active ? [r2(LION.x), r2(LION.z), r2(LION.h), Math.max(0, SIM.LION_MODES.indexOf(LION.mode)), LION.tgt, Math.round(LION.hp)] : null,
+  };
+}
+// Javelina herd: a separate, self-contained hazard (its rules live in their own section of sim.js, not mixed into
+// stepMonsters above). JAV.list is [] when no herd is out; otherwise a fixed-size array for that herd's lifetime,
+// so a client can address one by its stable array index ('whack'), the same idea as MON above but a herd of many.
+const JAV = { list: [] };
+let javOn = false;
+function javSnapshot() { return JAV.list.map(j => [r2(j.x), r2(j.z), r2(j.h), j.state]); }
+// One call from the main tick (see below): steps the herd (host-authoritative AI, bites, natural spawns) and
+// broadcasts anything that changed. Kept as its own function so the tick body only grows by one line for this.
+// The event director picked a server-side monster ('monster' mode in public/director.js): start it around (tx,tz),
+// the camper it was aimed at. The herd spawns 50-100 m out from them; the lion spawns at the director's ring spot.
+// The shared hazard clock: the same number every client's twNow() gives (Date.now() + the camp clock offset wrapped
+// to one day, see 72-twisters.js). Director events are stamped with it, so a spawn's start time means the same thing
+// to the server, to everyone who hears it live, and to a late joiner replaying it from 'hello'.
+function hazardNow(now) { return now + SIM.wrapT(world.clock.off); }
+function dirStartMonster(d, tx, tz) {
+  if (d.kind === 'javelinas') {
+    const jev = []; SIM.spawnJavHerd(JAV, { x: tx, z: tz }, SIM.JAV_COUNT, Math.min(100, Math.max(50, Math.hypot(d.x - tx, d.z - tz))), jev);
+    broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+  } else if (d.kind === 'lion') LION.pendingSpawn = { x: d.x, z: d.z };
+}
+function tickJavelinas(t, dt, players) {
+  JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
+  const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
+  for (const e of jev) {
+    if (e.k === 'javBite') LOG.log('javBite', { id: e.id, dmg: e.dmg });
+    else if (e.k === 'javSpawn' || e.k === 'javLeave' || e.k === 'javGone') LOG.log(e.k, { n: e.n, x: e.x != null ? r1(e.x) : undefined, z: e.z != null ? r1(e.z) : undefined });
+  }
+  const on = JAV.list.length > 0;
+  if (on || javOn) broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
+  javOn = on;
 }
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
-let policeOn = false, zerOn = false, lastMonLogT = 0;
+let policeOn = false, zerOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
   return joined().map(c => ({
-    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy,
-    hd: !!(c.f & 1), cr: !!(c.f & 8),
+    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, hp: c.hp,
+    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
   }));
@@ -589,25 +727,45 @@ setInterval(() => {
   // monsters
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);
+  if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
+  LION.noNatural = dirState.enabled; // ditto for the lion's own pre-curfew window
+  SIM.stepLion(LION, players, t, dt, ev);
   for (const e of ev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
     const cc = e.id != null ? clients.get(e.id) : null;
     const fields = { id: e.id, n: cc && cc.n, x: cc && r1(cc.x), z: cc && r1(cc.z) };
     if (e.by) fields.by = e.by;
     if (e.front !== undefined) fields.front = e.front;
+    if (e.why !== undefined) fields.why = e.why;
     if (e.k === 'zspawn' && MON.zer) { fields.x = r1(MON.zer.x); fields.z = r1(MON.zer.z); }
+    if ((e.k === 'lionSpawn' || e.k === 'pounce') && LION.active) { fields.x = r1(LION.x); fields.z = r1(LION.z); }
     LOG.log(e.k, fields);
   }
-  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer;
+  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer, lionNow = LION.active;
   if (policeNow !== policeOn) { LOG.log(policeNow ? 'mobsOn' : 'mobsOff', { kind: 'police' }); policeOn = policeNow; }
   if (zerNow !== zerOn) { LOG.log(zerNow ? 'mobsOn' : 'mobsOff', { kind: 'zeroni' }); zerOn = zerNow; }
-  const on = policeNow || zerNow;
+  if (lionNow !== lionOn) { LOG.log(lionNow ? 'mobsOn' : 'mobsOff', { kind: 'lion' }); lionOn = lionNow; }
+  const on = policeNow || zerNow || lionNow;
   if (on && now - lastMonLogT >= 2000) {
     lastMonLogT = now;
-    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null });
+    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null, lion: LION.active ? { x: r2(LION.x), z: r2(LION.z), mode: LION.mode, tgt: LION.tgt, hp: Math.round(LION.hp) } : null });
   }
   if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;
+  // event director: one shared budget for natural hazards (see public/director.js). Decisions go out through the
+  // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
+  const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
+  const hz = hazardNow(now);
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz })) {
+    LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
+    if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
+    else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }
+  }
+  if (now - lastDirInfoT >= 3000 && joined().length) {
+    lastDirInfoT = now;
+    broadcast({ t: 'dirinfo', ...DIRECTOR.describe(dirState, now, world.run.day, Math.max(1, joined().length)) });
+  }
+  tickJavelinas(t, dt, players);
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
 

@@ -7,6 +7,7 @@ const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
+  sinkRescue:s=>`Hold to link hands and pull ${s.R.name} up`+(sinkPulling?' (holding on, keep it up)':''),
   drop:s=>`Let go of the ${LOOT[s.pr.type].name}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
@@ -36,7 +37,9 @@ function updateHUD(){
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){const s=document.createElement('span');if(t==='onion'){s.className='onion';s.textContent='Onion breath'}else s.textContent=t;hud.tools.appendChild(s)}}
   hud.det.hidden=!S.up.detector;hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
   const s=nearSpot();
-  if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
+  const sinkSh=inSinkhole();
+  if(sinkSh&&!uiOpen()){hud.prompt.innerHTML='';hud.prompt.append(document.createTextNode(sinkTrappedText(sinkSh)));hud.prompt.hidden=false}
+  else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
@@ -52,6 +55,7 @@ function wz(z){return (z-mcz+MV)/(MV*2)*mm.width}
 function ws(v){return v/(MV*2)*mm.width}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
+  if(haboobMap(mx,W))return;   // caught in a haboob: the map scrambles to static instead of drawing normally (see 75-haboob.js)
   mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
   mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
   if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
@@ -68,10 +72,12 @@ function drawMap(){
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
+  for(const w of tbWeeds)if(!w.dead){mx.fillStyle='#6b4f2a';mx.beginPath();mx.arc(wx(w.x),wz(w.z),Math.max(2,ws(w.r)),0,6.3);mx.fill()}
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
   if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
+  mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}
   {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 }
