@@ -99,13 +99,26 @@ function broadcast(msg, exceptId) {
   for (const c of clients.values()) if (c.joined && c.id !== exceptId) send(c, s);
 }
 function joined() { return [...clients.values()].filter(c => c.joined); }
+function broadcastSleep() { const js = joined(); broadcast({ t: 'sleepstat', asleep: js.filter(c => c.sleeping).length, total: js.length }); }
+// If it's night and every connected camper is asleep in a bunk, everyone skips straight to dawn (06:00, clock t=0).
+// This mirrors the host clock change above: set world.clock, then broadcast it the same way.
+function maybeSkipNight() {
+  const js = joined();
+  if (!js.length || SIM.clockT(world.clock, Date.now()) < SIM.DAYMS) return;
+  if (!js.every(c => c.sleeping)) return;
+  world.clock = { off: -Date.now(), paused: false, pt: 0 }; dirty = true;
+  broadcast({ t: 'clock', ...world.clock });
+  broadcast({ t: 'daybreak' });
+  for (const c of js) c.sleeping = false;
+  broadcastSleep();
+}
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', ws => {
   if (clients.size >= MAX_CLIENTS) { ws.close(1013, 'camp is full'); return; }
-  const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true };
+  const c = { id: nextId++, ws, joined: false, n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false };
   clients.set(c.id, c);
   send(c, {
     t: 'hello', id: c.id, day: world.day,
@@ -243,6 +256,12 @@ wss.on('connection', ws => {
         world.clock = { off: num(m.off, -1e13, 1e13, 0), paused: m.paused === true, pt: num(m.pt, 0, 12 * 60 * 1000, 0) }; dirty = true;
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
+      case 'sleep':
+        // A camper lay down in (or got out of) a bunk. If it's night and EVERY joined camper is asleep, skip to dawn.
+        c.sleeping = m.on === true;
+        broadcastSleep();
+        maybeSkipNight();
+        break;
       case 'env': {
         // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only. The server just
         // relays it; every client builds the same hazard from the kind, position and heading.
@@ -273,7 +292,7 @@ wss.on('connection', ws => {
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
-    if (c.joined) broadcast({ t: 'leave', id: c.id });
+    if (c.joined) { broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); }
   });
 });
 
