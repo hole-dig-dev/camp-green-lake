@@ -1,0 +1,9 @@
+{
+  "name": "camp-green-lake",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multiplayer Holes-themed digging game server",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "ws": "^8.18.0" }
+}
