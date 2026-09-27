@@ -291,6 +291,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <button data-a="curseUp">Curse +20</button><button data-a="curseDown">Curse −20</button>
     <button data-a="mood">Next mood</button><button data-a="site">Next dig site</button>
     <button data-a="day">Next day (1–5)</button><button data-a="town">Break into town</button>
+    <button data-a="seeds">+100 crew seeds</button><button data-a="refill">Refill water + stamina</button>
+    <button data-tp="camp">Go: camp</button><button data-tp="ruins">Go: Kate's ruins</button>
+    <button data-tp="field">Go: onion fields</button><button data-tp="thumb">Go: Big Thumb</button>
     <button id="admPause">Pause time</button><button id="admReal">Back to real clock</button>
   </div>
 </div>
@@ -1740,6 +1743,8 @@ function toggleAdmin(){const el=$('#admin');if(el.hidden&&net.ws&&net.ws.readySt
 function renderAdmin(){if($('#admin').hidden)return;$('#admT').textContent=clockText();$('#admS').textContent=CLK.paused?'paused':CLK.off?'(changed)':'(real clock)';$('#admPause').textContent=CLK.paused?'Resume time':'Pause time'}
 $('#admin').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.h)jumpTo(tAtHour(+d.h));else if(d.c)jumpTo(DAYMS-59000);else if(d.d)jumpTo(tAtHour(hourOf(clockT())+(+d.d)));
+  else if(d.a==='refill'){S.water=waterMax();for(const k in AFF)AFF[k]=0;S.stam=100;toast('Water and stamina refilled.','good',1500)}
+  else if(d.tp)adminGo(d.tp);
   else if(d.a==='town')enterTown();
   else if(d.a){if(online())wsSend({t:'admin',a:d.a});else soloAdmin(d.a)}
   else if(b.id==='admPause'){if(CLK.paused)applyClock({paused:false,off:CLK.pt-Date.now()});else applyClock({paused:true,pt:clockT()})}
@@ -1998,8 +2003,14 @@ function soloEndOfDay(){
   }else if(played<180)graceDay();
   else{const b=RUN.bank,q=RUN.quota;newSoloRun(RUN.sentence);saveRun();fired(b,q)}
 }
+function adminGo(where){
+  // admin teleport for testing the map
+  if(S.inTown)exitTown(0,39);
+  const R=SIM.SITES.ruins,spots={camp:[0,39],ruins:[R.x+8,R.z],field:[140,-420],thumb:[SIM.THUMB.x+SIM.THUMB.mound+3,SIM.THUMB.z]},p=spots[where];if(!p)return;
+  P.climb=false;P.ledge=-1;P.onTop=false;S.carry=null;P.x=p[0];P.z=p[1];P.y=groundAt(P.x,P.z);P.vy=0;toast('Teleported.','',1200);
+}
 function soloAdmin(a){
-  if(a==='fill')RUN.bank=Math.max(RUN.bank,RUN.quota);else if(a==='empty')RUN.bank=0;
+  if(a==='seeds')RUN.bank+=100;else if(a==='fill')RUN.bank=Math.max(RUN.bank,RUN.quota);else if(a==='empty')RUN.bank=0;
   else if(a==='curseUp'||a==='curseDown'){addCurse(a==='curseUp'?20:-20)}
   else if(a==='mood'){const ks=Object.keys(SIM.MOODS);RUN.mood=ks[(ks.indexOf(RUN.mood)+1)%ks.length];announceDay()}
   else if(a==='site'){const ks=Object.keys(SIM.SITES);RUN.site=ks[(ks.indexOf(RUN.site)+1)%ks.length];announceDay()}

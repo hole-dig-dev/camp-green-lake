@@ -318,6 +318,7 @@ wss.on('connection', ws => {
         // Buttons in the hidden admin panel. Only the host can use them.
         if (!c.host) return;
         if (m.a === 'fill') { world.run.bank = runInfo().quota; dirty = true; broadcast(runInfo()); }
+        else if (m.a === 'seeds') { world.run.bank += 100; dirty = true; broadcast(runInfo()); }
         else if (m.a === 'empty') { world.run.bank = 0; dirty = true; broadcast(runInfo()); }
         else if (m.a === 'curseUp' || m.a === 'curseDown') { curse(m.a === 'curseUp' ? 20 : -20); broadcast(runInfo()); }
         else if (m.a === 'mood') { const ks = Object.keys(SIM.MOODS); world.run.mood = ks[(ks.indexOf(world.run.mood) + 1) % ks.length]; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
