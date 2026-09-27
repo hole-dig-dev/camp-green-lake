@@ -30,6 +30,18 @@ const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
 const CHAT_RANGE = 30, HELP_RANGE = 3.5;
 
+/* ---- proximity voice: WebRTC signaling relay ---- */
+// SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
+// (checked in the message handler) instead of loosening the limit for everyone. maxPayload below must cover it.
+const RTC_MAX = 8192, GEN_MAX = 1024, LOG_MAX = 8192;
+// STUN only by default (no TURN server exists yet). Set ICE_SERVERS to a JSON array of RTCIceServer objects,
+// e.g. '[{"urls":"turn:host:3478","username":"u","credential":"p"}]', to add a TURN server later.
+const ICE_SERVERS = (() => {
+  const base = [{ urls: 'stun:stun.l.google.com:19302' }];
+  try { const extra = JSON.parse(process.env.ICE_SERVERS || '[]'); if (Array.isArray(extra)) return base.concat(extra); } catch (e) { /* bad env, fall back to STUN */ }
+  return base;
+})();
+
 /* ---- public-internet guards -------------------------------------------------------------------------------
    PUBLIC=1 means "this server is reachable off the tailnet" (e.g. behind Tailscale Funnel) and turns on the
    stricter defaults below. ALLOW_OPEN=1 is the explicit opt-out of the password requirement that comes with it.
@@ -193,7 +205,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 8192 }); // raised from 2048 for batched play-test log messages
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: Math.max(8192, RTC_MAX) }); // batched play-test log messages and WebRTC offers both need more than the old 2048
 const LOG_TYPE_RE = /^[a-zA-Z]{1,16}$/, LOG_FIELD_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,15}$/;
 // Client-reported log events (case 'log' below) come from our own client code but are still untrusted input:
 // keep only plain, small fields so a modified client can't stuff arbitrary data or huge blobs into the log files.
@@ -257,7 +269,7 @@ wss.on('connection', (ws, req) => {
 
   function sendHello() {
     send(c, {
-      t: 'hello', id: c.id, day: world.day,
+      t: 'hello', id: c.id, day: world.day, iceServers: ICE_SERVERS,
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
@@ -282,6 +294,12 @@ wss.on('connection', (ws, req) => {
     c.tokens -= 1;
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
+    // 'rtc' (WebRTC signaling) gets its own bigger size allowance and costs extra tokens; every other
+    // message type stays capped small so one big frame can't be smuggled in under a different type.
+    if (m.t === 'rtc') { if (raw.length > RTC_MAX || c.tokens < 2) return; c.tokens -= 2; }
+    // 'log' (batched play-test events, up to 24 per message) also needs room; it has its own token bucket in case 'log'.
+    else if (m.t === 'log') { if (raw.length > LOG_MAX) return; }
+    else if (raw.length > GEN_MAX) return;
 
     if (m.t === 'join') {
       if (!c.authed) {
@@ -401,6 +419,14 @@ wss.on('connection', (ws, req) => {
         if (!withinRate(c.pingTimes, PING_RATE, PING_WINDOW_MS)) return; // no flooding the map with pings
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
+      case 'rtc': {
+        // Proximity voice signaling: relay an SDP offer/answer or ICE candidate to exactly one joined peer,
+        // with the sender's id attached so the recipient knows who it's from. Never broadcast.
+        const to = clients.get(num(m.to, 0, 1e9, -1) | 0);
+        if (!to || !to.joined || to === c || !m.d || typeof m.d !== 'object') return;
+        send(to, { t: 'rtc', from: c.id, d: m.d });
+        break;
+      }
       case 'chat': {
         // Proximity chat: only campers within earshot see it.
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return;
