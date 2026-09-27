@@ -62,7 +62,7 @@ function javEvent(e) {
         ? `A herd of ${e.n} javelinas showed up out on the lake. You're safe here -- they won't cross the fence.`
         : `A herd of ${e.n} javelinas is charging in, ${relDir(e.x, e.z)}, about ${Math.round(d)} m out. Sprint for the fence, or fight them off -- two shovel hits kills one.`,
         'bad', 6500);
-      tone(120, 0.5, 'sawtooth', 0.12, 55); logEv('javSpawn', { n: e.n, x: +e.x.toFixed(1), z: +e.z.toFixed(1) });
+      tone(120, 0.5, 'sawtooth', 0.12, 55); // the spawn itself is already logged server-side (natural or console-triggered), no need to log it again here
       break;
     }
     case 'javBite':
@@ -72,7 +72,7 @@ function javEvent(e) {
     case 'javDeath': {
       const s = JR[e.idx]; if (s) { s.hitT = 0.3; javDust(s.x, s.z); }
       javSqueal(true);
-      if (e.by === myId()) { addXP(JAV_KILL_XP); toast(`Javelina down. +${JAV_KILL_XP} XP`, 'good', 1800); sfx.coin(); logEv('javKill', {}); }
+      if (e.by === myId()) { addXP(JAV_KILL_XP); toast(`Javelina down. +${JAV_KILL_XP} XP`, 'good', 1800); sfx.coin(); } // the kill itself is already logged server-side (see the 'whack' case)
       break;
     }
     case 'javLeave': if (!inCamp(P.x, P.z)) toast('The herd is giving up. They\'re running off.', '', 3000); break;
