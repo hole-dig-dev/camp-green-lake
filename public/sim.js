@@ -39,17 +39,31 @@
     const site = pickW(r, { near: [5, 3, 2, 1, 1][day - 1] || 1, ruins: [1, 3, 3, 3, 2][day - 1] || 2, thumb: [0.2, 1, 2, 3, 4][day - 1] || 4 });
     return { mood, site };
   }
-  const HEAVY = { safe: 120, strongbox: 80 };
+  // physical loot (GAME_DESIGN.md section 19): weight class w (1 light .. 4 very heavy), value, and what makes it awkward
+  const OBJ = {
+    pjar: { w: 1, val: 45, fragile: 6.5, name: 'Big jar of Sploosh' },          // throwable, smashes if nobody catches it
+    bell: { w: 2, val: 70, noisy: true, name: 'Old school bell' },          // rings the whole time it moves
+    mirror: { w: 2, val: 110, fragile: 4.6, name: 'Antique mirror' },       // breaks if you even drop it from your hands
+    fossil: { w: 3, val: 150, long: true, name: 'Giant fossil' },           // long and heavy: one camper can only drag it
+    strongbox: { w: 3, val: 120, name: "Kate's strongbox" },
+    safe: { w: 4, val: 300, hits: true, name: 'Old iron safe' },            // most of a payout; flattens whoever it lands on
+  };
+  const HEAVY = Object.fromEntries(Object.entries(OBJ).map(([k, o]) => [k, o.val]));
   // gear bought from the crew's shared seeds
   const SHOP = { spade: 45, long: 110, detector: 70, canteen: 30, bigsack: 60, rope: 35, onion: 8, battery: 6, tonic: 20, newshovel: 12 };
 
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
-  function carrySpeed(n, type) { return n >= 2 ? 3.5 : type === 'body' ? 2.2 : 1.2; }
+  // how fast carriers can move an object: friends make it faster, never an arbitrary requirement (section 20)
+  const SPEED = { 1: [0, 4.2, 4.3, 4.3, 4.3], 2: [0, 3.0, 4.0, 4.2, 4.3], 3: [0, 0.9, 2.8, 3.6, 4.0], 4: [0, 0.7, 2.2, 3.4, 4.0] };
+  function carrySpeed(n, type) { if (type === 'body') return n >= 2 ? 3.5 : 2.2; const w = (OBJ[type] && OBJ[type].w) || 3; return SPEED[w][clamp(Math.round(n), 1, 4)]; }
+  // how far and high a throw goes, by weight class; heavy things need several carriers to heave at all
+  function throwVel(type, n) { const w = (OBJ[type] && OBJ[type].w) || 3; if (w >= 3 && n < w - 1) return null; return [[0, 0], [9, 5], [6.5, 4.2], [4.5, 3.4], [3.8, 3.2]][w]; }
   // props: {id:{type,x,z,n}}; players: [{id,x,z,cy,dn}]. Returns ids that reached Mr. Sir's truck.
   function stepProps(props, players, dt) {
     const sold = [];
     for (const id in props) {
       const pr = props[id];
+      if (pr.air) continue; // flying or rolling: the thrower's game simulates it
       const cs = pr.cargo ? [] : players.filter(p => p.cy === +id && !p.dn && Math.hypot(p.x - pr.x, p.z - pr.z) < 3.4);
       pr.n = cs.length + cs.filter(p => p.br).length; // a wheelbarrow counts as a second pair of hands
       pr.who = cs.map(p => p.id);
@@ -357,7 +371,11 @@
       const a = r() * Math.PI * 2, d = 170 + r() * 250; cx = clamp(Math.cos(a) * d, -EDGE + 90, EDGE - 90); cz = clamp(20 + Math.sin(a) * d, -EDGE + 90, EDGE - 90);
       if (!nearCampZone(cx, cz) && Math.hypot(cx - THUMB.x, cz - THUMB.z) > THUMB.mound + MISSION.HALF + 10) break;
     }
-    return { phase: 'ride', site: 'flats', trip, cx, cz, half: MISSION.HALF, rideEnd: now + MISSION.RIDE, endsAt: now + MISSION.RIDE + MISSION.SECS * 1000, horn: 0 };
+    // buried physical loot for this trip: cracks and dirt mounds on the surface give it away
+    const kinds = ['pjar', 'pjar', 'pjar', 'pjar', 'bell', 'bell', 'mirror', 'mirror', 'fossil', 'fossil', 'strongbox', 'strongbox', 'safe'], loot = [];
+    kinds.forEach((type, i) => { let x = cx, z = cz; for (let k = 0; k < 30; k++) { x = cx + (r() - 0.5) * (MISSION.HALF * 2 - 16); z = cz + (r() - 0.5) * (MISSION.HALF * 2 - 16); if (Math.hypot(x - cx, z - cz) > 14 && loot.every(l => Math.hypot(l.x - x, l.z - z) > 6)) break; }
+      loot.push({ id: 60000 + (trip % 400) * 20 + i, type, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, d: OBJ[type].w <= 2 ? 0.5 + r() * 0.5 : 1.0 + r() * 0.45, u: false }); });
+    return { phase: 'ride', site: 'flats', trip, cx, cz, half: MISSION.HALF, rideEnd: now + MISSION.RIDE, endsAt: now + MISSION.RIDE + MISSION.SECS * 1000, horn: 0, loot };
   }
   // pure timing: returns events for the caller (server, or the page when solo) to act on
   function stepMission(MS, now, ev) {
@@ -372,6 +390,6 @@
   }
   const inSite = (MS, x, z) => !!MS && Math.max(Math.abs(x - MS.cx), Math.abs(z - MS.cz)) <= MS.half;
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt, TRUCK, stepWanted, MISSION, newMission, stepMission, inSite };
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt, TRUCK, stepWanted, MISSION, newMission, stepMission, inSite, OBJ, throwVel };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

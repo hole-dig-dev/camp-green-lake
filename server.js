@@ -351,6 +351,52 @@ wss.on('connection', ws => {
         p.cargo = true; dirty = true; broadcast({ t: 'cargo', id, on: true });
         break;
       }
+      /* ---- physical loot (GAME_DESIGN.md section 19): whoever throws or drops something runs its flight ---- */
+      case 'unearth': {
+        // dug down to a buried object: it comes up out of the hole
+        const MS = world.mission, L = MS.phase === 'site' && (MS.loot || []).find(l => l.id === (num(m.id, 0, 1e7, -1) | 0));
+        if (!L || L.u || Math.hypot(c.x - L.x, c.z - L.z) > 4.5 || Object.keys(world.props).length >= MAX_PROPS) return;
+        L.u = true; world.props[L.id] = { type: L.type, x: r2(num(m.x, -600, 600, L.x)), z: r2(num(m.z, -600, 600, L.z)) }; dirty = true;
+        broadcast({ t: 'unearthed', id: L.id, by: c.n }); broadcast({ t: 'prop', id: L.id, ...world.props[L.id] });
+        break;
+      }
+      case 'throw': {
+        const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id];
+        if (!p || p.air || p.cargo || p.type === 'body' || (c.cy !== id && !near(c, p, 3))) return;
+        p.air = true; p.owner = c.id; p.cargo = false;
+        const v = [num(m.vx, -15, 15, 0), num(m.vy, -15, 15, 0), num(m.vz, -15, 15, 0)], y = num(m.y, -40, 80, 0);
+        broadcast({ t: 'thrown', id, owner: c.id, x: p.x, y, z: p.z, vx: v[0], vy: v[1], vz: v[2] });
+        break;
+      }
+      case 'pfly': {
+        const p = world.props[num(m.id, 0, 1e7, -1) | 0]; if (!p || !p.air || p.owner !== c.id) return;
+        p.x = r2(num(m.x, -600, 2100, p.x)); p.z = r2(num(m.z, -600, 600, p.z));
+        broadcast({ t: 'pfly', id: +m.id, x: p.x, y: r2(num(m.y, -40, 80, 0)), z: p.z }, c.id);
+        break;
+      }
+      case 'pland': {
+        const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id]; if (!p || !p.air || p.owner !== c.id) return;
+        p.air = false; p.x = r2(num(m.x, -600, 2100, p.x)); p.z = r2(num(m.z, -600, 600, p.z)); dirty = true;
+        const o = SIM.OBJ[p.type], imp = num(m.impact, 0, 60, 0);
+        if (o && o.fragile && imp > o.fragile && !p.broken) { p.broken = true; broadcast({ t: 'pbreak', id }); }
+        const T = world.truck;
+        if (m.bed === true && T.mode === 'mission' && Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED) { p.cargo = true; broadcast({ t: 'cargo', id, on: true }); }
+        broadcast({ t: 'pland', id, x: p.x, z: p.z });
+        break;
+      }
+      case 'pcatch': {
+        // the thrower's game saw someone catch it
+        const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id], o = clients.get(num(m.by, 0, 1e9, -1) | 0);
+        if (!p || !p.air || p.owner !== c.id || !o || !near(o, p, 3)) return;
+        p.air = false; send(o, { t: 'caught', id }); broadcast({ t: 'pcaught', id, by: o.id, n: o.n });
+        break;
+      }
+      case 'hit': {
+        // a flying or rolling heavy object hit someone (seen by the thrower's game)
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0); if (!o || !o.joined) return;
+        send(o, { t: 'hitBy', type: String(m.type || '').slice(0, 20), by: c.n });
+        break;
+      }
       case 'bonk':
         // shovel swing: squashes critters in front of the camper (results go out with the next monster update)
         if (now - (c.bonkAt || 0) < 600) return;
@@ -549,7 +595,7 @@ function missionDepart() {
   for (const c of aboard) if (c.sv) { payout += c.sv; items.push(`${c.n}'s sack: ${c.sv}`); }
   for (const id in world.props) {
     const p = world.props[id]; if (p.type === 'body') continue;
-    if (p.cargo || Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED) { const v = SIM.HEAVY[p.type] || 0; payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
+    if (!p.air && (p.cargo || Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED)) { const v = Math.round((SIM.HEAVY[p.type] || 0) * (p.broken ? 0.2 : 1)); payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
   }
   world.run.bank += payout;
   MS.results = { payout, aboard: aboard.map(c => c.n), lost: lost.map(c => c.n), items, failed: aboard.length === 0 };
