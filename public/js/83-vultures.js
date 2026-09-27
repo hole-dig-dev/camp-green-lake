@@ -277,7 +277,11 @@ command('vultures',{usage:'vultures [on|off|now]',help:'Toggle the vulture hazar
   run([a]){
     if(a==='off'){vulturesEnabled=false;vCancelToIdle();return'Vultures disabled.'}
     if(a==='on'){vulturesEnabled=true;return'Vultures enabled.'}
-    if(a==='now'){if(vSt>=3)return'One already has you.';startWarn();startDive();return'A vulture dives at you now.'}
+    if(a==='now'){
+      if(vSt>=3)return'One already has you.';
+      S.hp=Math.min(S.hp,HP_MAX*VULTURE_THRESH-1);   // otherwise vCancelCheck() sees full health next frame and calls it straight back off
+      startWarn();startDive();return'A vulture dives at you now.';
+    }
     S.hp=Math.min(S.hp,HP_MAX*VULTURE_THRESH-1);vGraceT=0;
     return`Health set to ${Math.round(S.hp)}. Stay out on the lake, out of camp and a tent, and they'll notice you in a few seconds.`;
   }});
