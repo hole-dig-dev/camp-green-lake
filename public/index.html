@@ -2944,7 +2944,6 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass never arrives)
 
 /* =====================================================================
    PAUSE MENU  (Escape opens/closes it; Resume, Options, Controls, Restart, Quit)
@@ -3159,7 +3158,10 @@ function renderControlsList(){
 loadSettings();
 applySettings();
 
-{const R0=loadSession();if(R0)startGame(R0)}
+/* Resume a saved session LAST, after every section above has run: startGame() touches things defined late in
+   the file (e.g. the pause menu's SETTINGS), and a resume that ran earlier crashed the whole script (black screen).
+   maybeResume() also waits for the camp password when one is set. Covers the offline/solo-copy case too. */
+maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass never arrives)
 /* test hook for screenshots: #shot, #shot-fp, #shot-night, #shot-far */
 if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startGame();
   if(h.includes('far')){P.x=140;P.z=-180}
