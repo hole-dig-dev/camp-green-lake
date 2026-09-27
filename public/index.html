@@ -63,7 +63,15 @@
     <div id="tools"></div>
   </div>
   <div id="mapbox" class="panel">
-    <canvas id="minimap" width="320" height="320" aria-label="Map of the lake bed"></canvas>
+    <div class="map-canvas-wrap">
+      <span class="map-north" aria-hidden="true">N</span>
+      <canvas id="minimap" width="320" height="320" aria-label="Map of the lake bed"></canvas>
+    </div>
+    <div class="map-zoom" role="group" aria-label="Map zoom">
+      <button id="mapZoomOut" type="button" class="ui-button ui-button--quiet" aria-label="Zoom out">&minus;</button>
+      <span id="mapZoomLabel" class="map-zoom-label">260 m across</span>
+      <button id="mapZoomIn" type="button" class="ui-button ui-button--quiet" aria-label="Zoom in">+</button>
+    </div>
     <div id="online"><b>At camp</b><span id="onlineList">Just you</span></div>
   </div>
   <div id="prompt" class="panel" hidden></div>

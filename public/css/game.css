@@ -23,6 +23,10 @@
 @media (prefers-reduced-motion:reduce){
   :root{ --dur-press:0ms; --dur-panel:0ms; --dur-confirm:0ms; }
 }
+/* border-box everywhere: panels below are sized to an exact pixel width from the spec (map frame,
+   HUD strips, dialogue, blackjack felt); with the default content-box, a fixed width plus border
+   and padding silently grows past that number and can collide with its neighbor at narrow widths. */
+*,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
 [hidden]{display:none!important}
 
@@ -148,9 +152,16 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 #tools span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--ink);color:var(--canvas);padding:2px 6px;border-radius:2px}
 #tools span.onion{background:var(--leaf)}
 
-#mapbox{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));padding:6px;display:flex;flex-direction:column;gap:6px;width:174px}
-#minimap{width:160px;height:160px;display:block;border:2px solid var(--ink);border-radius:2px;background:#d9a86c}
-#online{font-size:13px;line-height:1.25;color:var(--ink);padding:0 2px}
+/* ---- minimap: shallow metal survey frame (docs/ui-redesign-spec.md section 3) ---- */
+#mapbox{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;width:192px}
+.map-canvas-wrap{position:relative;width:176px;height:176px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:#d9a86c;box-shadow:inset 0 0 0 3px var(--canvas-deep),inset 0 0 0 5px rgba(40,29,21,.3)}
+#minimap{display:block;width:100%;height:100%}
+.map-north{position:absolute;left:50%;top:3px;transform:translateX(-50%);font:900 10px/1 var(--display);color:var(--ink);background:var(--canvas);padding:1px 4px 2px;border-radius:2px;z-index:2;letter-spacing:.05em;pointer-events:none}
+.map-north::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:6px;background:var(--ink);transform:translateX(-50%)}
+.map-zoom{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.map-zoom-label{font:700 11px/1 var(--ui);letter-spacing:.03em;color:var(--ink-soft);min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+.map-zoom .ui-button{min-height:30px;min-width:30px;padding:4px 8px}
+#online{font-size:13px;line-height:1.25;color:var(--ink);padding:0 2px;width:100%}
 #online b{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--ink-soft);display:block}
 
 #prompt{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:8px 14px;font:700 18px/1.1 var(--ui);letter-spacing:.02em;max-width:calc(100vw - 32px);text-align:center}
@@ -285,8 +296,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   #stats{width:168px;font-size:14px;padding:8px 10px;gap:4px}
   #stats .who b{font-size:18px}
   .row.big .v{font-size:22px}
-  #mapbox{width:118px}
-  #minimap{width:104px;height:104px}
+  #mapbox{width:136px;padding:6px}
+  .map-canvas-wrap{width:120px;height:120px}
+  .map-zoom .ui-button{min-height:44px;min-width:44px}
   #online{display:none}
   #keys{display:none}
   #toasts{width:calc(100vw - 32px);top:auto;bottom:calc(200px + env(safe-area-inset-bottom,0px))}

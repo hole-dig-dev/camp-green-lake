@@ -45,23 +45,65 @@ function updateHUD(){
 }
 function idxAt(x,z){const c=clamp(Math.round((x+HALF)/RES),0,N-1),r=clamp(Math.round((z+HALF)/RES),0,N-1);return r*N+c}
 const mm=$('#minimap'),mx=mm.getContext('2d');
-/* the map follows you and shows a 260 m square; camp is labelled on the edge when it's off the map */
-const MV=130;let mcx=0,mcz=20;
+/* the map follows you, north stays up (world -z is north, +z draws down -- P.fa's own rotation
+   already accounts for this, see drawMap's player arrow). Three zoom levels, expressed as full
+   visible width; MV is the current HALF-width in metres. Default index 1 = 260 m, matching the
+   map's pre-redesign fixed view (docs/ui-redesign-spec.md section 3). */
+const ZOOM_HALF=[65,130,260];
+let zoomIdx=1,MV=ZOOM_HALF[zoomIdx];
+let mcx=0,mcz=20;
 function wx(x){return (x-mcx+MV)/(MV*2)*mm.width}
 function wz(z){return (z-mcz+MV)/(MV*2)*mm.width}
 function ws(v){return v/(MV*2)*mm.width}
+function setMapZoom(i){
+  const ni=clamp(i,0,ZOOM_HALF.length-1);if(ni===zoomIdx)return;
+  zoomIdx=ni;MV=ZOOM_HALF[zoomIdx];$('#mapZoomLabel').textContent=(MV*2)+' m across';
+  $('#mapZoomOut').disabled=zoomIdx===ZOOM_HALF.length-1;$('#mapZoomIn').disabled=zoomIdx===0;
+  drawMap();
+}
+$('#mapZoomOut').onclick=()=>setMapZoom(zoomIdx+1);   // out = wider view = bigger half-width
+$('#mapZoomIn').onclick=()=>setMapZoom(zoomIdx-1);
+$('#mapZoomOut').disabled=zoomIdx===ZOOM_HALF.length-1;$('#mapZoomIn').disabled=zoomIdx===0;
+/* wheel-to-zoom, without letting the page behind the overlay scroll */
+$('#mapbox').addEventListener('wheel',e=>{e.preventDefault();setMapZoom(zoomIdx+(e.deltaY>0?1:-1))},{passive:false});
+
+/* ---------- static map cache (docs/ui-redesign-spec.md section 3, "Performance") ----------
+   Terrain tint, the boundary, and every camp building are fixed world geometry -- cache them once
+   in an offscreen 1024x1024 canvas covering the whole world (-HALF..HALF on both axes) instead of
+   redrawing them at 5 Hz. Each live draw just blits the visible rectangle out of this cache, then
+   layers dynamic holes/people/threats/pings on top at the same 5 Hz cadence as before. */
+const MAP_CACHE_RES=1024,MAP_SCALE=MAP_CACHE_RES/(HALF*2);
+const ccx=x=>(x+HALF)*MAP_SCALE,ccz=z=>(z+HALF)*MAP_SCALE,ccs=v=>v*MAP_SCALE;
+function makeOffscreenCanvas(w,h){
+  if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);
+  const c=document.createElement('canvas');c.width=w;c.height=h;return c;   // fallback: detached <canvas>
+}
+let mapCache=null,mapCacheCtx=null,mapCacheNight=null;
+function buildMapCache(night){
+  if(!mapCache){mapCache=makeOffscreenCanvas(MAP_CACHE_RES,MAP_CACHE_RES);mapCacheCtx=mapCache.getContext('2d')}
+  const g=mapCacheCtx;mapCacheNight=night;
+  g.clearRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);
+  g.fillStyle=night?'#161f1c':'#b98a5e';g.fillRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);   // beyond EDGE
+  g.fillStyle=night?'#26332d':'#d9a86c';g.fillRect(ccx(-EDGE),ccz(-EDGE),ccs(EDGE*2),ccs(EDGE*2));   // lake bed
+  g.strokeStyle=night?'rgba(237,226,200,.08)':'rgba(43,29,18,.10)';g.lineWidth=1;g.setLineDash([3,5]);
+  for(let gx=Math.ceil(-EDGE/50)*50;gx<=EDGE;gx+=50){g.beginPath();g.moveTo(ccx(gx),ccz(-EDGE));g.lineTo(ccx(gx),ccz(EDGE));g.stroke()}
+  for(let gz=Math.ceil(-EDGE/50)*50;gz<=EDGE;gz+=50){g.beginPath();g.moveTo(ccx(-EDGE),ccz(gz));g.lineTo(ccx(EDGE),ccz(gz));g.stroke()}
+  g.setLineDash([]);
+  g.fillStyle=night?'#3a463d':'#c4955f';g.fillRect(ccx(-40),ccz(27),ccs(70),ccs(29));
+  g.strokeStyle=night?'rgba(237,226,200,.5)':'rgba(43,29,18,.55)';g.lineWidth=2;g.strokeRect(ccx(-40),ccz(27),ccs(70),ccs(29));
+  g.fillStyle=night?'#4f5c4f':'#8d8f69';for(const t of TENTS)g.fillRect(ccx(t.x-t.hw),ccz(t.z-t.hd),ccs(t.hw*2),ccs(t.hd*2));
+  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Warden's cabin
+  g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
+  g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4));   // water truck
+}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
-  mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
-  mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
-  if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
-  mx.fillStyle='#c4955f';mx.fillRect(wx(-40),wz(27),ws(70),ws(29));
-  mx.strokeStyle='rgba(43,29,18,.55)';mx.lineWidth=2;mx.strokeRect(wx(-40),wz(27),ws(70),ws(29));
-  for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.max(1.6,ws(h.r)),0,6.3);mx.fill()}
-  mx.fillStyle='#8d8f69';for(const t of TENTS)mx.fillRect(wx(t.x-t.hw),wz(t.z-t.hd),ws(t.hw*2),ws(t.hd*2));
-  mx.fillStyle='#9b7b58';mx.fillRect(wx(12.5),wz(42.5),ws(7),ws(5));
-  mx.fillStyle='#b07650';mx.fillRect(wx(-34),wz(42),ws(8),ws(6));
-  mx.fillStyle='#4f8fb8';mx.fillRect(wx(2.5),wz(35),ws(5),ws(2.4));
+  const night=clockT()>=DAYMS;
+  if(!mapCache||mapCacheNight!==night)buildMapCache(night);
+  let sx=ccx(mcx-MV),sy=ccz(mcz-MV),sw=ccs(MV*2),sh=ccs(MV*2);
+  sx=clamp(sx,0,MAP_CACHE_RES-sw);sy=clamp(sy,0,MAP_CACHE_RES-sh);
+  mx.imageSmoothingEnabled=false;mx.drawImage(mapCache,sx,sy,sw,sh,0,0,W,W);
+  for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.min(9,Math.max(1.6,ws(h.r))),0,6.3);mx.fill()}
   if(S.revealed){mx.strokeStyle='#d12a2a';mx.lineWidth=3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
   mx.fillStyle='rgba(43,29,18,.45)';for(const b of bots){mx.beginPath();mx.arc(wx(b.p.g.position.x),wz(b.p.g.position.z),3,0,6.3);mx.fill()}
   for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
@@ -72,7 +114,7 @@ function drawMap(){
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
   if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
-  {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
+  {const cxp=wx(-5),czp=wz(41);if(cxp<0||czp<0||cxp>W||czp>W){const a=Math.atan2(czp-W/2,cxp-W/2),r=W/2-22;mx.fillStyle=night?'#EDE2C8':'#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 }
 
