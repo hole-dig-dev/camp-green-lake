@@ -8,6 +8,7 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 
 - **WASD** walk, **Shift** run, **Space** jump
 - **Click** to lock the mouse, then **hold click** (or **E**) to dig
+- **Shovel bonk**: dig while a friend is right in front of you and you whack them instead. They go tumbling but take no damage (the D Tent crew just complain). No bonking inside tents, and it can't knock anyone out of a hole.
 - **F** talk, buy, sell, or sit down at the card table
 - **Q** eat an onion (lizards won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound

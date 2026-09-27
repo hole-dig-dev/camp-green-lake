@@ -111,6 +111,7 @@ function onMsg(m){
     case 'bagGone':removeBag(num(m.id,0,1e9,-1));break;
     case 'grabbed':removeBag(num(m.id,0,1e9,-1));if(Array.isArray(m.items))takeBag(m.items.slice(0,12),cleanName(m.n));break;
     case 'revived':revived(cleanName(m.by)||'A friend');break;
+    case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}

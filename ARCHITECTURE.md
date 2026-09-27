@@ -47,6 +47,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/60-title.js` | title screen, camp password, session save/resume, start-game flow |
 | `public/js/65-net.js` | WebSocket client, remote players, server messages, play-test log batching |
 | `public/js/70-player.js` | player movement/physics, camera, health and healing |
+| `public/js/71-bonk.js` | shovel bonk: whack a friend (harmless tumble), server-checked (`bonk` message) |
 | `public/js/72-twisters.js` | twisters: schedule, pull/suck-up/ragdoll, visuals, sound |
 | `public/js/74-landslide.js` | landslides: deterministic boulder physics, hits, warnings |
 | `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
