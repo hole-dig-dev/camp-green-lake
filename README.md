@@ -12,6 +12,9 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 - **Q** eat an onion (lizards won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound
 - **Voice chat** (proximity, like Lethal Company / Rust): click **Voice off** in the bottom-right HUD to turn on your mic (your browser will ask permission). Hold **B** to talk (push-to-talk is the default), or click the mode button to switch to always-on mic. Click **Mute voices** to silence everyone else without muting game sound. Whoever's talking gets a green glow on their name tag. **M** (sound off) mutes voice chat too, since it shares the game's volume.
+- **Esc** pauses (a touch-screen game gets a small pause button in the HUD instead): Resume, Options, Controls, Restart (respawns you at camp; keeps your seeds, gear, and the team's progress), or Quit to title. The game keeps running for everyone else while you're paused.
+
+In Options you can adjust mouse sensitivity, invert Y, touch look speed, field of view, master/effects/music/voice-chat volume, shadows, render quality, and the FPS counter, and rebind every control except Esc and the console key (voice push-to-talk is rebindable too). Settings and key bindings are saved in the browser (`localStorage`) and reload with you. WASD and the arrow keys always move you, even if you rebind them.
 
 Find the gold tube marked **KB** and take it to the Warden. She'll mark the search area with red flags. The suitcase is buried deeper than five feet, so you'll need the long-handled shovel from the Wreck Room.
 
@@ -52,7 +55,37 @@ Players keep their progress in their browser tab, so you can restart the server 
 curl -H "x-admin: $HOST_TOKEN" localhost:4300/admin/update
 ```
 
-Other admin endpoints (same header): `/admin/who` lists who's connected.
+Other admin endpoints (same header): `/admin/who` lists who's connected. Admin endpoints only answer requests that arrive with no `X-Forwarded-For` header (i.e. local `curl`, not through a reverse proxy or Funnel) — they're unreachable from the network at all, correct token or not.
+
+## Running it publicly
+
+The server only listens on `127.0.0.1`, so put it behind [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (or any other HTTPS reverse proxy) to let people outside your tailnet in:
+
+```sh
+tailscale funnel --bg --https=10000 http://127.0.0.1:4300
+```
+
+A few env vars matter once anyone outside your household can reach the game:
+
+| Env var | What it does |
+|---|---|
+| `CAMP_PASSWORD` | If set, the title screen asks for this password before showing any game state (the world isn't sent to a socket until it's authenticated). Share it as part of an invite link: `https://your-funnel-host/?camp=your-password` fills the field in and remembers it (like the existing `?host=` link for the host token). |
+| `PUBLIC=1` | Marks the server as internet-facing. Refuses to start unless `CAMP_PASSWORD` is also set, or you explicitly pass `ALLOW_OPEN=1` to run without one on purpose. Also refuses to start if `DEV_MODE=1` is set alongside it. |
+| `ALLOW_OPEN=1` | Opts out of the `PUBLIC=1` + `CAMP_PASSWORD` requirement — an open camp anyone with the link can join. |
+| `DEV_MODE=1` | **Never use this on a server other people connect to.** It gives every camper host powers (the console, the clock, spawning hazards). The server prints a loud warning at startup if it's on, and refuses to start at all if `PUBLIC=1` is also set. |
+
+Example for a small private game with friends:
+
+```sh
+PORT=4300 CAMP_PASSWORD='a few random words' PUBLIC=1 HOST_TOKEN=some-long-random-string npm start
+tailscale funnel --bg --https=10000 http://127.0.0.1:4300
+```
+
+Behind Funnel, every request arrives from `127.0.0.1`; Funnel adds an `X-Forwarded-For` header carrying the real caller's address, which the server uses for its per-IP connection and request limits (max simultaneous connections per address, new connections per minute, HTTP requests per minute). Without that header (e.g. hitting the server directly over the tailnet, or via `curl` on the box itself) it falls back to the raw socket address.
+
+### What's still client-authoritative
+
+Item locations, the seed count in your sack, and who found what are worked out in the browser from a shared deterministic random seed — the server never learns where the suitcase is. That means a modified client could, in principle, claim to have found the KB tube or the suitcase, or report a bigger sack value than it should. The server clamps and rate-limits what it can (dig distance/rate, sell amount/rate, chat/ping/hazard spam, connection limits) but can't fully verify loot without duplicating the client's world generation server-side — out of scope here. See the code comments in `server.js` near each `case` for what is and isn't checked.
 
 ## Developer console
 
@@ -92,13 +125,16 @@ nearby, no media server) — fine for the handful of campers a session actually 
 - **Connectivity**: STUN only (`stun:stun.l.google.com:19302`), sent to clients in the `hello` message. Set
   the `ICE_SERVERS` environment variable to a JSON array of `RTCIceServer` objects to add a TURN server later
   (there isn't one yet, so friends behind strict/symmetric NATs — many phone hotspots, some corporate or
-  carrier-grade NATs — may fail to connect to each other even though the signaling worked fine).
+  carrier-grade NATs — may fail to connect to each other even though the signaling worked fine). On a
+  `CAMP_PASSWORD`-protected server `hello` (and the `iceServers` it carries) is withheld until the socket
+  authenticates, same as the rest of the world state — see "Running it publicly" above.
 - **Positional audio**: each remote voice is piped through a WebAudio `PannerNode` (HRTF, linear falloff,
-  full volume out to 4m, silent past ~36m — close to the text chat's 30m range) under the game's existing
-  master volume bus, so **M** (mute sound) mutes voices too. The panner's position is updated from that
-  player's rendered position every frame, and the listener follows the camera. Chrome needs the incoming
-  stream attached to a real (but muted) `<audio>` element as well as WebAudio, or it can stay silent — the
-  code does both.
+  full volume out to 4m, silent past ~36m — close to the text chat's 30m range) into its own **Voice chat**
+  volume bus (Options screen, alongside Master/Effects/Music) under the game's master volume, so **M** (mute
+  sound) mutes voices too. The panner's position is updated from that player's rendered position every
+  frame (this also covers players inside a tent, which is really just standing a few meters lower — voices
+  work the same there), and the listener follows the camera. Chrome needs the incoming stream attached to a
+  real (but muted) `<audio>` element as well as WebAudio, or it can stay silent — the code does both.
 - **Who connects to whom**: a client only opens a connection to players within 60m, and drops it past 80m
   (the gap between the two is hysteresis, so walking back and forth at the edge doesn't thrash connections).
   That keeps a full camp from trying to hold everyone-to-everyone connections when most players are far
@@ -109,4 +145,5 @@ nearby, no media server) — fine for the handful of campers a session actually 
   without turning their own mic control on first. Denied mic permission shows a toast and leaves the rest of
   the game untouched.
 - **Controls**: push-to-talk on **B** (hold) by default, or toggle to always-on mic; a separate "mute voices"
-  toggle silences everyone else without touching game sound.
+  toggle silences everyone else without touching game sound. Push-to-talk is rebindable from the pause
+  menu's Options screen like any other key.

@@ -178,6 +178,31 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #admin button:hover{background:#5a4028}
 #admin #admT{font:900 22px/1 var(--display)}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}.pcard{animation:none}#partyBanner{animation:none}}
+
+/* ===================== PAUSE MENU (Escape) ===================== */
+#pause{z-index:60;background:rgba(30,20,10,.55)}
+#pause .card{max-width:480px;max-height:calc(100vh - 48px);overflow:auto}
+#pause h2{margin:0}
+.pausebtns{display:flex;flex-direction:column;gap:8px}
+.btn2{background:var(--canvas-2);color:var(--ink)}
+.btn2:hover{background:#d8c090}
+.optgrp{border-top:2px dashed var(--ink-soft);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.optgrp h3{margin:0;font:900 15px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.optrow{display:flex;align-items:center;gap:10px;font-size:15px}
+.optrow>span:first-child{flex:0 0 138px}
+.optrow input[type=range]{flex:1;accent-color:var(--jump)}
+.optrow output{width:44px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.optrow.chk{gap:8px}
+.optrow input[type=checkbox]{width:18px;height:18px;accent-color:var(--jump)}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{font:700 13px/1 var(--ui);text-transform:none;letter-spacing:0;padding:7px 10px;background:var(--canvas-2);color:var(--ink);box-shadow:none;border:2px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--jump);color:#fff8ea}
+.bindrow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px;padding:4px 0}
+.bindrow .keybtn{font:700 14px/1 var(--ui);text-transform:none;letter-spacing:0;padding:7px 12px;min-width:96px;background:var(--canvas-2);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.bindrow .keybtn.listening{background:var(--danger);color:#fff}
+.bindwarn{color:var(--danger);font-size:13px;margin:0}
+#tPause{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:30;font:700 18px/1 var(--ui);width:46px;height:40px;padding:0;box-shadow:0 3px 0 var(--ink);border-radius:6px}
+@media (max-width:700px){.optrow>span:first-child{flex-basis:110px;font-size:13px}}
 </style>
 
 <div id="game"></div>
@@ -224,8 +249,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <div class="field">
       <label for="nick">Your camp nickname</label>
       <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
-      <button id="startBtn">Start digging</button>
+      <button id="startBtn" disabled>Start digging</button>
     </div>
+    <div class="field" id="campWrap" hidden>
+      <label for="campPass">Camp password</label>
+      <input type="text" id="campPass" maxlength="64" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="fine" id="campErr" hidden></p>
     <div id="lobby">Connecting to camp…</div>
     <div class="controls">
       <div><kbd>WASD</kbd> walk, <kbd>Shift</kbd> run</div>
@@ -324,6 +354,69 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   </div>
 </div>
 
+<!-- ===================== PAUSE MENU (Escape) ===================== -->
+<button id="tPause" type="button" hidden aria-label="Pause">II</button>
+<div id="pause" class="overlay" hidden role="dialog" aria-labelledby="pauseTitle">
+  <div class="card" id="pMain">
+    <h1 class="stencil" id="pauseTitle" style="font-size:clamp(36px,8vw,56px)">Paused<small>Game continues in the background</small></h1>
+    <div class="pausebtns">
+      <button id="pResume" type="button">Resume</button>
+      <button id="pOptions" type="button">Options</button>
+      <button id="pControlsBtn" type="button">Controls</button>
+      <button id="pRestart" type="button">Restart</button>
+      <button id="pQuit" type="button">Quit to title</button>
+    </div>
+  </div>
+
+  <div class="card" id="pOptionsCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Options</h2>
+    <div class="optgrp">
+      <h3>Look</h3>
+      <div class="optrow"><span>Mouse sensitivity</span><input type="range" id="oSens" min="0.2" max="3" step="0.05"><output id="oSensV"></output></div>
+      <div class="optrow chk"><input type="checkbox" id="oInvert"><span>Invert Y</span></div>
+      <div class="optrow"><span>Touch look speed</span><input type="range" id="oTouchSens" min="0.2" max="3" step="0.05"><output id="oTouchSensV"></output></div>
+      <div class="optrow"><span>Field of view</span><input type="range" id="oFov" min="50" max="100" step="1"><output id="oFovV"></output></div>
+    </div>
+    <div class="optgrp">
+      <h3>Sound</h3>
+      <div class="optrow"><span>Master</span><input type="range" id="oVolMaster" min="0" max="100" step="1"><output id="oVolMasterV"></output></div>
+      <div class="optrow"><span>Effects</span><input type="range" id="oVolFx" min="0" max="100" step="1"><output id="oVolFxV"></output></div>
+      <div class="optrow"><span>Music</span><input type="range" id="oVolMusic" min="0" max="100" step="1"><output id="oVolMusicV"></output></div>
+      <div class="optrow"><span>Voice chat</span><input type="range" id="oVolVoice" min="0" max="100" step="1"><output id="oVolVoiceV"></output></div>
+    </div>
+    <div class="optgrp">
+      <h3>Graphics</h3>
+      <div class="optrow chk"><input type="checkbox" id="oShadows"><span>Shadows</span></div>
+      <div class="optrow chk"><input type="checkbox" id="oFps"><span>Show FPS counter</span></div>
+      <div class="optrow"><span>Render quality</span><div class="seg" id="oQuality">
+        <button type="button" data-v="auto">Auto</button><button type="button" data-v="low">Low</button><button type="button" data-v="med">Medium</button><button type="button" data-v="high">High</button>
+      </div></div>
+    </div>
+    <div class="optgrp">
+      <h3>Key bindings</h3>
+      <div id="bindList"></div>
+      <p class="bindwarn" id="bindWarn" hidden></p>
+      <button id="bindReset" type="button" class="btn2" style="align-self:flex-start">Reset to defaults</button>
+    </div>
+    <button id="pOptBack" type="button">Back</button>
+  </div>
+
+  <div class="card" id="pControlsCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Controls</h2>
+    <div class="controls" id="pControlsList"></div>
+    <button id="pCtrlBack" type="button">Back</button>
+  </div>
+
+  <div class="card" id="pConfirmCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)" id="pConfirmTitle"></h2>
+    <p id="pConfirmText"></p>
+    <div class="pausebtns">
+      <button id="pConfirmYes" type="button"></button>
+      <button id="pConfirmNo" type="button" class="btn2">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="touch" hidden>
   <div id="stick"><i id="knob"></i></div>
   <div id="tbtns">
@@ -394,6 +487,20 @@ const matCache={};
 function M(c,o){const k=c+(o?JSON.stringify(o):'');if(!matCache[k])matCache[k]=new T.MeshStandardMaterial(Object.assign({color:c,flatShading:true,roughness:0.95,metalness:0},o||{}));return matCache[k]}
 function box(w,h,d,c){const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(c));m.castShadow=true;m.receiveShadow=true;return m}
 function cyl(rt,rb,h,seg,c){const m=new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg),M(c));m.castShadow=true;m.receiveShadow=true;return m}
+/* PERF: merge a set of coloured boxes into ONE mesh, so the GPU draws it in one call instead of one per box.
+   Each box's colour is baked into a per-vertex colour attribute, which lets every merged mesh share one material.
+   parts: [[width, height, depth, colour, x, y, z], ...] (moved up here so the camp buildings below can use it too) */
+const mergedMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.95,metalness:0});
+function mergeBoxes(parts){
+  const pos=[],col=[],c=new T.Color();
+  for(const[w,h,d,hex,x,y,z]of parts){
+    const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(x,y,z);
+    const p=g.attributes.position.array;for(let i=0;i<p.length;i++)pos.push(p[i]);
+    c.setHex(hex);for(let i=0;i<p.length/3;i++)col.push(c.r,c.g,c.b);g.dispose();
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();g.computeBoundingSphere();
+  return g;
+}
 
 /* ---------- sky ---------- */
 {
@@ -584,13 +691,87 @@ function sign(text,x,z,ry,w,h){
   for(const s of[-1,1]){const p=cyl(0.06,0.06,1.8+h,5,0x6b4f33);p.position.set(s*(w/2-0.1),(1.8+h)/2,-0.06);g.add(p)}
   g.position.set(x,baseH(x,z),z);g.rotation.y=ry;scene.add(g);return g;
 }
-function tent(x,z){
-  const g=new T.Group();const tg=new T.CylinderGeometry(1.7,1.7,4.2,3);tg.rotateX(-Math.PI/2);const t=new T.Mesh(tg,M(0x8d8f69));
-  t.position.y=0.85;t.castShadow=true;t.receiveShadow=true;g.add(t);
-  const flap=box(0.9,1.2,0.05,0x5a5a3e);flap.position.set(0,0.6,-2.12);g.add(flap);
-  g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,3.1,4.4);
+/* Tents: bigger than before, and each one has an interior you can walk into (see "tent interiors" below).
+   D Tent (the middle one) is where the crew (X-Ray & co) hang out, and where the blackjack table lives now. */
+const TENTS=[
+  {x:-16,z:47,name:'A Tent',hw:3.0,hd:3.6},
+  {x:-8, z:47,name:'B Tent',hw:3.0,hd:3.6},
+  {x:0,  z:47,name:'D Tent',hw:3.6,hd:5.2,crew:true},
+  {x:8,  z:47,name:'C Tent',hw:3.0,hd:3.6},
+];
+const D_TENT=TENTS.find(t=>t.crew);
+function tent(t){
+  const g=new T.Group();
+  // The canvas is stretched to cover the tent's real footprint (t.hw x t.hd, the same size as the room inside),
+  // so what you see matches what you bump into. The door flap faces the middle of camp (-z), toward the lake.
+  const tg=new T.CylinderGeometry(1.7,1.7,4.2,3);tg.rotateX(-Math.PI/2);const m=new T.Mesh(tg,M(0x8d8f69));
+  m.scale.set(t.hw/1.47,t.crew?1.6:1.35,t.hd*2/4.2);m.position.y=0.85*m.scale.y;m.castShadow=true;m.receiveShadow=true;g.add(m);
+  const flap=box(1.1,1.7,0.05,0x5a5a3e);flap.position.set(0,0.85,-t.hd-0.03);g.add(flap);
+  g.position.set(t.x,baseH(t.x,t.z),t.z);scene.add(g);
+  solid(t.x,t.z,t.hw*2,t.hd*2);   // the outdoor footprint matches the interior room, so nobody can walk "through" the tent
 }
-[-16,-8,0,8].forEach(x=>tent(x,47));
+TENTS.forEach(tent);
+
+/* ---------- tent interiors ----------
+   Each tent has a small room built straight down, under the tent itself: same x/z as the tent outside, just at
+   TENT_FLOOR_Y (comfortably below the terrain, and inside the -5..10 range the network clamps player Y to).
+   Because the room shares x/z with the tent, and the tent's own outdoor collider keeps everyone a couple of metres
+   away from that x/z, nothing outdoors can ever wander into the same spot the room occupies underground: it's
+   effectively "somewhere the outside world can't reach" without needing a whole separate patch of the map. It
+   also means inCamp()/nearCampZone() need no changes at all: your x/z never leaves the camp bounding box, so the
+   police, Madame Zeroni, lizards and the quota walk-back timer already treat you as "in camp" while you're inside. */
+const TENT_FLOOR_Y=-4;         // safely underground, and inside the network's -5..10 clamp on player/remote Y
+const BUNKS=[];                // {tent, x, z, high} - a sleeping spot; "high" ones are the top bunk of a bunk-bed
+const TENT_COLLIDERS=TENTS.map(()=>[]);   // per-tent list of {x0,x1,z0,z1} for furniture, checked only while inside
+function tentSolid(list,x,z,w,d){list.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2})}
+{
+  const parts=[];
+  const wallC=0x726b48,floorC=0x4a3f2e,roofC=0x54503a,frameC=0x5a4632,mattC=0xb0455a,pillowC=0xe8e0cc;
+  const bunk=(list,ti,x,z,doubledecker)=>{
+    parts.push([1.1,0.5,1.9,frameC,x,TENT_FLOOR_Y+0.25,z]);
+    parts.push([0.9,0.12,0.4,pillowC,x,TENT_FLOOR_Y+0.56,z-0.75]);
+    tentSolid(list,x,z,1.2,2.0);
+    BUNKS.push({tent:ti,x,z,high:false});
+    if(doubledecker){
+      for(const dz2 of[-0.85,0.85]){parts.push([0.08,1.7,0.08,frameC,x-0.45,TENT_FLOOR_Y+0.85,z+dz2]);parts.push([0.08,1.7,0.08,frameC,x+0.45,TENT_FLOOR_Y+0.85,z+dz2])}
+      parts.push([1.1,0.08,1.9,frameC,x,TENT_FLOOR_Y+1.4,z]);
+      parts.push([0.9,0.32,1.9,mattC,x,TENT_FLOOR_Y+1.62,z]);
+      parts.push([0.9,0.1,0.4,pillowC,x,TENT_FLOOR_Y+1.84,z-0.75]);
+      BUNKS.push({tent:ti,x,z,high:true});
+    }
+  };
+  TENTS.forEach((t,ti)=>{
+    const wallH=t.crew?3.0:2.6,list=TENT_COLLIDERS[ti];
+    parts.push([t.hw*2,0.2,t.hd*2,floorC,t.x,TENT_FLOOR_Y-0.1,t.z]);
+    parts.push([t.hw*2,0.2,t.hd*2,roofC,t.x,TENT_FLOOR_Y+wallH+0.1,t.z]);
+    parts.push([t.hw*2,wallH,0.16,wallC,t.x,TENT_FLOOR_Y+wallH/2,t.z-t.hd]);           // back wall
+    parts.push([0.16,wallH,t.hd*2,wallC,t.x-t.hw,TENT_FLOOR_Y+wallH/2,t.z]);           // left wall
+    parts.push([0.16,wallH,t.hd*2,wallC,t.x+t.hw,TENT_FLOOR_Y+wallH/2,t.z]);           // right wall
+    const gap=0.95;   // doorway gap in the south (door-side) wall, under the flap
+    parts.push([t.hw-gap,wallH,0.16,wallC,t.x-(t.hw+gap)/2,TENT_FLOOR_Y+wallH/2,t.z+t.hd]);
+    parts.push([t.hw-gap,wallH,0.16,wallC,t.x+(t.hw+gap)/2,TENT_FLOOR_Y+wallH/2,t.z+t.hd]);
+    if(t.crew){
+      // three bunk-beds (6 sleeping spots) down the left wall for the D Tent crew
+      for(let i=0;i<3;i++)bunk(list,ti,t.x-t.hw+1.0,t.z-t.hd+1.5+i*1.9,true);
+      // the blackjack table, moved in from outside, with four chairs
+      const tx=t.x+t.hw-1.9,tz=t.z-0.6;
+      parts.push([1.5,0.08,1.5,0x6b4f33,tx,TENT_FLOOR_Y+0.75,tz]);
+      for(const[dx,dz]of[[-0.65,-0.65],[0.65,-0.65],[-0.65,0.65],[0.65,0.65]])parts.push([0.08,0.75,0.08,frameC,tx+dx,TENT_FLOOR_Y+0.375,tz+dz]);
+      for(const[dx,dz]of[[-1.05,0],[1.05,0],[0,-1.05],[0,1.05]]){
+        parts.push([0.5,0.42,0.5,0x7a5a3a,tx+dx,TENT_FLOOR_Y+0.21,tz+dz]);
+        parts.push([0.5,0.5,0.08,0x7a5a3a,tx+dx*1.35,TENT_FLOOR_Y+0.65,tz+dz*1.35]);
+      }
+      tentSolid(list,tx,tz,1.8,1.8);
+      D_TENT.table={x:tx,z:tz-1.35};      // the 'cards' interaction spot, where you sit down
+      D_TENT.dealerSeat={x:tx,z:tz+1.35}; // where X-Ray sits when he's dealing
+    }else{
+      // a plain cot on either side for two campers to sleep in
+      bunk(list,ti,t.x-1.3,t.z-t.hd+1.2,false);
+      bunk(list,ti,t.x+1.3,t.z-t.hd+1.2,false);
+    }
+  });
+  const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;scene.add(m);
+}
 function cabin(x,z,w,d,h,wall,roof){
   const g=new T.Group();const b=box(w,h,d,wall);b.position.y=h/2;g.add(b);
   const R=(d+0.8)/1.732;const rg=new T.CylinderGeometry(R,R,w+0.5,3);rg.rotateX(-Math.PI/2);rg.rotateY(Math.PI/2);
@@ -622,12 +803,53 @@ oak(-36.5,38.5,1.1);oak(-24,38,1);
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
  const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);}
 sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
-sign('D TENT\nCARDS',2.4,44.2,Math.PI,1.3,0.75);
-/* fence posts along the camp edge */
-/* a fence of posts all the way around camp: inside it you're safe after curfew */
-{const pts=[];for(let x=-40;x<=30;x+=2.5)pts.push([x,27.2],[x,55.8]);for(let z=29.7;z<55.8;z+=2.5)pts.push([-40,z],[30,z]);
- const im=new T.InstancedMesh(new T.CylinderGeometry(0.07,0.07,1.1,5),M(0x6b4f33),pts.length),o=new T.Object3D();
- pts.forEach(([x,z],i)=>{o.position.set(x,baseH(x,z)+0.55,z);o.updateMatrix();im.setMatrixAt(i,o.matrix)});im.castShadow=true;scene.add(im)}
+sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
+
+/* ---------- fenced compound ----------
+   A real perimeter fence (posts + two rails) all the way around camp, with a gate gap in the south wall (the lake
+   side, where the CAMP GREEN LAKE sign stands) so there's a proper way in. Purely a look: it's dressing on the same
+   inCamp()/nearCampZone() boundary the game already used (nothing solid, so bots and the existing curfew logic
+   don't need to route around it), plus a water tower, light poles, crates and a second porch to sell the place as
+   a real base. Everything box-shaped is one merged mesh (see mergeBoxes above); the water tower is a few plain
+   cylinders since mergeBoxes only does boxes. */
+const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
+{
+  const parts=[];
+  const POST=0x6b4f33,RAIL=0x7a5a3a,LAMP=0xffdf8a;
+  const post=(x,z,h,r)=>parts.push([r||0.22,h||1.5,r||0.22,POST,x,baseH(x,z)+(h||1.5)/2,z]);
+  const railX=(x0,x1,z,y)=>parts.push([x1-x0,0.09,0.09,RAIL,(x0+x1)/2,(baseH(x0,z)+baseH(x1,z))/2+y,z]);
+  const railZ=(z0,z1,x,y)=>parts.push([0.09,0.09,z1-z0,RAIL,x,(baseH(x,z0)+baseH(x,z1))/2+y,(z0+z1)/2]);
+  for(let x=FENCE_X0;x<=FENCE_X1;x+=2.5){if(x<GATE_X0-1||x>GATE_X1+1)post(x,FENCE_Z0);post(x,FENCE_Z1)}
+  for(let x=FENCE_X0;x<FENCE_X1;x+=2.5){
+    const x1=Math.min(x+2.5,FENCE_X1);
+    if(x1<=GATE_X0||x>=GATE_X1){railX(x,x1,FENCE_Z0,0.45);railX(x,x1,FENCE_Z0,0.95)}
+    railX(x,x1,FENCE_Z1,0.45);railX(x,x1,FENCE_Z1,0.95);
+  }
+  for(let z=FENCE_Z0;z<=FENCE_Z1;z+=2.5){post(FENCE_X0,z);post(FENCE_X1,z)}
+  for(let z=FENCE_Z0;z<FENCE_Z1;z+=2.5){
+    const z1=Math.min(z+2.5,FENCE_Z1);
+    railZ(z,z1,FENCE_X0,0.45);railZ(z,z1,FENCE_X0,0.95);railZ(z,z1,FENCE_X1,0.45);railZ(z,z1,FENCE_X1,0.95);
+  }
+  for(const gx of[GATE_X0,GATE_X1])post(gx,FENCE_Z0,2.2,0.3);   // taller, thicker posts framing the gate
+  // a second porch, at the Wreck Room this time
+  parts.push([5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44]);
+  // crates stacked by the water truck
+  parts.push([0.8,0.8,0.8,0x8a6a3f,8,baseH(8,38)+0.4,38.4],[0.8,0.8,0.8,0x8a6a3f,8.9,baseH(8.9,38.3)+0.4,38.3],[0.8,0.8,0.8,0x9a7a4a,8.3,baseH(8.3,38.1)+1.2,38.1]);
+  // light poles around the compound so it reads as lived-in after dark
+  for(const[lx,lz]of[[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
+    parts.push([0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz]);
+    parts.push([0.4,0.22,0.4,LAMP,lx,baseH(lx,lz)+2.55,lz]);
+  }
+  const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
+}
+{
+  // water tower: four legs, a tank and a cone roof
+  const wx0=25,wz0=49,h0=baseH(wx0,wz0);
+  [[-1.3,-1.3],[1.3,-1.3],[-1.3,1.3],[1.3,1.3]].forEach(([dx,dz])=>{const l=cyl(0.12,0.14,5.4,6,0x5a4a3a);l.position.set(wx0+dx,h0+2.7,wz0+dz);scene.add(l)});
+  const tank=cyl(2.1,2.1,3.2,10,0xb9b4a6);tank.position.set(wx0,h0+5.4+1.6,wz0);scene.add(tank);
+  const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(wx0,h0+5.4+3.2+0.7,wz0);scene.add(roof);
+  solid(wx0,wz0,2.8,2.8);
+}
 
 /* ---------- people ---------- */
 const CAMPER_COLORS=[0xd94f3a,0x2f7bb8,0x6b9a3a,0x8a4bb0,0xd9a21a,0x2a9a8a,0xe07ab0,0x444444];
@@ -696,6 +918,8 @@ function updateLabels(now){
   const w=innerWidth,h=innerHeight;
   for(const L of labeled){
     if(!L.obj.visible&&L.obj.parent){L.el.style.display='none';continue}
+    // inside a tent you only see tags from inside (the rooms are underground), and outside only tags from outside
+    if((L.obj.position.y<TENT_FLOOR_Y+2)!==inTent()){L.el.style.display='none';continue}
     if(L.sayUntil&&now>L.sayUntil){L.b.textContent='';L.sayUntil=0}
     projV.set(L.obj.position.x,L.obj.position.y+L.h,L.obj.position.z);
     const dist=projV.distanceTo(camera.position);
@@ -716,8 +940,16 @@ const SPOTS=[
   {id:'sir',x:1.4,z:32.6,r:3.6},
   {id:'store',x:16,z:41.2,r:3.4},
   {id:'warden',x:-30,z:39.2,r:3.6},
-  {id:'cards',x:0,z:43.9,r:1.9},
+  {id:'cards',x:D_TENT.table.x,z:D_TENT.table.z,r:1.6},   // moved inside D Tent (see "tent interiors" above)
 ];
+/* tent doors (outside: press E or F to go in), and, once inside, the way back out and every bunk.
+   These reuse the tent's real x/z, but the outdoor solid() footprint keeps anyone outside from ever standing
+   close enough to trigger them by accident - they're only reachable via enterTent()/the teleport it does. */
+TENTS.forEach((t,ti)=>{
+  SPOTS.push({id:'tentdoor',ti,x:t.x,z:t.z-t.hd-1.3,r:1.4});   // outside, at the flap on the camp-facing side
+  SPOTS.push({id:'exit',ti,x:t.x,z:t.z+t.hd-1.0,r:1.0});
+});
+BUNKS.forEach((b,bi)=>SPOTS.push({id:'bunk',bi,x:b.x,z:b.z,r:1.2}));
 
 /* the D Tent crew (they're here even when your friends aren't) */
 const BOTDEF=[
@@ -736,8 +968,15 @@ const bots=BOTDEF.map(d=>{
   const L=makeLabel(p.g,d.n,'bot');
   return{d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0};
 });
+/* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
+const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
+/* X-Ray always deals; everyone else gets one of D Tent's bunks (there are 6, one more than the 5 who need one) */
+const D_TENT_BUNKS=BUNKS.map((b,i)=>({b,i})).filter(o=>o.b.tent===TENTS.indexOf(D_TENT)).map(o=>o.i);
+const BOT_BUNK={};BOTDEF.filter(d=>d.n!=='X-Ray').forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[i]});
+function botIndoorSpot(b){return b.d.n==='X-Ray'?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
 function updateBots(dt,now){
   if(PARTY.on)return;
+  const isNight=clockT()>=DAYMS;
   for(const b of bots){
     const g=b.p.g;
     if(DLG.open&&DLG.bot===b){ /* mid-conversation: stop and face the player */
@@ -745,6 +984,13 @@ function updateBots(dt,now){
       animPerson(b.p,0,dt);continue;
     }
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
+    if(b.state==='inside'){
+      /* hanging out in D Tent: sitting at the table (X-Ray) or lying on a bunk (everyone else) */
+      g.position.y=TENT_FLOOR_Y;animPerson(b.p,b.d.n==='X-Ray'?0:5,dt);
+      b.t-=dt;
+      if(!isNight&&b.t<=0){b.state='leaving';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
+      continue;
+    }
     if(b.state==='dig'){
       const iv=b.d.rate>0.1?0.7:0.95,prev=b.dph;b.dph+=dt/iv;
       /* dirt leaves the shovel at the top of the toss and lands on this hole's pile */
@@ -765,12 +1011,20 @@ function updateBots(dt,now){
       g.position.y=groundAt(g.position.x,g.position.z);
       animPerson(b.p,b.restT<2.2?5:b.restT<3.8?6:0,dt);
       if(b.t<=0){
-        for(let k=0;k<20;k++){const a=botRng()*Math.PI*2;const x=r1(b.hole.x+Math.cos(a)*3.3),z=r1(clamp(b.hole.z+Math.sin(a)*3.3,14,26));if(!holeNear(x,z,2.9)){b.tx=x;b.tz=z;break}}
-        if(b.tx||b.tz)b.state='walk';else b.t=4;
+        /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
+        if(isNight||botRng()<0.22){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
+        else{
+          for(let k=0;k<20;k++){const a=botRng()*Math.PI*2;const x=r1(b.hole.x+Math.cos(a)*3.3),z=r1(clamp(b.hole.z+Math.sin(a)*3.3,14,26));if(!holeNear(x,z,2.9)){b.tx=x;b.tz=z;break}}
+          if(b.tx||b.tz)b.state='walk';else b.t=4;
+        }
       }
     }else{
       const dx=b.tx-g.position.x,dz=b.tz-g.position.z,d=Math.hypot(dx,dz);
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=FIVE_FT?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
+      else if(d<0.1&&b.state==='gotent'){
+        const spot=botIndoorSpot(b);g.position.set(spot.x,TENT_FLOOR_Y,spot.z);b.state='inside';b.t=20+botRng()*40;
+      }
+      else if(d<0.1&&b.state==='leaving'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
       else if(d<0.1){b.hole=addHole({x:b.tx,z:b.tz,d:0.05,bot:true});b.tx=b.tz=0;b.state='dig';b.dph=0;touchHole(b.hole)}
       else{const s=Math.min(d,dt*(b.state==='return'?3.5:2.2));g.position.x+=dx/d*s;g.position.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);g.position.y=groundAt(g.position.x,g.position.z);animPerson(b.p,1,dt)}
     }
@@ -778,20 +1032,6 @@ function updateBots(dt,now){
 }
 
 /* ---------- yellow-spotted lizards ---------- */
-/* PERF: merge a set of coloured boxes into ONE mesh, so the GPU draws it in one call instead of one per box.
-   Each box's colour is baked into a per-vertex colour attribute, which lets every merged mesh share one material.
-   parts: [[width, height, depth, colour, x, y, z], ...] */
-const mergedMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.95,metalness:0});
-function mergeBoxes(parts){
-  const pos=[],col=[],c=new T.Color();
-  for(const[w,h,d,hex,x,y,z]of parts){
-    const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(x,y,z);
-    const p=g.attributes.position.array;for(let i=0;i<p.length;i++)pos.push(p[i]);
-    c.setHex(hex);for(let i=0;i<p.length/3;i++)col.push(c.r,c.g,c.b);g.dispose();
-  }
-  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();g.computeBoundingSphere();
-  return g;
-}
 /* PERF: a lizard used to be 20 separate meshes (body, head, tail, 11 spots, 2 eyes, 4 legs), and there are 48 of
    them, so lizards alone cost ~1,000 draw calls a frame (plus the shadow pass). Now each lizard is 2 meshes:
    the body with everything that doesn't move baked in, and the tail (kept separate because it wags).
@@ -856,16 +1096,17 @@ function updateRain(dt){if(!rain.visible)return;const cx=camera.position.x,cz=ca
 /* ---------- audio (made in the browser, starts on your first click) ---------- */
 let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null;
 function initAudio(){
-  if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.55;master.connect(AC.destination);
+  if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=SETTINGS.volMaster;master.connect(AC.destination);
+  fxBus=AC.createGain();fxBus.gain.value=SETTINGS.volFx;fxBus.connect(master);   // pause menu: ambient + one-shot sfx share this bus, so Effects volume is independent of Music
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;const wg=AC.createGain();wg.gain.value=0.07;
   const lfo=AC.createOscillator();lfo.frequency.value=0.08;const lg=AC.createGain();lg.gain.value=0.04;lfo.connect(lg).connect(wg.gain);lfo.start();
-  wind.connect(wf).connect(wg).connect(master);wind.start();
-  const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(master);rn.start();
+  wind.connect(wf).connect(wg).connect(fxBus);wind.start();
+  const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(fxBus);rn.start();
   }catch(e){AC=null}
 }
-function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(master);s.start(t,Math.random());s.stop(t+dur+0.05)}
-function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(master);o.start(t);o.stop(t+dur+0.05)}
+function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
+function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
 const sfx={
   scoop(){noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
   clank(){tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)},
@@ -881,7 +1122,7 @@ const sfx={
 };
 
 /* ---------- game state ---------- */
-const S={started:false,seeds:20,hp:100,hurtT:99,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0};
+const S={started:false,seeds:20,hp:100,hurtT:99,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0,tent:null,tentBack:null,inBed:null};
 const P={x:0,z:39,y:0,vy:0,kx:0,kz:0,fa:Math.PI,yaw:0,pitch:0.32,digT:0,digPh:0,anim:0,grounded:true,moving:false};
 P.y=groundAt(P.x,P.z);
 let me=null,meL=null;
@@ -894,7 +1135,7 @@ function toggleView(){FP=!FP;if(me)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(F
 const vm=new T.Group();
 {const hd=new T.Mesh(new T.CylinderGeometry(0.02,0.02,0.9,5),M(0x8a6440));hd.rotation.x=Math.PI/2;hd.position.z=-0.25;const bl=new T.Mesh(new T.BoxGeometry(0.22,0.02,0.26),M(0x7d8288));bl.position.z=-0.78;const sh=new T.Group();sh.rotation.x=-0.35;sh.add(hd,bl);vm.add(sh)}
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
-function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
+function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!twSt;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}
@@ -963,6 +1204,35 @@ function use(){
   else if(s.id==='store')openShop();
   else if(s.id==='cards')openCards();
   else if(s.id==='bot')openDialog('bot',s.bot);
+  else if(s.id==='tentdoor')enterTent(s.ti);
+  else if(s.id==='exit')exitTent();
+  else if(s.id==='bunk')toggleBunk(s.bi);
+}
+
+/* ---------- tent interiors: entering, leaving, bunks ---------- */
+function inTent(){return S.tent!=null}
+function enterTent(ti){
+  if(S.ko||uiOpen()||inTent())return;
+  const t=TENTS[ti];S.tent=ti;S.tentBack={x:t.x,z:t.z-t.hd-1.3};S.inBed=null;
+  P.x=t.x;P.z=t.z+t.hd-1.6;P.yaw=0;P.fa=Math.PI;P.y=TENT_FLOOR_Y;   // just inside the door (E again walks back out), facing into the room
+  P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
+  toast(`You duck inside ${t.name}.${t.crew?' The cards table is against the far wall.':''} Press E to go back out.`,'',3200);
+}
+function exitTent(){
+  if(!inTent())return;
+  const t=TENTS[S.tent],wasBed=S.inBed!=null;S.tent=null;S.inBed=null;digHeld=false;
+  P.x=S.tentBack.x;P.z=S.tentBack.z;P.y=groundAt(P.x,P.z);P.vy=0;
+  if(wasBed&&online())wsSend({t:'sleep',on:false});
+  toast(`You step back outside ${t.name}.`,'',2200);
+}
+function toggleBunk(bi){
+  if(!inTent())return;
+  if(S.inBed===bi){S.inBed=null;if(online())wsSend({t:'sleep',on:false});toast('You get up.','',1600);return}
+  const b=BUNKS[bi];if(b.tent!==S.tent)return;   // not one of this tent's own bunks
+  S.inBed=bi;P.x=b.x;P.z=b.z;digHeld=false;
+  if(online()){wsSend({t:'sleep',on:true});toast('You lie down. Everyone in camp needs to be asleep for the night to pass.','',3600)}
+  else if(clockT()>=DAYMS){jumpTo(tAtHour(6));toast('You get some sleep. Morning already.','good',3200);S.inBed=null}
+  else toast('You lie down and rest. Nothing to skip yet - it\'s still daytime.','',3200);
 }
 function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold tube to the Warden. Red flags mark the search area.`,'gold',6000)}
 
@@ -996,10 +1266,11 @@ $('#shopClose').onclick=closeShop;
 /* KO */
 function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
+  twSt=0;twStT=0;me.g.rotation.z=0;   // clears any twister suck/tumble/lie state so it can't fight the KO pose or get stuck
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();me.g.rotation.x=0}
+function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){
@@ -1013,7 +1284,7 @@ $('#winClose').onclick=()=>{$('#win').hidden=true};
 
 /* ---------- input ---------- */
 const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
-function releaseLock(){if(document.pointerLockElement)try{document.exitPointerLock()}catch(e){}}
+function releaseLock(){if(document.pointerLockElement){voluntaryRelease=true;try{document.exitPointerLock()}catch(e){}}}
 function lockOk(){return document.pointerLockElement===canvas}
 canvas.addEventListener('mousedown',e=>{
   if(!S.started||uiOpen()||S.ko)return;
@@ -1025,38 +1296,57 @@ addEventListener('mouseup',e=>{if(e.button===0)digHeld=false;dragLook=null});
 let dragLook=null;
 addEventListener('mousemove',e=>{
   if(!S.started)return;
-  if(lockOk()){P.yaw-=e.movementX*0.0026;P.pitch=pc(P.pitch+e.movementY*0.0022)}
-  else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004);dragLook={x:e.clientX,y:e.clientY}}
+  const iv=SETTINGS.invertY?-1:1;   // pause menu: sensitivity + invert-Y settings
+  if(lockOk()){P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
+  else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005*SETTINGS.sens;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004*SETTINGS.sens*iv);dragLook={x:e.clientX,y:e.clientY}}
 });
-document.addEventListener('pointerlockchange',()=>{if(!lockOk())digHeld=false});
+document.addEventListener('pointerlockchange',()=>{
+  if(!lockOk()){
+    digHeld=false;
+    if(voluntaryRelease)voluntaryRelease=false;   // we released it ourselves (shop/dialog/pause/etc): nothing more to do
+    else if(S.started&&!overlayBlocking())openPause();   // browser dropped the lock on its own -- almost always Escape, which many browsers swallow instead of sending us a keydown
+  }
+});
 const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here!','Water truck!'];
 addEventListener('keydown',e=>{
+  const pk=e.key.toLowerCase();   // pause menu: the raw physical key, before any rebinding is applied
   if(e.target===conIn){conKey(e);return}
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
   if(!$('#fired').hidden)return;
-  if(e.key==='Enter'&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
+  if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
   if(shopOpen){if(e.key==='Escape'||e.key==='f'||e.key==='F'){e.preventDefault();closeShop()}return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
+  /* pause menu: Escape toggles it, after every menu above has had first crack at its own Escape handling.
+     While it's open, every other key is swallowed here too (same pattern as the shop/dialog/blackjack blocks above). */
+  if(pk==='escape'){e.preventDefault();if(PAUSE.open)closePause();else if(S.started&&!overlayBlocking())openPause();return}
+  if(PAUSE.open)return;
   if(!S.started)return;
-  const k=e.key.toLowerCase();KEYS[k]=true;
+  if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
+  KEYS[k]=true;
   if(k===' '||k.startsWith('arrow'))e.preventDefault();
-  if(k==='e')digHeld=true;
+  if(k==='e'){
+    // E is normally hold-to-dig, but at a tent door/exit/bunk it enters/leaves/lies down instead (digging
+    // is already blocked in camp, so this never steals a dig anywhere it would have worked).
+    const s=nearSpot();
+    if(s&&(s.id==='tentdoor'||s.id==='exit'||s.id==='bunk')){if(!e.repeat&&!S.ko&&!uiOpen())use()}
+    else digHeld=true;
+  }
   if(k==='f')use();
   if(k==='q')eatOnion();
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();
   if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
-  if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
+  if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:SETTINGS.volMaster;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='b'&&!e.repeat&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(true);
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}
   if(k>='1'&&k<='5')shout(+k-1);
-  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
 });
-addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false;if(k==='b'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
+addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false;if(k==='b'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i})}
 function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
@@ -1066,7 +1356,7 @@ const touch={id:null,ox:0,oy:0,ix:0,iz:0,lookId:null,lx:0,ly:0};
 if(isTouch){
   $('#touch').hidden=false;$('#keys').textContent='';
   canvas.addEventListener('touchstart',e=>{if(!S.started)return;for(const t of e.changedTouches){if(t.clientX<innerWidth*0.45&&touch.id===null){touch.id=t.identifier;touch.ox=t.clientX;touch.oy=t.clientY}else if(touch.lookId===null){touch.lookId=t.identifier;touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
-  canvas.addEventListener('touchmove',e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){const dx=clamp(t.clientX-touch.ox,-50,50),dy=clamp(t.clientY-touch.oy,-50,50);touch.ix=dx/50;touch.iz=-dy/50;$('#knob').style.transform=`translate(${dx}px,${dy}px)`}else if(t.identifier===touch.lookId){P.yaw-=(t.clientX-touch.lx)*0.006;P.pitch=pc(P.pitch+(t.clientY-touch.ly)*0.004);touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
+  canvas.addEventListener('touchmove',e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){const dx=clamp(t.clientX-touch.ox,-50,50),dy=clamp(t.clientY-touch.oy,-50,50);touch.ix=dx/50;touch.iz=-dy/50;$('#knob').style.transform=`translate(${dx}px,${dy}px)`}else if(t.identifier===touch.lookId){const iv=SETTINGS.invertY?-1:1;P.yaw-=(t.clientX-touch.lx)*0.006*SETTINGS.touchSens;P.pitch=pc(P.pitch+(t.clientY-touch.ly)*0.004*SETTINGS.touchSens*iv);touch.lx=t.clientX;touch.ly=t.clientY}}e.preventDefault()},{passive:false});
   const end=e=>{for(const t of e.changedTouches){if(t.identifier===touch.id){touch.id=null;touch.ix=touch.iz=0;$('#knob').style.transform=''}if(t.identifier===touch.lookId)touch.lookId=null}};
   canvas.addEventListener('touchend',end);canvas.addEventListener('touchcancel',end);
   const hold=(id,on,off)=>{const b=$(id);b.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();off&&off()},{passive:false})};
@@ -1104,7 +1394,7 @@ function startGame(resume){
   me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color]});scene.add(me.g);
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
-  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();
+  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
   if(S.revealed===false&&S.reported)reveal('You');
   if(!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
@@ -1113,16 +1403,39 @@ function startGame(resume){
   setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig.','',5000),1500)}
   sendJoin();
 }
-$('#startBtn').onclick=()=>startGame();
+const campIn=$('#campPass'),campWrap=$('#campWrap'),campErr=$('#campErr'),startBtn=$('#startBtn');
+function showCampErr(msg){campErr.textContent=msg;campErr.hidden=false}
+function hideCampErr(){campErr.hidden=true}
+function cleanPass(s){return String(s||'').replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,64)}
+startBtn.onclick=()=>{
+  if(net.needPass&&!net.passOk){
+    const p=cleanPass(campIn.value);
+    if(!p){showCampErr('Enter the camp password.');return}
+    PASS=p;net.awaitingJoin=true;hideCampErr();showCampErr('Checking…');
+    wsSend({t:'join',n:cleanName(nickIn.value)||'Caveman',v:2,host:HOST||undefined,p:PASS});
+    return;
+  }
+  startGame();
+};
 addEventListener('pointerdown',()=>{if(AC&&AC.state==='suspended')AC.resume()});
+// Belt-and-suspenders: if the socket never tells us whether a password is needed (server down, odd network),
+// don't leave the Start button, or a pending session resume, stuck waiting forever.
+setTimeout(()=>{startBtn.disabled=false;maybeResume()},4200);
 
 /* ---------- multiplayer (WebSocket to the camp server) ---------- */
-const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:''};
+const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:'',needPass:false,passOk:false,awaitingJoin:false};
 const remotes=new Map();
 function wsSend(o){if(net.ws&&net.ws.readyState===1)try{net.ws.send(JSON.stringify(o))}catch(e){}}
-let HOST='';
-try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.setItem('cgl-host',q);history.replaceState(null,'',location.pathname)}HOST=localStorage.getItem('cgl-host')||''}catch(e){}
-function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
+let HOST='',PASS='';
+try{
+  const sp=new URLSearchParams(location.search),qh=sp.get('host'),qc=sp.get('camp');
+  if(qh)localStorage.setItem('cgl-host',qh);
+  if(qc)localStorage.setItem('cgl-camp',qc); // invite link: ?camp=<password>, like ?host= for the host token
+  if(qh||qc)history.replaceState(null,'',location.pathname);
+  HOST=localStorage.getItem('cgl-host')||'';PASS=localStorage.getItem('cgl-camp')||'';
+}catch(e){}
+if(PASS)campIn.value=PASS;
+function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
@@ -1168,8 +1481,22 @@ function onMsg(m){
       if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
-      renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}break;
+      // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
+      // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
+      // have missed the one broadcast that told everyone else the monster was gone).
+      monFromServer(m.mon||{trucks:[],zer:null});
+      net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
+      renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
+      maybeResume();break;
     }
+    // A reconnect (including the join-timeout closing an idle title screen) re-sends 'needpass'; only prefill
+    // from the remembered/invite-link password when the field is still empty, so it never clobbers what
+    // someone's mid-typing or a value we already know was rejected.
+    case 'needpass':net.needPass=true;campWrap.hidden=false;startBtn.disabled=false;if(PASS&&!campIn.value)campIn.value=PASS;break;
+    case 'joinrejected':
+      net.awaitingJoin=false;
+      if(!S.started){showCampErr(m.reason||'Wrong camp password');PASS='';}else toast(m.reason||'Wrong camp password','bad',4000);
+      break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
     case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;setRemoteLv(R,m.lv);break}
@@ -1200,15 +1527,33 @@ function onMsg(m){
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
     case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;
-    case 'host':net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);break;
+    case 'host':
+      net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);
+      // 'host' is only ever sent after a join clears the password gate, so seeing it after our probe join
+      // means the password was right: remember it and start (or resume) the game for real.
+      if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
+      break;
     case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
     case 'clock':setClock(m);break;
+    case 'sleepstat':SLEEP.asleep=num(m.asleep,0,80,0)|0;SLEEP.total=num(m.total,0,80,1)|0;break;
+    case 'daybreak':S.inBed=null;toast('Morning already - everyone in camp was asleep.','good',4500);break;
     case 'reset':toast('A new day at Camp Green Lake. The lake bed is being refilled.','',4000);saveSession(true);setTimeout(()=>location.reload(),2500);break;
   }
 }
+// A saved session (e.g. the page reloaded itself after a server 'reset'/'update', or just an accidental refresh)
+// normally resumes straight away. When a camp password is set we still have to clear that gate first, so this
+// waits for word from the server (hello = no password needed / host-after-password = password accepted) before
+// resuming, with a short fallback timer in case that word never arrives (server down, odd network).
+let pendingResume=null;
+{const R0=loadSession();if(R0)pendingResume=R0}
+function maybeResume(){
+  if(!pendingResume||S.started)return;
+  if(net.needPass&&!net.passOk)return; // password required and not yet cleared: let the title screen ask for it
+  const r=pendingResume;pendingResume=null;startGame(r);
+}
 function connect(){
-  if(!/^https?:$/.test(location.protocol)){$('#lobby').textContent='Offline copy. Solo camp.';return}
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws')}catch(e){return}
+  if(!/^https?:$/.test(location.protocol)){$('#lobby').textContent='Offline copy. Solo camp.';startBtn.disabled=false;maybeResume();return}
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws')}catch(e){startBtn.disabled=false;maybeResume();return}
   net.ws=ws;
   ws.onopen=()=>{net.retry=1000;clearTimeout(net.lostT)};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}onMsg(m)};
@@ -1229,8 +1574,40 @@ function updateRemotes(dt){
 /* ---------- player update ---------- */
 const fwd=new T.Vector3();
 function nearCam(x,z,d){return (camera.position.x-x)**2+(camera.position.z-z)**2<d*d}
+/* Inside a tent: a small, separate movement update. No gravity, no digging, no outdoor colliders (the room has its
+   own tiny furniture colliders instead) - just walk around a flat floor bounded by the room's own walls. Twisters,
+   police, Madame Zeroni and lizards all already leave you alone (see inTent() in twPush, and inCamp() elsewhere:
+   your x/z never actually change, so every check that already asks "is this in camp?" still says yes). */
+function updatePlayerTent(dt){
+  const t=TENTS[S.tent];
+  let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
+  let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
+  if(touch.id!==null){ix=touch.ix;iz=touch.iz}
+  if(uiOpen()||S.inBed!=null){ix=0;iz=0}
+  const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
+  let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
+  P.moving=false;P.anim=S.inBed!=null?5:0;
+  if(ml>0.1&&S.inBed==null){
+    mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:4.3)*Math.min(1,ml);
+    let nx=clamp(P.x+mx*sp*dt,t.x-t.hw+0.5,t.x+t.hw-0.5),nz=clamp(P.z+mz*sp*dt,t.z-t.hd+0.5,t.z+t.hd-0.5);
+    for(const c of TENT_COLLIDERS[S.tent]){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
+    P.x=nx;P.z=nz;P.fa=Math.atan2(mx,mz);P.moving=true;P.anim=1;
+  }
+  P.y=TENT_FLOOR_Y;P.vy=0;P.kx=P.kz=0;P.grounded=true;
+  me.g.position.set(P.x,P.y,P.z);
+  me.g.rotation.x=S.inBed!=null?-Math.PI/2:0;
+  if(S.inBed==null){let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14)}
+  animPerson(me,P.anim,dt,P.digPh);
+  // shelter: water drains slowly just standing around inside, and resting in a bunk restores health and water
+  if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);S.hp=Math.min(HP_MAX,S.hp+8*dt)}
+  else S.water=Math.max(0,S.water-0.15*dt);
+  if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
+  if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
+}
 function updatePlayer(dt){
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
+  if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
+  if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
@@ -1256,11 +1633,8 @@ function updatePlayer(dt){
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
     }else P.anim=0;
   }
-  /* knockback: something (a twister) threw you. Carries you through the air, then you skid to a stop on landing. */
-  if(P.kx||P.kz){
-    P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
-    const f=P.grounded?Math.exp(-dt*5):Math.exp(-dt*0.2);P.kx*=f;P.kz*=f;if(Math.hypot(P.kx,P.kz)<0.3)P.kx=P.kz=0;
-  }
+  // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever
+  // non-zero while that state machine owns the frame, so there's nothing left to integrate here.
   const g=groundAt(P.x,P.z);
   if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=5.6;P.grounded=false}
   P.vy-=16*dt;P.y+=P.vy*dt;
@@ -1279,9 +1653,10 @@ function updatePlayer(dt){
 }
 function updateCamera(dt){
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
-  const cp=Math.cos(P.pitch),dist=5.4;
+  const cp=Math.cos(P.pitch),dist=inTent()?3.2:5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
-  cy=Math.max(cy,groundAt(cx,cz)+0.5);
+  cy=Math.max(cy,(inTent()?TENT_FLOOR_Y:groundAt(cx,cz))+0.5);
+  if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+2.2);   // keep the camera under the tent's low ceiling
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);
 }
@@ -1342,12 +1717,33 @@ function updateHealth(dt){
    clock and a fixed random seed. The lake is split into TW_CELL-sized squares, and in every TW_WIN window each
    square has a TW_CHANCE chance of growing one. Only the squares around you are checked, so wherever you are,
    twisters can show up nearby.
-   Get within TW_PULL_R and the wind drags you in (you can outrun it). Touch the funnel and you're thrown through the
-   air and lose TW_DMG health. They weaken and fall apart near camp, die down at night, and can't reach you while
-   you're down in a hole deeper than 4 feet. Type "twister" in game to summon a test one that only you can see. */
-const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2,TW_PULL_R=18,TW_CORE_R=3.2,TW_DMG=30,TW_SAFE_DEPTH=1.2;
+   Get within TW_PULL_R and the wind drags you in, gently at first and steeply harder as you get close (a real
+   tornado is "nothing, nothing, then everything") - walking against it is enough at the rim, sprinting still wins
+   at mid-range, and near the core no speed saves you. Get within TW_SUCK_R and it lifts you clean off your feet and
+   spins you up the funnel for a beat before flinging you out (TW_DMG health, scaled by strength) into a tumbling
+   ragdoll fall; you land, skid, lie there, then get back up. None of this touches the twister's own path - it's
+   still a pure function of shared time + seed, so every camper sees it in the same place.
+   They weaken and fall apart near camp, die down at night, and can't reach you while you're down in a hole deeper
+   than 4 feet. Type "twister" in game to summon a test one that only you can see. */
+const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2;
+const TW_PULL_R=25;         // outer edge of the wind - widened now the rim is gentle instead of a hard line
+const TW_SUCK_R=6;          // inside this you're lifted off your feet instead of just pulled (both x tw.s)
+const TW_PULL_POW=2.4;      // pull ramps with (1-d/pr)^POW between the two radii: flat near the rim, steep near the core
+const TW_PULL_MAX=11;       // pull speed (m/s) right at the mouth of the suck radius, before strength scaling
+const TW_SPIN_MAX=7.5;      // tangential (swirl) speed at that same point - drags you around the funnel, not just in
+const TW_SUCK_TIME=1.1;     // seconds spent spiralling upward before the throw
+const TW_SUCK_RISE=10;      // how high (m) you're lifted during the suck-up
+const TW_DOWN_TIME=1.4;     // seconds lying flat after landing
+const TW_GETUP_TIME=0.4;    // quick stand-up transition (down+getup ~= the 1.5-2s JT asked for)
+const TW_DMG=30,TW_SAFE_DEPTH=1.2;
 const TW_LIVE=new Map();   // id -> twister currently near you: {x,z,s (strength 0-1), ...}
-let twSpawned=[],twCool=0,twTumble=0,twWind=null;   // twSpawned: twisters made with the console (see ENV below)
+let twSpawned=[],twCool=0,twWind=null;   // twSpawned: twisters made with the console (see ENV below)
+/* twSt: what a twister is currently doing to YOU (0 free, 1 sucked up, 2 airborne/tumbling, 3 down, 4 getting up).
+   Purely local/per-client - like the old kx/kz knockback, it never touches the twister's own state, so it can't
+   break determinism between players. twStT times the current state; the rest are the grabbing twister's details,
+   kept around in case it despawns mid-grab (e.g. a console twister's lifetime runs out while it has you). */
+let twSt=0,twStT=0,twGrab=null,twCenter={x:0,z:0},twStrength=0,twSuckR0=1,twSpiralA=0,twRagX=0,twRagY=0,twRagZ=0,twDbgPull=0;
+function twStateName(){return['free','sucked','airborne','down','gettingup'][twSt]}
 function twNow(){return Date.now()+CLK.off}   // absolute shared time (clockT() only gives the time of day)
 /* the twister (if any) that square (ci,cj) grows in window k: where it starts, which way it heads, how long it lasts */
 function twPlan(ci,cj,k){
@@ -1424,31 +1820,80 @@ function updateTwisters(dt){
     const d=Math.hypot(at.x-fx,at.z-fz);if(d>260)continue;
     let tw=TW_LIVE.get(pl.id);if(!tw){tw={id:pl.id,warned:false};TW_LIVE.set(pl.id,tw)}
     Object.assign(tw,at);seen.add(pl.id);nearest=Math.min(nearest,d);loud=Math.max(loud,at.s*clamp(1-d/140,0,1)**2);
-    if(S.started&&!tw.warned&&at.s>0.3&&d<120){tw.warned=true;toast(`Twister to the ${compass(at.x-P.x,at.z-P.z)}! Get out of its way, or get down in a deep hole.`,'bad',6000)}
+    if(S.started&&!inTent()&&!tw.warned&&at.s>0.3&&d<120){tw.warned=true;toast(`Twister to the ${compass(at.x-P.x,at.z-P.z)}! Get out of its way, or get down in a deep hole.`,'bad',6000)}
     twVisual(tw,dt);
     if(S.started&&!S.ko)twPush(tw,d,dt);
   }
   for(const[id]of TW_LIVE)if(!seen.has(id)){TW_LIVE.delete(id);const v=twPool.find(p=>p.used===id);if(v){v.used=null;v.g.visible=false}}
   twSound(loud);
-  // tumble through the air after being thrown; the normal pose comes back once you land
-  if(twTumble>0){twTumble-=dt;if(!P.grounded&&me)me.g.rotation.x+=dt*9;else twTumble=0}
   // camera shake the closer you are
-  if(S.started&&nearest<40){const a=clamp(1-nearest/40,0,1)*0.12;camera.position.x+=(Math.random()-0.5)*a;camera.position.y+=(Math.random()-0.5)*a}
+  if(S.started&&!inTent()&&nearest<40){const a=clamp(1-nearest/40,0,1)*0.12;camera.position.x+=(Math.random()-0.5)*a;camera.position.y+=(Math.random()-0.5)*a}
 }
-/* the wind: pulls you toward the funnel, spins you around it, and throws you if you touch it */
+/* the wind: gentle at TW_PULL_R, steep near TW_SUCK_R (real tornadoes don't ramp up smoothly the whole way - you
+   feel almost nothing, then suddenly you're fighting hard), plus a swirl so it drags you around the funnel, not
+   just in. Cross into TW_SUCK_R and twStart() takes over instead of a plain shove. */
 function twPush(tw,d,dt){
+  if(inTent())return;   // inside a tent: sheltered, even though your x/z is still technically "out there"
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
+  if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
   const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
-  const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d,f=1-d/pr;
-  const pull=3.4*tw.s*f,spin=2.2*tw.s*f;                      // walking is 4.3 m/s, so you can get away
+  const sr=Math.max(TW_SUCK_R*tw.s,0.4);
+  if(d<sr){if(twCool<=0)twStart(tw,d);return}
+  const norm=clamp(1-(d-sr)/(pr-sr),0,1),f=Math.pow(norm,TW_PULL_POW);
+  const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d;
+  const pull=TW_PULL_MAX*tw.s*f,spin=TW_SPIN_MAX*tw.s*f;      // walking (4.3) beats it near the rim, sprint (7.2) near mid-range
+  twDbgPull=pull;
   P.x=clamp(P.x+(dx*pull-dz*spin)*dt,-HALF+3,HALF-3);P.z=clamp(P.z+(dz*pull+dx*spin)*dt,-HALF+3,HALF-3);
-  if(d<TW_CORE_R*(0.5+0.5*tw.s)&&twCool<=0){
-    twCool=4;                                                  // a few seconds before it can grab you again
-    const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
-    P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=11;P.y+=0.2;P.grounded=false;twTumble=2;
-    digHeld=false;sfx.hiss();
-    hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
-    if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+}
+/* sucked up: lifts you off the ground and spirals you in toward the core for TW_SUCK_TIME before the throw.
+   No movement control here - the wind has you. Keeps a live ref to the twister (twGrab) but falls back to the last
+   known spot (twCenter/twStrength) if it despawns mid-grab, so a twister expiring never leaves you stuck. */
+function twStart(tw,d){
+  twSt=1;twStT=0;twGrab=tw.id;twCenter={x:tw.x,z:tw.z};twStrength=tw.s;twSuckR0=Math.max(d,0.6);
+  twSpiralA=Math.atan2(P.z-tw.z,P.x-tw.x);P.moving=false;P.anim=0;digHeld=false;
+  if(!S.ko)toast('The wind has you!','bad',2000);
+}
+/* the throw: flings you outward and hurts you same as before, then hands off to the airborne ragdoll tumble */
+function twThrow(tw){
+  twCool=4;                                                    // a few seconds before it can grab you again
+  const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
+  P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=10+tw.s*3;P.grounded=false;
+  twRagX=(Math.random()*2-1)*11;twRagY=(Math.random()*2-1)*7;twRagZ=(Math.random()*2-1)*9;  // mixed axes: a tumble, not a spin
+  twSt=2;twStT=0;digHeld=false;sfx.hiss();
+  hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
+  if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+}
+/* landing: keep a little of the throw's speed as a skid instead of stopping dead, then lie there */
+function twLand(){P.grounded=true;twSt=3;twStT=0;P.anim=3;P.kx*=0.4;P.kz*=0.4}
+/* drives states 1-4 every frame, in place of the normal movement/knockback code in updatePlayer (which it replaces
+   while a twister has you). If S.ko fires mid-sequence (the throw's damage, a lizard, whatever) knockOut() clears
+   twSt itself, so control falls straight back to the normal S.ko handling next frame - no state to get stuck in. */
+function twStep(dt){
+  twStT+=dt;
+  if(twSt===1){                                                 // spiralling up the funnel
+    const tw=TW_LIVE.get(twGrab),cx=tw?tw.x:twCenter.x,cz=tw?tw.z:twCenter.z;
+    const u=clamp(twStT/TW_SUCK_TIME,0,1);
+    twSpiralA+=dt*(4+10*u);const r=lerp(twSuckR0,0.6,u);
+    P.x=clamp(cx+Math.cos(twSpiralA)*r,-HALF+3,HALF-3);P.z=clamp(cz+Math.sin(twSpiralA)*r,-HALF+3,HALF-3);
+    P.y=groundAt(P.x,P.z)+TW_SUCK_RISE*sm(u);P.grounded=false;
+    me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=twSpiralA+Math.PI/2;me.g.rotation.x=lerp(me.g.rotation.x,0,dt*4);me.g.rotation.z+=dt*10;
+    if(twStT>=TW_SUCK_TIME)twThrow(tw||{s:twStrength});
+  }else if(twSt===2){                                           // thrown - tumbling flight
+    P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
+    P.vy-=16*dt;P.y+=P.vy*dt;
+    me.g.rotation.x+=dt*twRagX;me.g.rotation.y+=dt*twRagY;me.g.rotation.z+=dt*twRagZ;
+    const g=groundAt(P.x,P.z);if(P.y<=g){P.y=g;P.vy=0;twLand()}
+    me.g.position.set(P.x,P.y,P.z);
+  }else if(twSt===3){                                           // down - skid dies out, then lie still
+    const f=Math.exp(-dt*5);P.kx*=f;P.kz*=f;
+    if(Math.hypot(P.kx,P.kz)>0.05){P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);P.y=groundAt(P.x,P.z)}
+    animPerson(me,3,dt);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*6));me.g.position.set(P.x,P.y,P.z);
+    if(twStT>=TW_DOWN_TIME){twSt=4;twStT=0}
+  }else if(twSt===4){                                           // getting up
+    const u=clamp(twStT/TW_GETUP_TIME,0,1);
+    me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8));
+    me.g.position.set(P.x,P.y,P.z);
+    if(u>=1){twSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }
 }
 
@@ -1521,6 +1966,10 @@ command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -59
 command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
   run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
 command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
+command('tent',{usage:'tent <A|B|D|C|out>',help:'Teleport straight into (or out of) a tent, for testing.',
+  run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a tent.';exitTent();return'Stepped outside.'}
+    const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such tent. Try A, B, D or C.');
+    if(inTent())exitTent();enterTent(ti);return`Inside ${TENTS[ti].name}.`}});
 
 /* detector */
 let beepT=0,sig=0;
@@ -1542,9 +1991,14 @@ const COOP_TXT={
   drop:s=>`Let go of the ${LOOT[s.pr.type].name}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
+  tentdoor:s=>`Go inside ${TENTS[s.ti].name}`,
+  exit:()=>'Step back outside',
+  bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
 };
 const hq={hp:$('#hpBar'),hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
+  if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
+  else sleepEl.style.display='none';
   hud.seeds.textContent=S.seeds;
   hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
@@ -1565,7 +2019,7 @@ function updateHUD(){
   const s=nearSpot();
   if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
+  else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
@@ -1585,7 +2039,7 @@ function drawMap(){
   mx.fillStyle='#c4955f';mx.fillRect(wx(-40),wz(27),ws(70),ws(29));
   mx.strokeStyle='rgba(43,29,18,.55)';mx.lineWidth=2;mx.strokeRect(wx(-40),wz(27),ws(70),ws(29));
   for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.max(1.6,ws(h.r)),0,6.3);mx.fill()}
-  mx.fillStyle='#8d8f69';for(const x of[-16,-8,0,8])mx.fillRect(wx(x-1.5),wz(45),ws(3)+0.5,ws(4));
+  mx.fillStyle='#8d8f69';for(const t of TENTS)mx.fillRect(wx(t.x-t.hw),wz(t.z-t.hd),ws(t.hw*2),ws(t.hd*2));
   mx.fillStyle='#9b7b58';mx.fillRect(wx(12.5),wz(42.5),ws(7),ws(5));
   mx.fillStyle='#b07650';mx.fillRect(wx(-34),wz(42),ws(8),ws(6));
   mx.fillStyle='#4f8fb8';mx.fillRect(wx(2.5),wz(35),ws(5),ws(2.4));
@@ -1608,7 +2062,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||!$('#fired').hidden}
+function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||!$('#fired').hidden||PAUSE.open}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
@@ -1676,6 +2130,9 @@ $('#dlgClose').onclick=closeDialog;
 
 /* ---------- D Tent blackjack ---------- */
 const BJ={open:false,shoe:[],dealer:[],you:[],bet:10,stake:0,phase:'bet',net:0,busy:false};
+/* how many campers are asleep in bunks, out of how many are connected (server-reported; solo defaults to 1/1) */
+const SLEEP={asleep:0,total:1};
+const sleepEl=(()=>{const e=document.createElement('div');e.style.cssText='position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:40;font:700 15px/1.3 "Barlow Condensed",sans-serif;color:#fff;background:rgba(20,15,10,.72);padding:6px 16px;border-radius:6px;letter-spacing:.02em;display:none;pointer-events:none';document.body.appendChild(e);return e})();
 const SUITS=['♠','♥','♦','♣'],SUIT_NAMES={'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'},RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 function newShoe(){BJ.shoe=[];for(let d=0;d<2;d++)for(const s of SUITS)for(const r of RANKS)BJ.shoe.push({r,s});for(let i=BJ.shoe.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[BJ.shoe[i],BJ.shoe[j]]=[BJ.shoe[j],BJ.shoe[i]]}}
 function drawCard(){if(BJ.shoe.length<15)newShoe();return BJ.shoe.pop()}
@@ -1793,7 +2250,7 @@ function playStep(i,t){
   if(s===2||s===6||s===10||s===14)for(const f of CHORDS[bar])oscAt(t,f,0.13,'square',0.045,null,2400);
 }
 function scheduleMusic(){if(!AC)return;while(nextStep<AC.currentTime+0.12){playStep(stepIdx,nextStep);nextStep+=STEP;stepIdx=(stepIdx+1)%64}}
-function startMusic(){if(!AC||musicTimer)return;if(!partyBus){partyBus=AC.createGain();partyBus.gain.value=0.85;partyBus.connect(master)}if(AC.state==='suspended')AC.resume();nextStep=AC.currentTime+0.05;stepIdx=0;musicTimer=setInterval(scheduleMusic,25)}
+function startMusic(){if(!AC||musicTimer)return;if(!partyBus){partyBus=AC.createGain();partyBus.gain.value=0.85*SETTINGS.volMusic;partyBus.connect(master)}if(AC.state==='suspended')AC.resume();nextStep=AC.currentTime+0.05;stepIdx=0;musicTimer=setInterval(scheduleMusic,25)}
 function stopMusic(){clearInterval(musicTimer);musicTimer=null}
 
 function partyTarget(){if(PARTY.targetId===net.id)return me?{x:P.x,y:P.y,z:P.z}:null;const R=remotes.get(PARTY.targetId);return R?R.p.g.position:null}
@@ -2139,13 +2596,13 @@ function takeBag(items,n){const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
 function holeDepthHere(){return Math.max(0,baseH(P.x,P.z)-P.y)}
-function isTrapped(){return S.started&&!S.ko&&P.grounded&&holeDepthHere()>1.8}
+function isTrapped(){return S.started&&!S.ko&&!inTent()&&P.grounded&&holeDepthHere()>1.8}
 function popOut(){
   const h=holeNear(P.x,P.z,HOLE_R*1.2);let dx=Math.sin(P.fa),dz=Math.cos(P.fa);
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;me.g.rotation.x=0;toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
@@ -2228,7 +2685,7 @@ const VOICE_STALE_MS=6000; // an offer nobody answered (the other side's voice i
 const SPEAK_LVL=0.045; // RMS level above which we consider someone "speaking" for the glow indicator
 const VOX={enabled:false,mode:'ptt',muted:false,localStream:null,peers:new Map(),selfSrc:null,selfAnalyser:null,selfBuf:null};
 let voiceMaster=null; // a sub-bus under the game's master gain, so pressing M mutes voice along with everything else
-function ensureVoiceBus(){if(voiceMaster)return;initAudio();voiceMaster=AC.createGain();voiceMaster.gain.value=VOX.muted?0:1;voiceMaster.connect(master)}
+function ensureVoiceBus(){if(voiceMaster)return;initAudio();voiceMaster=AC.createGain();voiceMaster.gain.value=(VOX.muted?0:1)*SETTINGS.volVoice;voiceMaster.connect(master)}
 function sendRtc(to,d){wsSend({t:'rtc',to,d})}
 function updateVoiceHud(){
   const b=$('#voiceBtn');b.textContent=VOX.enabled?'Voice on':'Voice off';b.setAttribute('aria-pressed',VOX.enabled?'true':'false');
@@ -2357,7 +2814,7 @@ function updateVoice(now){
 }
 $('#voiceBtn').onclick=()=>setVoiceEnabled(!VOX.enabled);
 $('#voiceModeBtn').onclick=()=>{VOX.mode=VOX.mode==='ptt'?'open':'ptt';if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud()};
-$('#voiceMuteBtn').onclick=()=>{VOX.muted=!VOX.muted;if(voiceMaster)voiceMaster.gain.value=VOX.muted?0:1;updateVoiceHud()};
+$('#voiceMuteBtn').onclick=()=>{VOX.muted=!VOX.muted;applyVolume();updateVoiceHud()};
 
 /* ---------- main loop ---------- */
 let last=performance.now(),tAcc=0,mapT=0;
@@ -2371,17 +2828,21 @@ const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null,warned:false};
    "llvmpipe"), which is roughly 10x slower. We warn the player once when that happens, because no in-game setting fixes it. */
 const GPU_NAME=(()=>{try{const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info');return String(ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER))}catch(e){return'unknown'}})();
 const SOFTWARE_GPU=/swiftshader|llvmpipe|software|basic render/i.test(GPU_NAME);
-if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1.35 monospace;white-space:pre;text-align:right;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
+/* pause menu: the element always exists now (so the Options "Show FPS" checkbox has something to toggle);
+   it stays hidden unless #fps is in the address or the setting is on -- see applyFpsVisibility(). */
+PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1.35 monospace;white-space:pre;text-align:right;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';PERF.el.hidden=!/fps/.test(location.hash);document.body.appendChild(PERF.el);
 function perfTick(now,gap){
   if(gap>1500){PERF.frames=0;PERF.t0=now;return}   // tab was hidden (the game pauses): don't count that gap
   if(!PERF.t0)PERF.t0=now;PERF.frames++;
   const span=now-PERF.t0;if(span<2000)return;
   PERF.fps=PERF.frames*1000/span;PERF.frames=0;PERF.t0=now;
-  let pr=PERF.pr;
-  if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
-  else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
-  else PERF.good=0;
-  if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  if(SETTINGS.quality==='auto'){   // fixed Low/Medium/High settings skip this adaptive step entirely (see applyQuality)
+    let pr=PERF.pr;
+    if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
+    else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
+    else PERF.good=0;
+    if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  }
   if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris\nGPU: ${GPU_NAME}`;
   if(SOFTWARE_GPU&&S.started&&!PERF.warned){PERF.warned=true;toast('Your browser is drawing the game without your graphics card, so it will be slow. In Chrome: Settings > System > turn on "Use graphics acceleration when available", then restart Chrome.','bad',15000)}
 }
@@ -2403,6 +2864,225 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass never arrives)
+
+/* =====================================================================
+   PAUSE MENU  (Escape opens/closes it; Resume, Options, Controls, Restart, Quit)
+   Everything the feature owns lives in this one section. Only a handful of one-line
+   hooks sit elsewhere: uiOpen() (so movement/digging/water-drain pause), the
+   keydown/keyup handlers (Escape + the key-remap layer), releaseLock() and the
+   pointerlockchange listener (so losing pointer lock via Escape also opens this),
+   the mouse/touch look code (sensitivity + invert Y), perfTick (fixed render quality),
+   initAudio/noise/tone/startMusic (an Effects bus separate from Music), and one line
+   in startGame() (apply saved volumes once the audio graph exists).
+   ===================================================================== */
+
+/* ---- rebindable actions: id, label shown in the UI, and the default physical key.
+   Movement (forward/back/left/right) always ALSO answers to WASD and the arrow keys,
+   no matter what they're rebound to -- see the "fixed alternative" note in rebuildRemap(). */
+const BIND_DEFS=[
+  {id:'forward',label:'Move forward',def:'w'},{id:'back',label:'Move back',def:'s'},
+  {id:'left',label:'Move left',def:'a'},{id:'right',label:'Move right',def:'d'},
+  {id:'sprint',label:'Sprint',def:'shift'},{id:'jump',label:'Jump / climb out of a hole',def:' '},
+  {id:'dig',label:'Dig (hold)',def:'e'},{id:'use',label:'Use / talk / buy / sell',def:'f'},
+  {id:'onion',label:'Eat an onion',def:'q'},{id:'detector',label:'Toggle the detector',def:'t'},
+  {id:'sound',label:'Mute sound',def:'m'},{id:'firstPerson',label:'First / third person',def:'v'},
+  {id:'crouch',label:'Crouch',def:'c'},{id:'ping',label:'Ping the map',def:'g'},
+  {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
+  {id:'shout1',label:'Shout 1',def:'1'},{id:'shout2',label:'Shout 2',def:'2'},
+  {id:'shout3',label:'Shout 3',def:'3'},{id:'shout4',label:'Shout 4',def:'4'},{id:'shout5',label:'Shout 5',def:'5'},
+  {id:'pushtalk',label:'Push to talk (voice)',def:'b'},
+];
+const RESERVED_KEYS=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','`']);
+const KEY_NAMES={' ':'Space','arrowup':'Up','arrowdown':'Down','arrowleft':'Left','arrowright':'Right','enter':'Enter','shift':'Shift','`':'`'};
+const keyLabel=k=>KEY_NAMES[k]||(k.length===1?k.toUpperCase():k);
+const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
+
+/* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
+const SETTINGS_KEY='cgl-settings';
+const SETTINGS={sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
+  shadows:true,quality:'auto',showFps:false,binds:defaultBinds()};
+function loadSettings(){
+  try{
+    const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
+    for(const k of['sens','touchSens','fov','volMaster','volFx','volMusic','volVoice'])if(Number.isFinite(o[k]))SETTINGS[k]=o[k];
+    if(typeof o.invertY==='boolean')SETTINGS.invertY=o.invertY;
+    if(typeof o.shadows==='boolean')SETTINGS.shadows=o.shadows;
+    if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
+    if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
+    if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
+  }catch(e){}
+}
+function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS))}catch(e){}}
+
+/* ---- key remap layer: turns whatever key is physically pressed into the default key name the rest
+   of the file already checks (KEYS['w'], k==='e', ...), so none of that code had to change. Rebuilt
+   whenever a binding changes. Returns null for a key that isn't bound to anything right now. */
+let REMAP=Object.create(null);
+function rebuildRemap(){
+  REMAP=Object.create(null);
+  for(const k of['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'])REMAP[k]=k;   // fixed alternative: always movement
+  for(const b of BIND_DEFS)REMAP[SETTINGS.binds[b.id]]=b.def;
+}
+const remapKey=pk=>REMAP[pk]||null;
+
+/* ---- apply settings to the live game ---- */
+let fxBus=null;
+function applyVolume(){
+  if(master)master.gain.value=muted?0:SETTINGS.volMaster;
+  if(fxBus)fxBus.gain.value=SETTINGS.volFx;
+  if(partyBus)partyBus.gain.value=0.85*SETTINGS.volMusic;
+  if(voiceMaster)voiceMaster.gain.value=(VOX.muted?0:1)*SETTINGS.volVoice;
+}
+function applyFov(){camera.fov=SETTINGS.fov;camera.updateProjectionMatrix()}
+function applyShadows(){renderer.shadowMap.enabled=SETTINGS.shadows}
+const QUALITY_PR={low:0.65,med:1,high:MAX_PR};
+function applyQuality(){
+  if(SETTINGS.quality==='auto')return;   // perfTick's adaptive step takes it from here
+  const pr=QUALITY_PR[SETTINGS.quality]||MAX_PR;
+  PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight);
+}
+function applyFpsVisibility(){if(PERF.el)PERF.el.hidden=!(SETTINGS.showFps||/fps/.test(location.hash))}
+function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility()}
+
+/* ---- pause state + screens ---- */
+const PAUSE={open:false};
+let voluntaryRelease=false;
+const pauseEl=$('#pause'),pMain=$('#pMain'),pOptionsCard=$('#pOptionsCard'),pControlsCard=$('#pControlsCard'),pConfirmCard=$('#pConfirmCard');
+function overlayBlocking(){return uiOpen()||!$('#admin').hidden||!$('#win').hidden}
+function tryLock(){if(!isTouch)try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+function showPauseScreen(name){
+  stopListening();
+  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';
+}
+function openPause(){
+  if(PAUSE.open||!S.started)return;
+  PAUSE.open=true;digHeld=false;releaseLock();
+  showPauseScreen('main');pauseEl.hidden=false;
+}
+function closePause(){
+  if(!PAUSE.open)return;
+  PAUSE.open=false;pauseEl.hidden=true;tryLock();
+}
+$('#tPause').onclick=()=>{if(S.started&&!overlayBlocking())openPause()};
+if(isTouch)$('#tPause').hidden=false;
+$('#pResume').onclick=closePause;
+$('#pOptions').onclick=()=>{renderOptions();showPauseScreen('options')};
+$('#pOptBack').onclick=()=>showPauseScreen('main');
+$('#pControlsBtn').onclick=()=>{renderControlsList();showPauseScreen('controls')};
+$('#pCtrlBack').onclick=()=>showPauseScreen('main');
+function askConfirm(title,text,yesLabel,onYes){
+  $('#pConfirmTitle').textContent=title;$('#pConfirmText').textContent=text;
+  const yes=$('#pConfirmYes');yes.textContent=yesLabel;yes.onclick=onYes;
+  $('#pConfirmNo').onclick=()=>showPauseScreen('main');
+  showPauseScreen('confirm');
+}
+$('#pRestart').onclick=()=>askConfirm('Restart?',
+  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your seeds, gear, sack, onions, the team\'s quota, or the time of day -- that\'s shared with everyone at camp and already saved.',
+  'Respawn at camp',()=>{respawn();closePause()});
+$('#pQuit').onclick=()=>askConfirm('Quit to title?',
+  'Your progress is saved. You\'ll disconnect from camp and land back on the title screen -- come back any time to pick up where you left off.',
+  'Quit to title',quitToTitle);
+function quitToTitle(){
+  saveSession();
+  S.started=false;   // the existing pagehide listener also calls saveSession(); without this it would re-write the session we're about to clear
+  try{sessionStorage.removeItem('cgl-session')}catch(e){}   // so the reload lands on the title screen instead of auto-resuming
+  if(net.ws)try{net.ws.close()}catch(e){}
+  location.reload();
+}
+
+/* ---- options screen ---- */
+const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('#oTouchSens'),oTouchSensV=$('#oTouchSensV'),
+      oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
+      oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
+      oVolVoice=$('#oVolVoice'),oVolVoiceV=$('#oVolVoiceV'),
+      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality');
+function renderOptions(){
+  oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
+  oInvert.checked=SETTINGS.invertY;
+  oTouchSens.value=SETTINGS.touchSens;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';
+  oFov.value=SETTINGS.fov;oFovV.textContent=SETTINGS.fov+'°';
+  oVolMaster.value=Math.round(SETTINGS.volMaster*100);oVolMasterV.textContent=oVolMaster.value+'%';
+  oVolFx.value=Math.round(SETTINGS.volFx*100);oVolFxV.textContent=oVolFx.value+'%';
+  oVolMusic.value=Math.round(SETTINGS.volMusic*100);oVolMusicV.textContent=oVolMusic.value+'%';
+  oVolVoice.value=Math.round(SETTINGS.volVoice*100);oVolVoiceV.textContent=oVolVoice.value+'%';
+  oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;
+  for(const b of oQuality.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.quality?'true':'false');
+  renderBindList();
+}
+oSens.oninput=()=>{SETTINGS.sens=+oSens.value;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';saveSettings()};
+oInvert.onchange=()=>{SETTINGS.invertY=oInvert.checked;saveSettings()};
+oTouchSens.oninput=()=>{SETTINGS.touchSens=+oTouchSens.value;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';saveSettings()};
+oFov.oninput=()=>{SETTINGS.fov=+oFov.value;oFovV.textContent=SETTINGS.fov+'°';applyFov();saveSettings()};
+oVolMaster.oninput=()=>{SETTINGS.volMaster=+oVolMaster.value/100;oVolMasterV.textContent=oVolMaster.value+'%';applyVolume();saveSettings()};
+oVolFx.oninput=()=>{SETTINGS.volFx=+oVolFx.value/100;oVolFxV.textContent=oVolFx.value+'%';applyVolume();saveSettings()};
+oVolMusic.oninput=()=>{SETTINGS.volMusic=+oVolMusic.value/100;oVolMusicV.textContent=oVolMusic.value+'%';applyVolume();saveSettings()};
+oVolVoice.oninput=()=>{SETTINGS.volVoice=+oVolVoice.value/100;oVolVoiceV.textContent=oVolVoice.value+'%';applyVolume();saveSettings()};
+oShadows.onchange=()=>{SETTINGS.shadows=oShadows.checked;applyShadows();saveSettings()};
+oFps.onchange=()=>{SETTINGS.showFps=oFps.checked;applyFpsVisibility();saveSettings()};
+oQuality.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.quality=b.dataset.v;for(const c of oQuality.children)c.setAttribute('aria-pressed',c===b?'true':'false');applyQuality();saveSettings()};
+
+/* ---- key-binding capture: click a row, press a key. Conflicts get a warning but aren't blocked;
+   the fixed keys (WASD, arrows, Escape, `) can't be reassigned at all. ---- */
+const bindListEl=$('#bindList'),bindWarnEl=$('#bindWarn');
+let listeningFor=null,cancelListen=null;
+function stopListening(){if(cancelListen){document.removeEventListener('keydown',cancelListen,true);cancelListen=null}listeningFor=null}
+function conflictFor(id,key){for(const b of BIND_DEFS)if(b.id!==id&&SETTINGS.binds[b.id]===key)return b.label;return null}
+function renderBindList(){
+  stopListening();bindListEl.textContent='';bindWarnEl.hidden=true;
+  for(const b of BIND_DEFS){
+    const row=document.createElement('div');row.className='bindrow';
+    const span=document.createElement('span');span.textContent=b.label;
+    const btn=document.createElement('button');btn.type='button';btn.className='keybtn';
+    btn.textContent=keyLabel(SETTINGS.binds[b.id]);
+    btn.onclick=()=>startListening(b.id,btn);
+    row.append(span,btn);bindListEl.appendChild(row);
+  }
+}
+function startListening(id,btn){
+  if(listeningFor)return;   // one capture at a time
+  listeningFor=id;btn.classList.add('listening');btn.textContent='Press a key…';bindWarnEl.hidden=true;
+  cancelListen=e=>{
+    e.preventDefault();e.stopPropagation();
+    const key=e.key.toLowerCase();
+    stopListening();
+    if(key==='escape'){renderBindList();return}   // cancel, keep the old binding
+    if(RESERVED_KEYS.has(key)){bindWarnEl.hidden=false;bindWarnEl.textContent=`${keyLabel(key)} is fixed and can't be reassigned.`;renderBindList();return}
+    const clash=conflictFor(id,key);
+    SETTINGS.binds[id]=key;rebuildRemap();saveSettings();
+    for(const kk in KEYS)KEYS[kk]=false;digHeld=false;   // a rebind mid-hold shouldn't leave a key stuck "on"
+    renderBindList();
+    if(clash){bindWarnEl.hidden=false;bindWarnEl.textContent=`Heads up: that key was already "${clash}". It now does both.`}
+  };
+  document.addEventListener('keydown',cancelListen,true);
+}
+$('#bindReset').onclick=()=>{Object.assign(SETTINGS.binds,defaultBinds());rebuildRemap();saveSettings();renderBindList()};
+addEventListener('blur',stopListening);
+
+/* ---- controls screen: one row per action, reading the *current* binding ---- */
+const pControlsListEl=$('#pControlsList');
+function renderControlsList(){
+  pControlsListEl.textContent='';
+  let shownShout=false;
+  for(const b of BIND_DEFS){
+    if(b.id.startsWith('shout')){
+      if(shownShout)continue;shownShout=true;
+      const div=document.createElement('div');
+      div.innerHTML=BIND_DEFS.filter(d=>d.id.startsWith('shout')).map(d=>`<kbd>${keyLabel(SETTINGS.binds[d.id])}</kbd>`).join('')+' Shout 1-5';
+      pControlsListEl.appendChild(div);continue;
+    }
+    const div=document.createElement('div');
+    div.innerHTML=`<kbd>${keyLabel(SETTINGS.binds[b.id])}</kbd> ${b.label}`;
+    pControlsListEl.appendChild(div);
+  }
+  const note=document.createElement('div');note.style.cssText='grid-column:1/-1;color:var(--ink-soft);font-size:13px;padding-top:6px';
+  note.textContent='Click the game to lock the mouse and look around. WASD and the arrow keys always move you too, even when rebound.';
+  pControlsListEl.appendChild(note);
+}
+
+loadSettings();
+applySettings();
+
 {const R0=loadSession();if(R0)startGame(R0)}
 /* test hook for screenshots: #shot, #shot-fp, #shot-night, #shot-far */
 if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startGame();
@@ -2417,6 +3097,9 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC};
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
+  twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
+  PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
+  VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC};
 })();
 </script>
