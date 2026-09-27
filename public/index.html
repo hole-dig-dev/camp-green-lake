@@ -1965,8 +1965,13 @@ let last=performance.now(),tAcc=0,mapT=0;
    0.75x the screen's resolution); after 6 smooth seconds at 57+ fps, step back up toward full. Drawing fewer pixels is
    the quickest way to get frames back on phones and older laptops. The HUD is HTML, so its text stays sharp.
    Add #fps to the page address to see the frame rate and current resolution in the corner. */
-const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null};
-if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1 monospace;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
+const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null,warned:false};
+/* Which graphics chip the browser is drawing with. If Chrome can't use the real GPU (hardware acceleration switched
+   off in settings, a blocklisted driver, remote desktop), it falls back to drawing on the CPU ("SwiftShader",
+   "llvmpipe"), which is roughly 10x slower. We warn the player once when that happens, because no in-game setting fixes it. */
+const GPU_NAME=(()=>{try{const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info');return String(ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER))}catch(e){return'unknown'}})();
+const SOFTWARE_GPU=/swiftshader|llvmpipe|software|basic render/i.test(GPU_NAME);
+if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1.35 monospace;white-space:pre;text-align:right;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
 function perfTick(now,gap){
   if(gap>1500){PERF.frames=0;PERF.t0=now;return}   // tab was hidden (the game pauses): don't count that gap
   if(!PERF.t0)PERF.t0=now;PERF.frames++;
@@ -1977,7 +1982,8 @@ function perfTick(now,gap){
   else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
   else PERF.good=0;
   if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
-  if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris`;
+  if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris\nGPU: ${GPU_NAME}`;
+  if(SOFTWARE_GPU&&S.started&&!PERF.warned){PERF.warned=true;toast('Your browser is drawing the game without your graphics card, so it will be slow. In Chrome: Settings > System > turn on "Use graphics acceleration when available", then restart Chrome.','bad',15000)}
 }
 function frame(now){
   perfTick(now,now-last);
