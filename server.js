@@ -34,6 +34,7 @@ const CHAT_RANGE = 30, HELP_RANGE = 3.5;
 // SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
 // (checked in the message handler) instead of loosening the limit for everyone. maxPayload below must cover it.
 const RTC_MAX = 8192, GEN_MAX = 1024, LOG_MAX = 8192;
+const LOG_BURST = 60, LOG_RATE = 0.012; // per-client play-test log budget: 60 events at once, refilling 12/s
 // STUN only by default (no TURN server exists yet). Set ICE_SERVERS to a JSON array of RTCIceServer objects,
 // e.g. '[{"urls":"turn:host:3478","username":"u","credential":"p"}]', to add a TURN server later.
 const ICE_SERVERS = (() => {
@@ -261,7 +262,7 @@ wss.on('connection', (ws, req) => {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
     n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
     digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
-    lastPosLogT: 0, logTokens: 30, lastLog: Date.now(), // play-test logging (see logger.js)
+    lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
   clients.set(c.id, c);
   // A camper who never joins (never sends a valid 'join', e.g. wrong/no password, or just sits on the title screen) doesn't get to hold a socket open forever.
@@ -501,10 +502,13 @@ wss.on('connection', (ws, req) => {
         // report. A separate token bucket (from the gameplay one above) so a chatty client can't crowd out play
         // messages, and vice versa.
         if (!Array.isArray(m.ev) || !m.ev.length) return;
-        c.logTokens = Math.min(30, c.logTokens + (now - c.lastLog) * 0.006); c.lastLog = now;
-        const items = m.ev.slice(0, 24);
-        if (c.logTokens < items.length) return;
+        c.logTokens = Math.min(LOG_BURST, c.logTokens + (now - c.lastLog) * LOG_RATE); c.lastLog = now;
+        // Keep whatever fits the budget instead of dropping the whole batch (bursts are exactly when you need the
+        // log), client errors first, and note how many were dropped so a gap in the log is visible, not silent.
+        const all = m.ev.slice(0, 24).sort((a, b) => (b && b.k === 'err') - (a && a.k === 'err'));
+        const items = all.slice(0, Math.max(0, Math.floor(c.logTokens)));
         c.logTokens -= items.length;
+        if (items.length < all.length) LOG.log('logDropped', { id: c.id, n: c.n, dropped: all.length - items.length });
         for (const e of items) {
           if (!e || typeof e !== 'object' || typeof e.k !== 'string' || !LOG_TYPE_RE.test(e.k)) continue;
           const f = sanitizeLogFields(e); delete f.k;
