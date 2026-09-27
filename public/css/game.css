@@ -1,12 +1,102 @@
 :root{
   color-scheme: light;
-  --canvas:#efe2c4; --canvas-2:#e2cea4; --ink:#2b1d12; --ink-soft:#6b523a;
-  --jump:#e8742a; --jump-deep:#b9531a; --lizard:#e3c83a; --water:#4f8fb8; --danger:#b8321f; --leaf:#5f7a3a;
+  /* ---- desert-camp token set (docs/ui-redesign-spec.md section 1) ---- */
+  --canvas:#F2E7CD; --canvas-2:#DFCCA6; --canvas-deep:#C5A979;
+  --ink:#281D15; --ink-soft:#654E38; --ink-muted:#786A56;
+  --jump:#D96529; --jump-deep:#A9471F;
+  --lizard:#D7BF43; --water:#397FA5; --danger:#AD392B; --leaf:#587347; --brass:#B48A3B;
+  --night-paper:#232A29; --night-ink:#EDE2C8;
+  --scrim: rgba(24,17,11,.72);
   --display:"Big Shoulders Stencil Display","Impact","Arial Narrow",sans-serif;
   --ui:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  /* spacing scale */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+  /* corners */
+  --r-card:4px; --r-control:3px; --r-pill:999px;
+  /* frame shadow + dividers */
+  --shadow-frame: 0 4px 0 rgba(40,29,21,.45);
+  --divider: rgba(40,29,21,.2);
+  /* motion */
+  --dur-press:120ms; --dur-panel:180ms; --dur-confirm:240ms;
+  --ease-ui: cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --dur-press:0ms; --dur-panel:0ms; --dur-confirm:0ms; }
 }
 html,body{height:100%}
 [hidden]{display:none!important}
+
+/* =====================================================================
+   Shared UI component library (docs/ui-redesign-spec.md section 1 & 5)
+   Camp-issued equipment meets sun-bleached roadside store: stamped canvas,
+   crate wood, worn orange paint, restrained brass. No backdrop-filter, no
+   image assets -- flat color, borders, sparse lines, inline SVG marks only.
+   ===================================================================== */
+.ui-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* icon sprite use sites: 1em square by default, currentColor stroke */
+.ui-icon{width:1.2em;height:1.2em;flex:none;fill:none;stroke:currentColor;stroke-width:2;vertical-align:-0.2em}
+.ui-icon--lg{width:1.6em;height:1.6em}
+
+/* -- buttons -- */
+.ui-button{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:44px;padding:10px 16px;border:2px solid var(--ink);border-radius:var(--r-control);
+  font:700 16px/1.1 var(--ui);letter-spacing:.03em;text-transform:uppercase;
+  background:var(--canvas-2);color:var(--ink);box-shadow:0 3px 0 var(--ink);cursor:pointer;
+  transition:transform var(--dur-press) var(--ease-ui),box-shadow var(--dur-press) var(--ease-ui),background var(--dur-press) var(--ease-ui);
+  -webkit-tap-highlight-color:transparent;
+}
+.ui-button:hover{background:#d8c090}
+.ui-button:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+.ui-button:disabled,.ui-button[aria-disabled="true"]{background:#b9a888;color:#efe2c4;border-color:#8b7c60;cursor:not-allowed;box-shadow:0 3px 0 #8b7c60;transform:none}
+.ui-button:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+.ui-button--primary{background:var(--jump);color:#fff8ea}
+.ui-button--primary:hover{background:var(--jump-deep)}
+.ui-button--secondary{background:var(--canvas-2);color:var(--ink)}
+.ui-button--quiet{background:transparent;color:var(--ink);box-shadow:none;border-color:var(--ink-soft)}
+.ui-button--quiet:hover{background:rgba(40,29,21,.08)}
+.ui-button--danger{background:var(--danger);color:#fff4e0}
+.ui-button--danger:hover{background:#8f2c20}
+.ui-button--sm{min-height:36px;padding:6px 10px;font-size:13px}
+.ui-button[aria-pressed="true"]{outline:3px solid var(--brass);outline-offset:2px}
+
+/* -- panels / cards -- */
+.ui-panel{
+  background:var(--canvas);border:2px solid var(--ink);border-radius:var(--r-card);
+  box-shadow:var(--shadow-frame);position:relative;
+}
+/* corner "registration marks" -- a sparse material cue instead of a texture overlay */
+.ui-panel--notched::before,.ui-panel--notched::after{
+  content:"";position:absolute;top:6px;width:10px;height:10px;pointer-events:none;
+  border-top:2px solid var(--ink-muted);opacity:.55;
+}
+.ui-panel--notched::before{left:6px;border-left:2px solid var(--ink-muted)}
+.ui-panel--notched::after{right:6px;border-right:2px solid var(--ink-muted)}
+
+.ui-card{
+  background:var(--canvas-2);border:1px solid var(--divider);border-radius:var(--r-card);
+  padding:var(--sp-3);
+}
+
+.ui-badge{
+  display:inline-flex;align-items:center;gap:4px;font:700 12px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:var(--r-pill);background:var(--ink);color:var(--canvas);
+}
+.ui-badge--brass{background:var(--brass);color:#2b1d12}
+.ui-badge--leaf{background:var(--leaf);color:#f6f0dc}
+.ui-badge--danger{background:var(--danger);color:#fff4e0}
+.ui-badge--muted{background:var(--canvas-deep);color:var(--ink-soft)}
+
+.ui-meter{height:10px;border:2px solid var(--ink);background:#fff6e2;border-radius:2px;overflow:hidden}
+.ui-meter > i{display:block;height:100%;background:var(--water);transition:width .2s var(--ease-ui)}
+
+.ui-kbd{font:700 13px/1 var(--ui);background:var(--ink);color:var(--canvas);padding:3px 7px;border-radius:2px;min-width:14px;text-align:center;display:inline-block}
+
+.ui-divider{border:0;border-top:1px solid var(--divider);margin:var(--sp-2) 0}
+.ui-divider--dashed{border-top:1px dashed var(--ink-soft);opacity:.7}
+
+@media (prefers-reduced-motion:reduce){.ui-button{transition:none}}
 body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
 #game{position:fixed;inset:0}
 #game canvas{display:block;width:100%;height:100%;cursor:crosshair}
