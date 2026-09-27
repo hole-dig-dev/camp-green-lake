@@ -37,6 +37,10 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .bar{height:10px;border:2px solid var(--ink);background:#fff6e2;border-radius:2px;overflow:hidden;flex:1}
 .bar i{display:block;height:100%;width:100%;background:var(--water);transition:width .2s}
 .bar.low i{background:var(--danger)}
+.bar.hp i{background:var(--leaf)}
+.bar.hp.low i{background:var(--danger)}
+/* red edge flash when you take damage (opacity driven from updateHealth) */
+#hurtFx{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(184,50,31,0) 55%,rgba(184,50,31,.55) 100%)}
 .bar.xp i{background:#d4af37}
 #fired{background:rgba(30,0,0,.7);z-index:50}
 #fired h2{font:900 56px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;color:#b3261e}
@@ -163,6 +167,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 </style>
 
 <div id="game"></div>
+<div id="hurtFx"></div>
 <div id="labels"></div>
 
 <div id="hud" class="hud" hidden>
@@ -171,6 +176,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
     <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
     <div class="meter"><span class="k" id="lvK">LV 1</span><div class="bar xp"><i id="xpBar" style="width:0"></i></div></div>
+    <div class="meter"><span class="k">Health</span><div class="bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
     <div class="meter"><span class="k">Water</span><div class="bar" id="waterWrap"><i id="waterBar"></i></div></div>
     <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
     <div class="row"><span class="k" id="curK">Curfew in</span><span class="v" id="curfew">9:30</span></div>
@@ -854,8 +860,8 @@ const sfx={
 };
 
 /* ---------- game state ---------- */
-const S={started:false,seeds:20,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0};
-const P={x:0,z:39,y:0,vy:0,fa:Math.PI,yaw:0,pitch:0.32,digT:0,digPh:0,anim:0,grounded:true,moving:false};
+const S={started:false,seeds:20,hp:100,hurtT:99,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0};
+const P={x:0,z:39,y:0,vy:0,kx:0,kz:0,fa:Math.PI,yaw:0,pitch:0.32,digT:0,digPh:0,anim:0,grounded:true,moving:false};
 P.y=groundAt(P.x,P.z);
 let me=null,meL=null;
 const KEYS={};let digHeld=false;
@@ -968,11 +974,11 @@ $('#shopClose').onclick=closeShop;
 
 /* KO */
 function knockOut(title,text){
-  if(S.ko)return;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
+  if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){S.ko=0;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();me.g.rotation.x=0}
+function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();me.g.rotation.x=0}
 
 /* win */
 function triggerWin(who,mine){
@@ -1024,7 +1030,7 @@ addEventListener('keydown',e=>{
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}
   if(k>='1'&&k<='5')shout(+k-1);
-  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('twister')){net.typed='';spawnTestTwister()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
 });
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false});
@@ -1223,6 +1229,11 @@ function updatePlayer(dt){
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
     }else P.anim=0;
   }
+  /* knockback: something (a twister) threw you. Carries you through the air, then you skid to a stop on landing. */
+  if(P.kx||P.kz){
+    P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
+    const f=P.grounded?Math.exp(-dt*5):Math.exp(-dt*0.2);P.kx*=f;P.kz*=f;if(Math.hypot(P.kx,P.kz)<0.3)P.kx=P.kz=0;
+  }
   const g=groundAt(P.x,P.z);
   if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=5.6;P.grounded=false}
   P.vy-=16*dt;P.y+=P.vy*dt;
@@ -1235,7 +1246,7 @@ function updatePlayer(dt){
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
   S.water=Math.max(0,S.water-drain*dt*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1));
-  if(S.water<=0)knockOut('Heatstroke','You ran out of water in the sun.');
+  // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
@@ -1272,6 +1283,151 @@ function updateLizards(dt,t){
   }
 }
 
+/* ---------- health ---------- */
+/* Health runs 0-100. Damage takes it down, and at 0 you're downed like any other knockout (your sack drops, and
+   friends can pick you up). It heals on its own: once you've gone HEAL_DELAY seconds without getting hurt, it comes
+   back at HEAL_RATE per second (about a minute from nearly empty to full). Running out of water drains it instead
+   of healing it. Lizard bites, the police and Madame Zeroni still knock you out outright. */
+const HP_MAX=100,HEAL_DELAY=5,HEAL_RATE=1.5,THIRST_DPS=4,REVIVE_HP=40;
+let hurtFx=0;
+function hurt(n,title,text){
+  if(!S.started||S.ko||n<=0)return;
+  S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);sfx.thud();
+  if(S.hp<=0)knockOut(title,text);
+}
+function updateHealth(dt){
+  hurtFx=Math.max(0,hurtFx-dt*1.2);$('#hurtFx').style.opacity=hurtFx.toFixed(2);
+  if(S.ko)return;
+  S.hurtT+=dt;
+  if(S.water<=0&&!uiOpen()&&!PARTY.on){
+    if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and losing health. Get to Mr. Sir for a refill.','bad',5000)}
+    S.hurtT=0;S.hp=Math.max(0,S.hp-THIRST_DPS*dt);hurtFx=Math.max(hurtFx,0.25);
+    if(S.hp<=0)knockOut('Heatstroke','You ran out of water in the sun.');
+  }else{
+    if(S.water>0)S.thirsty=false;
+    if(S.hurtT>=HEAL_DELAY)S.hp=Math.min(HP_MAX,S.hp+HEAL_RATE*dt);
+  }
+}
+
+/* ---------- twisters ---------- */
+/* Twisters form out on the lake during the day and wander for a minute or two.
+   Every camper sees the same twisters without the server sending anything: they're worked out from the shared camp
+   clock and a fixed random seed. The lake is split into TW_CELL-sized squares, and in every TW_WIN window each
+   square has a TW_CHANCE chance of growing one. Only the squares around you are checked, so wherever you are,
+   twisters can show up nearby.
+   Get within TW_PULL_R and the wind drags you in (you can outrun it). Touch the funnel and you're thrown through the
+   air and lose TW_DMG health. They weaken and fall apart near camp, die down at night, and can't reach you while
+   you're down in a hole deeper than 4 feet. Type "twister" in game to summon a test one that only you can see. */
+const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2,TW_PULL_R=18,TW_CORE_R=3.2,TW_DMG=30,TW_SAFE_DEPTH=1.2;
+const TW_LIVE=new Map();   // id -> twister currently near you: {x,z,s (strength 0-1), ...}
+let twTest=null,twCool=0,twTumble=0,twWind=null;
+function twNow(){return Date.now()+CLK.off}   // absolute shared time (clockT() only gives the time of day)
+/* the twister (if any) that square (ci,cj) grows in window k: where it starts, which way it heads, how long it lasts */
+function twPlan(ci,cj,k){
+  const r=mulberry32((((ci+64)*131+(cj+64))*2654435761^(k*40503))>>>0);r();
+  if(r()>TW_CHANCE)return null;
+  return{id:ci+','+cj+','+k,x0:(ci+r())*TW_CELL,z0:(cj+r())*TW_CELL,a:r()*Math.PI*2,ph:r()*6.28,t0:k*TW_WIN+r()*20000,life:80+r()*30};
+}
+/* where a planned twister is at time T, and how strong it is (0 = not there) */
+function twAt(pl,T){
+  const e=(T-pl.t0)/1000;if(e<0||e>pl.life)return null;
+  const x=pl.x0+Math.cos(pl.a)*TW_SPEED*e+Math.sin(e*0.11+pl.ph)*14,z=pl.z0+Math.sin(pl.a)*TW_SPEED*e+Math.cos(e*0.09+pl.ph)*14;
+  let s=sm(e/10)*sm((pl.life-e)/10);                           // grows for 10 s, dies down over the last 10 s
+  s*=clamp((campDist(x,z)-15)/35,0,1);                         // falls apart as it nears camp
+  s*=1-nightF();                                               // only during the day
+  if(Math.max(Math.abs(x),Math.abs(z))>EDGE-10)s=0;           // off the edge of the lake
+  return{x,z,s,e};
+}
+function spawnTestTwister(){
+  const a=P.yaw+Math.PI+(Math.random()-0.5)*0.6,x=P.x+Math.sin(a)*45,z=P.z+Math.cos(a)*45;   // ~45 m in front of the camera
+  twTest={id:'test',x0:x,z0:z,a:Math.atan2(P.z-z,P.x-x),ph:Math.random()*6,t0:twNow(),life:70};
+  toast('Test twister summoned (only you can see it).','',2500);
+}
+
+/* looks: three swirling funnel layers + a dust skirt + flying debris. The funnel bends with a small vertex-shader
+   tweak (uTime), and a few pooled visuals are reused so twisters coming and going never allocate new meshes. */
+const twU={uTime:{value:0}};
+const twTex=(()=>{const c=document.createElement('canvas');c.width=64;c.height=256;const x=c.getContext('2d');
+  x.fillStyle='rgba(255,255,255,0.55)';x.fillRect(0,0,64,256);   // solid dusty base so the funnel reads from a distance
+  for(let i=0;i<46;i++){x.strokeStyle=`rgba(255,255,255,${0.15+Math.random()*0.55})`;x.lineWidth=2+Math.random()*6;const y=Math.random()*256;x.beginPath();x.moveTo(-10,y);x.lineTo(74,y-40-Math.random()*40);x.stroke()}
+  const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;return t})();
+function twMat(color,op){
+  const m=new T.MeshBasicMaterial({color,map:twTex,transparent:true,opacity:op,depthWrite:false,side:T.DoubleSide});
+  m.onBeforeCompile=sh=>{sh.uniforms.uTime=twU.uTime;
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uTime;').replace('#include <begin_vertex>',
+      '#include <begin_vertex>\nfloat hh=position.y+15.0;transformed.x+=sin(uTime*1.1+hh*0.09)*hh*0.09;transformed.z+=cos(uTime*0.8+hh*0.07)*hh*0.07;')};
+  m.userData.op=op;return m;
+}
+const TW_FUNNEL=new T.CylinderGeometry(7.5,1.1,30,20,14,true);TW_FUNNEL.translate(0,15,0);
+const TW_SKIRT=new T.CylinderGeometry(3.2,6.5,3.2,20,1,true);TW_SKIRT.translate(0,1.2,0);
+const TW_DEBRIS_N=70;
+const twPool=[];
+for(let i=0;i<3;i++){
+  const g=new T.Group();g.visible=false;scene.add(g);
+  const layers=[[1,0xb8905e,0.7],[0.78,0xd2ad7c,0.6],[0.55,0x8e6a44,0.75]].map(([sc,c,op])=>{const m=new T.Mesh(TW_FUNNEL,twMat(c,op));m.scale.set(sc,1,sc);m.renderOrder=2;g.add(m);return m});
+  const skirt=new T.Mesh(TW_SKIRT,twMat(0xc99a66,0.5));skirt.renderOrder=2;g.add(skirt);
+  const deb=new T.InstancedMesh(new T.BoxGeometry(0.28,0.12,0.2),M(0x7a5a3a),TW_DEBRIS_N);deb.frustumCulled=false;deb.instanceMatrix.setUsage(T.DynamicDrawUsage);g.add(deb);
+  const seeds=Array.from({length:TW_DEBRIS_N},()=>({a:Math.random()*6.28,h:Math.random(),sp:1.5+Math.random()*2.5}));
+  twPool.push({g,layers,skirt,deb,seeds,used:null});
+}
+function twVisual(tw,dt){
+  let v=twPool.find(p=>p.used===tw.id)||twPool.find(p=>!p.used);if(!v)return;v.used=tw.id;
+  const g=v.g;g.visible=true;g.position.set(tw.x,groundAt(tw.x,tw.z)-0.3,tw.z);
+  const w=0.35+0.65*tw.s;g.scale.set(w,0.5+0.5*tw.s,w);
+  v.layers.forEach((m,i)=>{m.rotation.y+=dt*(3+i*1.7);m.material.opacity=m.material.userData.op*tw.s});
+  v.skirt.rotation.y-=dt*4;v.skirt.material.opacity=v.skirt.material.userData.op*tw.s;
+  for(let i=0;i<TW_DEBRIS_N;i++){const d=v.seeds[i];d.a+=dt*d.sp*(2.2-d.h);d.h+=dt*0.12;if(d.h>1)d.h=0;
+    const r=1.2+d.h*7,y=d.h*26;dummy.position.set(Math.cos(d.a)*r,y,Math.sin(d.a)*r);dummy.rotation.set(d.a*3,d.a*2,0);dummy.scale.setScalar(tw.s);dummy.updateMatrix();v.deb.setMatrixAt(i,dummy.matrix)}
+  v.deb.instanceMatrix.needsUpdate=true;
+}
+function twSound(level){
+  if(!AC)return;
+  if(!twWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=380;twWind=AC.createGain();twWind.gain.value=0;src.connect(f).connect(twWind).connect(master);src.start()}
+  twWind.gain.setTargetAtTime(level*0.6,AC.currentTime,0.3);
+}
+
+function updateTwisters(dt){
+  twU.uTime.value+=dt;twCool=Math.max(0,twCool-dt);
+  const T0=twNow(),k=Math.floor(T0/TW_WIN),fx=S.started?P.x:0,fz=S.started?P.z:12;
+  const ci=Math.floor(fx/TW_CELL),cj=Math.floor(fz/TW_CELL),seen=new Set();
+  // which twisters are around right now: this window's and the last one's (a twister can run past its window)
+  const plans=[];
+  for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)}
+  if(twTest)plans.push(twTest);
+  let nearest=1e9,loud=0;
+  for(const pl of plans){
+    const at=twAt(pl,T0);if(!at||at.s<=0.01){if(pl===twTest&&(!at||at.e>pl.life-0.1))twTest=null;continue}
+    const d=Math.hypot(at.x-fx,at.z-fz);if(d>260)continue;
+    let tw=TW_LIVE.get(pl.id);if(!tw){tw={id:pl.id,warned:false};TW_LIVE.set(pl.id,tw)}
+    Object.assign(tw,at);seen.add(pl.id);nearest=Math.min(nearest,d);loud=Math.max(loud,at.s*clamp(1-d/140,0,1)**2);
+    if(S.started&&!tw.warned&&at.s>0.3&&d<120){tw.warned=true;toast(`Twister to the ${compass(at.x-P.x,at.z-P.z)}! Get out of its way, or get down in a deep hole.`,'bad',6000)}
+    twVisual(tw,dt);
+    if(S.started&&!S.ko)twPush(tw,d,dt);
+  }
+  for(const[id]of TW_LIVE)if(!seen.has(id)){TW_LIVE.delete(id);const v=twPool.find(p=>p.used===id);if(v){v.used=null;v.g.visible=false}}
+  twSound(loud);
+  // tumble through the air after being thrown; the normal pose comes back once you land
+  if(twTumble>0){twTumble-=dt;if(!P.grounded&&me)me.g.rotation.x+=dt*9;else twTumble=0}
+  // camera shake the closer you are
+  if(S.started&&nearest<40){const a=clamp(1-nearest/40,0,1)*0.12;camera.position.x+=(Math.random()-0.5)*a;camera.position.y+=(Math.random()-0.5)*a}
+}
+/* the wind: pulls you toward the funnel, spins you around it, and throws you if you touch it */
+function twPush(tw,d,dt){
+  if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
+  const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
+  const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d,f=1-d/pr;
+  const pull=3.4*tw.s*f,spin=2.2*tw.s*f;                      // walking is 4.3 m/s, so you can get away
+  P.x=clamp(P.x+(dx*pull-dz*spin)*dt,-HALF+3,HALF-3);P.z=clamp(P.z+(dz*pull+dx*spin)*dt,-HALF+3,HALF-3);
+  if(d<TW_CORE_R*(0.5+0.5*tw.s)&&twCool<=0){
+    twCool=4;                                                  // a few seconds before it can grab you again
+    const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
+    P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=11;P.y+=0.2;P.grounded=false;twTumble=2;
+    digHeld=false;sfx.hiss();
+    hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
+    if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+  }
+}
+
 /* detector */
 let beepT=0,sig=0;
 function updateDetector(dt){
@@ -1293,7 +1449,7 @@ const COOP_TXT={
   prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
 };
-const hq={quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
+const hq={hp:$('#hpBar'),hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   hud.seeds.textContent=S.seeds;
   hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
@@ -1303,6 +1459,7 @@ function updateHUD(){
    if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
    else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';hc.cur.classList.toggle('warn',!!CUR.hunter)}
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
+  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';hq.hpWrap.classList.toggle('low',hp<0.3)}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';hud.wrap.classList.toggle('low',w<0.25);
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
@@ -1342,6 +1499,7 @@ function drawMap(){
   mx.fillStyle='rgba(43,29,18,.45)';for(const b of bots){mx.beginPath();mx.arc(wx(b.p.g.position.x),wz(b.p.g.position.z),3,0,6.3);mx.fill()}
   for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
   for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
+  for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
@@ -1893,7 +2051,7 @@ function popOut(){
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0;toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;me.g.rotation.x=0;toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
@@ -1988,7 +2146,8 @@ function perfTick(now,gap){
 function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
-  if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt)}else titleCamera(dt);
+  if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
+  updateTwisters(dt);
   updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
@@ -2016,6 +2175,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot};
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,spawnTestTwister,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot};
 })();
 </script>
