@@ -3,7 +3,12 @@
 /* ---------- HUD + minimap ---------- */
 const hud={seeds:$('#seeds'),water:$('#waterBar'),wrap:$('#waterWrap'),depth:$('#depth'),sack:$('#sack'),onions:$('#onions'),tools:$('#tools'),det:$('#detector'),sig:$('#sigBar'),prompt:$('#prompt')};
 let hudT=0,lastTools='';
-const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow'),back:$('#back')};
+const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),curIcon:$('#curfewIcon'),backRow:$('#backRow'),back:$('#back')};
+const hw={hpWarn:$('#hpWarn'),waterWarn:$('#waterWarn'),onionRow:$('#onionRow'),battRow:$('#battRow'),depthChip:$('#depthChip'),crosshair:$('#crosshair')};
+/* bottom-right tool glyphs: icon + a visually-hidden accessible label, per spec 4 ("hide tool
+   names behind icons plus accessible labels"). Falls back to a small text badge for anything not
+   in this table rather than silently dropping it. */
+const TOOL_ICON={'Spade':'shovel','Rusty shovel':'shovel','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zero is helping':'teammate',onion:'onion'};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
@@ -22,19 +27,33 @@ function updateHUD(){
   hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
+  let curWarn=false;
   {const t=clockT();hc.clock.textContent=clockText();
-   if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
-   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';hc.cur.classList.toggle('warn',!!CUR.hunter)}
+   if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);curWarn=left<60}
+   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';curWarn=!!CUR.hunter}
+   hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
-  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';hq.hpWrap.classList.toggle('low',hp<0.3)}
-  const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';hud.wrap.classList.toggle('low',w<0.25);
+  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';const low=hp<0.3;hq.hpWrap.classList.toggle('low',low);hw.hpWarn.hidden=!low}
+  const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
+  {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
+   hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
+  hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
   const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
+  hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
+  hw.battRow.hidden=!(S.light||S.batt<30);
   const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
-  if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){const s=document.createElement('span');if(t==='onion'){s.className='onion';s.textContent='Onion breath'}else s.textContent=t;hud.tools.appendChild(s)}}
-  hud.det.hidden=!S.up.detector;hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
+  if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
+    const label=t==='onion'?'Onion breath':t,icon=TOOL_ICON[t];
+    const s=document.createElement('span');s.setAttribute('title',label);
+    if(icon){s.className='tool-badge'+(t==='onion'?' onion':'');s.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-${icon}"></use></svg><span class="ui-sr-only">${label}</span>`}
+    else{s.className='tool-badge--text';s.textContent=label}
+    hud.tools.appendChild(s);
+  }}
+  hud.det.hidden=!(S.up.detector&&S.detOn);hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
+  updateCrosshair();
   const s=nearSpot();
   if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
@@ -42,6 +61,14 @@ function updateHUD(){
   else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
+}
+/* static four-stroke reticle: never moves or redraws, just toggles hidden/active (docs/ui-redesign-
+   spec.md section 4). Visible only while the mouse is actually captured for look -- hidden on
+   touch devices (no pointer lock there) and while any overlay/menu has focus. */
+function updateCrosshair(){
+  const show=S.started&&!S.ko&&!isTouch&&!uiOpen()&&!PAUSE.open&&lockOk();
+  hw.crosshair.hidden=!show;
+  if(show)hw.crosshair.classList.toggle('active',digHeld||!!nearSpot());
 }
 function idxAt(x,z){const c=clamp(Math.round((x+HALF)/RES),0,N-1),r=clamp(Math.round((z+HALF)/RES),0,N-1);return r*N+c}
 const mm=$('#minimap'),mx=mm.getContext('2d');

@@ -18,7 +18,30 @@ function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!twSt;if(!vm.visible
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}
-function toast(msg,cls,ms){const el=document.createElement('div');el.className='toast '+(cls||'');el.textContent=msg;const box=$('#toasts');box.appendChild(el);while(box.children.length>4)box.firstChild.remove();setTimeout(()=>el.remove(),ms||3600)}
+/* toast variants (docs/ui-redesign-spec.md section 4): existing call sites keep passing the old
+   class names ('good'/'gold'/'bad'/'') -- toast() maps them to the spec's success/reward/warning/
+   neutral vocabulary (and picks an icon) so nothing elsewhere needs to change. An identical
+   message+variant within 2s refreshes the existing toast's timer instead of stacking a duplicate. */
+const TOAST_VARIANT={good:'success',gold:'reward',bad:'warning','':'neutral'};
+const TOAST_ICON={success:'check',reward:'seed',warning:'lizard',neutral:'ping'};
+const recentToasts=new Map();
+function toast(msg,cls,ms){
+  const variant=TOAST_VARIANT[cls||'']||'neutral',key=variant+'|'+msg,now=performance.now();
+  const dup=recentToasts.get(key);
+  if(dup&&now-dup.t<2000){
+    dup.t=now;clearTimeout(dup.timer);dup.timer=setTimeout(()=>{dup.el.remove();recentToasts.delete(key)},ms||3600);
+    dup.el.classList.remove('toast--refresh');void dup.el.offsetWidth;dup.el.classList.add('toast--refresh');
+    return;
+  }
+  const el=document.createElement('div');el.className=`toast toast--${variant}`;el.setAttribute('role','status');
+  const icon=document.createElement('span');icon.className='toast__icon';icon.setAttribute('aria-hidden','true');
+  icon.innerHTML=`<svg class="ui-icon"><use href="#icon-${TOAST_ICON[variant]}"></use></svg>`;
+  const txt=document.createElement('span');txt.className='toast__text';txt.textContent=msg;
+  el.append(icon,txt);
+  const box=$('#toasts');box.appendChild(el);while(box.children.length>4){const old=box.firstChild;for(const[k,v]of recentToasts)if(v.el===old){clearTimeout(v.timer);recentToasts.delete(k);break}old.remove()}
+  const timer=setTimeout(()=>{el.remove();recentToasts.delete(key)},ms||3600);
+  recentToasts.set(key,{el,t:now,timer});
+}
 
 /* ---------- digging ---------- */
 let lastWarn=0;

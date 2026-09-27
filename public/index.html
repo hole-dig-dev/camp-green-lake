@@ -45,23 +45,27 @@
 <div id="labels"></div>
 
 <div id="hud" class="hud" hidden>
-  <div id="stats" class="panel">
-    <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
-    <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
-    <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
-    <div class="meter"><span class="k" id="lvK">LV 1</span><div class="bar xp"><i id="xpBar" style="width:0"></i></div></div>
-    <div class="meter"><span class="k">Health</span><div class="bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
-    <div class="meter"><span class="k">Water</span><div class="bar" id="waterWrap"><i id="waterBar"></i></div></div>
-    <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
-    <div class="row"><span class="k" id="curK">Curfew in</span><span class="v" id="curfew">9:30</span></div>
-    <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
-    <div class="row"><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
-    <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
-    <div class="row"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
-    <div class="row"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
-    <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="bar sig"><i id="sigBar" style="width:0"></i></div></div>
-    <div id="tools"></div>
+  <div id="crosshair" class="crosshair" hidden aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M12 2.5v6M12 15.5v6M2.5 12h6M15.5 12h6"/></svg>
   </div>
+
+  <div id="hudTop" class="hud-top-row">
+    <div id="stats" class="hud-strip hud-strip--camper ui-panel">
+      <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
+      <div class="meter"><span class="k" id="lvK">LV 1</span><div class="ui-meter bar xp"><i id="xpBar" style="width:0"></i></div></div>
+      <div class="meter"><span class="k">Health</span><div class="ui-meter bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
+      <p id="hpWarn" class="hud-warn" hidden>Low health</p>
+      <div class="meter"><span class="k">Water</span><div class="ui-meter bar" id="waterWrap"><i id="waterBar"></i></div></div>
+      <p id="waterWarn" class="hud-warn" hidden>Low water</p>
+    </div>
+    <div id="hudObjective" class="hud-strip hud-strip--objective ui-panel">
+      <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
+      <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
+      <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
+      <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
+    </div>
+  </div>
+
   <div id="mapbox" class="panel">
     <div class="map-canvas-wrap">
       <span class="map-north" aria-hidden="true">N</span>
@@ -74,7 +78,19 @@
     </div>
     <div id="online"><b>At camp</b><span id="onlineList">Just you</span></div>
   </div>
+
+  <div id="hudSupplies" class="hud-strip hud-strip--supplies ui-panel">
+    <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
+    <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
+    <div class="row" id="onionRow"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
+    <div class="row" id="battRow"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
+    <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="ui-meter sig"><i id="sigBar" style="width:0"></i></div></div>
+  </div>
+
+  <div id="hudTools" class="hud-strip hud-strip--tools ui-panel"><div id="tools"></div></div>
+
   <div id="prompt" class="panel" hidden></div>
+  <div id="depthChip" class="hud-depth-chip" hidden><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
   <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · B push-to-talk</div>
