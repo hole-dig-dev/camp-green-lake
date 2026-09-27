@@ -11,6 +11,7 @@
 //
 // Usage: node tests/smoke.mjs   (also wired up as `npm test`)
 
+import net from 'node:net';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -20,7 +21,16 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const CANDIDATE_PORTS = [4327, 4328, 4329];
+// Ask the OS for a free port instead of a fixed list: with fixed ports, a second smoke run (another agent, CI,
+// a teammate) already listening on the same port could answer our /healthz check before our own server failed
+// to bind, and the two runs' players would end up in each other's games.
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.unref(); srv.on('error', reject);
+    srv.listen(0, '127.0.0.1', () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
+  });
+}
 const LAUNCH_ARGS = ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
 
 // Console/page noise that's expected from a software GL renderer in a headless CI box and isn't a
@@ -53,7 +63,8 @@ async function waitForHealthz(port, timeoutMs) {
 async function startServer() {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cgl-smoke-data-'));
   let lastError;
-  for (const port of CANDIDATE_PORTS) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const port = await freePort();
     const out = [];
     const child = spawn(process.execPath, ['server.js'], {
       cwd: ROOT,
@@ -77,7 +88,7 @@ async function startServer() {
       try { child.kill(); } catch (e2) { /* already gone */ }
     }
   }
-  throw new Error(`could not start server on any of ${CANDIDATE_PORTS.join(', ')}: ${lastError}`);
+  throw new Error(`could not start the server after 3 attempts: ${lastError}`);
 }
 
 // Software-rendered WebGL (swiftshader) under load can leave the page's main thread badly
