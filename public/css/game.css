@@ -216,12 +216,36 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 #voiceBtn[aria-pressed="true"]{background:#3fae5a;color:#fff8ea}
 #voiceBtn.speaking{box-shadow:0 0 0 3px #4ade80,0 2px 0 var(--ink)}
 
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:24px;overflow:auto}
+/* every modal overlay (title/shop/cards/ko/win/fired) sits above #toasts (z-index:20, added in the
+   HUD step) so an ambient toast can never visually bury an open modal; #fired and #pause set their
+   own higher tiers below since they're stricter interruptions */
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:24px;overflow:auto;z-index:25}
 .overlay[hidden]{display:none}
+.eyebrow{margin:0 0 2px;font:700 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+/* the title card reads as a tall stamped camp sign: heavy stencil headline, a couple of
+   registration-mark strokes in the corners, no photorealistic texture (docs/ui-redesign-spec.md
+   section 5) */
 #title{background:linear-gradient(180deg,rgba(201,160,106,0) 0%,rgba(90,52,24,.35) 100%)}
 .card{background:var(--canvas);border:3px solid var(--ink);border-radius:4px;box-shadow:0 8px 0 rgba(43,29,18,.45);padding:22px 24px;max-width:560px;width:100%;display:flex;flex-direction:column;gap:14px}
+.title-card{max-width:640px;position:relative}
+.title-card::before,.title-card::after{content:"";position:absolute;top:10px;width:12px;height:12px;border-top:2px solid var(--canvas-deep);opacity:.7;pointer-events:none}
+.title-card::before{left:10px;border-left:2px solid var(--canvas-deep)}
+.title-card::after{right:10px;border-right:2px solid var(--canvas-deep)}
 .stencil{font:900 clamp(48px,11vw,96px)/.86 var(--display);letter-spacing:.01em;text-transform:uppercase;color:var(--jump-deep);margin:0;text-wrap:balance}
 .stencil small{display:block;font-size:.34em;letter-spacing:.14em;color:var(--ink);margin-top:10px}
+.title-premise{margin:0;font-size:18px;line-height:1.35;max-width:62ch}
+.title-objectives{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.obj-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--canvas-2);border:1px solid var(--divider);border-radius:var(--r-card);padding:10px 12px}
+.obj-card svg{color:var(--jump-deep)}
+.obj-card b{font:900 15px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.obj-card span{font-size:13px;color:var(--ink-soft);line-height:1.25}
+.title-legend{margin:0}
+.controls-more{border-top:2px dashed var(--ink-soft);padding-top:10px}
+.controls-more summary{list-style:none;cursor:pointer;width:fit-content}
+.controls-more summary::-webkit-details-marker{display:none}
+.controls-more[open] summary{margin-bottom:10px}
+.controls-more .controls{border-top:0;padding-top:0}
+@media (max-width:700px){.title-objectives{grid-template-columns:1fr}}
 .card p{margin:0;font-size:18px;line-height:1.35;max-width:62ch}
 .card .fine{font-size:15px;color:var(--ink-soft)}
 .field{display:flex;gap:8px;flex-wrap:wrap}
@@ -238,6 +262,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #lobby{font-size:15px;font-weight:600;color:var(--leaf)}
 
 #win h2,#ko h2{font:900 40px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
+/* one shared outcome-card layout (docs/ui-redesign-spec.md section 5): a small event label, the
+   large title, description, a consequence line, and an existing action if the screen has one.
+   Each screen keeps its own restrained accent color via a border-top stripe. */
+.outcome-card{border-top:6px solid var(--ink-soft)}
+.outcome-card--ko{border-top-color:var(--danger)}
+.outcome-card--win{border-top-color:var(--water)}
+.outcome-card--fired{border-top-color:var(--danger)}
+.outcome-card--fired .eyebrow{color:#e0a99f}
 .seedline{display:flex;align-items:baseline;gap:6px;font-size:16px}
 .seedline strong{font:900 30px/1 var(--display);color:var(--jump-deep);font-variant-numeric:tabular-nums}
 
@@ -350,20 +382,30 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   #prompt{bottom:calc(210px + env(safe-area-inset-bottom,0px));font-size:15px}
   .crosshair{display:none}
 }
-#dlg{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(640px,calc(100vw - 32px));padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 40px);overflow:auto}
-#dlg .dlg-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* dialogue: a pinned paper card (docs/ui-redesign-spec.md section 5) -- a small ink "pin" mark
+   above the speaker tab, options scroll inside a capped height rather than growing the panel. */
+#dlg{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(680px,calc(100vw - 24px));padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-height:min(55dvh,440px);z-index:25}
+#dlg::before{content:"";position:absolute;left:50%;top:-7px;width:12px;height:12px;border-radius:50%;background:var(--ink);transform:translateX(-50%);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+#dlg .dlg-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex:none;border-bottom:2px dashed var(--ink-soft);padding-bottom:8px}
 .dlg-name{font:900 26px/1 var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--jump-deep)}
-#dlgClose{font:700 14px/1 var(--ui);padding:6px 10px;box-shadow:0 2px 0 var(--ink);background:var(--canvas-2);color:var(--ink);text-transform:none;letter-spacing:.02em}
-#dlgText{margin:0;font-size:19px;line-height:1.35;max-width:62ch}
-#dlgOpts{display:flex;flex-direction:column;gap:6px}
-#dlgOpts button{font:600 17px/1.25 var(--ui);text-transform:none;letter-spacing:.01em;text-align:left;background:#fff8ea;color:var(--ink);box-shadow:0 2px 0 var(--ink);padding:9px 12px;display:flex;gap:10px;align-items:baseline}
-#dlgOpts button:hover{background:var(--canvas-2)}
-#dlgOpts kbd{font:700 13px/1 var(--ui);background:var(--ink);color:var(--canvas);padding:3px 6px;border-radius:2px;flex:none}
+#dlgText{margin:0;font-size:19px;line-height:1.35;max-width:62ch;flex:none}
+#dlgOpts{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;flex:1 1 auto}
+.dlg-opt{font:600 17px/1.25 var(--ui);text-transform:none;letter-spacing:.01em;text-align:left;background:#fff8ea;color:var(--ink);border:2px solid var(--ink);border-radius:var(--r-control);box-shadow:0 2px 0 var(--ink);padding:9px 12px;min-height:44px;display:flex;gap:10px;align-items:center;cursor:pointer;transition:background var(--dur-press) var(--ease-ui)}
+.dlg-opt:hover{background:var(--canvas-2)}
+.dlg-opt:active{transform:translateY(2px);box-shadow:0 0 0 var(--ink)}
+.dlg-opt:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+.dlg-opt .ui-kbd{flex:none}
+@media (max-width:700px){#dlg{max-height:min(60dvh,420px)}}
 #cards{background:rgba(20,14,8,.55)}
 .felt{width:min(620px,100%);background:radial-gradient(ellipse at 50% 30%,#3d7d53 0%,#2a5d3c 70%,#224c31 100%);border:10px solid #6b4a2a;border-radius:18px;box-shadow:0 10px 0 rgba(0,0,0,.35),inset 0 0 40px rgba(0,0,0,.35);color:#f3ead2;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
 .felt .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .felt h2{font:900 34px/1 var(--display);text-transform:uppercase;margin:0;color:#f3ead2;letter-spacing:.02em}
-.seedpill{font-size:16px}.seedpill strong{font:900 26px/1 var(--display);color:#ffd27a;font-variant-numeric:tabular-nums}
+/* seed balance + current bet live in one stable header row across every phase, so nothing jumps
+   around when betting turns into play turns into the result (docs/ui-redesign-spec.md section 5) */
+.head-pills{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seedpill{font-size:16px;display:inline-flex;align-items:center;gap:5px}.seedpill strong{font:900 26px/1 var(--display);color:#ffd27a;font-variant-numeric:tabular-nums}
+.bet-pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:var(--r-pill);padding:3px 10px}
+.bj-status{margin:0;font:700 12px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:#a8c9a8}
 .xray{margin:0;font-size:17px;min-height:2.6em;font-style:italic;color:#e6dcc0}
 .hand .lbl{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#cfe3cf;margin-bottom:6px}
 .hand .lbl b{font:900 20px/1 var(--display);color:#fff;margin-left:6px;letter-spacing:.02em}
@@ -382,7 +424,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .chip.c5{background:#d94f3a}.chip.c10{background:#2f7bb8}.chip.c25{background:#6b9a3a}.chip.c50{background:#2b1d12}.chip.call{background:#8a4bb0;font-size:12px}
 .betline{font-size:16px;margin-left:6px}.betline strong{font:900 24px/1 var(--display);color:#ffd27a}
 .bj-actions{display:flex;gap:8px;flex-wrap:wrap}
-.felt button.ghost{background:transparent;color:#f3ead2;border-color:#f3ead2;box-shadow:none;align-self:flex-start}
+/* the shared .ui-button--quiet variant assumes a light canvas background; on the dark felt it
+   needs light text/border instead, same look the old one-off .ghost class gave #bjLeave */
+.felt .ui-button--quiet{color:#f3ead2;border-color:#f3ead2}
+.felt .ui-button--quiet:hover{background:rgba(255,255,255,.1)}
 .felt .keys{font-size:14px;color:#cfe3cf;margin:0}
 #partyBanner{position:fixed;left:50%;top:22%;transform:translateX(-50%);font:900 clamp(34px,7vw,76px)/.95 var(--display);text-transform:uppercase;letter-spacing:.03em;text-align:center;color:#fff;pointer-events:none;width:calc(100vw - 32px);text-wrap:balance;text-shadow:0 0 18px #ff2d95,0 0 36px #2de2ff,0 4px 0 #2b1d12;animation:disco 1.94s linear infinite}
 @keyframes disco{0%{color:#ff2d95}25%{color:#2de2ff}50%{color:#ffe02d}75%{color:#7dff2d}100%{color:#ff2d95}}

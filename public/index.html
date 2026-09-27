@@ -102,13 +102,18 @@
 </div>
 
 <div id="title" class="overlay">
-  <div class="card">
+  <div class="card title-card">
     <h1 class="stencil">Camp Green Lake<small>There is no lake. Only holes.</small></h1>
-    <p>Dig five-foot holes in the dry lake bed. Sell what you find to Mr. Sir, buy better gear, and keep away from the yellow-spotted lizards. Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot. The lake is huge, but be back inside the camp fence by curfew, or the police come looking for you.</p>
+    <p class="title-premise">Dig five-foot holes in the dry lake bed and sell what you find to Mr. Sir. Keep away from the yellow-spotted lizards, and be back inside the camp fence before curfew.</p>
+    <div class="title-objectives">
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-shovel"></use></svg><b>Dig</b><span>Five feet deep, five feet across.</span></div>
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-seed"></use></svg><b>Sell</b><span>Trade finds to Mr. Sir for seeds.</span></div>
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-clock"></use></svg><b>Be back by curfew</b><span>Or the police come looking.</span></div>
+    </div>
     <div class="field">
       <label for="nick">Your camp nickname</label>
       <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
-      <button id="startBtn" disabled>Start digging</button>
+      <button id="startBtn" class="ui-button ui-button--primary" disabled>Start digging</button>
     </div>
     <div class="field" id="campWrap" hidden>
       <label for="campPass">Camp password</label>
@@ -116,29 +121,42 @@
     </div>
     <p class="fine" id="campErr" hidden></p>
     <div id="lobby">Connecting to camp…</div>
-    <div class="controls">
-      <div><kbd>WASD</kbd> walk, <kbd>Shift</kbd> run</div>
-      <div><kbd>Click</kbd> lock mouse to look</div>
-      <div><kbd>Hold click</kbd> or <kbd>E</kbd> dig</div>
-      <div><kbd>F</kbd> talk / buy / sell</div>
-      <div><kbd>Q</kbd> eat an onion</div>
-      <div><kbd>1</kbd>–<kbd>5</kbd> shout at friends</div>
-      <div><kbd>V</kbd> first / third person</div>
-      <div><kbd>C</kbd> crouch (hide from police)</div>
+    <p class="fine title-legend">Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot -- the curse on the lake only breaks when someone finds it.</p>
+    <div class="controls" id="controlsEssential">
+      <div><kbd class="ui-kbd">WASD</kbd> walk, <kbd class="ui-kbd">Shift</kbd> run</div>
+      <div><kbd class="ui-kbd">Click</kbd> lock mouse to look</div>
+      <div><kbd class="ui-kbd">Hold click</kbd> or <kbd class="ui-kbd">E</kbd> dig</div>
+      <div><kbd class="ui-kbd">F</kbd> talk / buy / sell</div>
+      <div><kbd class="ui-kbd">V</kbd> first / third person</div>
     </div>
+    <details class="controls-more">
+      <summary class="ui-button ui-button--quiet ui-button--sm">Show all controls</summary>
+      <div class="controls">
+        <div><kbd class="ui-kbd">Q</kbd> eat an onion</div>
+        <div><kbd class="ui-kbd">1</kbd>–<kbd class="ui-kbd">5</kbd> shout at friends</div>
+        <div><kbd class="ui-kbd">C</kbd> crouch (hide from police)</div>
+      </div>
+    </details>
     <p class="fine">Anyone with this page open shows up in your camp. Share the link and dig together.</p>
   </div>
 </div>
 
 <div id="dlg" class="panel" hidden role="dialog" aria-labelledby="dlgName">
-  <div class="dlg-top"><div class="dlg-name" id="dlgName"></div><button id="dlgClose" type="button">Esc · Leave</button></div>
+  <div class="dlg-top"><div class="dlg-name" id="dlgName"></div><button id="dlgClose" class="ui-button ui-button--quiet ui-button--sm" type="button">Esc · Leave</button></div>
   <p id="dlgText"></p>
   <div id="dlgOpts"></div>
 </div>
 
 <div id="cards" class="overlay" hidden>
   <div class="felt" role="dialog" aria-labelledby="cardsTitle">
-    <div class="head"><h2 id="cardsTitle">D Tent Blackjack</h2><span class="seedpill"><strong id="bjSeeds">0</strong> seeds</span></div>
+    <div class="head">
+      <h2 id="cardsTitle">D Tent Blackjack</h2>
+      <div class="head-pills">
+        <span class="seedpill"><svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg><strong id="bjSeeds">0</strong> seeds</span>
+        <span class="seedpill bet-pill" id="bjBetPill" hidden>Bet <strong id="bjBetHeader">0</strong></span>
+      </div>
+    </div>
+    <p class="bj-status" id="bjStatus" role="status"></p>
     <p class="xray" id="bjSay"></p>
     <div class="hand"><div class="lbl">X-Ray (dealer)<b id="bjDealerTot"></b></div><div class="row-cards" id="bjDealer"></div></div>
     <div class="hand"><div class="lbl">You<b id="bjYouTot"></b></div><div class="row-cards" id="bjYou"></div></div>
@@ -151,13 +169,15 @@
       <button class="chip c50" data-v="50" id="chip50" type="button">50</button>
       <button class="chip call" data-v="all" id="chipAll" type="button">ALL IN</button>
       <span class="betline">Bet <strong id="bjBet">10</strong></span>
-      <button id="bjDeal" type="button">Deal</button>
+      <button id="bjDeal" class="ui-button ui-button--primary" type="button">Deal</button>
     </div>
     <div class="bj-actions" id="bjActs" hidden>
-      <button id="bjHit" type="button">Hit</button><button id="bjStand" type="button">Stand</button><button id="bjDouble" type="button">Double</button>
+      <button id="bjHit" class="ui-button ui-button--secondary" type="button">Hit</button>
+      <button id="bjStand" class="ui-button ui-button--secondary" type="button">Stand</button>
+      <button id="bjDouble" class="ui-button ui-button--secondary" type="button">Double</button>
     </div>
     <p class="keys">Keys: H hit · S stand · D double · Esc leave. Blackjack pays 3 to 2. Dealer stands on 17.</p>
-    <button id="bjLeave" class="ghost" type="button">Leave the tent</button>
+    <button id="bjLeave" class="ui-button ui-button--quiet" type="button">Leave the tent</button>
   </div>
 </div>
 
@@ -209,11 +229,12 @@
 </div>
 
 <div id="fired" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--fired">
+    <p class="eyebrow">Dismissed</p>
     <h2>Fired</h2>
     <p id="firedText"></p>
-    <p>The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
-    <button id="firedBtn">Start a new run</button>
+    <p class="fine">The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
+    <button id="firedBtn" class="ui-button ui-button--danger">Start a new run</button>
   </div>
 </div>
  <div id="console" hidden><div id="conLog" aria-live="polite"></div><div id="conRow"><b>&gt;</b><input id="conIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type a command (help lists them). Esc closes."></div></div>
@@ -222,7 +243,8 @@
 <div id="scare"></div>
 
 <div id="ko" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--ko">
+    <p class="eyebrow">Hazard</p>
     <h2 id="koTitle">Bitten</h2>
     <p id="koText">A yellow-spotted lizard got you.</p>
     <p class="fine" id="koFine">Waking up in the nurse's office…</p>
@@ -230,11 +252,12 @@
 </div>
 
 <div id="win" class="overlay" hidden>
-  <div class="card">
+  <div class="card outcome-card outcome-card--win">
+    <p class="eyebrow">Rainfall</p>
     <h2>It's raining</h2>
     <p id="winText">Someone dug up the suitcase.</p>
     <p class="fine">For the first time in over a hundred years, rain is falling on Camp Green Lake. The curse is broken. You can keep digging if you want.</p>
-    <button id="winClose">Keep digging</button>
+    <button id="winClose" class="ui-button ui-button--primary">Keep digging</button>
   </div>
 </div>
 

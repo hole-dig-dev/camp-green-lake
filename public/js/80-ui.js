@@ -12,7 +12,7 @@ function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
   $('#dlgName').textContent=node.name;$('#dlgText').textContent=node.text;
   const box=$('#dlgOpts');box.textContent='';DLG.opts=node.opts;
-  node.opts.forEach((o,i)=>{const b=document.createElement('button');b.type='button';b.id='dlg-opt-'+i;const k=document.createElement('kbd');k.textContent=String(i+1);const s=document.createElement('span');s.textContent=o.label;b.append(k,s);b.onclick=()=>chooseOpt(i);box.appendChild(b)});
+  node.opts.forEach((o,i)=>{const b=document.createElement('button');b.type='button';b.id='dlg-opt-'+i;b.className='dlg-opt';const k=document.createElement('kbd');k.className='ui-kbd';k.textContent=String(i+1);const s=document.createElement('span');s.textContent=o.label;b.append(k,s);b.onclick=()=>chooseOpt(i);box.appendChild(b)});
   setTimeout(()=>{const f=box.querySelector('button');if(f)f.focus()},20);
 }
 function chooseOpt(i){const o=DLG.opts&&DLG.opts[i];if(!o)return;if(o.leave){closeDialog();return}const next=o.go();if(next)showNode(next);else closeDialog()}
@@ -97,6 +97,7 @@ function syncHand(el,cards,hideIdx){
   for(let j=i;j<cards.length;j++){const e=cardEl(cards[j],j===hideIdx);e.dataset.k=want[j];el.appendChild(e)}
 }
 function bjSay(t){$('#bjSay').textContent='X-Ray: "'+t+'"'}
+const BJ_STATUS={bet:'Betting',play:'Your turn',dealer:"X-Ray's turn",done:'Result'};
 function renderBJ(){
   $('#bjSeeds').textContent=S.seeds;
   const hide=BJ.phase==='play'?1:-1;
@@ -108,6 +109,10 @@ function renderBJ(){
   $('#bjBet').textContent=Math.min(BJ.bet,S.seeds);
   for(const c of document.querySelectorAll('.chip'))c.setAttribute('aria-pressed',String(c.dataset.v==='all'?BJ.bet>=S.seeds&&S.seeds>0:+c.dataset.v===BJ.bet));
   $('#bjDeal').disabled=S.seeds<5;$('#bjLeave').disabled=BJ.phase!=='bet';
+  $('#bjStatus').textContent=BJ_STATUS[BJ.phase]||'';
+  /* seed balance + current bet live in a stable header row so they don't jump between phases */
+  const betPill=$('#bjBetPill');betPill.hidden=BJ.phase==='bet';
+  if(!betPill.hidden)$('#bjBetHeader').textContent=BJ.stake||Math.min(BJ.bet,S.seeds);
 }
 function openCards(){BJ.open=true;digHeld=false;releaseLock();$('#cards').hidden=false;$('#bjResult').textContent='';
   bjSay(S.seeds<5?'You got no seeds. Go dig some holes and come back.':pick(['Sit down. Blackjack pays three to two. I stand on seventeen.','You in? Minimum bet is five seeds.','Cards are clean. Mostly.']));
