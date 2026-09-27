@@ -1034,7 +1034,7 @@ function toggleView(){FP=!FP;if(me)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(F
 const vm=new T.Group();
 {const hd=new T.Mesh(new T.CylinderGeometry(0.02,0.02,0.9,5),M(0x8a6440));hd.rotation.x=Math.PI/2;hd.position.z=-0.25;const bl=new T.Mesh(new T.BoxGeometry(0.22,0.02,0.26),M(0x7d8288));bl.position.z=-0.78;const sh=new T.Group();sh.rotation.x=-0.35;sh.add(hd,bl);vm.add(sh)}
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
-function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
+function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!twSt;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}
@@ -1165,10 +1165,11 @@ $('#shopClose').onclick=closeShop;
 /* KO */
 function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
+  twSt=0;twStT=0;me.g.rotation.z=0;   // clears any twister suck/tumble/lie state so it can't fight the KO pose or get stuck
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();me.g.rotation.x=0}
+function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){
@@ -1488,6 +1489,7 @@ function updatePlayerTent(dt){
 }
 function updatePlayer(dt){
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
+  if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
@@ -1514,11 +1516,8 @@ function updatePlayer(dt){
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
     }else P.anim=0;
   }
-  /* knockback: something (a twister) threw you. Carries you through the air, then you skid to a stop on landing. */
-  if(P.kx||P.kz){
-    P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
-    const f=P.grounded?Math.exp(-dt*5):Math.exp(-dt*0.2);P.kx*=f;P.kz*=f;if(Math.hypot(P.kx,P.kz)<0.3)P.kx=P.kz=0;
-  }
+  // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever
+  // non-zero while that state machine owns the frame, so there's nothing left to integrate here.
   const g=groundAt(P.x,P.z);
   if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=5.6;P.grounded=false}
   P.vy-=16*dt;P.y+=P.vy*dt;
@@ -1601,12 +1600,33 @@ function updateHealth(dt){
    clock and a fixed random seed. The lake is split into TW_CELL-sized squares, and in every TW_WIN window each
    square has a TW_CHANCE chance of growing one. Only the squares around you are checked, so wherever you are,
    twisters can show up nearby.
-   Get within TW_PULL_R and the wind drags you in (you can outrun it). Touch the funnel and you're thrown through the
-   air and lose TW_DMG health. They weaken and fall apart near camp, die down at night, and can't reach you while
-   you're down in a hole deeper than 4 feet. Type "twister" in game to summon a test one that only you can see. */
-const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2,TW_PULL_R=18,TW_CORE_R=3.2,TW_DMG=30,TW_SAFE_DEPTH=1.2;
+   Get within TW_PULL_R and the wind drags you in, gently at first and steeply harder as you get close (a real
+   tornado is "nothing, nothing, then everything") - walking against it is enough at the rim, sprinting still wins
+   at mid-range, and near the core no speed saves you. Get within TW_SUCK_R and it lifts you clean off your feet and
+   spins you up the funnel for a beat before flinging you out (TW_DMG health, scaled by strength) into a tumbling
+   ragdoll fall; you land, skid, lie there, then get back up. None of this touches the twister's own path - it's
+   still a pure function of shared time + seed, so every camper sees it in the same place.
+   They weaken and fall apart near camp, die down at night, and can't reach you while you're down in a hole deeper
+   than 4 feet. Type "twister" in game to summon a test one that only you can see. */
+const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2;
+const TW_PULL_R=25;         // outer edge of the wind - widened now the rim is gentle instead of a hard line
+const TW_SUCK_R=6;          // inside this you're lifted off your feet instead of just pulled (both x tw.s)
+const TW_PULL_POW=2.4;      // pull ramps with (1-d/pr)^POW between the two radii: flat near the rim, steep near the core
+const TW_PULL_MAX=11;       // pull speed (m/s) right at the mouth of the suck radius, before strength scaling
+const TW_SPIN_MAX=7.5;      // tangential (swirl) speed at that same point - drags you around the funnel, not just in
+const TW_SUCK_TIME=1.1;     // seconds spent spiralling upward before the throw
+const TW_SUCK_RISE=10;      // how high (m) you're lifted during the suck-up
+const TW_DOWN_TIME=1.4;     // seconds lying flat after landing
+const TW_GETUP_TIME=0.4;    // quick stand-up transition (down+getup ~= the 1.5-2s JT asked for)
+const TW_DMG=30,TW_SAFE_DEPTH=1.2;
 const TW_LIVE=new Map();   // id -> twister currently near you: {x,z,s (strength 0-1), ...}
-let twSpawned=[],twCool=0,twTumble=0,twWind=null;   // twSpawned: twisters made with the console (see ENV below)
+let twSpawned=[],twCool=0,twWind=null;   // twSpawned: twisters made with the console (see ENV below)
+/* twSt: what a twister is currently doing to YOU (0 free, 1 sucked up, 2 airborne/tumbling, 3 down, 4 getting up).
+   Purely local/per-client - like the old kx/kz knockback, it never touches the twister's own state, so it can't
+   break determinism between players. twStT times the current state; the rest are the grabbing twister's details,
+   kept around in case it despawns mid-grab (e.g. a console twister's lifetime runs out while it has you). */
+let twSt=0,twStT=0,twGrab=null,twCenter={x:0,z:0},twStrength=0,twSuckR0=1,twSpiralA=0,twRagX=0,twRagY=0,twRagZ=0,twDbgPull=0;
+function twStateName(){return['free','sucked','airborne','down','gettingup'][twSt]}
 function twNow(){return Date.now()+CLK.off}   // absolute shared time (clockT() only gives the time of day)
 /* the twister (if any) that square (ci,cj) grows in window k: where it starts, which way it heads, how long it lasts */
 function twPlan(ci,cj,k){
@@ -1689,26 +1709,74 @@ function updateTwisters(dt){
   }
   for(const[id]of TW_LIVE)if(!seen.has(id)){TW_LIVE.delete(id);const v=twPool.find(p=>p.used===id);if(v){v.used=null;v.g.visible=false}}
   twSound(loud);
-  // tumble through the air after being thrown; the normal pose comes back once you land
-  if(twTumble>0){twTumble-=dt;if(!P.grounded&&me)me.g.rotation.x+=dt*9;else twTumble=0}
   // camera shake the closer you are
   if(S.started&&!inTent()&&nearest<40){const a=clamp(1-nearest/40,0,1)*0.12;camera.position.x+=(Math.random()-0.5)*a;camera.position.y+=(Math.random()-0.5)*a}
 }
-/* the wind: pulls you toward the funnel, spins you around it, and throws you if you touch it */
+/* the wind: gentle at TW_PULL_R, steep near TW_SUCK_R (real tornadoes don't ramp up smoothly the whole way - you
+   feel almost nothing, then suddenly you're fighting hard), plus a swirl so it drags you around the funnel, not
+   just in. Cross into TW_SUCK_R and twStart() takes over instead of a plain shove. */
 function twPush(tw,d,dt){
   if(inTent())return;   // inside a tent: sheltered, even though your x/z is still technically "out there"
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
+  if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
   const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
-  const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d,f=1-d/pr;
-  const pull=3.4*tw.s*f,spin=2.2*tw.s*f;                      // walking is 4.3 m/s, so you can get away
+  const sr=Math.max(TW_SUCK_R*tw.s,0.4);
+  if(d<sr){if(twCool<=0)twStart(tw,d);return}
+  const norm=clamp(1-(d-sr)/(pr-sr),0,1),f=Math.pow(norm,TW_PULL_POW);
+  const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d;
+  const pull=TW_PULL_MAX*tw.s*f,spin=TW_SPIN_MAX*tw.s*f;      // walking (4.3) beats it near the rim, sprint (7.2) near mid-range
+  twDbgPull=pull;
   P.x=clamp(P.x+(dx*pull-dz*spin)*dt,-HALF+3,HALF-3);P.z=clamp(P.z+(dz*pull+dx*spin)*dt,-HALF+3,HALF-3);
-  if(d<TW_CORE_R*(0.5+0.5*tw.s)&&twCool<=0){
-    twCool=4;                                                  // a few seconds before it can grab you again
-    const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
-    P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=11;P.y+=0.2;P.grounded=false;twTumble=2;
-    digHeld=false;sfx.hiss();
-    hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
-    if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+}
+/* sucked up: lifts you off the ground and spirals you in toward the core for TW_SUCK_TIME before the throw.
+   No movement control here - the wind has you. Keeps a live ref to the twister (twGrab) but falls back to the last
+   known spot (twCenter/twStrength) if it despawns mid-grab, so a twister expiring never leaves you stuck. */
+function twStart(tw,d){
+  twSt=1;twStT=0;twGrab=tw.id;twCenter={x:tw.x,z:tw.z};twStrength=tw.s;twSuckR0=Math.max(d,0.6);
+  twSpiralA=Math.atan2(P.z-tw.z,P.x-tw.x);P.moving=false;P.anim=0;digHeld=false;
+  if(!S.ko)toast('The wind has you!','bad',2000);
+}
+/* the throw: flings you outward and hurts you same as before, then hands off to the airborne ragdoll tumble */
+function twThrow(tw){
+  twCool=4;                                                    // a few seconds before it can grab you again
+  const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
+  P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=10+tw.s*3;P.grounded=false;
+  twRagX=(Math.random()*2-1)*11;twRagY=(Math.random()*2-1)*7;twRagZ=(Math.random()*2-1)*9;  // mixed axes: a tumble, not a spin
+  twSt=2;twStT=0;digHeld=false;sfx.hiss();
+  hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
+  if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+}
+/* landing: keep a little of the throw's speed as a skid instead of stopping dead, then lie there */
+function twLand(){P.grounded=true;twSt=3;twStT=0;P.anim=3;P.kx*=0.4;P.kz*=0.4}
+/* drives states 1-4 every frame, in place of the normal movement/knockback code in updatePlayer (which it replaces
+   while a twister has you). If S.ko fires mid-sequence (the throw's damage, a lizard, whatever) knockOut() clears
+   twSt itself, so control falls straight back to the normal S.ko handling next frame - no state to get stuck in. */
+function twStep(dt){
+  twStT+=dt;
+  if(twSt===1){                                                 // spiralling up the funnel
+    const tw=TW_LIVE.get(twGrab),cx=tw?tw.x:twCenter.x,cz=tw?tw.z:twCenter.z;
+    const u=clamp(twStT/TW_SUCK_TIME,0,1);
+    twSpiralA+=dt*(4+10*u);const r=lerp(twSuckR0,0.6,u);
+    P.x=clamp(cx+Math.cos(twSpiralA)*r,-HALF+3,HALF-3);P.z=clamp(cz+Math.sin(twSpiralA)*r,-HALF+3,HALF-3);
+    P.y=groundAt(P.x,P.z)+TW_SUCK_RISE*sm(u);P.grounded=false;
+    me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=twSpiralA+Math.PI/2;me.g.rotation.x=lerp(me.g.rotation.x,0,dt*4);me.g.rotation.z+=dt*10;
+    if(twStT>=TW_SUCK_TIME)twThrow(tw||{s:twStrength});
+  }else if(twSt===2){                                           // thrown - tumbling flight
+    P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
+    P.vy-=16*dt;P.y+=P.vy*dt;
+    me.g.rotation.x+=dt*twRagX;me.g.rotation.y+=dt*twRagY;me.g.rotation.z+=dt*twRagZ;
+    const g=groundAt(P.x,P.z);if(P.y<=g){P.y=g;P.vy=0;twLand()}
+    me.g.position.set(P.x,P.y,P.z);
+  }else if(twSt===3){                                           // down - skid dies out, then lie still
+    const f=Math.exp(-dt*5);P.kx*=f;P.kz*=f;
+    if(Math.hypot(P.kx,P.kz)>0.05){P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);P.y=groundAt(P.x,P.z)}
+    animPerson(me,3,dt);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*6));me.g.position.set(P.x,P.y,P.z);
+    if(twStT>=TW_DOWN_TIME){twSt=4;twStT=0}
+  }else if(twSt===4){                                           // getting up
+    const u=clamp(twStT/TW_GETUP_TIME,0,1);
+    me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8));
+    me.g.position.set(P.x,P.y,P.z);
+    if(u>=1){twSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }
 }
 
@@ -2417,7 +2485,7 @@ function popOut(){
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;me.g.rotation.x=0;toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
@@ -2541,6 +2609,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour};
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
+  twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull})};
 })();
 </script>
