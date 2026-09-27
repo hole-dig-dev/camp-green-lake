@@ -114,6 +114,7 @@ wss.on('connection', ws => {
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
+    mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
   });
 
   ws.on('pong', () => { c.alive = true; });
@@ -278,6 +279,14 @@ wss.on('connection', ws => {
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
 const MON = { trucks: [], zer: null };
+// Wire format for the 'mon' field, shared by the periodic broadcast and the 'hello' a (re)connecting
+// client gets. A fresh connection has to see the CURRENT truth here, not just wait for the next change:
+// the periodic broadcast only fires on the tick a monster appears or disappears, so a client that wasn't
+// connected at that exact moment (dropped and reconnected, or just joined) would otherwise never learn
+// monsters are gone and keep rendering whatever it saw last.
+function monSnapshot() {
+  return { trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null };
+}
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 function simPlayers(now) {
   return joined().map(c => ({
@@ -325,7 +334,7 @@ setInterval(() => {
   SIM.stepMonsters(MON, players, t, dt, ev);
   for (const e of ev) if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
   const on = MON.trucks.length > 0 || !!MON.zer;
-  if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null, ev });
+  if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
