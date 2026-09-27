@@ -38,6 +38,16 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .bar i{display:block;height:100%;width:100%;background:var(--water);transition:width .2s}
 .bar.low i{background:var(--danger)}
 .bar.xp i{background:#d4af37}
+.bar.curse i{background:#6b2fa0}
+.bar.stam{display:flex}
+.bar.stam i{width:0;flex:none;transition:none}
+.bar.stam #stamFill{background:#e8b923}.bar.stam .gap{background:transparent}
+.bar.stam .a-heat{background:#e8742a}.bar.stam .a-burn{background:#d12a2a}.bar.stam .a-poison{background:#7b3fb5}.bar.stam .a-injury{background:#6a1e1e}.bar.stam .a-hunger{background:#8a6a3a}
+#outBanner{position:fixed;left:50%;top:calc(90px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:10px 16px;font:700 18px/1.25 var(--ui);text-align:center;max-width:calc(100vw - 32px);z-index:20}
+#lookout{background:rgba(20,16,12,.8);z-index:40}
+#lookout .card{max-width:min(94vw,860px);align-items:center}
+#lkMap{width:min(86vmin,760px);height:min(86vmin,760px);border:3px solid var(--ink);border-radius:3px;background:#d9a86c;cursor:crosshair;touch-action:none}
+#lookout .fine{text-align:center}
 #fired{background:rgba(30,0,0,.7);z-index:50}
 #fired h2{font:900 56px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;color:#b3261e}
 #chatIn{position:fixed;left:50%;bottom:calc(130px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(460px,calc(100vw - 32px));font:600 17px/1.2 var(--ui);padding:9px 12px;border:2px solid var(--ink);border-radius:3px;background:var(--canvas);color:var(--ink);z-index:30}
@@ -167,18 +177,21 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 
 <div id="hud" class="hud" hidden>
   <div id="stats" class="panel">
-    <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
-    <div class="row big"><span class="k">Sunflower seeds</span><span class="v" id="seeds">20</span></div>
-    <div class="row"><span class="k">Team quota</span><span class="v" id="quota">0 / 100</span></div>
-    <div class="meter"><span class="k" id="lvK">LV 1</span><div class="bar xp"><i id="xpBar" style="width:0"></i></div></div>
+    <div class="who"><b id="hudName">Caveman</b><span id="dayTag">Day 1/5</span></div>
+    <div class="row big"><span class="k">Crew seeds</span><span class="v" id="seeds">30</span></div>
+    <div class="row"><span class="k" id="quotaK">Quota by curfew</span><span class="v" id="quota">0 / 100</span></div>
+    <div class="meter"><span class="k">Curse</span><div class="bar curse"><i id="curseBar" style="width:0"></i></div></div>
+    <div class="meter"><span class="k">Stamina</span><div class="bar stam" id="stamWrap"><i id="stamFill"></i><i class="gap" id="stamGap"></i><i class="a-heat" id="affHeat"></i><i class="a-burn" id="affBurn"></i><i class="a-poison" id="affPoison"></i><i class="a-injury" id="affInjury"></i><i class="a-hunger" id="affHunger"></i></div></div>
     <div class="meter"><span class="k">Water</span><div class="bar" id="waterWrap"><i id="waterBar"></i></div></div>
+    <div class="meter"><span class="k" id="lvK">LV 1</span><div class="bar xp"><i id="xpBar" style="width:0"></i></div></div>
     <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
     <div class="row"><span class="k" id="curK">Curfew in</span><span class="v" id="curfew">9:30</span></div>
     <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
+    <div class="row"><span class="k">Warden's mood</span><span class="v" id="mood">A regular day</span></div>
+    <div class="row"><span class="k">Dig site</span><span class="v" id="site">Near camp</span></div>
     <div class="row"><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
     <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
-    <div class="row"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
-    <div class="row"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
+    <div class="row"><span class="k">Onions · light</span><span class="v"><span id="onions">0</span> · <span id="batt">100%</span></span></div>
     <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="bar sig"><i id="sigBar" style="width:0"></i></div></div>
     <div id="tools"></div>
   </div>
@@ -265,16 +278,27 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <button data-c="1">Curfew −1 min</button><button data-h="20.05">Night: police</button>
     <button data-h="1.05">Night: Zeroni</button><button data-h="5.8">Almost dawn</button>
     <button data-d="-1">− 1 hour</button><button data-d="1">+ 1 hour</button>
-    <button data-a="fill">Fill team quota</button><button data-a="empty">Empty team bank</button>
+    <button data-a="fill">Fill quota</button><button data-a="empty">Empty crew seeds</button>
+    <button data-a="curseUp">Curse +20</button><button data-a="curseDown">Curse −20</button>
+    <button data-a="mood">Next mood</button><button data-a="site">Next dig site</button>
+    <button data-a="day">Next day (1–5)</button><button data-a="town">Break into town</button>
     <button id="admPause">Pause time</button><button id="admReal">Back to real clock</button>
   </div>
 </div>
 
+<div id="outBanner" class="panel" hidden>You're out cold until morning. <span id="outWho"></span></div>
+<div id="lookout" class="overlay" hidden>
+  <div class="card">
+    <h2 style="margin:0;font:900 30px/1 var(--display);text-transform:uppercase">The Warden's lookout</h2>
+    <canvas id="lkMap" width="900" height="900" aria-label="Map of the whole lake: campers, monsters, nests and loot"></canvas>
+    <p class="fine">Click the map to ping a spot for your crew. Green dots are lizards; red and blue squares are police; the glowing green circle is Madame Zeroni. Press F or Esc to get up.</p>
+  </div>
+</div>
 <div id="fired" class="overlay" hidden>
   <div class="card">
-    <h2>Fired</h2>
+    <h2 id="firedTitle">Fired</h2>
     <p id="firedText"></p>
-    <p>The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
+    <p id="firedMore">The Warden fired the whole crew. The lake gets refilled, and your seeds and gear are gone. Your level stays.</p>
     <button id="firedBtn">Start a new run</button>
   </div>
 </div>
@@ -310,6 +334,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="sim.js"></script>
 <script>
+/* test mode (#shot hooks): show script errors on screen */
+if(location.hash.startsWith('#shot'))window.onerror=(m,s,l,c)=>{const d=document.createElement('div');d.style.cssText='position:fixed;left:8px;bottom:40px;z-index:999;background:#b00;color:#fff;font:14px monospace;padding:4px';d.textContent='ERR '+m+' @'+l+':'+c;document.body.appendChild(d)};
 (function(){
 'use strict';
 const T = THREE;
@@ -348,7 +374,7 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
 $('#game').appendChild(renderer.domElement);
 const canvas=renderer.domElement;
 const scene=new T.Scene();
-const FOG_DAY=new T.Color(0xe8d6b4), FOG_RAIN=new T.Color(0x9aa3a8);
+const FOG_DAY=new T.Color(0xe8d6b4), FOG_RAIN=new T.Color(0x9aa3a8), SAND_FOG=new T.Color(0xc9a06a);
 scene.fog=new T.Fog(FOG_DAY.getHex(),80,1000);
 const camera=new T.PerspectiveCamera(62,innerWidth/innerHeight,0.1,3000);
 camera.rotation.order='YXZ';scene.add(camera);
@@ -419,6 +445,7 @@ const LOOT={
   sploosh:{name:'Old jar of Sploosh',val:48,color:0xe8a040},
   locket:{name:'Gold locket',val:60,color:0xd4af37},
   pistol:{name:'Kate\'s old pistol',val:75,color:0x2a2a2a},
+  sneakers:{name:'Clyde Livingston\'s sneakers',val:30,color:0xf0f0f0},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
@@ -674,6 +701,7 @@ const SPOTS=[
   {id:'store',x:16,z:41.2,r:3.4},
   {id:'warden',x:-30,z:39.2,r:3.6},
   {id:'cards',x:0,z:43.9,r:1.9},
+  {id:'lookout',x:-24.3,z:45,r:1.5},
 ];
 
 /* the D Tent crew (they're here even when your friends aren't) */
@@ -697,6 +725,7 @@ function updateBots(dt,now){
   if(PARTY.on)return;
   for(const b of bots){
     const g=b.p.g;
+    if(b.helper){if(helpersOn()){updateHelper(b,dt);continue}else if(b.helping)releaseHelper(b)}
     if(DLG.open&&DLG.bot===b){ /* mid-conversation: stop and face the player */
       let dr=Math.atan2(P.x-g.position.x,P.z-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*8);
       animPerson(b.p,0,dt);continue;
@@ -816,7 +845,7 @@ const sfx={
 };
 
 /* ---------- game state ---------- */
-const S={started:false,seeds:20,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0};
+const S={started:false,seeds:20,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0,stam:100,tonic:0,sackBonus:0,refills:0,out:false,buried:false,broken:false};
 const P={x:0,z:39,y:0,vy:0,fa:Math.PI,yaw:0,pitch:0.32,digT:0,digPh:0,anim:0,grounded:true,moving:false};
 P.y=groundAt(P.x,P.z);
 let me=null,meL=null;
@@ -851,9 +880,12 @@ function scoop(){
     if(now-lastWarn>3000){lastWarn=now;if(maxD<EIGHT_FT)toast('That\'s 5 feet, as deep as your shovel reaches. A long-handled shovel from the Wreck Room goes to 8 feet.');else toast('8 feet. Your shovel won\'t go any deeper.')}
     sfx.thud();return;
   }
-  const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
+  if(!useStam(2.5)){if(now-lastWarn>2500){lastWarn=now;toast('Too tired to dig. Catch your breath, drink, eat (Z) or rest in the shade.','bad')}return}
+  if(!S.broken&&Math.random()<RUN.curse/100*0.0025){S.broken=true;sfx.clank();toast('CRACK. Your shovel snapped. (The curse.) You dig at half speed until the crew buys a replacement at the Wreck Room.','bad',6000)}
+  const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1)*(S.broken?0.5:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});
+  caveCheck(h);maybeNest(h);if(h.d<0.35)return;
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
   for(const it of items){
@@ -871,13 +903,14 @@ function foundItem(it,h){
   if(it.type==='kb'){S.hasKB=true;sfx.gold();toast('A gold tube marked "KB"! The Warden will want this. Take it to her cabin.','gold',6000);shout(2);return}
   if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} seeds). It won't fit in your sack. Grab it with F and haul it to Mr. Sir's truck. Two campers carry it much faster.`,'gold',7000);
     if(online())wsSend({t:'prop',item:it.id,type:it.type,x:h.mx,z:h.mz});else addProp(it.id,it.type,h.mx,h.mz);return}
-  S.sack.push(it.type);sfx.find();sfx.clank();addXP(4+L.val/4);toast(`Found: ${L.name} (worth ${L.val} seeds). Sell it to Mr. Sir.`+(L.val>=40?' A rare one!':''),L.val>=40?'gold':'',3200);
+  S.sack.push(it.type);S.sackBonus+=L.val*(siteMult(h.x,h.z)-1);sfx.find();sfx.clank();addXP(4+L.val/4);toast(`Found: ${L.name} (worth ${L.val} seeds). Sell it to Mr. Sir.`+(L.val>=40?' A rare one!':''),L.val>=40?'gold':'',3200);
 }
 
 /* ---------- interactions ---------- */
 function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
+  const bu=remoteNear(R=>R.f&32,2.4);if(bu)return{id:'digout',...bu};
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   const pr=propNear(2.4);if(pr)return{id:'prop',pr};
   const b=bagNear(2);if(b)return{id:'bag',b};
@@ -888,10 +921,11 @@ function nearSpot(){
 }
 function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
-  if(s.id==='revive')return; // hold F: handled in updateCoop
+  if(s.id==='revive'||s.id==='digout')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
-  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
+  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;toast(s.pr.type==='body'?`Carrying ${s.pr.name}. Get them inside the camp fence before dawn and the nurse wakes them up. F to put them down.`:`Hauling the ${propName(s.pr)}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4500);sfx.thud();return}
+  if(s.id==='lookout'){openLookout();return}
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');
@@ -911,6 +945,8 @@ const SHOP=[
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35},
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt'},
+  {id:'tonic',name:'Sam\'s onion tonic',desc:'Drink with Z: cures snake and scorpion poison, soothes sunburn and heat, and lizards hate the smell.',cost:20,stack:'tonic'},
+  {id:'newshovel',name:'Replacement shovel',desc:'The curse snapped yours? This one digs at full speed again.',cost:12,stack:'fix'},
 ];
 let shopOpen=false;
 function openShop(){shopOpen=true;releaseLock();$('#shop').hidden=false;renderShop();setTimeout(()=>$('#shopClose').focus(),30)}
@@ -922,7 +958,7 @@ function renderShop(){
     const b=document.createElement('b');b.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc+(it.stack==='onions'?` You have ${S.onions}.`:it.stack==='batt'?` Battery: ${Math.round(S.batt)}%.`:'');
     const btn=document.createElement('button');const owned=!it.stack&&S.up[it.id];
     btn.textContent=owned?'Owned':`${it.cost} seeds`;btn.disabled=owned||S.seeds<it.cost;btn.id='buy-'+it.id;
-    btn.onclick=()=>{if(S.seeds<it.cost)return;S.seeds-=it.cost;if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax();sfx.coin();renderShop();toast(`Bought: ${it.name}`,'good',2000)};
+    btn.onclick=()=>{if(S.seeds<it.cost)return;S.seeds-=it.cost;if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack==='tonic')S.tonic++;else if(it.stack==='fix')S.broken=false;else S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax();sfx.coin();renderShop();toast(`Bought: ${it.name}`,'good',2000)};
     row.append(b,d,btn);list.appendChild(row);
   }
 }
@@ -930,9 +966,9 @@ $('#shopClose').onclick=closeShop;
 
 /* KO */
 function knockOut(title,text){
-  if(S.ko)return;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
-  const lost=S.sack.length;dropBag();
-  $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
+  if(S.ko||S.out)return;S.ko=othersOnline()||helpersOn()?25:4;digHeld=false;S.carry=null;S.light=false;S.buried=false;
+  const lost=S.sack.length;
+  $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack is still on you. If nobody gets you up, it\'s gone.':'');$('#ko').hidden=false;
 }
 function respawn(){S.ko=0;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();me.g.rotation.x=0}
 
@@ -951,6 +987,7 @@ const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 function releaseLock(){if(document.pointerLockElement)try{document.exitPointerLock()}catch(e){}}
 function lockOk(){return document.pointerLockElement===canvas}
 canvas.addEventListener('mousedown',e=>{
+  if(S.out){S.specI=(S.specI||0)+1;return}
   if(!S.started||uiOpen()||S.ko)return;
   if(!lockOk()&&!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(err){}}
   if(e.button===0&&lockOk())digHeld=true;
@@ -970,6 +1007,7 @@ addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
   if(!$('#fired').hidden)return;
   if(e.key==='Enter'&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
+  if(LOOK.open){if(e.key==='Escape'||e.key==='f'||e.key==='F'){e.preventDefault();closeLookout()}return}
   if(shopOpen){if(e.key==='Escape'||e.key==='f'||e.key==='F'){e.preventDefault();closeShop()}return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
@@ -980,6 +1018,7 @@ addEventListener('keydown',e=>{
   if(k==='f')use();
   if(k==='q')eatOnion();
   if(k==='g'&&!e.repeat)doPing();
+  if(k==='z'&&!e.repeat)eatSomething();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='b'&&!e.repeat)twerk();
   if(k==='v')toggleView();
@@ -1014,7 +1053,7 @@ const NICKS=['Caveman','Sploosh','Big Thumb','Onion Boy','Lizard Bait','Seeds','
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['seeds','water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt'];
+const SAVE_KEYS=['water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt','tonic','sackBonus','broken'];
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
@@ -1026,7 +1065,7 @@ function startGame(resume){
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
-    S.seeds=num(r.seeds,0,1e6,20)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
+    S.water=num(r.water,0,180,100);S.tonic=num(r.tonic,0,99,0)|0;S.sackBonus=num(r.sackBonus,0,1e5,0);S.broken=!!r.broken;S.onions=num(r.onions,0,999,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
     S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
@@ -1035,7 +1074,7 @@ function startGame(resume){
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
   me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color]});scene.add(me.g);
-  meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
+  meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();setTimeout(announceDay,1500);meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
@@ -1058,10 +1097,10 @@ try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
-  const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel()];
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0);
+  const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),+P.yaw.toFixed(2)];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],sc:S.seeds});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds});
 }
 function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
@@ -1078,6 +1117,7 @@ function applyDig(x,z,d,rebuild){
   let h=holeNear(x,z,0.06);
   if(h){if(d<=h.d+0.001)return;h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true});
   if(rebuild){touchHole(h);if(nearCam(x,z,40))puff(x,groundAt(x,z)+0.4,z,h.mx,h.mz,4)}
+  maybeNest(h);
 }
 function renderOnline(){
   const names=[...remotes.values()].map(R=>R.name);
@@ -1097,32 +1137,38 @@ function onMsg(m){
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e7,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),cleanName(p.name));
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}break;
     }
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,65535,0)|0;R.p.g.visible=!(R.f&64);setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout()}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
-    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;const sc=num(m.sc,0,1e6,0)|0;if(sc>S.seeds){S.seeds=sc;toast('Welcome back. Your '+sc+' seeds were saved.','good',4000)}P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
+    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
     case 'twerk':{const R=remotes.get(m.id);if(R&&!(R.twerkT>0))R.twerkT=TWERK_SECS;break}
     case 'run':setRun(m);break;
-    case 'quota':setRun(m);quotaMet();break;
+    case 'quota':setRun(m);quotaMet(num(m.paid,0,1e7,0)|0);break;
+    case 'dawn':setRun(m);newMorning();break;
+    case 'rollcall':if(Array.isArray(m.missing)&&m.missing.length)toast(`ROLL CALL: ${m.missing.slice(0,8).map(cleanName).join(', ')} missed curfew. The Warden fines the crew ${num(m.fine,0,1e4,0)|0} seeds, and the curse grows.`,'bad',7000);else toast('Roll call: everyone made it inside the fence. The curse eases a little.','good',3500);break;
+    case 'served':served(num(m.sentence,1,99,1)|0,num(m.next,1,99,2)|0);break;
+    case 'bodyHome':{const id=num(m.id,0,1e7,-1)|0;removeProp(id);toast(`${cleanName(m.n)||'Someone'} made it back inside the fence. The nurse will wake them up.`,'good',4000);if(Array.isArray(m.who)&&m.who.includes(net.id))addXP(40);break}
+    case 'cave':{const h=holeNear(num(m.x,-600,600,0),num(m.z,-600,600,0),0.3);if(h)caveIn(h,false,num(m.d,0,2.6,0.3));break}
+    case 'unburied':unbury(cleanName(m.by)||'A friend');break;
     case 'grace':graceDay();break;
     case 'fired':fired(num(m.bank,0,1e7,0)|0,num(m.quota,0,1e7,0)|0);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);break;
-    case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0));break;
+    case 'prop':addProp(num(m.id,0,1e7,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0),cleanName(m.name));break;
     case 'props':if(Array.isArray(m.list))for(const a of m.list){const pr=PROPS.get(a[0]);if(pr){pr.x=num(a[1],-600,600,pr.x);pr.z=num(a[2],-600,600,pr.z);pr.n=num(a[3],0,40,0)|0}}break;
     case 'psold':propSold(num(m.id,0,1e5,-1)|0,num(m.v,0,1e4,0)|0,Array.isArray(m.who)?m.who:[]);break;
     case 'bag':addBag(num(m.id,0,1e9,-1),num(m.x,-600,600,0),num(m.z,-600,600,0),Array.isArray(m.items)?m.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(m.n));break;
@@ -1162,13 +1208,16 @@ function updateRemotes(dt){
 const fwd=new T.Vector3();
 function nearCam(x,z,d){return (camera.position.x-x)**2+(camera.position.z-z)**2<d*d}
 function updatePlayer(dt){
-  if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
+  if(S.out){me.g.position.set(P.x,P.y-50,P.z);return}
+  if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)goOut();return}
+  if(S.stunT>0){S.stunT-=dt;animPerson(me,0,dt);return}
+  if(S.buried){S.stam=Math.max(0,S.stam-2*dt);if(KEYS[' ']&&!uiOpen()){S.buryT+=dt;if(S.buryT>=10)unbury()}me.g.position.set(P.x,groundAt(P.x,P.z)-1.1,P.z);animPerson(me,0,dt);return}
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
   if(touch.id!==null){ix=touch.ix;iz=touch.iz}
   if(uiOpen()||S.twerkT>0){ix=0;iz=0}
-  const sprint=KEYS['shift']&&S.water>0&&S.carry==null;
+  const sprint=KEYS['shift']&&S.water>0&&S.carry==null&&S.stam>2;
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
   const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0);
@@ -1189,9 +1238,11 @@ function updatePlayer(dt){
     }else P.anim=0;
   }
   const g=groundAt(P.x,P.z);
-  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=5.6;P.grounded=false}
+  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap&&useStam(8)){P.vy=5.6;P.grounded=false}
+  if(P.anim===4){S.stam=Math.max(0,S.stam-14*dt);S.stamT=0}
+  if(S.carry!=null&&P.moving){S.stam=Math.max(0,S.stam-4*dt);S.stamT=0;if(S.stam<=0){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500)}}
   P.vy-=16*dt;P.y+=P.vy*dt;
-  if(P.y<=g){P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;
+  if(P.y<=g){if(P.vy<-8.5)hurt('injury',(-P.vy-8.5)*5,'Ouch. That fall hurt.');P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;
   if(P.y<g+0.02)P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
@@ -1200,12 +1251,12 @@ function updatePlayer(dt){
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
-  S.water=Math.max(0,S.water-drain*dt*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1));
-  if(S.water<=0)knockOut('Heatstroke','You ran out of water in the sun.');
+  S.water=Math.max(0,S.water-drain*dt*(RUN.mood==='heatwave'?1.6:1)*(uiOpen()||PARTY.on?0:1));
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
 function updateCamera(dt){
+  if(S.out&&spectateCam())return;
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
   const cp=Math.cos(P.pitch),dist=5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
@@ -1254,33 +1305,36 @@ const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
-  drop:s=>`Let go of the ${LOOT[s.pr.type].name}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
-  prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
+  digout:s=>`Hold to dig ${s.R.name} out`+(S.digOutT>0?`… ${Math.round(S.digOutT/3*100)}%`:''),
+  drop:s=>`Let go of ${s.pr.type==='body'?s.pr.name:'the '+propName(s.pr)}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
+  prop:s=>(s.pr.type==='body'?`Pick up ${s.pr.name} and carry them back inside the fence`:`Grab the ${propName(s.pr)} (${SIM.HEAVY[s.pr.type]} seeds)`)+(s.pr.n?` · ${s.pr.n} carrying`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
 };
 const hq={quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
+  {const t=clockT(),cur=curfewT();hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&t>cur-120000&&t<cur);$('#quotaK').textContent='Quota by '+hhmm(cur)}
+  $('#curseBar').style.width=RUN.curse.toFixed(0)+'%';$('#mood').textContent=SIM.MOODS[RUN.mood].name;{const st=SIM.SITES[RUN.site];$('#site').textContent=st.name+' ×'+st.mult}
+  {const mx=stamMax(),pc=v=>v.toFixed(1)+'%';$('#stamFill').style.width=pc(Math.min(S.stam,mx));$('#stamGap').style.width=pc(Math.max(0,mx-S.stam));$('#affHeat').style.width=pc(AFF.heat);$('#affBurn').style.width=pc(AFF.burn);$('#affPoison').style.width=pc(AFF.poison);$('#affInjury').style.width=pc(AFF.injury);$('#affHunger').style.width=pc(AFF.hunger)}
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   {const t=clockT();hc.clock.textContent=clockText();
-   if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
+   const cur=curfewT();if(t<cur){const left=(cur-t)/1000;hc.curK.textContent='Curfew in';hc.cur.textContent=fmtT(left);hc.cur.classList.toggle('warn',left<60)}
    else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';hc.cur.classList.toggle('warn',!!CUR.hunter)}
-   const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
+   const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<curfewT()&&walk>(curfewT()-t)/1000*0.85)}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';hud.wrap.classList.toggle('low',w<0.25);
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
-  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
+  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':'',S.broken?'Broken shovel':'',S.tonic?S.tonic+' onion tonic':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){const s=document.createElement('span');if(t==='onion'){s.className='onion';s.textContent='Onion breath'}else s.textContent=t;hud.tools.appendChild(s)}}
   hud.det.hidden=!S.up.detector;hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
   const s=nearSpot();
   if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent (with the crew\'s seeds!)':s.id==='lookout'?'Sit at the Warden\'s lookout (whole-lake map)':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
 }
@@ -1294,6 +1348,7 @@ function ws(v){return v/(MV*2)*mm.width}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
   mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
+  if(RUN.mood==='sandstorm'&&!inCamp(P.x,P.z)){mx.fillStyle='#c9a37a';mx.fillRect(0,0,W,W);mx.fillStyle='#5a4028';mx.font='700 30px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.fillText('SANDSTORM',W/2,W/2);return}
   mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
   if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
   mx.fillStyle='#c4955f';mx.fillRect(wx(-40),wz(27),ws(70),ws(29));
@@ -1306,11 +1361,12 @@ function drawMap(){
   if(S.revealed){mx.strokeStyle='#d12a2a';mx.lineWidth=3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
   mx.fillStyle='rgba(43,29,18,.45)';for(const b of bots){mx.beginPath();mx.arc(wx(b.p.g.position.x),wz(b.p.g.position.z),3,0,6.3);mx.fill()}
   for(const R of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(wx(R.p.g.position.x),wz(R.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
-  for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
+  // monsters only show up on the lookout's big map
+  if(false)for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
-  if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
+  if(false&&ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
   {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 }
@@ -1321,7 +1377,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||!$('#fired').hidden}
+function uiOpen(){return shopOpen||DLG.open||BJ.open||LOOK.open||chatOpen()||!$('#fired').hidden}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
@@ -1339,9 +1395,10 @@ function reportKB(){
   if(!S.up.long)setTimeout(()=>toast('Kate buried it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
 function sirNode(first){
-  const back=()=>sirNode(false),opts=[],sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
-  if(S.water<waterMax()-2)opts.push({label:'Can I fill my canteen?',go:()=>{S.water=waterMax();sfx.splash();return reply('Mr. Sir','Drink up. Then get back out there. The sun doesn\'t care about your feelings.',back)}});
-  if(S.sack.length)opts.push({label:`I found some stuff. (${S.sack.length} item${S.sack.length>1?'s':''}, worth ${sum} seeds)`,go:()=>{S.seeds+=sum;S.sack=[];sfx.coin();payTeam(sum);addXP(sum/2);toast(`Mr. Sir paid ${sum} seeds. They count toward the team quota.`,'good');return reply('Mr. Sir',pick(['This isn\'t a Girl Scout camp. But fine. Here\'s your seeds.','Don\'t spit your seeds on my truck.','Keep \'em coming, camper.']),back)}});
+  const back=()=>sirNode(false),opts=[],sum=Math.round((S.sack.reduce((s,t)=>s+LOOT[t].val,0)+S.sackBonus)*(RUN.mood==='digday'?2:1));
+  if(S.water<waterMax()-2)opts.push({label:'Can I fill my canteen?'+(RUN.mood==='stingy'?` (${Math.max(0,3-S.refills)} left today)`:''),go:()=>{if(RUN.mood==='stingy'&&S.refills>=3)return reply('Mr. Sir','Three refills. That\'s the rule today. Go suck on a rock.',back);S.refills++;S.water=waterMax();AFF.heat=0;sfx.splash();return reply('Mr. Sir','Drink up. Then get back out there. The sun doesn\'t care about your feelings.',back)}});
+  if(S.sack.length)opts.push({label:`I found some stuff. (${S.sack.length} item${S.sack.length>1?'s':''}, worth ${sum} seeds)`,go:()=>{S.seeds+=sum;S.sack=[];S.sackBonus=0;sfx.coin();addXP(sum/2);toast(`Mr. Sir paid ${sum} seeds into the crew's pile.`,'good');return reply('Mr. Sir',pick(['This isn\'t a Girl Scout camp. But fine. Here\'s your seeds.','Don\'t spit your seeds on my truck.','Keep \'em coming, camper.']),back)}});
+  if(!S.lunch)opts.push({label:'Is there any lunch?',go:()=>{S.lunch=true;AFF.hunger=0;S.stam=stamMax();sfx.splash();return reply('Mr. Sir',pick(['One sandwich. Don\'t say I never gave you nothing.','Lunch is a bologna sandwich and a warm juice box. Enjoy.']),back)}});
   if(S.hasKB)opts.push({label:'I found a gold tube marked KB.',go:()=>reply('Mr. Sir','That ain\'t mine. The Warden will want that. Her cabin\'s the one with the trees.',back)});
   opts.push({label:'Can I have some of your sunflower seeds?',go:()=>{if(!DLG.used.sirSeeds&&Math.random()<0.5){DLG.used.sirSeeds=1;S.seeds+=3;sfx.coin();return reply('Mr. Sir','Fine. Three. You tell anybody, you dig two holes tomorrow. (+3 seeds)',back)}return reply('Mr. Sir','These are MY seeds. I quit smoking for these seeds.',back)}});
   opts.push({label:'Why do we dig holes all day?',go:()=>({name:'Mr. Sir',text:'Builds character. Dig a hole every day in the hot sun and you come out a better kid.',opts:[{label:'Is that the real reason?',go:()=>reply('Mr. Sir','You ask a lot of questions for somebody holding a shovel. Go ask the Warden. Actually, don\'t.',back)},{label:'Got it. Character.',go:back},LEAVE]})});
@@ -1546,6 +1603,7 @@ function updateParty(dt,now){
     sun.intensity=lerp(sun.intensity,tS,k);hemi.intensity=lerp(hemi.intensity,tH,k);
     SKY_T.copy(WHITE).lerp(NIGHT_SKY,nf);sky.material.color.lerp(SKY_T,k);if(!S.won){FOG_T.copy(FOG_DAY).lerp(NIGHT_FOG,nf);scene.fog.color.lerp(FOG_T,k)}
     sunDisc.visible=nf<0.6;stars.material.opacity=nf*0.9;
+    {const sand=RUN.mood==='sandstorm'&&S.started;scene.fog.far=lerp(scene.fog.far,sand?60:1000,k);scene.fog.near=lerp(scene.fog.near,sand?3:80,k);if(sand)scene.fog.color.lerp(SAND_FOG,k)}
     for(const[p,home,ry]of[[sir,PARTY.homeSir,PARTY.homeSirR],[warden,PARTY.homeWarden,PARTY.homeWardenR]]){
       const d=stepTo(p.g,home.x,home.z,dt,3.5);p.g.position.y=d<0.3?home.y:groundAt(p.g.position.x,p.g.position.z);
       if(d>0.05){p.g.rotation.y=Math.atan2(home.x-p.g.position.x,home.z-p.g.position.z);animPerson(p,1,dt)}else{p.g.rotation.y=ry;animPerson(p,0,dt)}
@@ -1606,7 +1664,7 @@ function toggleAdmin(){const el=$('#admin');if(el.hidden&&net.ws&&net.ws.readySt
 function renderAdmin(){if($('#admin').hidden)return;$('#admT').textContent=clockText();$('#admS').textContent=CLK.paused?'paused':CLK.off?'(changed)':'(real clock)';$('#admPause').textContent=CLK.paused?'Resume time':'Pause time'}
 $('#admin').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.h)jumpTo(tAtHour(+d.h));else if(d.c)jumpTo(DAYMS-59000);else if(d.d)jumpTo(tAtHour(hourOf(clockT())+(+d.d)));
-  else if(d.a){if(online())wsSend({t:'admin',a:d.a});else{setRun({day:RUN.day,bank:d.a==='fill'?RUN.quota:0,quota:RUN.quota});saveRun()}}
+  else if(d.a){if(online())wsSend({t:'admin',a:d.a});else soloAdmin(d.a)}
   else if(b.id==='admPause'){if(CLK.paused)applyClock({paused:false,off:CLK.pt-Date.now()});else applyClock({paused:true,pt:clockT()})}
   else if(b.id==='admReal')applyClock({paused:false,off:0,pt:0});
   b.blur()});
@@ -1633,7 +1691,7 @@ function makeTruck(){
   return{g,red,blue,spot,x:0,z:0,h:0,tx:0,tz:0,mode:'patrol',lost:0,active:false};
 }
 const trucks=[makeTruck(),makeTruck()];
-const CUR={phase:clockT()<DAYMS?'day':'night',warned:clockT()>DAYMS-60000,hunter:null,half:null,msgT:0};
+const CUR={phase:null,warned:false,hunter:null,half:null,msgT:0,lastT:null};
 function siren(){for(let i=0;i<3;i++)setTimeout(()=>tone(450,1.4,'sawtooth',0.07,900),i*1500)}
 /* trucks and Zeroni are moved by the shared rules in sim.js (on the server, or right here when you play solo). This just draws them. */
 function showTruck(tk,st,dt){
@@ -1723,17 +1781,19 @@ function hunterToast(h,was){
   else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
-  const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);
+  const t=clockT(),cur=curfewT(),night=t>=cur,out=!inCamp(P.x,P.z);
+  if(CUR.lastT!=null&&CUR.lastT-t>SIM.CYCLE/2)soloDawn();CUR.lastT=t;
+  if(CUR.phase===null)CUR.phase=night?'night':'day',CUR.warned=t>cur-60000;
   stepSoloMonsters(dt);trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
   if(!night){
     if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. Madame Zeroni fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
-    if(t<DAYMS-60000)CUR.warned=false;
+    if(t<cur-60000)CUR.warned=false;
     else if(!CUR.warned){CUR.warned=true;siren();toast('SIREN: curfew in one minute. Get back inside the camp fence!','bad',6000)}
     return;
   }
-  const half=t<NIGHT_SPLIT?'police':'zeroni';
+  const half=t<splitT()?'police':'zeroni';
   if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out)toast('Curfew. Lights out, campers.','',3500)}
-  else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast('01:00. The police go home. Out on the lake, someone is asking for a ride up the mountain…','',5000)}}
+  else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast(hhmm(t)+'. The police go home. Out on the lake, someone is asking for a ride up the mountain…','',5000)}}
   const h=MONV.trucks.length?'police':MONV.zer?'zeroni':null,want=out?h:null;
   if(want!==CUR.hunter){const was=CUR.hunter;CUR.hunter=want;if(want)hunterToast(want,was);else if(was&&!out&&performance.now()-S.respawnAt>1500)toast(was==='zeroni'?'You made it inside the fence. Madame Zeroni can\'t cross it. She waits out there…':'You made it back inside the fence. The police won\'t follow you into camp.','good',4000)}
 }
@@ -1743,7 +1803,7 @@ const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
 function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise}}
 function stepSoloMonsters(dt){
-  if(online())return;const ev=[];SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);
+  if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN});
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
   for(const e of ev)monEvent(e);
 }
@@ -1793,46 +1853,251 @@ function setHat(p,l){
   const c=[0,0xd9c27a,0x222222,0xd4af37][t];const br=cyl(0.42,0.42,0.04,10,c),cr=cyl(0.2,0.24,0.2,8,c);cr.position.y=0.12;h.add(br,cr);
 }
 
-/* ---- the team quota: sell enough to Mr. Sir by curfew, or the Warden fires the whole crew ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1)};
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e7,0)|0}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
-function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank}))}catch(e){}}
-function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
+/* ================= the sentence: 5 days, one shared pile of seeds, the Warden's mood, dig sites and the family curse ================= */
+const RUN={day:1,bank:30,quota:140,curse:0,mood:'normal',site:'near',sentence:1,seed:1,served:0};
+function soloQuota(){return SIM.quotaFor(RUN.day,1,RUN.sentence,RUN.mood)}
+function newSoloRun(sentence){const seed=(Math.random()*1e9)|0;Object.assign(RUN,{day:1,bank:30,curse:0,sentence:sentence||1,seed},SIM.rollDay(seed,1,0));RUN.quota=soloQuota()}
+function loadRun(){
+  try{const o=JSON.parse(localStorage.getItem('cgl-run')||'null');
+    if(o&&o.seed){RUN.day=num(o.day,1,SIM.DAYS,1)|0;RUN.bank=num(o.bank,0,1e7,30)|0;RUN.curse=num(o.curse,0,100,0);RUN.sentence=num(o.sentence,1,99,1)|0;RUN.seed=o.seed|0;RUN.mood=o.mood in SIM.MOODS?o.mood:'normal';RUN.site=o.site in SIM.SITES?o.site:'near';RUN.served=num(o.served,0,999,0)|0}
+    else newSoloRun(1)}catch(e){newSoloRun(1)}
+  RUN.quota=soloQuota();runChanged();
+}
+function saveRun(){if(!online())try{localStorage.setItem('cgl-run',JSON.stringify(RUN))}catch(e){}}
+// everyone earns into and spends from the same pile: S.seeds is just the crew's bank
+Object.defineProperty(S,'seeds',{configurable:true,get(){return RUN.bank},set(v){v=Math.max(0,Math.round(v));const d=v-RUN.bank;if(!d)return;RUN.bank=v;if(online())wsSend(d>0?{t:'sell',v:d}:{t:'spend',v:-d});else saveRun()}});
+function payTeam(v){if(v>0)S.seeds+=v}
+const CURSE_TXT={25:'The family curse is growing. Shovels feel flimsy, and the lizards are restless.',50:'The curse is strong. More lizard nests, and Madame Zeroni will come earlier tonight.',75:'The crew is CURSED. Even the sky is against you.'};
+function curseNote(was){const c=RUN.curse;for(const th of [25,50,75])if(was<th&&c>=th){toast(CURSE_TXT[th],'bad',6500);zeroniSting(0.5)}if(was>=25&&c<25)toast('The curse is lifting. The crew\'s luck is turning.','good',4000)}
+function addCurse(d){if(online())return;const was=RUN.curse;RUN.curse=clamp(RUN.curse+d,0,100);saveRun();curseNote(was)} // the server keeps the curse when online
 function setRun(m){
-  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
-  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
+  const was={bank:RUN.bank,curse:RUN.curse,day:RUN.day};
+  RUN.day=num(m.day,1,SIM.DAYS,1)|0;RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;RUN.curse=num(m.curse,0,100,0);
+  if(m.mood in SIM.MOODS)RUN.mood=m.mood;if(m.site in SIM.SITES)RUN.site=m.site;RUN.sentence=num(m.sentence,1,99,1)|0;RUN.served=num(m.served,0,999,0)|0;if(m.seed)RUN.seed=m.seed|0;
+  if(S.started&&was.day===RUN.day&&was.bank<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a cushion for tomorrow. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
+  if(S.started)curseNote(was.curse);
+  runChanged();
+}
+function curfewT(){return SIM.curfewT(RUN.day)}
+function splitT(){return SIM.nightSplit(curfewT(),RUN.curse,RUN.mood)}
+function hhmm(t){const h=hourOf(t);return String(Math.floor(h)%24).padStart(2,'0')+':'+String(Math.floor((h%1)*60)).padStart(2,'0')}
+function runChanged(){$('#dayTag').textContent=`Day ${RUN.day}/${SIM.DAYS}`+(RUN.sentence>1?` · Sentence ${RUN.sentence}`:'');placeSiteFlag()}
+function announceDay(){
+  const M=SIM.MOODS[RUN.mood],St=SIM.SITES[RUN.site];
+  toast(`Day ${RUN.day} of ${SIM.DAYS}. The Warden's mood: ${M.name}. ${M.desc}`,RUN.mood==='normal'?'':'bad',8000);
+  setTimeout(()=>toast(`Dig site: ${St.name} (finds worth ×${St.mult}). Quota: ${RUN.quota} seeds by curfew at ${hhmm(curfewT())}.`,'',8000),1400);
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
-function quotaMet(){toast(`QUOTA MET. The Warden keeps the crew for day ${RUN.day}. New quota: ${RUN.quota} seeds. +20 seeds, +100 XP`,'gold',7000);S.seeds+=20;addXP(100)}
+function quotaMet(paid){toast(`QUOTA MET. The Warden took her ${paid} seeds. Tomorrow is day ${RUN.day} of ${SIM.DAYS}. +100 XP`,'gold',7000);addXP(100)}
+function bigCard(title,text,more,btn){$('#firedTitle').textContent=title;$('#firedText').textContent=text;$('#firedMore').textContent=more;$('#firedBtn').textContent=btn;$('#fired').hidden=false;releaseLock()}
+function wipeGear(){Object.assign(S,{sack:[],sackBonus:0,up:{},onions:1,batt:100,tonic:0,hasKB:false,reported:false,holesDone:0,carry:null,broken:false});saveSession()}
 function fired(bank,quota){
-  if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew sold ${bank} of the ${quota} seeds the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  // a new run: seeds and gear are gone, your level stays
-  Object.assign(S,{seeds:20,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  if(!$('#fired').hidden)return;zeroniSting(0.8);
+  bigCard('Fired',`The crew had ${bank} of the ${quota} seeds the Warden wanted.`,'The Warden fired the whole crew. The lake gets refilled, and the crew\'s seeds and gear are gone. Your level stays.','Start a new sentence');
+  wipeGear();
 }
-$('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run')}catch(e){}location.reload()};
+function served(done,next){
+  if(!$('#fired').hidden)return;sfx.gold();addXP(300);
+  try{const m=JSON.parse(localStorage.getItem('cgl-meta')||'{}');m.served=(m.served||0)+1;m.best=Math.max(m.best||0,done);localStorage.setItem('cgl-meta',JSON.stringify(m))}catch(e){}
+  bigCard('Released!',`The crew served sentence ${done}: five days at Camp Green Lake. +300 XP`,`Sentence ${next} is harder: bigger quotas and meaner days. The lake gets refilled for the new crew.`,'Start sentence '+next);
+  wipeGear();
+}
+$('#firedBtn').onclick=()=>{saveSession();location.reload()};
+function rollCall(){
+  // solo roll call at curfew: anyone outside the fence costs the crew (being out cold in the nurse's office is excused)
+  if(S.out)return;
+  if(!inCamp(P.x,P.z)){S.seeds-=25;addCurse(8);toast('ROLL CALL: you weren\'t inside the fence. The Warden fines the crew 25 seeds, and the curse grows.','bad',6500)}
+  else{addCurse(-4);toast('Roll call: everyone\'s inside the fence. The curse eases a little.','good',3500)}
+}
 function soloEndOfDay(){
   if(online()||!S.started)return;
-  const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
-  else if(played<180)graceDay();
-  else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;saveRun();fired(b,q)}
+  rollCall();
+  const played=S.dayPlay||0;S.dayPlay=0;RUN.quota=soloQuota();
+  if(RUN.bank>=RUN.quota){
+    const q=RUN.quota;RUN.bank-=q;
+    if(RUN.day>=SIM.DAYS){const done=RUN.sentence;newSoloRun(done+1);saveRun();served(done,done+1);return}
+    RUN.day++;RUN.quota=soloQuota();saveRun();runChanged();quotaMet(q);
+  }else if(played<180)graceDay();
+  else{const b=RUN.bank,q=RUN.quota;newSoloRun(RUN.sentence);saveRun();fired(b,q)}
 }
+function soloAdmin(a){
+  if(a==='fill')RUN.bank=Math.max(RUN.bank,RUN.quota);else if(a==='empty')RUN.bank=0;
+  else if(a==='curseUp'||a==='curseDown'){addCurse(a==='curseUp'?20:-20)}
+  else if(a==='mood'){const ks=Object.keys(SIM.MOODS);RUN.mood=ks[(ks.indexOf(RUN.mood)+1)%ks.length];announceDay()}
+  else if(a==='site'){const ks=Object.keys(SIM.SITES);RUN.site=ks[(ks.indexOf(RUN.site)+1)%ks.length];announceDay()}
+  else if(a==='day'){RUN.day=RUN.day%SIM.DAYS+1;announceDay()}
+  else if(a==='town'&&typeof enterTown==='function')enterTown();
+  RUN.quota=soloQuota();saveRun();runChanged();
+}
+function soloDawn(){if(online())return;Object.assign(RUN,SIM.rollDay(RUN.seed,RUN.day,RUN.curse));RUN.quota=soloQuota();saveRun();runChanged();newMorning()}
+function newMorning(){
+  // a night in the tents heals most things; anyone out cold wakes up in the nurse's office
+  if(S.out)wakeUp(false);
+  AFF.hunger=0;AFF.burn=0;AFF.heat=0;AFF.poison=0;AFF.injury*=0.3;S.stam=stamMax();S.refills=0;S.lunch=false;
+  if(S.started)announceDay();
+}
+
+/* ---- dig sites: a flag on the lake where the Warden wants you today ---- */
+const siteFlag=(()=>{const g=new T.Group();const p=cyl(0.12,0.12,9,6,0xdcdcdc);p.position.y=4.5;const f=box(2.4,1.3,0.05,0xd12a2a);f.position.set(1.25,8.2,0);g.add(p,f);scene.add(g);return g})();
+function placeSiteFlag(){const s=SIM.SITES[RUN.site];siteFlag.position.set(s.x,groundAt(s.x,s.z),s.z)}
+function siteMult(x,z){const s=SIM.SITES[RUN.site];return Math.hypot(x-s.x,z-s.z)<s.r?s.mult:1}
+/* the ruins of the old town of Green Lake, out where Kate used to teach */
+{const R=SIM.SITES.ruins,rr=mulberry32(4242);
+  for(let i=0;i<9;i++){const a=rr()*Math.PI*2,d=10+rr()*60,x=R.x+Math.cos(a)*d,z=R.z+Math.sin(a)*d,w=3+rr()*6,h=1+rr()*2.4;const m=box(w,h,0.5,rr()<0.5?0xb07650:0x9b7b58);m.position.set(x,groundAt(x,z)+h/2-0.2,z);m.rotation.y=rr()*Math.PI;scene.add(m)}
+  const s=sign('GREEN LAKE',R.x+6,R.z+8,0.4,4,1.2);if(s)s.rotation.z=0.25}
+
+/* ---- stamina, worn down by the lake (heat, sunburn, bites, falls, hunger) ---- */
+const AFF={heat:0,burn:0,poison:0,injury:0,hunger:0};
+function stamMax(){return Math.max(0,100-AFF.heat-AFF.burn-AFF.poison-AFF.injury-AFF.hunger)}
+function useStam(n){if(S.stam<n)return false;S.stam-=n;S.stamT=0;return true}
+function hurt(kind,n,why){AFF[kind]=clamp(AFF[kind]+n,0,70);if(why)toast(why,'bad',2500)}
+function inShade(){return inCamp(P.x,P.z)||holeDepthHere()>1.2||S.inTown}
+let skyT=30;
+function updateStamina(dt){
+  if(S.out)return;
+  const t=clockT(),day=t<curfewT(),h=hourOf(t),hot=RUN.mood==='heatwave'?2:1;
+  if(!inShade()&&day&&h>=10&&h<17)AFF.burn=Math.min(35,AFF.burn+0.05*hot*dt);else AFF.burn=Math.max(0,AFF.burn-(inCamp(P.x,P.z)?0.25:0.06)*dt);
+  if(S.water<=0)AFF.heat=Math.min(60,AFF.heat+3*dt);else if(S.water>30)AFF.heat=Math.max(0,AFF.heat-0.6*dt);
+  AFF.poison=Math.max(0,AFF.poison-0.2*dt);
+  if(inCamp(P.x,P.z)&&!P.moving)AFF.injury=Math.max(0,AFF.injury-0.5*dt);
+  if(day)AFF.hunger=Math.min(40,AFF.hunger+0.03*dt);
+  const mx=stamMax();
+  if(mx<=3&&!S.ko){knockOut('Collapsed','The heat, the bites and the bruises all added up. Your body gave out.');return}
+  S.stamT=(S.stamT||0)+dt;if(S.stamT>0.9)S.stam=Math.min(mx,S.stam+(P.moving?10:20)*dt);S.stam=Math.min(S.stam,mx);
+  // the curse makes things fall out of the sky (Clyde Livingston's sneakers, like the movie)
+  if(RUN.curse>=40&&day&&!inCamp(P.x,P.z)&&(skyT-=dt)<=0){skyT=20;if(Math.random()<(RUN.curse-30)/140)sneakersFall()}
+}
+function sneakersFall(){
+  sfx.thud();tone(900,0.5,'sine',0.05,300);hurt('injury',8);S.stunT=1.2;say(meL,'OW!',2500);
+  toast('A pair of sneakers fell out of the sky and hit you on the head. They say CLYDE LIVINGSTON on them. (The curse)','bad',6000);
+  if(S.sack.length<sackMax())S.sack.push('sneakers');
+}
+/* eat or drink (Z): onion tonic cures poison and sunburn; Sploosh or peaches fill you up */
+function eatSomething(){
+  if(S.ko||S.out)return;
+  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);S.onionT=Math.max(S.onionT,30);tone(330,0.3,'triangle',0.1,220);toast('You drink some of Sam\'s onion tonic. The sting fades, and lizards won\'t like your smell for 30 seconds.','good',4000);return}
+  const i=S.sack.findIndex(t=>t==='sploosh'||t==='jar');
+  if(i>=0&&AFF.hunger>4){const t=S.sack.splice(i,1)[0];AFF.hunger=0;S.stam=Math.min(stamMax(),S.stam+40);sfx.splash();toast(t==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);return}
+  toast(S.tonic>0||i>=0?'You don\'t need that right now.':'Nothing to eat or drink. Sploosh and peaches from the lake fill you up; the Wreck Room sells onion tonic.','',3000);
+}
+
+/* ---- getting caught hurts: not picked up in time = out cold until morning ---- */
+function goOut(){
+  S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0;S.carry=null;S.buried=false;S.out=true;
+  if(othersOnline()){wsSend({t:'out',x:P.x,z:P.z});$('#outWho').textContent='Your body is where you fell. Friends can carry it back inside the fence to wake you up. Otherwise your sack is lost. Click to watch someone else.';toast('You\'re out cold until morning.','bad',5000)}
+  else{addCurse(10);$('#outWho').textContent='Your sack is lost.';soloSkipNight()}
+  P.x=-20;P.z=41;P.y=groundAt(P.x,P.z);me.g.visible=false;$('#outBanner').hidden=false;
+}
+function jumpClockLocal(t){if(CLK.paused)CLK.pt=SIM.wrapT(t);else CLK.off=t-Date.now()}
+function soloSkipNight(){const t=clockT(),cur=curfewT();if(t<cur){jumpClockLocal(cur+800);setTimeout(()=>jumpClockLocal(SIM.CYCLE-2500),2500)}else jumpClockLocal(SIM.CYCLE-2500)}
+function wakeUp(withSack){
+  S.out=false;$('#outBanner').hidden=true;me.g.visible=!FP;P.x=-20;P.z=41;P.y=groundAt(P.x,P.z);P.vy=0;S.water=waterMax();S.stam=stamMax();
+  if(withSack)toast('Your friends carried you back. You wake up in the nurse\'s office with your sack.','good',5000);
+  else{if(S.sack.length)toast('You wake up in the nurse\'s office. Your sack is gone.','bad',5000);S.sack=[];S.sackBonus=0}
+}
+function spectateCam(){
+  const list=[...remotes.values()].filter(R=>!(R.f&64));if(!list.length)return false;
+  const R=list[(S.specI||0)%list.length],g=R.p.g,r=g.rotation.y;
+  camera.position.set(g.position.x-Math.sin(r)*5,g.position.y+3,g.position.z-Math.cos(r)*5);camera.lookAt(g.position.x,g.position.y+1.2,g.position.z);
+  $('#outWho').textContent=`Watching ${R.name}. Click to switch.`;return true;
+}
+
+/* ---- cave-ins: dig too hard next to another deep hole and it collapses on whoever is inside ---- */
+function caveCheck(h){
+  if(h.d<1.2)return;let near=false;forNearHoles(h.x,h.z,o=>{if(o!==h&&o.d>0.9&&Math.hypot(o.x-h.x,o.z-h.z)<h.r+o.r-0.2)near=true});
+  if(near&&Math.random()<0.045*(1+RUN.curse/100))caveIn(h,true);
+}
+function caveIn(h,mine,depth){
+  h.d=depth!=null?depth:Math.max(0.3,+(h.d*0.35).toFixed(2));touchHole(h);sfx.thud();noise(1.3,150,0.7,0.6,'lowpass');
+  const y=groundAt(h.x,h.z);for(let i=0;i<4;i++)puff(h.x,y+0.5,h.z,h.x+(Math.random()-0.5)*3,h.z+(Math.random()-0.5)*3,8);
+  if(mine)wsSend({t:'cave',x:h.x,z:h.z,d:h.d});
+  if(Math.hypot(P.x-h.x,P.z-h.z)<h.r&&!S.ko&&!S.out){S.buried=true;S.buryT=0;digHeld=false;S.carry=null;toast('CAVE-IN! You\'re buried up to your neck. A friend can dig you out (hold F next to you), or hold Space to struggle free.','bad',6500)}
+}
+function unbury(by){if(!S.buried)return;S.buried=false;S.buryT=0;P.y=groundAt(P.x,P.z);sfx.thud();toast(by?`${by} dug you out.`:'You wriggled free.','good',2500)}
+
+/* ---- lizards move into finished holes, more with the curse and in breeding season ---- */
+function maybeNest(h){
+  if(h.nestChecked||h.d<FIVE_FT||h.pre||h.bot||nearCampZone(h.x,h.z)||lizards.length>=150)return;h.nestChecked=true;
+  const p=0.07*(1+RUN.curse/60)*(RUN.mood==='breeding'?2:1);
+  if(hash2(h.x*3.1+RUN.seed%997,h.z*1.7+RUN.day*13)>=p)return;
+  const m=makeLizard();scene.add(m.g);lizards.push({home:h,m,x:h.x,z:h.z,ph:Math.random()*6,w:0.08+Math.random()*0.06,mode:'wander',hissT:0,yaw:0});
+  if(Math.hypot(P.x-h.x,P.z-h.z)<25){sfx.hiss();toast('Something is moving in the dirt. A yellow-spotted lizard just moved into that hole.','bad',4000)}
+}
+
+/* ---- the Warden's lookout: a seat in her cabin with the whole lake on one map ---- */
+const LOOK={open:false};const lk=$('#lkMap'),lkx=lk.getContext('2d');
+function openLookout(){LOOK.open=true;digHeld=false;releaseLock();$('#lookout').hidden=false;drawLookout()}
+function closeLookout(){LOOK.open=false;$('#lookout').hidden=true}
+const lkW=x=>(x+HALF)/(HALF*2)*lk.width;
+function drawLookout(){
+  if(!LOOK.open)return;const W=lk.width,s=W/(HALF*2),c=lkx;
+  c.fillStyle='#d9a86c';c.fillRect(0,0,W,W);
+  c.fillStyle='rgba(110,60,32,.35)';for(const h of holes){if(h.d<0.5)continue;c.fillRect(lkW(h.x)-1,lkW(h.z)-1,2,2)}
+  const st=SIM.SITES[RUN.site];c.strokeStyle='#d12a2a';c.lineWidth=3;c.setLineDash([8,6]);c.beginPath();c.arc(lkW(st.x),lkW(st.z),st.r*s,0,6.3);c.stroke();c.setLineDash([]);
+  c.fillStyle='#c4955f';c.fillRect(lkW(-40),lkW(27),70*s,29*s);c.strokeStyle='#2b1d12';c.lineWidth=2;c.strokeRect(lkW(-40),lkW(27),70*s,29*s);
+  c.fillStyle='#3f6e1e';for(const L of lizards){c.beginPath();c.arc(lkW(L.x),lkW(L.z),3,0,6.3);c.fill()}
+  c.fillStyle='#7a5f38';for(const b of BAGS.values())c.fillRect(lkW(b.x)-3,lkW(b.z)-3,6,6);
+  for(const pr of PROPS.values()){c.fillStyle=pr.type==='body'?'#e8742a':'#2b2f35';c.fillRect(lkW(pr.x)-5,lkW(pr.z)-5,10,10)}
+  for(const tk of trucks)if(tk.active){c.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';c.fillRect(lkW(tk.x)-6,lkW(tk.z)-6,12,12)}
+  if(typeof drawMonstersOnLookout==='function')drawMonstersOnLookout(c,lkW);
+  if(ZER.active){c.fillStyle='#7dff6a';c.beginPath();c.arc(lkW(ZER.x),lkW(ZER.z),8,0,6.3);c.fill()}
+  for(const p of PINGS){c.strokeStyle='#ffd23a';c.lineWidth=3;c.beginPath();c.arc(lkW(p.x),lkW(p.z),10,0,6.3);c.stroke()}
+  c.font='700 16px "Barlow Condensed",sans-serif';c.textAlign='center';
+  for(const R of remotes.values()){if(R.f&64)continue;const g=R.p.g.position;c.fillStyle='#fff8e8';c.strokeStyle='#2b1d12';c.lineWidth=2;c.beginPath();c.arc(lkW(g.x),lkW(g.z),6,0,6.3);c.fill();c.stroke();c.fillStyle='#2b1d12';c.fillText(R.name,lkW(g.x),lkW(g.z)-10)}
+  for(const H of HELPERS){const g=H.p.g.position;c.fillStyle='#b9b4a6';c.beginPath();c.arc(lkW(g.x),lkW(g.z),4,0,6.3);c.fill()}
+  c.fillStyle='#e8742a';c.beginPath();c.arc(lkW(P.x),lkW(P.z),7,0,6.3);c.fill();c.fillStyle='#2b1d12';c.fillText('You',lkW(P.x),lkW(P.z)-11);
+}
+lk.addEventListener('pointerdown',e=>{const r=lk.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*HALF*2-HALF,z=(e.clientY-r.top)/r.height*HALF*2-HALF;if(online())wsSend({t:'ping',x,z});else pingAt(x,z,'Lookout',0xffd23a)});
+setInterval(drawLookout,250);
+const lookoutChair=(()=>{const g=new T.Group();const seat=box(0.8,0.1,0.8,0x6d5a44);seat.position.y=0.55;const back=box(0.8,0.8,0.1,0x6d5a44);back.position.set(0,0.95,-0.35);
+  const tri=cyl(0.03,0.03,1.4,5,0x333333);tri.position.set(0,0.7,0.6);const bin=box(0.34,0.12,0.2,0x222222);bin.position.set(0,1.45,0.6);g.add(seat,back,tri,bin);g.position.set(-24.3,groundAt(-24.3,45),45);g.rotation.y=Math.PI;scene.add(g);return g})();
+
+/* ---- the D Tent helps when you're playing alone (and only then) ---- */
+const HELPERS=bots.filter(b=>b.d.n==='Armpit'||b.d.n==='Zero');for(const b of HELPERS)b.helper=true;
+const HELPER_WANDER={Armpit:['Hold on, I gotta pee.','My back. Gimme a sec.','Is that a cloud? No. Never mind.'],Zero:['I like digging.','I\'ll be right back.','I think there\'s something over there.']};
+function helpersOn(){return S.started&&!othersOnline()&&!S.out}
+function helperSims(){return HELPERS.filter(b=>b.helping).map((b,i)=>({id:'h'+i,x:b.p.g.position.x,z:b.p.g.position.z,cy:b.carryId==null?-1:b.carryId,dn:false}))}
+function updateHelper(b,dt){
+  const g=b.p.g,ix=HELPERS.indexOf(b);if(!b.helping){b.helping=true;b.L.n.textContent=b.d.n+' (helping you)'}
+  let tx,tz,act=null,near=1.6;
+  if(S.ko){tx=P.x;tz=P.z;act='revive';near=1.3}
+  else if(S.buried){tx=P.x+(ix?1:-1);tz=P.z;act='dig';near=1.4}
+  else if(isTrapped()){tx=P.x+(ix?1.9:-1.9);tz=P.z;act='pull';near=2.4}
+  else if(S.carry!=null&&PROPS.has(S.carry)){const pr=PROPS.get(S.carry);tx=pr.x+(ix?1:-1);tz=pr.z+0.6;act='carry';near=1.2}
+  else if(b.wanderT>0){b.wanderT-=dt;tx=b.wx;tz=b.wz;near=1}
+  else{const a=P.fa+Math.PI+(ix?0.8:-0.8);tx=P.x+Math.sin(a)*4;tz=P.z+Math.cos(a)*4;
+    b.clumsyT=(b.clumsyT||30+Math.random()*30)-dt;if(b.clumsyT<=0){b.clumsyT=35+Math.random()*40;if(Math.random()<0.35){b.wanderT=8;b.wx=P.x+(Math.random()-0.5)*40;b.wz=P.z+(Math.random()-0.5)*40;say(b.L,pick(HELPER_WANDER[b.d.n]),3500)}}}
+  let dx=tx-g.position.x,dz=tz-g.position.z,d=Math.hypot(dx,dz);
+  if(d>70){g.position.x=tx-dx/d*25;g.position.z=tz-dz/d*25;dx=tx-g.position.x;dz=tz-g.position.z;d=Math.hypot(dx,dz)}
+  b.carryId=null;
+  if(d>near){const sp=act==='carry'?SIM.carrySpeed(2)+0.4:d>12?6.5:4.4,s=Math.min(d,sp*dt);g.position.x+=dx/d*s;g.position.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);animPerson(b.p,d>12?4:1,dt);b.actT=0;if(act==='carry'&&d<3)b.carryId=S.carry}
+  else{
+    g.rotation.y=Math.atan2(P.x-g.position.x,P.z-g.position.z);
+    if(act==='carry'){b.carryId=S.carry;animPerson(b.p,0,dt)}
+    else if(act){b.actT=(b.actT||0)+dt;animPerson(b.p,act==='dig'?2:0,dt,(b.actT*2.4)%1);
+      if(b.actT>=(act==='revive'?5:act==='dig'?6:3)){b.actT=0;if(act==='revive')revived(b.d.n);else if(act==='dig')unbury(b.d.n);else{popOut();toast(`${b.d.n} pulled you out of the hole.`,'good',2500)}}}
+    else animPerson(b.p,P.anim===2?2:0,dt,P.digPh);
+  }
+  g.position.y=groundAt(g.position.x,g.position.z);
+}
+function releaseHelper(b){b.helping=false;b.carryId=null;b.L.n.textContent=b.d.n;b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
 
 /* ---- heavy loot: too big for the sack. Grab it (F) and haul it to Mr. Sir's truck; two campers carry it much faster ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
   if(type==='safe'){const b=box(1.1,1.1,1,0x3b3f45);b.position.y=0.55;const d=cyl(0.18,0.18,0.06,10,0xb8b8b8);d.rotation.x=Math.PI/2;d.position.set(0,0.62,0.52);const h=box(0.3,0.06,0.06,0xd4af37);h.position.set(0.3,0.35,0.52);g.add(b,d,h)}
+  else if(type==='body'){const p=makePerson({skin:0xc68a5e,band:0x2f5f8a,shovel:false});p.g.rotation.x=-Math.PI/2;p.g.position.y=0.2;g.add(p.g)}
   else{const b=box(1.2,0.7,0.8,0x5b3a1e);b.position.y=0.35;g.add(b);for(const x of[-0.4,0.4]){const s=box(0.1,0.72,0.82,0xd4af37);s.position.set(x,0.36,0);g.add(s)}}
   scene.add(g);return g;
 }
-function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',1.7)})}
+function addProp(id,type,x,z,name){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='body'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);const pr={id,type,x,z,n:0,g,name:name||'Camper'};pr.L=makeLabel(g,type==='body'?pr.name+' (out cold): carry back to camp':LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',type==='body'?0.8:1.7);PROPS.set(id,pr)}
+function propName(pr){return pr.type==='body'?pr.name:LOOT[pr.type].name}
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?LOOT[pr.type].name:'heavy find';removeProp(id);
-  const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin()}
+  const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all goes in the crew's pile.`,'good',4500);
+  if(mine){addXP(50);sfx.coin()}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}
@@ -1938,15 +2203,18 @@ function fart(x,y,z,ry,dist){fartCloud(x,y,z,ry);fartSound(clamp(1.2-dist/45,0,1
 let luckyT=0;
 function updateCoop(dt){
   if(!S.started)return;
-  if(clockT()<DAYMS)S.dayPlay=(S.dayPlay||0)+dt;
+  if(clockT()<curfewT())S.dayPlay=(S.dayPlay||0)+dt;
+  updateStamina(dt);
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
-  if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim()],dt)){const v=SIM.HEAVY[PROPS.get(+id).type];propSold(+id,v,[myId()]);payTeam(v)}}
+  if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
   for(const pr of PROPS.values()){const g=pr.g,k=Math.min(1,dt*8);g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y=groundAt(g.position.x,g.position.z)}
   if(S.carry!=null){const pr=PROPS.get(S.carry);if(!pr||S.ko||Math.hypot(pr.x-P.x,pr.z-P.z)>3.6){S.carry=null;if(pr&&!S.ko)toast('You let go.','',1500)}}
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
   if(dn){S.revT+=dt;if(S.revT>=3){S.revT=0;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
+  const bu=!S.ko&&!uiOpen()&&KEYS['f']&&!dn?remoteNear(R=>R.f&32,2.4):null;
+  if(bu){S.digOutT=(S.digOutT||0)+dt;if(S.digOutT>=3){S.digOutT=0;wsSend({t:'unbury',id:bu.rid});addXP(30);toast(`You dug ${bu.R.name} out.`,'good',2500)}}else S.digOutT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
   if(isTrapped()&&KEYS[' ']&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
   updatePings(dt);updateLights(dt);

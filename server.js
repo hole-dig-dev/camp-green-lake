@@ -28,16 +28,17 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Camper';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
-const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol'];
+const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'sneakers'];
 
-function freshRun() { return { day: 1, bank: 0, peak: 1 }; }
+function freshRun(sentence) { const seed = (Math.random() * 1e9) | 0; return { day: 1, bank: 30, peak: 1, curse: 0, sentence: sentence || 1, seed, ...SIM.rollDay(seed, 1, 0) }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
 if (!Array.isArray(world.hostNames)) world.hostNames = [];
 if (!world.clock || typeof world.clock !== 'object') world.clock = { off: 0, paused: false, pt: 0 };
-if (!world.run || typeof world.run !== 'object') world.run = freshRun();
+if (!world.run || typeof world.run !== 'object' || !world.run.seed) world.run = freshRun();
+if (!world.meta || typeof world.meta !== 'object') world.meta = { served: 0, best: 0 };
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
@@ -97,7 +98,7 @@ function broadcast(msg, exceptId) {
 }
 function joined() { return [...clients.values()].filter(c => c.joined); }
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
-function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
+function runInfo() { const r = world.run, n = Math.max(r.peak, joined().length, 1); return { t: 'run', day: r.day, bank: r.bank, quota: SIM.quotaFor(r.day, n, r.sentence, r.mood), curse: r.curse || 0, mood: r.mood, site: r.site, sentence: r.sentence || 1, seed: r.seed, served: (world.meta && world.meta.served) || 0 }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', ws => {
@@ -109,7 +110,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
   });
 
@@ -143,7 +144,7 @@ wss.on('connection', ws => {
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
-        c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
+        c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -1, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
         break;
@@ -205,10 +206,44 @@ wss.on('connection', ws => {
         // Picking up a downed friend, or pulling one out of a deep hole: you have to be standing next to them.
         const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
         if (!o || !o.joined || o === c || !near(c, o, HELP_RANGE)) return;
-        if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; }
+        if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; curse(-6); broadcast(runInfo()); }
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
         break;
       }
+      case 'spend': {
+        // spending the crew's shared seeds (the shop, blackjack): refused if the crew can't afford it
+        const v = num(m.v, 0, 1e5, 0) | 0; if (!v) return;
+        if (world.run.bank < v) { send(c, runInfo()); return; }
+        world.run.bank -= v; dirty = true; broadcast(runInfo());
+        break;
+      }
+      case 'out': {
+        // nobody picked them up in time: they're out until morning, and their body stays where they fell
+        if (c.f & 64) return;
+        c.f |= 64; curse(10);
+        const id = 900000 + c.id; delete world.props[id];
+        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 600, c.x)), z: r2(num(m.z, -600, 600, c.z)) };
+        broadcast({ t: 'prop', id, ...world.props[id] }); broadcast(runInfo());
+        break;
+      }
+      case 'cave': {
+        // a hole caved in: it's shallower now, and whoever was inside is buried
+        const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100, k = x + '|' + z;
+        if (!(k in world.holes)) return;
+        world.holes[k] = d; dirty = true;
+        broadcast({ t: 'cave', id: c.id, x, z, d }, c.id);
+        break;
+      }
+      case 'unbury': {
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, HELP_RANGE)) return;
+        send(o, { t: 'unburied', by: c.n });
+        break;
+      }
+      case 'curse':
+        // small curse events a client notices itself (breaking fragile loot)
+        if (m.k === 'broke') { curse(3); broadcast(runInfo()); }
+        break;
       case 'ping':
         broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
@@ -224,6 +259,10 @@ wss.on('connection', ws => {
         if (!c.host) return;
         if (m.a === 'fill') { world.run.bank = runInfo().quota; dirty = true; broadcast(runInfo()); }
         else if (m.a === 'empty') { world.run.bank = 0; dirty = true; broadcast(runInfo()); }
+        else if (m.a === 'curseUp' || m.a === 'curseDown') { curse(m.a === 'curseUp' ? 20 : -20); broadcast(runInfo()); }
+        else if (m.a === 'mood') { const ks = Object.keys(SIM.MOODS); world.run.mood = ks[(ks.indexOf(world.run.mood) + 1) % ks.length]; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
+        else if (m.a === 'site') { const ks = Object.keys(SIM.SITES); world.run.site = ks[(ks.indexOf(world.run.site) + 1) % ks.length]; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
+        else if (m.a === 'day') { world.run.day = world.run.day % SIM.DAYS + 1; dirty = true; broadcast({ ...runInfo(), t: 'dawn' }); }
         break;
       case 'disco': {
         const now = Date.now();
@@ -275,50 +314,80 @@ wss.on('connection', ws => {
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, and the quota at curfew ---- */
 const MON = { trucks: [], zer: null };
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
+const curse = d => { world.run.curse = clamp((world.run.curse || 0) + d, 0, 100); dirty = true; };
+// flags on pos: 1 hidden in a deep hole, 2 downed, 4 flashlight, 8 crouching, 16 stuck in a hole, 32 buried by a cave-in, 64 out until morning
 function simPlayers(now) {
-  return joined().map(c => ({
-    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy,
-    hd: !!(c.f & 1), cr: !!(c.f & 8),
+  return joined().filter(c => !(c.f & 64)).map(c => ({
+    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, a: c.a, vy: c.vy,
+    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128),
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
   }));
 }
 function endOfDay() {
+  const js = joined(); if (!js.length) return;
+  // roll call: everyone who isn't inside the fence (and isn't lying in the nurse's office) costs the crew
+  const missing = js.filter(c => !SIM.inCamp(c.x, c.z) && !(c.f & 64));
+  if (missing.length) { world.run.bank = Math.max(0, world.run.bank - 25 * missing.length); curse(8 * missing.length); } else curse(-4);
+  broadcast({ t: 'rollcall', missing: missing.map(c => c.n), fine: 25 * missing.length });
   const q = runInfo(), played = world.run.played || 0;
   world.run.played = 0;
-  if (!joined().length) return;
-  if (world.run.bank < q.quota && played < 180) { broadcast({ t: 'grace' }); return; } // the crew only just got here: no check today
+  if (world.run.bank < q.quota && played < 180) { broadcast({ t: 'grace' }); broadcast(runInfo()); return; } // the crew only just got here: no check today
   if (world.run.bank >= q.quota) {
-    world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
-    broadcast({ ...runInfo(), t: 'quota', met: true });
+    world.run.bank -= q.quota; dirty = true;
+    if (world.run.day >= SIM.DAYS) {
+      // sentence served: the crew is released. Next sentence is longer and harder.
+      const done = world.run.sentence || 1;
+      world.meta = world.meta || { served: 0, best: 0 }; world.meta.served++; world.meta.best = Math.max(world.meta.best, done);
+      world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, meta: world.meta, run: freshRun(done + 1) });
+      gotSet = new Set(); kbHolder = null; save();
+      broadcast({ t: 'served', sentence: done, next: done + 1 });
+      return;
+    }
+    world.run.day++; world.run.peak = joined().length;
+    broadcast({ ...runInfo(), t: 'quota', met: true, paid: q.quota });
   } else {
-    // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
+    // Fired: the run starts over. The lake is refilled and the crew's seeds and gear are gone (levels stay).
     const got = q.bank;
-    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() });
+    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, meta: world.meta, run: freshRun(world.run.sentence || 1) });
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
   }
 }
+function dawn() {
+  // a new morning: the Warden picks today's mood and dig site; anyone out cold wakes up in the nurse's office
+  Object.assign(world.run, SIM.rollDay(world.run.seed, world.run.day, world.run.curse)); dirty = true;
+  for (const id in world.props) if (world.props[id].type === 'body') delete world.props[id];
+  broadcast({ ...runInfo(), t: 'dawn' });
+}
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
-  const t = SIM.clockT(world.clock, now);
-  if (lastT < SIM.DAYMS && t >= SIM.DAYMS) endOfDay();
+  const t = SIM.clockT(world.clock, now), cur = SIM.curfewT(world.run.day);
+  if (lastT < cur && t >= cur) endOfDay();
+  else if (lastT - t > SIM.CYCLE / 2) dawn();
   lastT = t;
-  if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
+  if (t < cur && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
-  // heavy loot
+  // heavy loot and bodies being carried
   const sold = SIM.stepProps(world.props, players, dt);
   const moved = [];
   for (const id in world.props) { const p = world.props[id]; if (p.moved) { p.moved = false; p.x = r2(p.x); p.z = r2(p.z); moved.push([+id, p.x, p.z, p.n]); } }
   if (moved.length) broadcast({ t: 'props', list: moved });
   for (const id of sold) {
-    const p = world.props[id], v = SIM.HEAVY[p.type]; delete world.props[id];
+    const p = world.props[id]; delete world.props[id];
+    if (p.type === 'body') {
+      // carried back inside the fence: the nurse wakes them up, sack and all
+      const o = clients.get(p.owner); if (o) send(o, { t: 'revived', by: 'The nurse', body: true });
+      curse(-6); broadcast({ t: 'bodyHome', id: +id, n: p.name, who: p.who || [] }); broadcast(runInfo());
+      continue;
+    }
+    const v = SIM.HEAVY[p.type] * (world.run.mood === 'digday' ? 2 : 1);
     world.run.bank += v; dirty = true;
     broadcast({ t: 'psold', id: +id, v, who: p.who || [] }); broadcast(runInfo());
   }
   // monsters
   const ev = [];
-  SIM.stepMonsters(MON, players, t, dt, ev);
+  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run });
   for (const e of ev) if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
   const on = MON.trucks.length > 0 || !!MON.zer;
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null, ev });
@@ -330,10 +399,6 @@ setInterval(() => {
   for (const c of clients.values()) {
     if (!c.alive) { c.ws.terminate(); continue; }
     c.alive = false; try { c.ws.ping(); } catch (e) { /* closing */ }
-  }
-  if (world.won && Date.now() - world.wonAt > NEW_DAY_AFTER_WIN_MS) {
-    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); gotSet = new Set(); kbHolder = null; dirty = true; save();
-    broadcast({ t: 'reset' });
   }
 }, 30000);
 
