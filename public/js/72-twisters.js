@@ -33,7 +33,10 @@ let twSpawned=[],twCool=0,twWind=null;   // twSpawned: twisters made with the co
    kept around in case it despawns mid-grab (e.g. a console twister's lifetime runs out while it has you). */
 let twSt=0,twStT=0,twGrab=null,twCenter={x:0,z:0},twStrength=0,twSuckR0=1,twSpiralA=0,twRagX=0,twRagY=0,twRagZ=0,twDbgPull=0;
 function twStateName(){return['free','sucked','airborne','down','gettingup'][twSt]}
-function twNow(){return Date.now()+CLK.off}   // absolute shared time (clockT() only gives the time of day)
+// Absolute shared time for hazard schedules. CLK.off is set by the host's clock changes as (time of day - now), a huge
+// negative number, so Date.now()+CLK.off collapsed to "time of day" and the natural twister/landslide schedule
+// repeated every in-game day. Wrapping the offset keeps the same time of day but a real, ever-increasing clock.
+function twNow(){return Date.now()+wrapT(CLK.off)}
 /* the twister (if any) that square (ci,cj) grows in window k: where it starts, which way it heads, how long it lasts */
 function twPlan(ci,cj,k){
   const r=mulberry32((((ci+64)*131+(cj+64))*2654435761^(k*40503))>>>0);r();
