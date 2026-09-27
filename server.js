@@ -69,7 +69,11 @@ const MAX_PER_IP = 4;                        // simultaneous sockets from one ad
 const MAX_CONNS_PER_IP_PER_MIN = 10;         // new socket attempts per address per minute
 const JOIN_TIMEOUT_MS = 15000;               // sockets that never send a valid join get dropped
 const MAX_BAD_JOINS = 5;                     // wrong-password attempts before we hang up on a socket
-const HTTP_RATE = 120, HTTP_WINDOW_MS = 60000; // HTTP requests per address per minute
+const HTTP_RATE = 120, HTTP_WINDOW_MS = 60000; // page/other HTTP requests per address per minute
+// The client is ~35 static files (public/js/*.js, css, sim.js, director.js), so one page load is ~35 requests.
+// Counting those against HTTP_RATE blocked a player after 3 reloads in a minute (429s -> missing scripts ->
+// "setClock is not defined" -> dead page). Static files get their own, much bigger budget instead.
+const STATIC_RATE = 1500; // static file requests per address per minute (~40 full page loads)
 const MAX_DIG_DIST = 6;                      // can't report a dig farther than this from your last known position
 const MAX_PLACE_DIST = 14;                   // ditto for dropped bags (props are placed at the dig site)
 const DIG_RATE = 8, DIG_WINDOW_MS = 1000;    // digs per connection per window
@@ -87,10 +91,12 @@ const MAX_SELL_V = 900;                      // above a full sack of the rarest 
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
 const ipHttpWindow = new Map(); // ip -> recent HTTP request timestamps
+const ipStaticWindow = new Map(); // ip -> recent static-file request timestamps (separate, larger budget)
 setInterval(() => { // drop windows nobody's touched in a couple minutes so these maps don't grow forever
   const cutoff = Date.now() - 120000;
   for (const [ip, hits] of ipConnWindow) if (!hits.length || hits[hits.length - 1] < cutoff) ipConnWindow.delete(ip);
   for (const [ip, hits] of ipHttpWindow) if (!hits.length || hits[hits.length - 1] < cutoff) ipHttpWindow.delete(ip);
+  for (const [ip, hits] of ipStaticWindow) if (!hits.length || hits[hits.length - 1] < cutoff) ipStaticWindow.delete(ip);
 }, 60000);
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -180,7 +186,9 @@ const server = http.createServer((req, res) => {
   try {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
-    if (!ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
+    const url0 = (req.url || '/').split('?')[0];
+    const isStatic = /^\/(js|css)\/[\w.-]+\.(js|css)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
+    if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
       // Admin controls for the host, over SSH only: curl -H 'x-admin: <token>' localhost:4300/admin/who
