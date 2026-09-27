@@ -49,7 +49,7 @@ function frame(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
   updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateThumbHaze();
-  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);
+  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   updateHaboob(dt);   // final blend on top of whatever fog/sky/light the day-night/disco/win code left this frame (see 75-haboob.js)
   sendPresence(now);

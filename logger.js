@@ -52,6 +52,14 @@
 //   twSuckUp        {id,n,x,z,twx,twz,s}                    a twister's core caught a camper and started pulling
 //                                                           them up (before the throw)
 //   twThrow         {id,n,x,z,twx,twz,dmg}                  a twister threw a camper
+//   sinkWarn        {id,n,x,z,shx,shz,dist}                 sinkhole ground-shake warning shown to a camper
+//   sinkOpen        {id,n,x,z,r}                             a sinkhole's crater finished opening (client-local)
+//   sinkFellIn      {id,n,x,z}                               a camper fell into an open sinkhole
+//   sinkpull        {id,n,by,x,z}                            by finished pulling camper n out of a sinkhole (server-relayed, like 'pull')
+//   sinkRescuer     {id,n,by}                                camper n was credited XP for helping pull someone up
+//   sinkSolo        {id,n,x,z}                                nobody else online: Zero set out with a line
+//   sinkSoloRescued {id,n,x,z}                                Zero finished pulling a solo camper out
+//   sinkFilled      {id,n,x,z}                                a sinkhole finished filling back in (client-local)
 //   found           {id,n,item,type,value,x,z,heavy,kb}     dug up an item
 //   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
 //   tentExit        {id,n,tent,name,x,z}                    stepped back outside a tent

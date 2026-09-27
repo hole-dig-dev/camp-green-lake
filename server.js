@@ -29,7 +29,7 @@ const DEV_MODE = process.env.DEV_MODE === '1';
 const HOST_TOKEN = process.env.HOST_TOKEN || crypto.randomBytes(24).toString('hex');
 const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
-const CHAT_RANGE = 30, HELP_RANGE = 3.5;
+const CHAT_RANGE = 30, HELP_RANGE = 3.5, SINK_HELP_RANGE = 5;   // sinkhole rims are big; a bit more generous than the ordinary deep-hole pull
 
 /* ---- proximity voice: WebRTC signaling relay ---- */
 // SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
@@ -339,7 +339,8 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
-        // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
+        // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
+        // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js)
         c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
         broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
@@ -432,6 +433,16 @@ wss.on('connection', (ws, req) => {
         const d = Math.hypot(o.x - c.x, o.z - c.z) || 1;
         LOG.log('bonk', { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
         send(o, { t: 'bonked', from: c.id, by: c.n, dx: r2((o.x - c.x) / d), dz: r2((o.z - c.z) / d) });
+        break;
+      }
+      case 'sinkpull': {
+        // A camper who was just pulled out of a sinkhole credits everyone who was actually holding on at the rim
+        // (the trapped client sends one of these per active rescuer once its own local rescue timer completes --
+        // see updateSinkholes() in 87-sinkhole.js). Same proximity check as 'pull'/'revive', just a bigger radius.
+        const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
+        if (!o || !o.joined || o === c || !near(c, o, SINK_HELP_RANGE)) return;
+        LOG.log('sinkpull', { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
+        send(o, { t: 'sinkpulled', by: c.n });
         break;
       }
       case 'ping':
