@@ -446,6 +446,7 @@ const LOOT={
   locket:{name:'Gold locket',val:60,color:0xd4af37},
   pistol:{name:'Kate\'s old pistol',val:75,color:0x2a2a2a},
   sneakers:{name:'Clyde Livingston\'s sneakers',val:30,color:0xf0f0f0},
+  goldbar:{name:'Gold bar',val:90,color:0xd4af37},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
@@ -509,6 +510,7 @@ function streamChunks(fx,fz,budget){
   for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*3){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
 }
 function groundAt(x,z){
+  if(x>1500)return townFloorAt(x,z);
   if(Math.max(Math.abs(x),Math.abs(z))>=HALF)return OUTER_Y;
   const C=chunks.get(ckey(Math.floor(x/CH),Math.floor(z/CH)));
   if(!C)return surfaceAt(x,z,baseH(x,z));
@@ -799,6 +801,8 @@ function itemMesh(type){
   if(type==='can')return cyl(0.09,0.09,0.2,8,c);
   if(type==='spoon')return box(0.05,0.03,0.3,c);
   if(type==='lipstick')return cyl(0.04,0.04,0.2,8,c);
+  if(type==='goldbar')return box(0.34,0.12,0.16,c);
+  if(type==='safe'||type==='strongbox'){const g=propMesh(type);scene.remove(g);g.scale.setScalar(0.8);return g}
   if(type==='sploosh')return cyl(0.13,0.11,0.26,8,c);
   if(type==='locket')return new T.Mesh(new T.TorusGeometry(0.1,0.035,6,12),M(c));
   if(type==='pistol'){const g=new T.Group();const b=box(0.32,0.07,0.06,c),h=box(0.07,0.16,0.06,0x5a3a1e);h.position.set(-0.12,-0.08,0);g.add(b,h);return g}
@@ -885,7 +889,7 @@ function scoop(){
   const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1)*(S.broken?0.5:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});
-  caveCheck(h);maybeNest(h);if(h.d<0.35)return;
+  caveCheck(h);maybeNest(h);checkBreach(h);if(h.d<0.35)return;
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
   for(const it of items){
@@ -911,6 +915,8 @@ function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const bu=remoteNear(R=>R.f&32,2.4);if(bu)return{id:'digout',...bu};
+  if(S.inTown){const sp=townSpot();if(sp&&sp.kind==='shaft'&&S.up.rope&&!sp.b.ladder)return{id:'stake',k:sp.k};if(sp&&sp.kind==='stair')return{id:'stair'};let best=null,bd=1.7*1.7;for(const e of TLOOTM.values()){const d2=(e.L.x-P.x)**2+(e.L.z-P.z)**2;if(d2<bd){bd=d2;best=e}}if(best)return{id:'tloot',e:best}}
+  else{const bn=breachNear(3.4);if(bn){if(Math.hypot(P.x-bn.b.x,P.z-bn.b.z)<1.8)return{id:'descend',k:bn.k};if([...remotes.values()].some(R=>R.f&128))return{id:'hand',k:bn.k}}}
   if(S.holdZer)return{id:'dropZer'};
   if(MONV.zer&&Math.hypot(MONV.zer.x-P.x,MONV.zer.z-P.z)<2.4)return{id:'grabZer'};
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
@@ -925,6 +931,11 @@ function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
   if(s.id==='revive'||s.id==='digout')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
+  if(s.id==='descend'){enterTown(s.k);return}
+  if(s.id==='hand'){S.handT=10;toast('You reach down into the shaft. Anyone below can climb up for the next 10 seconds.','good',3500);return}
+  if(s.id==='stake'){stakeLadder(s.k);return}
+  if(s.id==='stair'){tryClimb();return}
+  if(s.id==='tloot'){takeTownLoot(s.e);return}
   if(s.id==='grabZer'){S.holdZer=true;S.carry=null;toast('You picked up Madame Zeroni! She stops moving while someone holds her. Now everyone SING (hold H).','gold',5000);return}
   if(s.id==='dropZer'){S.holdZer=false;toast('You put Madame Zeroni down.','',1500);return}
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
@@ -946,7 +957,7 @@ const SHOP=[
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70},
   {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30},
   {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60},
-  {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35},
+  {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes fast. Or stake it in a shaft into the buried town (F) so anyone can climb out alone.',cost:35},
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt'},
   {id:'tonic',name:'Sam\'s onion tonic',desc:'Drink with Z: cures snake and scorpion poison, soothes sunburn and heat, and lizards hate the smell.',cost:20,stack:'tonic'},
@@ -1024,6 +1035,7 @@ addEventListener('keydown',e=>{
   if(k==='g'&&!e.repeat)doPing();
   if(k==='z'&&!e.repeat)eatSomething();
   if(k==='r'&&!e.repeat)bonkSwing();
+  if(k===' '&&!e.repeat&&S.inTown&&townSpot())tryClimb();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='b'&&!e.repeat)twerk();
   if(k==='v')toggleView();
@@ -1102,7 +1114,7 @@ try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0);
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.holdZer?-2:S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),+P.yaw.toFixed(2)];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
   net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds});
@@ -1139,6 +1151,9 @@ function onMsg(m){
       for(const id of [...remotes.keys()])removeRemote(id);
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
+      if(Array.isArray(m.got))for(const i of m.got)if((i|0)>=20000)TGOT.add(i|0);
+      if(m.breaches&&typeof m.breaches==='object')for(const k in m.breaches){const b=m.breaches[k];if(b&&!b.closed)addBreach(k,{x:num(b.x,-600,600,0),z:num(b.z,-600,600,0),at:Date.now(),ladder:!!b.ladder,closed:false})}
+      if(Array.isArray(m.rot))for(const i of m.rot)ROT.add(i|0);
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
@@ -1151,7 +1166,7 @@ function onMsg(m){
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
     case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,65535,0)|0;R.p.g.visible=!(R.f&64);setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
-    case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
+    case 'got':{const it=items[m.item|0];if(it)it.found=true;if((m.item|0)>=20000)removeTownLoot(m.item|0);break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout()}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
@@ -1160,6 +1175,10 @@ function onMsg(m){
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
+    case 'breach':{const k=String(m.k);addBreach(k,{x:num(m.x,-600,600,0),z:num(m.z,-600,600,0),at:Date.now()-(Date.now()-num(m.at,0,1e14,Date.now())),ladder:!!m.ladder,closed:!!m.closed});break}
+    case 'ladder':{const b=BREACH.get(String(m.k));if(b){b.ladder=true;if(S.inTown)toast('Someone staked a rope ladder in a shaft. Anyone can climb that one now.','good',3500)}break}
+    case 'rot':breakRot(num(m.i,0,35,0)|0,false);break;
+    case 'shaftClosed':closeBreach(String(m.k));break;
     case 'twerk':{const R=remotes.get(m.id);if(R&&!(R.twerkT>0))R.twerkT=TWERK_SECS;break}
     case 'run':setRun(m);break;
     case 'quota':setRun(m);quotaMet(num(m.paid,0,1e7,0)|0);break;
@@ -1236,8 +1255,8 @@ function updatePlayer(dt){
     if(ml>0.1){
       mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null)sp=Math.min(sp,SIM.carrySpeed(carryN()));
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
-      nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
-      for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
+      if(!S.inTown){nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3)}
+      for(const c of (S.inTown?TOWNCOL:colliders)){if(c.crawl&&P.crouch&&S.carry==null)continue;if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
       if(trap&&groundAt(nx,nz)-P.y>0.6){nx=P.x;nz=P.z}
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
     }else P.anim=0;
@@ -1263,9 +1282,9 @@ function updatePlayer(dt){
 function updateCamera(dt){
   if(S.out&&spectateCam())return;
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
-  const cp=Math.cos(P.pitch),dist=5.4;
+  const cp=Math.cos(P.pitch),dist=S.inTown?2.6:5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
-  cy=Math.max(cy,groundAt(cx,cz)+0.5);
+  cy=Math.max(cy,groundAt(cx,cz)+0.5);if(S.inTown)cy=Math.min(cy,SIM.TOWN.Y+SIM.TOWN.H-0.4);
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);
 }
@@ -1314,6 +1333,11 @@ const COOP_TXT={
   drop:s=>`Let go of ${s.pr.type==='body'?s.pr.name:'the '+propName(s.pr)}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>(s.pr.type==='body'?`Pick up ${s.pr.name} and carry them back inside the fence`:`Grab the ${propName(s.pr)} (${SIM.HEAVY[s.pr.type]} seeds)`)+(s.pr.n?` · ${s.pr.n} carrying`:''),
   grabZer:()=>'Pick up Madame Zeroni (then everyone sing: hold H)',
+  descend:()=>'Climb down into the buried town',
+  hand:()=>'Lower a hand to whoever is climbing up',
+  stake:()=>'Stake your rope ladder here (anyone can climb alone)',
+  stair:()=>'Walk up the collapsed stairwell and out',
+  tloot:s=>`Pick up: ${LOOT[s.e.L.type].name}`+(LOOT[s.e.L.type].heavy?' (heavy)':''),
   dropZer:()=>'Put Madame Zeroni down',
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
 };
@@ -1355,6 +1379,14 @@ function ws(v){return v/(MV*2)*mm.width}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
   mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
+  if(S.inTown&&LAY){ // underground: a sketch of the rooms and the ways out
+    const N=TW.N,s=W/N;mx.fillStyle='#1a1410';mx.fillRect(0,0,W,W);
+    for(const c of LAY.cells){const cx=c.i%N,cz=Math.floor(c.i/N);mx.fillStyle=c.treasure?'#6a5a1a':c.flood?'#1d3f4a':c.rot?'#4a3420':'#3a2c1e';mx.fillRect(cx*s+2,cz*s+2,s-4,s-4);
+      mx.fillStyle='#d9c9a8';if(c.e)mx.fillRect((cx+1)*s-3,cz*s+s/2-(c.e===2?3:6),6,c.e===2?6:12);if(c.s)mx.fillRect(cx*s+s/2-(c.s===2?3:6),(cz+1)*s-3,c.s===2?6:12,6);
+      if(c.well){mx.fillStyle='#8ab0ff';mx.beginPath();mx.arc(cx*s+s/2,cz*s+s/2,6,0,6.3);mx.fill()}if(c.stair){mx.fillStyle='#7dff6a';mx.fillRect(cx*s+s/2-6,cz*s+s/2-6,12,12)}}
+    for(const b of BREACH.values()){if(b.closed)continue;const p=shaftPos(b),cx=(p.x-(TW.X-N*TW.C/2))/TW.C*s,cz=(p.z-(TW.Z-N*TW.C/2))/TW.C*s;mx.strokeStyle='#fff0cc';mx.lineWidth=3;mx.beginPath();mx.arc(cx,cz,7,0,6.3);mx.stroke()}
+    const px=(P.x-(TW.X-N*TW.C/2))/TW.C*s,pz=(P.z-(TW.Z-N*TW.C/2))/TW.C*s;mx.fillStyle='#e8742a';mx.beginPath();mx.arc(px,pz,6,0,6.3);mx.fill();return;
+  }
   if(RUN.mood==='sandstorm'&&!inCamp(P.x,P.z)){mx.fillStyle='#c9a37a';mx.fillRect(0,0,W,W);mx.fillStyle='#5a4028';mx.font='700 30px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.fillText('SANDSTORM',W/2,W/2);return}
   mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
   if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
@@ -1606,11 +1638,11 @@ const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'B
 function stepTo(g,gx,gz,dt,sp){const dx=gx-g.position.x,dz=gz-g.position.z,d=Math.hypot(dx,dz);if(d>0.02){const s=Math.min(d,dt*sp);g.position.x+=dx/d*s;g.position.z+=dz/d*s}return d}
 function updateParty(dt,now){
   if(!PARTY.on){
-    const nf=nightF(),tS=(S.won?0.45:1.05)*(1-nf*0.97),tH=(S.won?0.8:0.62)*(1-nf*0.84),k=Math.min(1,dt*1.5);
+    const nf=nightF(),k=S.inTown?1:Math.min(1,dt*1.5);let tS=(S.won?0.45:1.05)*(1-nf*0.97),tH=(S.won?0.8:0.62)*(1-nf*0.84);if(S.inTown){tS=0.02;tH=0.05}
     sun.intensity=lerp(sun.intensity,tS,k);hemi.intensity=lerp(hemi.intensity,tH,k);
     SKY_T.copy(WHITE).lerp(NIGHT_SKY,nf);sky.material.color.lerp(SKY_T,k);if(!S.won){FOG_T.copy(FOG_DAY).lerp(NIGHT_FOG,nf);scene.fog.color.lerp(FOG_T,k)}
     sunDisc.visible=nf<0.6;stars.material.opacity=nf*0.9;
-    {const sand=RUN.mood==='sandstorm'&&S.started;scene.fog.far=lerp(scene.fog.far,sand?60:1000,k);scene.fog.near=lerp(scene.fog.near,sand?3:80,k);if(sand)scene.fog.color.lerp(SAND_FOG,k)}
+    {const sand=RUN.mood==='sandstorm'&&S.started&&!S.inTown;scene.fog.far=lerp(scene.fog.far,S.inTown?32:sand?60:1000,k);scene.fog.near=lerp(scene.fog.near,S.inTown?2:sand?3:80,k);if(sand)scene.fog.color.lerp(SAND_FOG,k);if(S.inTown)scene.fog.color.setRGB(0.01,0.01,0.012)}
     for(const[p,home,ry]of[[sir,PARTY.homeSir,PARTY.homeSirR],[warden,PARTY.homeWarden,PARTY.homeWardenR]]){
       const d=stepTo(p.g,home.x,home.z,dt,3.5);p.g.position.y=d<0.3?home.y:groundAt(p.g.position.x,p.g.position.z);
       if(d>0.05){p.g.rotation.y=Math.atan2(home.x-p.g.position.x,home.z-p.g.position.z);animPerson(p,1,dt)}else{p.g.rotation.y=ry;animPerson(p,0,dt)}
@@ -1671,6 +1703,7 @@ function toggleAdmin(){const el=$('#admin');if(el.hidden&&net.ws&&net.ws.readySt
 function renderAdmin(){if($('#admin').hidden)return;$('#admT').textContent=clockText();$('#admS').textContent=CLK.paused?'paused':CLK.off?'(changed)':'(real clock)';$('#admPause').textContent=CLK.paused?'Resume time':'Pause time'}
 $('#admin').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.h)jumpTo(tAtHour(+d.h));else if(d.c)jumpTo(DAYMS-59000);else if(d.d)jumpTo(tAtHour(hourOf(clockT())+(+d.d)));
+  else if(d.a==='town')enterTown();
   else if(d.a){if(online())wsSend({t:'admin',a:d.a});else soloAdmin(d.a)}
   else if(b.id==='admPause'){if(CLK.paused)applyClock({paused:false,off:CLK.pt-Date.now()});else applyClock({paused:true,pt:clockT()})}
   else if(b.id==='admReal')applyClock({paused:false,off:0,pt:0});
@@ -1810,7 +1843,7 @@ const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
 function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.holdZer?-2:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,a:P.anim,vy:P.yaw,sg:S.singT>0,kt:!!S.kate,on:S.onionT>0,tn:!!S.inTown}}
 function stepSoloMonsters(dt){
-  if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN});
+  if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN,town:(M2,tps,dt2,ev2)=>SIM.stepTown(M2,tps,dt2,ev2,layNow(),RUN.day)});
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;syncMobs(SIM.packMobs(MONL),dt);
   for(const e of ev)monEvent(e);
 }
@@ -1825,7 +1858,7 @@ function monEvent(e){
   switch(e.k){
     case 'spot':if(mine){toast('SPOTTED! Run for camp, or crouch (C) down in a deep hole.','bad',3000);tone(900,0.4,'square',0.06,1400);setTimeout(()=>tone(900,0.4,'square',0.06,1400),450);speak(pick(COP_LINES),{pitch:0.6,rate:1.15,vol:0.9,male:true})}break;
     case 'lost':if(mine&&performance.now()-CUR.msgT>8000){CUR.msgT=performance.now();toast('They lost you. For now.','',2500)}break;
-    case 'down':if(mine&&!S.ko){if(e.by==='zeroni'){zeroniTalk(0);knockOut('Cursed','Madame Zeroni grabbed you and is dragging you away.')}else if(e.by==='warden'){knockOut('Out for the day','The Warden caught you standing around and scratched you with her snake-venom nail polish.');S.ko=0.01}else if(e.by==='kate'){knockOut('Out cold','Kate Barlow\'s ghost reached you while nobody was watching her.')}else if(e.by==='sheriff'){knockOut('Caught','The Sheriff\'s ghost caught you holding Kate\'s loot.')}else knockOut('Busted','The police caught you out on the lake after curfew.')}break;
+    case 'down':if(mine&&!S.ko){if(e.by==='zeroni'){zeroniTalk(0);knockOut('Cursed','Madame Zeroni grabbed you and is dragging you away.')}else if(e.by==='warden'){knockOut('Out for the day','The Warden caught you standing around and scratched you with her snake-venom nail polish.');S.ko=0.01}else if(e.by==='kate'){knockOut('Out cold','Kate Barlow\'s ghost reached you while nobody was watching her.')}else if(e.by==='sheriff'){knockOut('Caught','The Sheriff\'s ghost caught you holding Kate\'s loot.')}else if(e.by==='queen'){knockOut('Out cold','The lizard queen got you. Crouch and move quietly near her vault.')}else if(e.by==='trout'){knockOut('Caught','Trout Walker\'s mob caught you. They hunt anyone carrying a light.')}else knockOut('Busted','The police caught you out on the lake after curfew.')}break;
     case 'talk':if(MONV.zer)zeroniTalk(Math.hypot(MONV.zer.x-P.x,MONV.zer.z-P.z));break;
     case 'blink':if(mine){zeroniSting(e.front?1.4:0.6);if(e.front)jumpScare()}break;
     case 'drop':if(mine&&S.ko)toast('Madame Zeroni let go of you.','good',2500);break;
@@ -1941,6 +1974,8 @@ function soloDawn(){if(online())return;Object.assign(RUN,SIM.rollDay(RUN.seed,RU
 function newMorning(){
   // a night in the tents heals most things; anyone out cold wakes up in the nurse's office
   if(S.out)wakeUp(false);
+  if(S.inTown){const R=SIM.SITES.ruins;exitTown(R.x+6,R.z+2,'Dawn. The buried town shifts, and you scramble out through a crack at the ruins.')}
+  for(const k of [...BREACH.keys()])closeBreach(k);BREACH.clear();ROT.clear();TGOT.clear();LAY=null;
   AFF.hunger=0;AFF.burn=0;AFF.heat=0;AFF.poison=0;AFF.injury*=0.3;S.stam=stamMax();S.refills=0;S.lunch=false;
   if(S.started)announceDay();
 }
@@ -2068,7 +2103,8 @@ function helperSims(){return HELPERS.filter(b=>b.helping).map((b,i)=>({id:'h'+i,
 function updateHelper(b,dt){
   const g=b.p.g,ix=HELPERS.indexOf(b);if(!b.helping){b.helping=true;b.L.n.textContent=b.d.n+' (helping you)'}
   let tx,tz,act=null,near=1.6;
-  if(S.ko){tx=P.x;tz=P.z;act='revive';near=1.3}
+  if(S.inTown){const b=[...BREACH.values()].filter(q=>!q.closed).pop();tx=b?b.x+(ix?2:-2):g.position.x;tz=b?b.z:g.position.z;near=1}
+  else if(S.ko){tx=P.x;tz=P.z;act='revive';near=1.3}
   else if(S.buried){tx=P.x+(ix?1:-1);tz=P.z;act='dig';near=1.4}
   else if(isTrapped()){tx=P.x+(ix?1.9:-1.9);tz=P.z;act='pull';near=2.4}
   else if(S.carry!=null&&PROPS.has(S.carry)){const pr=PROPS.get(S.carry);tx=pr.x+(ix?1:-1);tz=pr.z+0.6;act='carry';near=1.2}
@@ -2124,8 +2160,9 @@ function takeBag(items,n){const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
 function holeDepthHere(){return Math.max(0,baseH(P.x,P.z)-P.y)}
-function isTrapped(){return S.started&&!S.ko&&P.grounded&&holeDepthHere()>1.8}
+function isTrapped(){if(S.inTown)return S.started&&!S.ko&&P.grounded&&P.y<SIM.TOWN.Y-2;return S.started&&!S.ko&&P.grounded&&holeDepthHere()>1.8}
 function popOut(){
+  if(S.inTown){const i=SIM.cellAt(P.x,P.z),cc=i>=0?SIM.cellCenter(i):{x:P.x,z:P.z};let dx=P.x-cc.x,dz=P.z-cc.z,dl=Math.hypot(dx,dz)||1;P.x=cc.x+dx/dl*3.4;P.z=cc.z+dz/dl*3.4;P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();return}
   const h=holeNear(P.x,P.z,HOLE_R*1.2);let dx=Math.sin(P.fa),dz=Math.cos(P.fa);
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
@@ -2176,6 +2213,129 @@ function updateLights(dt){
   for(let i=1;i<FL.length;i++){const e=lit[i-1];if(!e){aimLight(FL[i],0,0,0,0,0,0,false);continue}const g=e.R.p.g;const r=g.rotation.y;aimLight(FL[i],g.position.x,g.position.y+1.5,g.position.z,Math.sin(r),-0.15,Math.cos(r),true)}
 }
 
+/* ================= the buried town of Green Lake (dig 8 feet and the floor can give way) ================= */
+const TW=SIM.TOWN,TOWNCOL=[],BREACH=new Map(),ROT=new Set(),TGOT=new Set(),TLOOTM=new Map();
+let LAY=null,townGroup=null,townRoom=-1;
+function layNow(){const k=RUN.seed+':'+RUN.day;if(!LAY||LAY.key!==k){LAY=SIM.townLayout(RUN.seed,RUN.day);LAY.key=k;buildTown()}return LAY}
+function townFloorAt(x,z){
+  const i=SIM.cellAt(x,z);if(i<0||!LAY)return TW.Y;const c=LAY.cells[i],cc=SIM.cellCenter(i);
+  if(c.rot&&ROT.has(i)&&Math.abs(x-cc.x)<2.5&&Math.abs(z-cc.z)<2.5)return TW.Y-3.2;
+  return TW.Y+(c.flood?-0.7:0);
+}
+function buildTown(){
+  if(townGroup){scene.remove(townGroup);townGroup.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
+  townGroup=new T.Group();townGroup.visible=!!S.inTown;scene.add(townGroup);TOWNCOL.length=0;TLOOTM.clear();
+  const N=TW.N,C=TW.C,H=TW.H,x0=TW.X-N*C/2,z0=TW.Z-N*C/2,th=0.4;
+  const add=(w,h,d,col,x,y,z)=>{const m=box(w,h,d,col);m.castShadow=false;m.receiveShadow=false;m.position.set(x,y,z);townGroup.add(m);return m};
+  const wall=(x,z,w,d,col,crawl)=>{if(crawl){add(w,H-1.1,d,col,x,TW.Y+1.1+(H-1.1)/2,z)}else add(w,H,d,col,x,TW.Y+H/2,z);TOWNCOL.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,crawl:!!crawl})};
+  const seg=(x,z,alongX,kind,col)=>{ // one side of a room: solid, a doorway, or a crawlspace
+    const gap=2.4,L=(C-gap)/2;
+    if(kind===0){alongX?wall(x,z,C,th,col):wall(x,z,th,C,col);return}
+    for(const s of[-1,1]){const o=s*(gap/2+L/2);alongX?wall(x+o,z,L,th,col):wall(x,z+o,th,L,col)}
+    if(kind===2)alongX?wall(x,z,gap,th,col,true):wall(x,z,th,gap,col,true);
+  };
+  for(const c of LAY.cells){
+    const cx=c.i%N,cz=Math.floor(c.i/N),mx=x0+cx*C+C/2,mz=z0+cz*C+C/2,col=[0x7a5a40,0x6d5a44,0x5a4633][c.i%3];
+    add(C,0.2,C,c.flood?0x2e3a38:0x4f3a28,mx,TW.Y-0.1+(c.flood?-0.7:0),mz);
+    add(C,0.3,C,0x2a1f16,mx,TW.Y+H+0.15,mz);
+    if(c.flood){const w=new T.Mesh(new T.BoxGeometry(C-0.4,0.05,C-0.4),new T.MeshBasicMaterial({color:0x1d3f4a,transparent:true,opacity:0.55,depthWrite:false}));w.position.set(mx,TW.Y+1.0,mz);townGroup.add(w)}
+    if(c.rot&&!ROT.has(c.i)){const r=add(5,0.08,5,0x9a7a52,mx,TW.Y+0.02,mz);r.name='rot'+c.i}
+    if(c.rot){add(5,0.1,5,0x0a0806,mx,TW.Y-3.3,mz)}
+    if(c.well){const w=cyl(1.1,1.1,0.9,10,0x777068);w.position.set(mx,TW.Y+0.45,mz);townGroup.add(w);const s=new T.Mesh(new T.CylinderGeometry(0.5,0.5,H,8,1,true),new T.MeshBasicMaterial({color:0x9ab0c0,transparent:true,opacity:0.12,depthWrite:false,side:T.DoubleSide}));s.position.set(mx,TW.Y+H/2+1,mz);townGroup.add(s)}
+    if(c.stair)for(let k=0;k<5;k++)add(3,0.4*(k+1),1.2,0x6d5a44,mx,TW.Y+0.2*(k+1),mz-2+k*1.2);
+    if(c.treasure)add(2,1.2,0.3,0xd4af37,mx,TW.Y+0.6,mz-C/2+0.6);
+    if(cx<N-1)seg(x0+(cx+1)*C,mz,false,c.e,col);
+    if(cz<N-1)seg(mx,z0+(cz+1)*C,true,c.s,col);
+    for(const L of c.loot){if(TGOT.has(L.id))continue;const m=itemMesh(L.type);m.position.set(L.x,townFloorAt(L.x,L.z)+0.25,L.z);townGroup.add(m);TLOOTM.set(L.id,{L,m})}
+  }
+  // outer walls
+  wall(TW.X,z0,N*C,th,0x5a4633);wall(TW.X,z0+N*C,N*C,th,0x5a4633);wall(x0,TW.Z,th,N*C,0x5a4633);wall(x0+N*C,TW.Z,th,N*C,0x5a4633);
+  for(const[k,b]of BREACH)shaftMark(k,b);
+}
+function shaftPos(b){const i=SIM.breachCell(b.x,b.z,LAY),cc=SIM.cellCenter(i);return{x:cc.x+2,z:cc.z+2,i}}
+function shaftMark(k,b){if(!townGroup||b.closed)return;const p=shaftPos(b);const s=new T.Mesh(new T.CylinderGeometry(0.9,0.9,TW.H,10,1,true),new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.14,depthWrite:false,side:T.DoubleSide}));s.position.set(p.x,TW.Y+TW.H/2,p.z);s.name='shaft'+k;townGroup.add(s)}
+function takeTownLoot(e){
+  const L=e.L,def=LOOT[L.type];
+  if(def.heavy){removeTownLoot(L.id);wsSend({t:'got',item:L.id});if(online())wsSend({t:'prop',item:L.id,type:L.type,x:L.x,z:L.z});else addProp(L.id,L.type,L.x,L.z);toast(`${def.name}! Too heavy for your sack. Grab it (F) and get it out through the stairwell. It won't fit through crawlspaces or up a shaft.`,'gold',6000);sfx.gold();return}
+  if(S.sack.length>=sackMax()){toast(`Your sack is full (${sackMax()} items).`,'bad',2500);return}
+  removeTownLoot(L.id);wsSend({t:'got',item:L.id});S.sack.push(L.type);S.sackBonus+=def.val*0.25;sfx.find();addXP(4+def.val/4);toast(`Found: ${def.name} (worth ${def.val} seeds, plus a bonus for bringing it up from the town).`,def.val>=40?'gold':'',3200);
+}
+function removeTownLoot(id){const e=TLOOTM.get(id);if(e){townGroup.remove(e.m);TLOOTM.delete(id)}TGOT.add(id)}
+
+/* ---- breaking through, and climbing down ---- */
+const breachDisc=new Map();
+function addBreach(k,b){
+  if(BREACH.has(k))return;BREACH.set(k,b);layNow();
+  const h=holeNear(b.x,b.z,0.3);const d=new T.Mesh(new T.CircleGeometry(0.8,16),new T.MeshBasicMaterial({color:0x050403}));d.rotation.x=-Math.PI/2;d.position.set(b.x,groundAt(b.x,b.z)+0.03,b.z);scene.add(d);breachDisc.set(k,d);
+  shaftMark(k,b);
+  if(Math.hypot(P.x-b.x,P.z-b.z)<20&&!S.inTown){sfx.thud();noise(1.2,120,0.7,0.5,'lowpass');toast('The bottom of the hole gave way. There\'s a dark room down there: the buried town. Stand in the hole and press F to climb down.','gold',7000)}
+}
+function closeBreach(k){
+  const b=BREACH.get(k);if(!b||b.closed)return;b.closed=true;const d=breachDisc.get(k);if(d){scene.remove(d);breachDisc.delete(k)}
+  const h=holeNear(b.x,b.z,0.3);if(h){h.d=Math.min(h.d,1);touchHole(h)}
+  if(townGroup){const s=townGroup.getObjectByName('shaft'+k);if(s)townGroup.remove(s)}
+  if(S.inTown){sfx.thud();noise(1.5,110,0.6,0.6,'lowpass');toast('A rumble. One of the shafts back up caved in. Find another way out: another shaft, an old well, or the collapsed stairwell.','bad',7000)}
+}
+function checkBreach(h){
+  if(h.d<2.4||h.breachTried||nearCampZone(h.x,h.z))return;h.breachTried=true;
+  const ruins=Math.hypot(h.x-SIM.SITES.ruins.x,h.z-SIM.SITES.ruins.z)<SIM.SITES.ruins.r;
+  if(!ruins&&hash2(h.x*5.7+RUN.seed%991,h.z*2.3+RUN.day)>0.45)return;
+  const k=h.x+'|'+h.z;if(online())wsSend({t:'breach',x:h.x,z:h.z});else addBreach(k,{x:h.x,z:h.z,at:Date.now(),ladder:false,closed:false});
+}
+function breachNear(r){for(const[k,b]of BREACH){if(!b.closed&&Math.hypot(P.x-b.x,P.z-b.z)<r)return{k,b}}return null}
+function enterTown(k){
+  layNow();let b=k?BREACH.get(k):null;
+  if(!b){const i=LAY.cells.find(c=>!c.treasure&&!c.stair&&!c.well).i,cc=SIM.cellCenter(i);S.inTown=true;P.x=cc.x;P.z=cc.z}
+  else{const p=shaftPos(b);S.inTown=true;P.x=p.x;P.z=p.z}
+  P.y=townFloorAt(P.x,P.z);P.vy=0;S.carry=null;townGroup.visible=true;townRoom=-1;hurt('injury',4);sfx.thud();
+  toast('You drop into the dark: the buried town of Green Lake. Grab what you can, then find a way out. Climbing a shaft or a well takes a boost from a friend, a hand from someone up top, or a staked rope ladder. The collapsed stairwell you can walk out of.','',9000);
+}
+function exitTown(x,z,why){
+  const carrying=S.carry!=null&&PROPS.has(S.carry)?S.carry:null;
+  S.inTown=false;if(townGroup)townGroup.visible=false;P.x=x;P.z=z;P.y=groundAt(x,z);P.vy=0;townRoom=-1;
+  if(carrying!=null){const pr=PROPS.get(carrying);pr.x=x+1.2;pr.z=z;pr.g.position.set(pr.x,groundAt(pr.x,pr.z),pr.z);if(online())wsSend({t:'propMove',id:carrying,x:pr.x,z:pr.z})}
+  if(why)toast(why,'good',3500);
+}
+/* who can help you climb a shaft or well: a friend next to you down here (boost), someone at the top (hand), or a ladder */
+function climbHelp(b){
+  if(b&&b.ladder)return'the rope ladder';
+  const bo=[...remotes.values()].find(R=>(R.f&128)&&!(R.f&2)&&Math.hypot(R.p.g.position.x-P.x,R.p.g.position.z-P.z)<2.6);if(bo)return bo.name+' boosting you';
+  if(b){const up=[...remotes.values()].find(R=>(R.f&2048)&&!(R.f&128)&&Math.hypot(R.p.g.position.x-b.x,R.p.g.position.z-b.z)<3.6);if(up)return up.name+'\'s hand';if(helpersOn())return'Zero\'s hand'}
+  return null;
+}
+function townSpot(){
+  if(!S.inTown||!LAY)return null;const i=SIM.cellAt(P.x,P.z);if(i<0)return null;const c=LAY.cells[i],cc=SIM.cellCenter(i);
+  for(const[k,b]of BREACH){if(b.closed)continue;const p=shaftPos(b);if(Math.hypot(P.x-p.x,P.z-p.z)<1.8)return{kind:'shaft',k,b}}
+  if(c.well&&Math.hypot(P.x-cc.x,P.z-cc.z)<2)return{kind:'well',i};
+  if(c.stair&&Math.hypot(P.x-cc.x,P.z-cc.z)<3.2)return{kind:'stair',i};
+  return null;
+}
+function tryClimb(){
+  const sp=townSpot();if(!sp||S.ko)return false;
+  if(sp.kind==='stair'){const R=SIM.SITES.ruins;exitTown(R.x+6,R.z+2,'You climb the broken stairwell and come out in the old town ruins.');return true}
+  const help=climbHelp(sp.kind==='shaft'?sp.b:null);
+  if(!help){if(!useStam(0))return true;toast(sp.kind==='well'?'The well is too high to climb alone. You need a friend down here to boost you.':'Too high to climb alone. You need a friend down here to boost you, someone at the top to lower a hand (F at the hole), or a staked rope ladder.','bad',4000);return true}
+  if(!useStam(20)){toast('Too tired to climb. Catch your breath first.','bad',2500);return true}
+  if(sp.kind==='well'){const a=sp.i*2.39;exitTown(Math.cos(a)*250,Math.sin(a)*250-60,'You climb up the old well ('+help+') and come out somewhere on the lake.');return true}
+  exitTown(sp.b.x+1.8,sp.b.z,'You climb out ('+help+').');return true;
+}
+function stakeLadder(k){if(!S.up.rope)return;S.up.rope=false;if(online())wsSend({t:'ladder',k});else{const b=BREACH.get(k);if(b)b.ladder=true}toast('You staked your rope ladder. Now anyone can climb this shaft alone.','good',4000);sfx.clank()}
+/* per frame: rooms, flooded cellars, rotten floors, the shaft timer */
+function updateTown(dt){
+  {const far=S.inTown?70:3000;if(camera.far!==far){camera.far=far;camera.updateProjectionMatrix()}}
+  if(townGroup)townGroup.visible=!!S.inTown;
+  if(!online())for(const[k,b]of BREACH)if(!b.closed&&Date.now()-b.at>240000)closeBreach(k);
+  if(S.handT>0)S.handT-=dt;
+  if(!S.inTown){S.breath=100;return}
+  layNow();const i=SIM.cellAt(P.x,P.z);if(i<0)return;const c=LAY.cells[i];
+  if(i!==townRoom){townRoom=i;toast(c.name+(c.flood?' (flooded: hold your breath)':c.rot?' (the floor looks rotten)':c.treasure?' (something big lives here. Crouch and stay quiet)':''),c.treasure||c.flood?'bad':'',2800)}
+  if(c.flood&&!S.ko){S.breath=Math.max(0,(S.breath==null?100:S.breath)-9*dt);if(S.breath<=0)knockOut('Out of breath','You ran out of air in a flooded cellar.')}else S.breath=Math.min(100,(S.breath==null?100:S.breath)+30*dt);
+  if(c.rot&&!ROT.has(i)){const cc=SIM.cellCenter(i),on=(x,z)=>Math.abs(x-cc.x)<2.5&&Math.abs(z-cc.z)<2.5;
+    if(on(P.x,P.z)){let w=1+(S.carry!=null?2:0);for(const R of remotes.values())if((R.f&128)&&on(R.p.g.position.x,R.p.g.position.z))w++;if(w>=2)breakRot(i,true)}}
+}
+function breakRot(i,mine){if(ROT.has(i))return;ROT.add(i);if(townGroup){const r=townGroup.getObjectByName('rot'+i);if(r)townGroup.remove(r)}if(mine)wsSend({t:'rot',i});
+  const cc=SIM.cellCenter(i);if(S.inTown&&Math.abs(P.x-cc.x)<2.5&&Math.abs(P.z-cc.z)<2.5){sfx.thud();hurt('injury',10);S.carry=null;toast('CRACK. The rotten floor gave way under the weight and you fell into the cellar below.','bad',5000)}}
+
 /* ---- the day's critters and characters (moved by sim.js; drawn here) ---- */
 const MOBV=new Map();
 function ghostify(g,color){g.traverse(o=>{if(o.isMesh){o.material=new T.MeshBasicMaterial({color,transparent:true,opacity:0.55,depthWrite:false});o.castShadow=false}})}
@@ -2189,6 +2349,8 @@ function mobMesh(k){
   else if(k==='warden'){const p=makePerson({skin:0xf0c9a2,suit:0x2a2a2a,shirt:0xd12a2a,hat:'none',shovel:false});g.add(p.g);g.userData.p=p;L=makeLabel(g,'The Warden','',2.3)}
   else if(k==='sheriff'){const p=makePerson({skin:0xb8c8d8,suit:0x8aa0b8,hat:'cowboy',shovel:false});ghostify(p.g,0xa8c8ff);g.add(p.g);g.userData.p=p;L=makeLabel(g,'The Sheriff\'s ghost','',2.3)}
   else if(k==='kate'){const p=makePerson({skin:0xf2d0d8,suit:0xd88aa8,hat:'cowboy',shovel:false});ghostify(p.g,0xffb0c8);g.add(p.g);g.userData.p=p;L=makeLabel(g,'Kate Barlow\'s ghost','',2.3)}
+  else if(k==='trout'){const p=makePerson({skin:0xd8b890,suit:0x8a6a4a,hat:'cowboy',shovel:false});ghostify(p.g,0xffc890);const torch=new T.Mesh(new T.BoxGeometry(0.12,0.5,0.12),new T.MeshBasicMaterial({color:0xffa030}));torch.position.set(0,-0.3,0.12);p.armR.add(torch);g.add(p.g);g.userData.p=p;L=makeLabel(g,'Trout Walker\'s mob','',2.3)}
+  else if(k==='queen'){const m=makeLizard();m.g.scale.setScalar(3.4);g.add(m.g);L=makeLabel(g,'The lizard queen','',1.6)}
   else{const b=box(0.5,0.5,0.5,0x7a2a2a);b.position.y=0.25;g.add(b)}
   scene.add(g);return{g,L};
 }
@@ -2238,6 +2400,8 @@ function mobEvent(e){
     case 'wardenWarn':if(mine){toast('The Warden is watching you stand around. Get digging, or keep moving!','bad',5000);zeroniSting(0.4)}break;
     case 'sheriff':toast('Spurs jingle in the distance. The Sheriff\'s ghost is looking for whoever has Kate\'s loot.','bad',5000);break;
     case 'kate':toast('Kate Barlow\'s ghost is out on the lake. She only moves when nobody is looking at her.','bad',6000);zeroniSting(0.5);break;
+    case 'queen':if(S.inTown){toast('Something huge stirs in the dark. The lizard queen is awake. Crouch (C) and keep still.','bad',5000);sfx.hiss()}break;
+    case 'trout':if(mine){toast('Torches! Trout Walker\'s mob saw your light. Turn it off (L) and hide.','bad',4500);noise(0.8,700,1,0.3)}break;
     case 'appeased':toast('The crew sang Madame Zeroni the lullaby. She smiles, and fades away for the night. The curse eases.','gold',6500);sfx.gold();addCurse(-25);rain.visible=true;setTimeout(()=>{if(!S.won)rain.visible=false},12000);break;
   }
 }
@@ -2295,7 +2459,7 @@ let luckyT=0;
 function updateCoop(dt){
   if(!S.started)return;
   if(clockT()<curfewT())S.dayPlay=(S.dayPlay||0)+dt;
-  updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
+  updateTown(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
   if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
@@ -2316,17 +2480,17 @@ function updateCoop(dt){
 /* ---------- main loop ---------- */
 let last=performance.now(),tAcc=0,mapT=0;
 function frame(now){
-  const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
+  const dt=Math.max(0,Math.min(0.05,(now-last)/1000));last=Math.max(last,now);tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt)}else titleCamera(dt);
   updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateClouds(dt);updateRain(dt);updateDetector(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
   const fx=S.started?P.x:0,fz=S.started?P.z:12;
-  streamChunks(fx,fz);farU.uFocus.value.set(fx,fz);flushTerrain();updateViewmodel();stars.position.copy(camera.position);
+  if(S.inTown){streamChunks(0,20);farU.uFocus.value.set(0,20)}else{streamChunks(fx,fz);farU.uFocus.value.set(fx,fz)}flushTerrain();updateViewmodel();stars.position.copy(camera.position);
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
-  renderer.render(scene,camera);
+  const _r0=performance.now();renderer.render(scene,camera);if(window.__prof){__prof.render=performance.now()-_r0;__prof.frame=performance.now()-now;__prof.n=(__prof.n||0)+1;__prof.calls=renderer.info.render.calls;__prof.tris=renderer.info.render.triangles}
   updateLabels(now);
   requestAnimationFrame(frame);
 }
@@ -2342,6 +2506,9 @@ if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startG
 if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('carry')){P.x=20;P.z=-10;P.yaw=0;P.y=groundAt(P.x,P.z);addProp(9990,'safe',P.x,P.z-1.6);S.carry=9990;S.sack=['cap','jar','locket'];setRun({day:2,bank:140,quota:SIM.quotaFor(2,1)});PROG.xp=700;addXP(1)}
   if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
+  if(h.includes('prof'))window.__prof={};
+  if(h.includes('dbg2')){const d=document.createElement('div');d.style.cssText='position:fixed;left:300px;top:200px;z-index:999;background:#000;color:#0f0;font:16px monospace;padding:4px';document.body.appendChild(d);setInterval(()=>{d.textContent=`t=${tAcc.toFixed(1)} x=${P.x.toFixed(1)} y=${P.y.toFixed(1)} town=${S.inTown} hudT=${hudT.toFixed(2)}`},300)}
+  if(h.includes('town')){CLK.pt=150000;CLK.paused=true;RUN.day=3;setTimeout(()=>{enterTown();S.light=true;P.pitch=0.15;if(h.includes('vault')){const c=SIM.cellCenter(LAY.treasure);P.x=c.x+5;P.z=c.z+4;P.y=townFloorAt(P.x,P.z)}},300)}
   if(h.includes('mobs')){RUN.day=5;RUN.curse=80;RUN.mood='normal';RUN.quota=soloQuota();CLK.pt=200000;CLK.paused=true;P.x=60;P.z=-90;P.yaw=0;P.y=groundAt(P.x,P.z);for(let i=0;i<400;i++)SIM.stepMonsters(MONL,[meSim()],200000,0.1,[],{curfew:curfewT(),split:splitT(),run:RUN});for(const m of MONL.mobs){if(m.k!=='vulture'){const a=Math.random()*6.3,d=4+Math.random()*10;m.x=P.x+Math.cos(a)*d;m.z=P.z-6-Math.abs(Math.sin(a))*d}}runChanged();P.pitch=0.25}
   if(h.includes('twerk')){P.x=20;P.z=-10;P.y=groundAt(P.x,P.z);P.fa=0;P.yaw=Math.PI/2;P.pitch=0.2;S.twerkT=60;setTimeout(()=>fart(P.x,P.y,P.z,0,0),600)}
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}

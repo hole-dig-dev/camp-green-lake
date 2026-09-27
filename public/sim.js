@@ -253,6 +253,67 @@
     if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs };
+  // ---- the buried town of Green Lake: a new layout of dark rooms under the lake every day ----
+  const TOWN = { X: 2000, Z: 0, N: 6, C: 14, Y: -30, H: 4 };
+  const ROOM_NAMES = ['Schoolhouse', "Sheriff's office", 'Jail', 'General store', 'Church', "Sam's boat shed", 'Saloon', 'Post office', "Kate's house", 'Barbershop', 'Stable', 'Bank', 'Onion cellar', 'Doctor\'s office', 'Hotel'];
+  const TLOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
+  const cellAt = (x, z) => { const cx = Math.floor((x - TOWN.X) / TOWN.C + TOWN.N / 2), cz = Math.floor((z - TOWN.Z) / TOWN.C + TOWN.N / 2); return cx >= 0 && cz >= 0 && cx < TOWN.N && cz < TOWN.N ? cz * TOWN.N + cx : -1; };
+  const cellCenter = i => ({ x: TOWN.X + ((i % TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C, z: TOWN.Z + (Math.floor(i / TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C });
+  const inTownXZ = x => x > TOWN.X - TOWN.N * TOWN.C;
+  function townLayout(seed, day) {
+    const r = rnd(seed * 13 + day * 71), N = TOWN.N, cells = [];
+    for (let i = 0; i < N * N; i++) cells.push({ i, e: 0, s: 0, name: ROOM_NAMES[Math.floor(r() * ROOM_NAMES.length)], flood: false, rot: false, loot: [] });
+    // doors: a random maze that reaches every room, plus some extra doors; some doors are crawlspaces (crouch to pass)
+    const seen = new Set([0]), stack = [0];
+    while (stack.length) {
+      const i = stack[stack.length - 1], cx = i % N, cz = Math.floor(i / N), nb = [];
+      if (cx < N - 1 && !seen.has(i + 1)) nb.push([i + 1, 'e', i]); if (cx > 0 && !seen.has(i - 1)) nb.push([i - 1, 'e', i - 1]);
+      if (cz < N - 1 && !seen.has(i + N)) nb.push([i + N, 's', i]); if (cz > 0 && !seen.has(i - N)) nb.push([i - N, 's', i - N]);
+      if (!nb.length) { stack.pop(); continue; }
+      const [j, side, owner] = nb[Math.floor(r() * nb.length)]; cells[owner][side] = r() < 0.2 ? 2 : 1; seen.add(j); stack.push(j);
+    }
+    for (const c of cells) { const cx = c.i % N, cz = Math.floor(c.i / N); if (cx < N - 1 && !c.e && r() < 0.22) c.e = 1; if (cz < N - 1 && !c.s && r() < 0.22) c.s = 1; }
+    const order = cells.map(c => c.i).sort(() => r() - 0.5);
+    const treasure = order[0], stair = order[1], wells = [order[2], order[3]];
+    cells[treasure].name = "Kate's vault"; cells[treasure].treasure = true; cells[stair].stair = true; cells[stair].name = 'Collapsed stairwell';
+    for (const w of wells) { cells[w].well = true; cells[w].name = 'Old well'; }
+    for (const i of order.slice(4, 9)) cells[i].flood = true;
+    for (const i of order.slice(9, 14)) cells[i].rot = true;
+    let id = 0;
+    for (const c of cells) {
+      const n = c.treasure ? 4 : c.flood ? 3 : Math.floor(r() * 3), cc = cellCenter(c.i);
+      for (let k = 0; k < n; k++) c.loot.push({ id: 20000 + (day % 50) * 400 + id++, type: c.treasure && k === 0 ? 'strongbox' : c.treasure ? 'goldbar' : TLOOT[Math.floor(r() * TLOOT.length)], x: cc.x + (r() - 0.5) * (TOWN.C - 4), z: cc.z + (r() - 0.5) * (TOWN.C - 4) });
+    }
+    return { seed, day, cells, treasure, stair, wells };
+  }
+  // where a hole that breaks through lands you: a room picked from the hole's position
+  const breachCell = (x, z, lay) => { const cand = lay.cells.filter(c => !c.treasure && !c.stair && !c.well && !c.flood); return cand[Math.abs(Math.floor(x * 7.3 + z * 3.1)) % cand.length].i; };
+  // Trout Walker's torch mob (hunts anyone with a light on) and the lizard queen (guards Kate's vault)
+  function stepTown(M, tps, dt, ev, lay, day) {
+    M.town = M.town || { key: '' };
+    const key = lay.seed + ':' + lay.day;
+    if (M.town.key !== key) { M.town = { key, mobs: [] }; }
+    const T_ = M.town, live = tps.filter(p => !p.dn);
+    if (!tps.length) { M.mobs = (M.mobs || []).filter(m => m.k !== 'trout' && m.k !== 'queen'); return; }
+    M.mobs = M.mobs || []; M.nid = M.nid || 1;
+    const have = k => M.mobs.filter(m => m.k === k).length;
+    if (!have('queen')) { const c = cellCenter(lay.treasure); M.mobs.push({ id: M.nid++, k: 'queen', x: c.x, z: c.z, h: 0, y: 0, st: 0, t: 0, cd: 0, home: c }); }
+    const want = 1 + Math.floor(day / 2);
+    while (have('trout') < want) { const c = cellCenter(lay.cells[Math.floor(Math.random() * lay.cells.length)].i); M.mobs.push({ id: M.nid++, k: 'trout', x: c.x, z: c.z, h: 0, y: 0, st: 0, t: 0, cd: 0 }); }
+    for (const m of M.mobs) {
+      if (m.k === 'queen') {
+        // she wakes up when someone moves carelessly (not crouched) or makes noise near her
+        let tgt = null, bd = 1e9; for (const p of live) { const d = Math.hypot(p.x - m.x, p.z - m.z); if (d < bd && d < 16 && ((p.a !== 0 && !p.cr) || p.nz > 0.5 || m.st === 1)) { bd = d; tgt = p; } }
+        if (tgt && bd < 20) { if (m.st !== 1) ev.push({ k: 'queen' }); m.st = 1; m.calm = 0; if (chase(m, tgt, 6, dt) < 1.6 && !m.cd) { m.cd = 2; ev.push({ k: 'down', id: tgt.id, by: 'queen' }); } }
+        else { m.calm = (m.calm || 0) + dt; if (m.calm > 4) m.st = 0; if (m.st === 0) chase(m, m.home, 1.5, dt, 0.5); }
+      } else if (m.k === 'trout') {
+        let tgt = null, bd = 1e9; for (const p of live) { const d = Math.hypot(p.x - m.x, p.z - m.z); if (d < bd && ((p.lt && d < 18) || d < 3)) { bd = d; tgt = p; } }
+        if (tgt) { if (m.st !== 1) ev.push({ k: 'trout', id: tgt.id }); m.st = 1; if (chase(m, tgt, 4.2, dt) < 1.3 && !m.cd) { m.cd = 3; ev.push({ k: 'down', id: tgt.id, by: 'trout' }); } }
+        else { m.st = 0; if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 2) m.goal = cellCenter(Math.floor(Math.random() * lay.cells.length)); chase(m, m.goal, 1.8, dt); }
+      }
+      m.cd = Math.max(0, (m.cd || 0) - dt);
+    }
+  }
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

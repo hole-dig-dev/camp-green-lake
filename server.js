@@ -12,7 +12,7 @@ const PUB = path.join(__dirname, 'public');
 const SAVE = path.join(__dirname, 'data', 'world.json');
 const MAX_CLIENTS = 40;
 const MAX_HOLES = 40000;
-const MAX_ITEM = 10000;
+const MAX_ITEM = 100000;
 const MAX_BAGS = 60, MAX_PROPS = 40;
 const NEW_DAY_AFTER_WIN_MS = 10 * 60 * 1000;
 // Token for the admin endpoints (curl over SSH). Set HOST_TOKEN in the environment;
@@ -28,10 +28,10 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Camper';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
-const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'sneakers'];
+const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'sneakers', 'goldbar'];
 
 function freshRun(sentence) { const seed = (Math.random() * 1e9) | 0; return { day: 1, bank: 30, peak: 1, curse: 0, sentence: sentence || 1, seed, ...SIM.rollDay(seed, 1, 0) }; }
-function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
+function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, breaches: {}, rot: [] }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -42,6 +42,10 @@ if (!world.meta || typeof world.meta !== 'object') world.meta = { served: 0, bes
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
+if (!world.breaches || typeof world.breaches !== 'object') world.breaches = {};
+if (!Array.isArray(world.rot)) world.rot = [];
+let layCache = { key: '', lay: null };
+function layout() { const k = world.run.seed + ':' + world.run.day; if (layCache.key !== k) layCache = { key: k, lay: SIM.townLayout(world.run.seed, world.run.day) }; return layCache.lay; }
 let gotSet = new Set(world.got);
 let dirty = false;
 let nextObj = Date.now() % 100000;
@@ -110,6 +114,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
+    breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
   });
@@ -141,7 +146,7 @@ wss.on('connection', ws => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
+        c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
@@ -176,7 +181,7 @@ wss.on('connection', ws => {
         // Someone dug up something too heavy for the sack. It sits on the ground until campers carry it to the truck.
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
-        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
+        world.props[id] = { type, x: r2(num(m.x, -595, 2100, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
       }
@@ -244,6 +249,32 @@ wss.on('connection', ws => {
         // small curse events a client notices itself (breaking fragile loot)
         if (m.k === 'broke') { curse(3); broadcast(runInfo()); }
         break;
+      case 'breach': {
+        // an 8-foot hole broke through into the buried town
+        const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), k = x + '|' + z;
+        if ((world.holes[k] || 0) < 2.35 || world.breaches[k]) return;
+        world.breaches[k] = { x, z, at: Date.now(), ladder: false, closed: false }; dirty = true;
+        broadcast({ t: 'breach', k, ...world.breaches[k] });
+        break;
+      }
+      case 'ladder': {
+        const b = world.breaches[String(m.k)]; if (!b || b.closed || b.ladder) return;
+        b.ladder = true; dirty = true; broadcast({ t: 'ladder', k: String(m.k) });
+        break;
+      }
+      case 'rot': {
+        const i = num(m.i, 0, 35, -1) | 0; if (i < 0 || world.rot.includes(i)) return;
+        world.rot.push(i); dirty = true; broadcast({ t: 'rot', i });
+        break;
+      }
+      case 'propMove': {
+        // someone carried heavy loot up the old stairwell: it comes up with them
+        const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id];
+        if (!p || c.cy !== id) return;
+        p.x = r2(num(m.x, -600, 3000, p.x)); p.z = r2(num(m.z, -600, 600, p.z)); dirty = true;
+        broadcast({ t: 'props', list: [[id, p.x, p.z, p.n || 0]] });
+        break;
+      }
       case 'bonk':
         // shovel swing: squashes critters in front of the camper (results go out with the next monster update)
         if (now - (c.bonkAt || 0) < 600) return;
@@ -365,6 +396,8 @@ function dawn() {
   // a new morning: the Warden picks today's mood and dig site; anyone out cold wakes up in the nurse's office
   Object.assign(world.run, SIM.rollDay(world.run.seed, world.run.day, world.run.curse)); dirty = true;
   for (const id in world.props) if (world.props[id].type === 'body') delete world.props[id];
+  for (const k in world.breaches) { const b = world.breaches[k]; if (!b.closed) world.holes[k] = Math.min(world.holes[k] || 0, 1); }
+  world.breaches = {}; world.rot = []; layCache.key = '';
   broadcast({ ...runInfo(), t: 'dawn' });
 }
 setInterval(() => {
@@ -380,6 +413,8 @@ setInterval(() => {
   const moved = [];
   for (const id in world.props) { const p = world.props[id]; if (p.moved) { p.moved = false; p.x = r2(p.x); p.z = r2(p.z); moved.push([+id, p.x, p.z, p.n]); } }
   if (moved.length) broadcast({ t: 'props', list: moved });
+  // a shaft into the buried town only holds for 4 minutes before it caves in
+  for (const k in world.breaches) { const b = world.breaches[k]; if (!b.closed && now - b.at > 240000) { b.closed = true; world.holes[k] = 1; dirty = true; broadcast({ t: 'shaftClosed', k, x: b.x, z: b.z }); } }
   for (const id of sold) {
     const p = world.props[id]; delete world.props[id];
     if (p.type === 'body') {
@@ -394,7 +429,7 @@ setInterval(() => {
   }
   // monsters
   const ev = pendingEv; pendingEv = [];
-  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run });
+  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
   for (const e of ev) { if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
   const on = MON.trucks.length > 0 || !!MON.zer || MON.mobs.length > 0 || ev.length > 0;
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag, MON.zer.held ? 1 : 0, r2(MON.zer.song || 0)] : null, mobs: SIM.packMobs(MON), ev });
