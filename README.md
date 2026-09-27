@@ -53,6 +53,25 @@ curl -H "x-admin: $HOST_TOKEN" localhost:4300/admin/update
 
 Other admin endpoints (same header): `/admin/who` lists who's connected.
 
+## Developer console
+
+Press **`** (the key left of 1) in game to open the console, or tap the **>_** button on a touch screen. Type `help` for the full list. Commands are case-insensitive:
+
+| Command | What it does |
+|---|---|
+| `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
+| `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
+| `heal` / `hurt [n]` | Refill health and water / take damage. |
+| `tp <x> <z>` / `tp camp` | Teleport. |
+| `where` | Print your position. |
+
+Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (the play-test server does) to give everyone host powers, including the console and the hidden `sploosh` admin panel. Solo offline play can always use it.
+
+**Adding a command:** one line near the other `command(...)` calls in `public/index.html`:
+`command('name', {usage: 'name <arg>', help: 'what it does', run(args) { ...; return 'reply'; }})`
+
+**Adding a spawnable hazard:** add an entry to the `ENV` registry (`ENV.sandstorm = {spawn: o => ...}`, where `o` is `{x, z, a}`) and a command that calls `spawnAhead('sandstorm', dist)`. The server relays hazards spawned by the host, so every client builds the same one.
+
 ## How it's built
 
 - `public/index.html`: the whole game in one file. Three.js (r128) for rendering, WebAudio for sound effects and music, no build step.

@@ -17,6 +17,9 @@ const MAX_BAGS = 60, MAX_PROPS = 40;
 const NEW_DAY_AFTER_WIN_MS = 10 * 60 * 1000;
 // Token for the admin endpoints (curl over SSH). Set HOST_TOKEN in the environment;
 // without it a random one is generated, which effectively turns the admin endpoints off.
+// DEV_MODE=1 (the play-test server): every camper gets host powers, so anyone testing can use the in-game
+// console and admin panel. Never set it on the server your friends play on.
+const DEV_MODE = process.env.DEV_MODE === '1';
 const HOST_TOKEN = process.env.HOST_TOKEN || require('crypto').randomBytes(24).toString('hex');
 const PARTY_SECS = 60, DISCO_COOLDOWN_MS = 3 * 60 * 1000;
 const RECENT_MS = 60 * 60 * 1000;
@@ -124,7 +127,7 @@ wss.on('connection', ws => {
 
     if (m.t === 'join') {
       c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
-      c.host = m.host === HOST_TOKEN || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
+      c.host = DEV_MODE || m.host === HOST_TOKEN || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
@@ -239,6 +242,13 @@ wss.on('connection', ws => {
         world.clock = { off: num(m.off, -1e13, 1e13, 0), paused: m.paused === true, pt: num(m.pt, 0, 12 * 60 * 1000, 0) }; dirty = true;
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
+      case 'env': {
+        // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only. The server just
+        // relays it; every client builds the same hazard from the kind, position and heading.
+        if (!c.host || typeof m.k !== 'string' || !/^[a-z]{1,16}$/.test(m.k)) return;
+        broadcast({ t: 'env', id: c.id, n: c.n, k: m.k, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)), a: num(m.a, -10, 10, 0) }, c.id);
+        break;
+      }
       case 'say':
         c.nz = 1; c.chatAt = Date.now();
         broadcast({ t: 'say', id: c.id, i: num(m.i, 0, 4, 0) | 0 }, c.id);

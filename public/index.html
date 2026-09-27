@@ -44,6 +44,13 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .bar.xp i{background:#d4af37}
 #fired{background:rgba(30,0,0,.7);z-index:50}
 #fired h2{font:900 56px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;color:#b3261e}
+/* developer console (open with the ` key) */
+#console{position:fixed;left:50%;bottom:calc(60px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(620px,calc(100vw - 32px));z-index:40;background:rgba(20,14,8,.88);border:2px solid var(--ink);border-radius:4px;color:#f3ead2;font:500 14px/1.35 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+#conLog{max-height:190px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+#conLog .err{color:#ff9b87}#conLog .ok{color:#b8e08a}#conLog .cmd{color:#ffd27a}
+#conRow{display:flex;gap:6px;align-items:center}#conRow b{color:#ffd27a}
+#conIn{flex:1;min-width:0;font:inherit;background:transparent;border:0;border-bottom:1px solid rgba(243,234,210,.35);color:#fff;padding:3px 2px;outline:none}
+#conBtn{position:fixed;right:16px;top:calc(250px + env(safe-area-inset-top,0px));z-index:30;font:700 14px/1 ui-monospace,monospace;padding:8px 10px;box-shadow:0 2px 0 var(--ink)}
 #chatIn{position:fixed;left:50%;bottom:calc(130px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(460px,calc(100vw - 32px));font:600 17px/1.2 var(--ui);padding:9px 12px;border:2px solid var(--ink);border-radius:3px;background:var(--canvas);color:var(--ink);z-index:30}
 #scare{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .45s;background:radial-gradient(circle,rgba(0,0,0,0) 15%,rgba(80,0,0,.9) 70%,#000);z-index:45}
 #scare.on{opacity:1;transition:none}
@@ -283,6 +290,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <button id="firedBtn">Start a new run</button>
   </div>
 </div>
+ <div id="console" hidden><div id="conLog" aria-live="polite"></div><div id="conRow"><b>&gt;</b><input id="conIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type a command (help lists them). Esc closes."></div></div>
+<button id="conBtn" type="button" hidden aria-label="Open console">&gt;_</button>
 <input id="chatIn" maxlength="80" placeholder="Say something. Only campers near you will see it." autocomplete="off" hidden>
 <div id="scare"></div>
 
@@ -1010,6 +1019,8 @@ addEventListener('mousemove',e=>{
 document.addEventListener('pointerlockchange',()=>{if(!lockOk())digHeld=false});
 const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here!','Water truck!'];
 addEventListener('keydown',e=>{
+  if(e.target===conIn){conKey(e);return}
+  if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
   if(!$('#fired').hidden)return;
@@ -1030,7 +1041,7 @@ addEventListener('keydown',e=>{
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:0.55;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}
   if(k>='1'&&k<='5')shout(+k-1);
-  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('twister')){net.typed='';spawnTestTwister()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  if(k.length===1){net.typed=(net.typed+k).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
 });
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false});
@@ -1174,7 +1185,8 @@ function onMsg(m){
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
-    case 'host':net.host=m.on===true;if(!net.host)$('#admin').hidden=true;break;
+    case 'host':net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);break;
+    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
     case 'clock':setClock(m);break;
     case 'reset':toast('A new day at Camp Green Lake. The lake bed is being refilled.','',4000);saveSession(true);setTimeout(()=>location.reload(),2500);break;
   }
@@ -1320,7 +1332,7 @@ function updateHealth(dt){
    you're down in a hole deeper than 4 feet. Type "twister" in game to summon a test one that only you can see. */
 const TW_CELL=200,TW_WIN=120000,TW_CHANCE=0.3,TW_SPEED=3.2,TW_PULL_R=18,TW_CORE_R=3.2,TW_DMG=30,TW_SAFE_DEPTH=1.2;
 const TW_LIVE=new Map();   // id -> twister currently near you: {x,z,s (strength 0-1), ...}
-let twTest=null,twCool=0,twTumble=0,twWind=null;
+let twSpawned=[],twCool=0,twTumble=0,twWind=null;   // twSpawned: twisters made with the console (see ENV below)
 function twNow(){return Date.now()+CLK.off}   // absolute shared time (clockT() only gives the time of day)
 /* the twister (if any) that square (ci,cj) grows in window k: where it starts, which way it heads, how long it lasts */
 function twPlan(ci,cj,k){
@@ -1334,15 +1346,12 @@ function twAt(pl,T){
   const x=pl.x0+Math.cos(pl.a)*TW_SPEED*e+Math.sin(e*0.11+pl.ph)*14,z=pl.z0+Math.sin(pl.a)*TW_SPEED*e+Math.cos(e*0.09+pl.ph)*14;
   let s=sm(e/10)*sm((pl.life-e)/10);                           // grows for 10 s, dies down over the last 10 s
   s*=clamp((campDist(x,z)-15)/35,0,1);                         // falls apart as it nears camp
-  s*=1-nightF();                                               // only during the day
+  if(!pl.forced)s*=1-nightF();                                 // only during the day (console-made ones ignore this)
   if(Math.max(Math.abs(x),Math.abs(z))>EDGE-10)s=0;           // off the edge of the lake
   return{x,z,s,e};
 }
-function spawnTestTwister(){
-  const a=P.yaw+Math.PI+(Math.random()-0.5)*0.6,x=P.x+Math.sin(a)*45,z=P.z+Math.cos(a)*45;   // ~45 m in front of the camera
-  twTest={id:'test',x0:x,z0:z,a:Math.atan2(P.z-z,P.x-x),ph:Math.random()*6,t0:twNow(),life:70};
-  toast('Test twister summoned (only you can see it).','',2500);
-}
+/* a twister made on demand (console / ENV). forced: it ignores the time of day, so testers can spawn one at night */
+function addTwister(x,z,a){twSpawned.push({id:'spawn'+Math.random().toString(36).slice(2,8),x0:x,z0:z,a,ph:(x*7+z*3)%6.28,t0:twNow(),life:75,forced:true})}
 
 /* looks: three swirling funnel layers + a dust skirt + flying debris. The funnel bends with a small vertex-shader
    tweak (uTime), and a few pooled visuals are reused so twisters coming and going never allocate new meshes. */
@@ -1393,10 +1402,10 @@ function updateTwisters(dt){
   // which twisters are around right now: this window's and the last one's (a twister can run past its window)
   const plans=[];
   for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)}
-  if(twTest)plans.push(twTest);
+  plans.push(...twSpawned);
   let nearest=1e9,loud=0;
   for(const pl of plans){
-    const at=twAt(pl,T0);if(!at||at.s<=0.01){if(pl===twTest&&(!at||at.e>pl.life-0.1))twTest=null;continue}
+    const at=twAt(pl,T0);if(!at||at.s<=0.01){if(pl.forced&&(!at||at.e>pl.life-0.1))twSpawned=twSpawned.filter(t=>t!==pl);continue}
     const d=Math.hypot(at.x-fx,at.z-fz);if(d>260)continue;
     let tw=TW_LIVE.get(pl.id);if(!tw){tw={id:pl.id,warned:false};TW_LIVE.set(pl.id,tw)}
     Object.assign(tw,at);seen.add(pl.id);nearest=Math.min(nearest,d);loud=Math.max(loud,at.s*clamp(1-d/140,0,1)**2);
@@ -1427,6 +1436,76 @@ function twPush(tw,d,dt){
     if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
   }
 }
+
+/* ---------- environmental hazards: one registry for everything that can be spawned on demand ---------- */
+/* ENV.<kind>.spawn({x,z,a}) builds the hazard at x,z heading a (radians). spawnEnv() is the one way to create one:
+   the host's console calls it with share=true and the server relays it to every camper, who call spawnEnv() with
+   the same numbers, so everyone gets the same hazard. To add a new hazard: add an ENV entry and a console command. */
+const ENV={
+  twister:{spawn:o=>addTwister(o.x,o.z,o.a)},
+};
+function spawnEnv(k,o,by){
+  if(!ENV[k])return false;
+  ENV[k].spawn(o);
+  if(by&&S.started)toast(`${by} spawned a ${k}.`,'',2500);
+  return true;
+}
+/* spawn a hazard `dist` m in front of the camera, heading straight at you; shared with everyone when online */
+function spawnAhead(k,dist){
+  const a=P.yaw+Math.PI,x=clamp(P.x+Math.sin(a)*dist,-EDGE+10,EDGE-10),z=clamp(P.z+Math.cos(a)*dist,-EDGE+10,EDGE-10);
+  const o={x,z,a:Math.atan2(P.z-z,P.x-x)};
+  spawnEnv(k,o);if(online())wsSend({t:'env',k,...o});
+  return o;
+}
+
+/* ---------- developer console ---------- */
+/* Open with the ` key (next to 1), or the >_ button on touch screens. Commands are case-insensitive.
+   Who can use it: the host (always host on the play-test server, which runs with DEV_MODE=1), or anyone playing solo
+   offline. Friends on the real server can't.
+   To add a command:  command('name', {usage:'name <arg>', help:'what it does', run(args){ ...; return 'reply' }});
+   run() gets the words after the command name. Return a string to print it; throw an Error to print it in red. */
+const conEl=$('#console'),conLog=$('#conLog'),conIn=$('#conIn');
+const CMDS=new Map(),conHist=[];let conHi=0;
+function command(name,def){CMDS.set(name,def)}
+function canConsole(){return!online()||net.host}
+function conPrint(text,cls){const d=document.createElement('div');if(cls)d.className=cls;d.textContent=text;conLog.appendChild(d);while(conLog.children.length>60)conLog.firstChild.remove();conLog.scrollTop=1e9}
+function openConsole(){
+  if(!canConsole()){toast('The console is only for the host.','bad',2000);return}
+  conEl.hidden=false;releaseLock();digHeld=false;for(const k in KEYS)KEYS[k]=false;
+  if(!conLog.children.length)conPrint('Camp Green Lake console. Type help for commands.');
+  conIn.value='';conIn.focus();   // focus right away, so fast typing never leaks keys into the game
+}
+function closeConsole(){conEl.hidden=true;conIn.blur()}
+function consoleOpen(){return!conEl.hidden}
+function runCommand(line){
+  const words=line.trim().split(/\s+/).filter(Boolean);if(!words.length)return;
+  const name=words[0].toLowerCase(),c=CMDS.get(name);
+  conPrint('> '+line.trim(),'cmd');
+  if(!c){conPrint(`Unknown command "${name}". Type help.`,'err');return}
+  if(!S.started&&c.needsGame!==false){conPrint('Start the game first.','err');return}
+  try{const out=c.run(words.slice(1));if(out)conPrint(String(out),'ok')}catch(err){conPrint(err.message,'err')}
+}
+function conKey(e){
+  if(e.key==='Escape'||e.key==='`'){e.preventDefault();closeConsole();return}
+  if(e.key==='Enter'){e.preventDefault();const v=conIn.value;conIn.value='';if(v.trim()){conHist.push(v);conHi=conHist.length}runCommand(v);return}
+  if(e.key==='ArrowUp'){e.preventDefault();if(conHi>0)conIn.value=conHist[--conHi];return}
+  if(e.key==='ArrowDown'){e.preventDefault();conHi=Math.min(conHist.length,conHi+1);conIn.value=conHist[conHi]||'';return}
+  if(e.key==='Tab'){e.preventDefault();const w=conIn.value.trim().toLowerCase();const m=[...CMDS.keys()].filter(k=>k.startsWith(w));if(m.length===1)conIn.value=m[0]+' ';else if(m.length)conPrint(m.join('  '))}
+}
+$('#conBtn').onclick=()=>consoleOpen()?closeConsole():openConsole();
+const numArg=(v,def,a,b)=>{if(v===undefined)return def;const n=Number(v);if(!Number.isFinite(n))throw new Error(`"${v}" isn't a number.`);return clamp(n,a,b)};
+
+command('help',{needsGame:false,usage:'help',help:'List every command.',run(){return[...CMDS.values()].map(c=>c.usage.padEnd(22)+c.help).join('\n')}});
+command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
+command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in front of you, heading your way. Everyone sees it.',
+  run([d]){const dist=numArg(d,45,10,200);spawnAhead('twister',dist);return`Twister spawned ${dist} m ahead.${campDist(P.x,P.z)<50?' (Twisters fall apart near camp; walk out onto the lake to see it at full strength.)':''}`}});
+command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
+command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
+command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',
+  run([a,b]){if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <z>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;return`Teleported to ${P.x.toFixed(0)}, ${P.z.toFixed(0)}.`}});
+command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
+  run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
+command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
 
 /* detector */
 let beepT=0,sig=0;
@@ -1514,7 +1593,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||!$('#fired').hidden}
+function uiOpen(){return shopOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||!$('#fired').hidden}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
 function showNode(node){
@@ -2175,6 +2254,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,spawnTestTwister,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot};
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot};
 })();
 </script>
