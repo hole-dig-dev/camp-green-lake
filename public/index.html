@@ -341,9 +341,13 @@ function baseH(x,z){
 
 /* ---------- renderer & scene ---------- */
 const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+/* PERF: phones and tablets (touch-first screens) get cheaper settings: a lower render resolution cap and plain
+   (not soft) shadows from a smaller shadow map. Desktops keep the original settings. */
+const LOW_POWER=matchMedia('(pointer: coarse)').matches;
+const MAX_PR=Math.min(window.devicePixelRatio||1,LOW_POWER?1.25:1.5);
+renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=LOW_POWER?T.PCFShadowMap:T.PCFSoftShadowMap;
 $('#game').appendChild(renderer.domElement);
 const canvas=renderer.domElement;
 const scene=new T.Scene();
@@ -354,7 +358,7 @@ camera.rotation.order='YXZ';scene.add(camera);
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()});
 
 const hemi=new T.HemisphereLight(0xcfe2ee,0xc28a52,0.62);scene.add(hemi);
-const sun=new T.DirectionalLight(0xfff0d2,1.05);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+const sun=new T.DirectionalLight(0xfff0d2,1.05);sun.castShadow=true;sun.shadow.mapSize.set(LOW_POWER?1024:2048,LOW_POWER?1024:2048);
 Object.assign(sun.shadow.camera,{left:-32,right:32,top:32,bottom:-32,near:1,far:170});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-0.0008;
 scene.add(sun,sun.target);
 const SUN_DIR=new T.Vector3(0.55,0.78,0.3).normalize();
@@ -1957,7 +1961,26 @@ function updateCoop(dt){
 
 /* ---------- main loop ---------- */
 let last=performance.now(),tAcc=0,mapT=0;
+/* PERF: adaptive resolution. Every 2 seconds, check the real frame rate. Under 45 fps, render fewer pixels (down to
+   0.75x the screen's resolution); after 6 smooth seconds at 57+ fps, step back up toward full. Drawing fewer pixels is
+   the quickest way to get frames back on phones and older laptops. The HUD is HTML, so its text stays sharp.
+   Add #fps to the page address to see the frame rate and current resolution in the corner. */
+const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null};
+if(/fps/.test(location.hash)){PERF.el=document.createElement('div');PERF.el.style.cssText='position:fixed;right:8px;bottom:8px;z-index:50;font:600 13px/1 monospace;color:#fff;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:3px;pointer-events:none';document.body.appendChild(PERF.el)}
+function perfTick(now,gap){
+  if(gap>1500){PERF.frames=0;PERF.t0=now;return}   // tab was hidden (the game pauses): don't count that gap
+  if(!PERF.t0)PERF.t0=now;PERF.frames++;
+  const span=now-PERF.t0;if(span<2000)return;
+  PERF.fps=PERF.frames*1000/span;PERF.frames=0;PERF.t0=now;
+  let pr=PERF.pr;
+  if(PERF.fps<45){pr=Math.max(0.75,pr-0.15);PERF.good=0}
+  else if(PERF.fps>=57){if(++PERF.good>=3){pr=Math.min(MAX_PR,pr+0.15);PERF.good=0}}
+  else PERF.good=0;
+  if(Math.abs(pr-PERF.pr)>0.01){PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight)}
+  if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris`;
+}
 function frame(now){
+  perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt)}else titleCamera(dt);
   updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
