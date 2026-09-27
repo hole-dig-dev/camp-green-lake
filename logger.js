@@ -73,7 +73,8 @@ const fs = require('fs');
 const path = require('path');
 const SIM = require('./public/sim.js');
 
-const DIR = path.join(__dirname, 'data', 'logs');
+// Follows the server's DATA_DIR (the smoke test points it at a scratch dir) so test runs never mix into real play-test logs.
+const DIR = path.join(process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data'), 'logs');
 const ENABLED = process.env.PLAYLOG !== '0';
 const MAX_BYTES = 50 * 1024 * 1024;          // roll to a new file past this size
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // delete files older than this on startup
