@@ -97,6 +97,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 8-20 boulders fall, bounce and roll. Everyone in camp sees it. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
+| `vultures [on\|off\|now]` | Toggle the vulture hazard, force your health low to test the warning, or `now` to skip straight to a dive. |
 | `tp <x> <z>` / `tp camp` | Teleport. |
 | `where` | Print your position. |
 
