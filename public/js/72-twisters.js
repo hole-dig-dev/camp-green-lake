@@ -104,7 +104,7 @@ function updateTwisters(dt){
   const ci=Math.floor(fx/TW_CELL),cj=Math.floor(fz/TW_CELL),seen=new Set();
   // which twisters are around right now: this window's and the last one's (a twister can run past its window)
   const plans=[];
-  for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)}
+  if(!DIRECTOR_ON)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)} // director owns natural twisters when on -- see public/director.js
   plans.push(...twSpawned);
   let nearest=1e9,loud=0;
   for(const pl of plans){

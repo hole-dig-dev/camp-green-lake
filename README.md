@@ -100,6 +100,9 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `tp <x> <z>` / `tp camp` | Teleport. |
 | `where` | Print your position. |
+| `director on\|off` | Toggle the event director (see below). Off brings back the old independent twister/landslide schedules. |
+| `event <kind>` | Force the director to place one event of `<kind>` near you now. |
+| `events` | Print the director's state: next roll, per-kind cooldowns, active events, current intensity. |
 
 Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (the play-test server does) to give everyone host powers, including the console and the hidden `sploosh` admin panel. Solo offline play can always use it.
 
@@ -107,6 +110,8 @@ Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (t
 `command('name', {usage: 'name <arg>', help: 'what it does', run(args) { ...; return 'reply'; }})`
 
 **Adding a spawnable hazard:** add an entry to the `ENV` registry (`ENV.sandstorm = {spawn: o => ...}`, where `o` is `{x, z, a}`) and a command that calls `spawnAhead('sandstorm', dist)`. The server relays hazards spawned by the host, so every client builds the same one.
+
+**The event director** (`public/director.js`) is the one place that decides which *natural* hazard happens, where, and when — on a shared budget, so twisters and landslides (and, once their branches land, tumbleweeds, sinkholes, javelinas, a mountain lion) don't all roll independent dice and stack three disasters on one camper. The server steps it every tick and relays its decisions through the same `env` message the console commands use; solo/offline play runs the identical logic locally. See "Adding an event to the director" in `ARCHITECTURE.md` for how to wire in a new kind.
 
 ## Play-test logging
 
