@@ -97,6 +97,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
 | `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 10-26 boulders rain down over a few seconds (some angled in), bounce hard, ricochet and roll. Everyone in camp sees it. |
 | `tumbleweed [distance]` | Blow in 1-3 giant tumbleweeds ~55 m out, heading your way: comically huge, bouncy, and fast. Get in one's way and you're stuck to it, riding around until you mash Space free or get flung off. Everyone in camp sees them. |
+| `haboob [direction]` | Start a dust storm blowing in from a compass direction (`n`/`ne`/`e`/`se`/`s`/`sw`/`w`/`nw`, or a random one). Rolls in over ~1 min, closes visibility to ~8 m for 1.5-3 min, then clears over ~12 s. Everyone in camp sees it. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
 | `tp <x> <z>` / `tp camp` | Teleport. |

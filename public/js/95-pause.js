@@ -242,4 +242,5 @@ if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,apply
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,
   tbWeeds,tbGusts,spawnTumbleweedGust,tbPhysStep,tbState:()=>({st:tbSt,name:tbStateName(),t:tbStT,mash:tbMashN}),
   VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC,
-  bonkSwing,bonked};
+  bonkSwing,bonked,
+  haboobF,addHaboob,get HABOOB_NATURAL(){return HABOOB_NATURAL},set HABOOB_NATURAL(v){HABOOB_NATURAL=v},hbState:()=>({f:HB.f,cur:hbCurId})};

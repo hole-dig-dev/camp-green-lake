@@ -52,6 +52,7 @@ function wz(z){return (z-mcz+MV)/(MV*2)*mm.width}
 function ws(v){return v/(MV*2)*mm.width}
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
+  if(haboobMap(mx,W))return;   // caught in a haboob: the map scrambles to static instead of drawing normally (see 75-haboob.js)
   mx.fillStyle='#d9a86c';mx.fillRect(0,0,W,W);
   mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
   if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
