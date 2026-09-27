@@ -101,6 +101,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |
 | `time <hh:mm>` | Set the camp clock for everyone, e.g. `time 13:00`. |
 | `heal` / `hurt [n]` | Refill health and water / take damage. |
+| `vultures [on\|off\|now]` | Toggle the vulture hazard, force your health low to test the warning, or `now` to skip straight to a dive. |
 | `tp <x> <z>` / `tp camp` | Teleport. |
 | `where` | Print your position. |
 | `director on\|off` | Toggle the event director (see below). Off brings back the old independent twister/landslide schedules. |
