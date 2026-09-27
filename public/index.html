@@ -1195,6 +1195,7 @@ function scoop(){
 function foundItem(it,h){
   it.found=true;wsSend({t:'got',item:it.id,kb:it.type==='kb'});popItem(it,h.x,h.z);
   const L=LOOT[it.type];
+  logEv('found',{item:it.id,type:it.type,value:L.val,x:+h.x.toFixed(1),z:+h.z.toFixed(1),heavy:!!L.heavy,kb:it.type==='kb'});
   if(it.type==='suitcase'){sfx.gold();triggerWin(S.name,true);return}
   if(it.type==='kb'){S.hasKB=true;sfx.gold();toast('A gold tube marked "KB"! The Warden will want this. Take it to her cabin.','gold',6000);shout(2);return}
   if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} seeds). It won't fit in your sack. Grab it with F and haul it to Mr. Sir's truck. Two campers carry it much faster.`,'gold',7000);
@@ -1219,7 +1220,7 @@ function use(){
   if(s.id==='revive')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
-  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
+  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');
@@ -1238,13 +1239,15 @@ function enterTent(ti){
   const t=TENTS[ti];S.tent=ti;S.tentBack={x:t.x,z:t.z-t.hd-1.3};S.inBed=null;
   P.x=t.x;P.z=t.z+t.hd-1.6;P.yaw=0;P.fa=Math.PI;P.y=TENT_FLOOR_Y;   // just inside the door (E again walks back out), facing into the room
   P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
+  logEv('tentEnter',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   toast(`You duck inside ${t.name}.${t.crew?' The cards table is against the far wall.':''} Press E to go back out.`,'',3200);
 }
 function exitTent(){
   if(!inTent())return;
-  const t=TENTS[S.tent],wasBed=S.inBed!=null;S.tent=null;S.inBed=null;digHeld=false;
+  const ti=S.tent,t=TENTS[S.tent],wasBed=S.inBed!=null;S.tent=null;S.inBed=null;digHeld=false;
   P.x=S.tentBack.x;P.z=S.tentBack.z;P.y=groundAt(P.x,P.z);P.vy=0;
   if(wasBed&&online())wsSend({t:'sleep',on:false});
+  logEv('tentExit',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   toast(`You step back outside ${t.name}.`,'',2200);
 }
 function toggleBunk(bi){
@@ -1288,6 +1291,7 @@ $('#shopClose').onclick=closeShop;
 /* KO */
 function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;
+  logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   twSt=0;twStT=0;me.g.rotation.z=0;   // clears any twister suck/tumble/lie state so it can't fight the KO pose or get stuck
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
@@ -1462,8 +1466,18 @@ function sendPresence(now){
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel()];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],sc:S.seeds});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water)});
 }
+
+/* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
+   (see logger.js for the full field list, and scripts/logq.js to query them). Solo/offline play just skips
+   sending: there's no server to write the file. Never lets a logging bug break the game. ---------- */
+const LOGQ=[];
+function logEv(k,fields){try{if(!online()||LOGQ.length>=80)return;LOGQ.push(Object.assign({k},fields))}catch(e){}}
+function flushLog(){try{if(LOGQ.length&&online())wsSend({t:'log',ev:LOGQ.splice(0,24)})}catch(e){}}
+setInterval(flushLog,1500);
+addEventListener('error',e=>{try{logEv('err',{msg:String((e&&(e.message||(e.error&&e.error.message)))||'error').slice(0,300),src:(e&&e.filename)||'',line:(e&&e.lineno)||0,col:(e&&e.colno)||0,stack:(e&&e.error&&e.error.stack)?String(e.error.stack).slice(0,600):''})}catch(err){}});
+addEventListener('unhandledrejection',e=>{try{const r=e&&e.reason;logEv('err',{msg:'unhandledrejection: '+String((r&&r.message)||r||'').slice(0,300),stack:(r&&r.stack)?String(r.stack).slice(0,600):''})}catch(err){}});
 function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
@@ -1691,7 +1705,7 @@ function updateLizards(dt,t){
     const dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
-    else if(alive&&dp<(L.mode==='chase'?11:6.5)&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
+    else if(alive&&dp<(L.mode==='chase'?11:6.5)&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
     const dx=gx-L.x,dz=gz-L.z,d=Math.hypot(dx,dz);
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
@@ -1700,7 +1714,7 @@ function updateLizards(dt,t){
     g.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);   // PERF: skip drawing far-away lizards (they still move and hunt)
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
-    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
+    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
   }
 }
 
@@ -1714,6 +1728,7 @@ let hurtFx=0;
 function hurt(n,title,text){
   if(!S.started||S.ko||n<=0)return;
   S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);sfx.thud();
+  logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(S.hp<=0)knockOut(title,text);
 }
 function updateHealth(dt){
@@ -1839,7 +1854,7 @@ function updateTwisters(dt){
     const d=Math.hypot(at.x-fx,at.z-fz);if(d>260)continue;
     let tw=TW_LIVE.get(pl.id);if(!tw){tw={id:pl.id,warned:false};TW_LIVE.set(pl.id,tw)}
     Object.assign(tw,at);seen.add(pl.id);nearest=Math.min(nearest,d);loud=Math.max(loud,at.s*clamp(1-d/140,0,1)**2);
-    if(S.started&&!inTent()&&!tw.warned&&at.s>0.3&&d<120){tw.warned=true;toast(`Twister to the ${compass(at.x-P.x,at.z-P.z)}! Get out of its way, or get down in a deep hole.`,'bad',6000)}
+    if(S.started&&!inTent()&&!tw.warned&&at.s>0.3&&d<120){tw.warned=true;logEv('twWarn',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+at.x.toFixed(1),twz:+at.z.toFixed(1),dist:+d.toFixed(1),dir:compass(at.x-P.x,at.z-P.z)});toast(`Twister to the ${compass(at.x-P.x,at.z-P.z)}! Get out of its way, or get down in a deep hole.`,'bad',6000)}
     twVisual(tw,dt);
     if(S.started&&!S.ko)twPush(tw,d,dt);
   }
@@ -1870,6 +1885,7 @@ function twPush(tw,d,dt){
 function twStart(tw,d){
   twSt=1;twStT=0;twGrab=tw.id;twCenter={x:tw.x,z:tw.z};twStrength=tw.s;twSuckR0=Math.max(d,0.6);
   twSpiralA=Math.atan2(P.z-tw.z,P.x-tw.x);P.moving=false;P.anim=0;digHeld=false;
+  logEv('twSuckUp',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+tw.x.toFixed(1),twz:+tw.z.toFixed(1),s:+tw.s.toFixed(2)});
   if(!S.ko)toast('The wind has you!','bad',2000);
 }
 /* the throw: flings you outward and hurts you same as before, then hands off to the airborne ragdoll tumble */
@@ -1879,8 +1895,10 @@ function twThrow(tw){
   P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=10+tw.s*3;P.grounded=false;
   twRagX=(Math.random()*2-1)*11;twRagY=(Math.random()*2-1)*7;twRagZ=(Math.random()*2-1)*9;  // mixed axes: a tumble, not a spin
   twSt=2;twStT=0;digHeld=false;sfx.hiss();
-  hurt(Math.round(TW_DMG*tw.s),'Twister','A twister picked you up and threw you across the lake.');
-  if(!S.ko)toast(`The twister threw you! -${Math.round(TW_DMG*tw.s)} health`,'bad',3000);
+  const dmg=Math.round(TW_DMG*tw.s);
+  logEv('twThrow',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+tw.x.toFixed(1),twz:+tw.z.toFixed(1),dmg});
+  hurt(dmg,'Twister','A twister picked you up and threw you across the lake.');
+  if(!S.ko)toast(`The twister threw you! -${dmg} health`,'bad',3000);
 }
 /* landing: keep a little of the throw's speed as a skid instead of stopping dead, then lie there */
 function twLand(){P.grounded=true;twSt=3;twStT=0;P.anim=3;P.kx*=0.4;P.kz*=0.4}
@@ -2134,9 +2152,9 @@ function runCommand(line){
   const words=line.trim().split(/\s+/).filter(Boolean);if(!words.length)return;
   const name=words[0].toLowerCase(),c=CMDS.get(name);
   conPrint('> '+line.trim(),'cmd');
-  if(!c){conPrint(`Unknown command "${name}". Type help.`,'err');return}
-  if(!S.started&&c.needsGame!==false){conPrint('Start the game first.','err');return}
-  try{const out=c.run(words.slice(1));if(out)conPrint(String(out),'ok')}catch(err){conPrint(err.message,'err')}
+  if(!c){conPrint(`Unknown command "${name}". Type help.`,'err');logEv('cmd',{line,error:`Unknown command "${name}"`});return}
+  if(!S.started&&c.needsGame!==false){conPrint('Start the game first.','err');logEv('cmd',{line,error:'Start the game first.'});return}
+  try{const out=c.run(words.slice(1));if(out)conPrint(String(out),'ok');logEv('cmd',{line,reply:out?String(out).slice(0,300):''})}catch(err){conPrint(err.message,'err');logEv('cmd',{line,error:String(err.message||err).slice(0,300)})}
 }
 function conKey(e){
   if(e.key==='Escape'||e.key==='`'){e.preventDefault();closeConsole();return}
@@ -2870,7 +2888,7 @@ let last=performance.now(),tAcc=0,mapT=0;
    0.75x the screen's resolution); after 6 smooth seconds at 57+ fps, step back up toward full. Drawing fewer pixels is
    the quickest way to get frames back on phones and older laptops. The HUD is HTML, so its text stays sharp.
    Add #fps to the page address to see the frame rate and current resolution in the corner. */
-const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null,warned:false};
+const PERF={pr:MAX_PR,frames:0,t0:0,good:0,fps:0,el:null,warned:false,logN:0};
 /* Which graphics chip the browser is drawing with. If Chrome can't use the real GPU (hardware acceleration switched
    off in settings, a blocklisted driver, remote desktop), it falls back to drawing on the CPU ("SwiftShader",
    "llvmpipe"), which is roughly 10x slower. We warn the player once when that happens, because no in-game setting fixes it. */
@@ -2893,13 +2911,27 @@ function perfTick(now,gap){
   }
   if(PERF.el)PERF.el.textContent=`${Math.round(PERF.fps)} fps · ${PERF.pr.toFixed(2)}x · ${renderer.info.render.calls} draws · ${Math.round(renderer.info.render.triangles/1000)}k tris\nGPU: ${GPU_NAME}`;
   if(SOFTWARE_GPU&&S.started&&!PERF.warned){PERF.warned=true;toast('Your browser is drawing the game without your graphics card, so it will be slow. In Chrome: Settings > System > turn on "Use graphics acceleration when available", then restart Chrome.','bad',15000)}
+  if(S.started&&++PERF.logN>=5){PERF.logN=0;logEv('perf',{fps:Math.round(PERF.fps),pr:+PERF.pr.toFixed(2),gpu:GPU_NAME,sw:SOFTWARE_GPU})}   // ~10s (perfTick fires every ~2s)
+}
+/* periodic "what does this client see nearby" snapshot for the play-test log: only lizards actively chasing/fleeing
+   (not all 48 wandering ones — that would be pure noise), nearby D Tent bots, nearby remote players, and any
+   twisters currently visible. Skipped entirely if there's nothing nearby worth a line. */
+let logReportT=0;
+function updateLogReport(dt){
+  if(!S.started||!online())return;
+  logReportT-=dt;if(logReportT>0)return;logReportT=3+Math.random();
+  const liz=[];for(const L of lizards){if(L.mode==='wander')continue;if(Math.hypot(L.x-P.x,L.z-P.z)<50)liz.push([+L.x.toFixed(1),+L.z.toFixed(1),L.mode])}
+  const bt=[];for(const b of bots){const g=b.p.g.position;if(Math.hypot(g.x-P.x,g.z-P.z)<40)bt.push([b.d.n,b.state,+g.x.toFixed(1),+g.z.toFixed(1)])}
+  const rp=[];for(const R of remotes.values()){const g=R.p.g.position;if(Math.hypot(g.x-P.x,g.z-P.z)<40)rp.push([R.name,+g.x.toFixed(1),+g.z.toFixed(1)])}
+  const tw=[];for(const tw2 of TW_LIVE.values())if(tw2.s>0.05)tw.push([+tw2.x.toFixed(1),+tw2.z.toFixed(1),+tw2.s.toFixed(2)]);
+  if(liz.length||bt.length||rp.length||tw.length)logEv('report',{liz,bots:bt,rp,tw});
 }
 function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
   updateTwisters(dt);updateLandslides(dt);updateThumbHaze();
-  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);
+  updateBots(dt,now);updateLizards(dt,tAcc);updateParty(dt,now);updateRemotes(dt);updateParts(dt);updatePops(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
@@ -3025,11 +3057,12 @@ function askConfirm(title,text,yesLabel,onYes){
 }
 $('#pRestart').onclick=()=>askConfirm('Restart?',
   'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your seeds, gear, sack, onions, the team\'s quota, or the time of day -- that\'s shared with everyone at camp and already saved.',
-  'Respawn at camp',()=>{respawn();closePause()});
+  'Respawn at camp',()=>{logEv('pause',{action:'restart'});respawn();closePause()});
 $('#pQuit').onclick=()=>askConfirm('Quit to title?',
   'Your progress is saved. You\'ll disconnect from camp and land back on the title screen -- come back any time to pick up where you left off.',
   'Quit to title',quitToTitle);
 function quitToTitle(){
+  logEv('pause',{action:'quit'});flushLog();   // send this before the socket closes: nothing left in the queue survives a reload
   saveSession();
   S.started=false;   // the existing pagehide listener also calls saveSession(); without this it would re-write the session we're about to clear
   try{sessionStorage.removeItem('cgl-session')}catch(e){}   // so the reload lands on the title screen instead of auto-resuming
@@ -3140,7 +3173,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
+if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,lizards,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH};
