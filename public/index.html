@@ -212,8 +212,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <div class="field">
       <label for="nick">Your camp nickname</label>
       <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
-      <button id="startBtn">Start digging</button>
+      <button id="startBtn" disabled>Start digging</button>
     </div>
+    <div class="field" id="campWrap" hidden>
+      <label for="campPass">Camp password</label>
+      <input type="text" id="campPass" maxlength="64" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="fine" id="campErr" hidden></p>
     <div id="lobby">Connecting to camp…</div>
     <div class="controls">
       <div><kbd>WASD</kbd> walk, <kbd>Shift</kbd> run</div>
@@ -1100,16 +1105,39 @@ function startGame(resume){
   setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig.','',5000),1500)}
   sendJoin();
 }
-$('#startBtn').onclick=()=>startGame();
+const campIn=$('#campPass'),campWrap=$('#campWrap'),campErr=$('#campErr'),startBtn=$('#startBtn');
+function showCampErr(msg){campErr.textContent=msg;campErr.hidden=false}
+function hideCampErr(){campErr.hidden=true}
+function cleanPass(s){return String(s||'').replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,64)}
+startBtn.onclick=()=>{
+  if(net.needPass&&!net.passOk){
+    const p=cleanPass(campIn.value);
+    if(!p){showCampErr('Enter the camp password.');return}
+    PASS=p;net.awaitingJoin=true;hideCampErr();showCampErr('Checking…');
+    wsSend({t:'join',n:cleanName(nickIn.value)||'Caveman',v:2,host:HOST||undefined,p:PASS});
+    return;
+  }
+  startGame();
+};
 addEventListener('pointerdown',()=>{if(AC&&AC.state==='suspended')AC.resume()});
+// Belt-and-suspenders: if the socket never tells us whether a password is needed (server down, odd network),
+// don't leave the Start button, or a pending session resume, stuck waiting forever.
+setTimeout(()=>{startBtn.disabled=false;maybeResume()},4200);
 
 /* ---------- multiplayer (WebSocket to the camp server) ---------- */
-const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:''};
+const net={ws:null,id:null,retry:1000,last:0,lastPos:'',lastPosT:0,day:1,typed:'',needPass:false,passOk:false,awaitingJoin:false};
 const remotes=new Map();
 function wsSend(o){if(net.ws&&net.ws.readyState===1)try{net.ws.send(JSON.stringify(o))}catch(e){}}
-let HOST='';
-try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.setItem('cgl-host',q);history.replaceState(null,'',location.pathname)}HOST=localStorage.getItem('cgl-host')||''}catch(e){}
-function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
+let HOST='',PASS='';
+try{
+  const sp=new URLSearchParams(location.search),qh=sp.get('host'),qc=sp.get('camp');
+  if(qh)localStorage.setItem('cgl-host',qh);
+  if(qc)localStorage.setItem('cgl-camp',qc); // invite link: ?camp=<password>, like ?host= for the host token
+  if(qh||qc)history.replaceState(null,'',location.pathname);
+  HOST=localStorage.getItem('cgl-host')||'';PASS=localStorage.getItem('cgl-camp')||'';
+}catch(e){}
+if(PASS)campIn.value=PASS;
+function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0);
@@ -1154,8 +1182,18 @@ function onMsg(m){
       if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
-      renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}break;
+      net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
+      renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
+      maybeResume();break;
     }
+    // A reconnect (including the join-timeout closing an idle title screen) re-sends 'needpass'; only prefill
+    // from the remembered/invite-link password when the field is still empty, so it never clobbers what
+    // someone's mid-typing or a value we already know was rejected.
+    case 'needpass':net.needPass=true;campWrap.hidden=false;startBtn.disabled=false;if(PASS&&!campIn.value)campIn.value=PASS;break;
+    case 'joinrejected':
+      net.awaitingJoin=false;
+      if(!S.started){showCampErr(m.reason||'Wrong camp password');PASS='';}else toast(m.reason||'Wrong camp password','bad',4000);
+      break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
     case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;setRemoteLv(R,m.lv);break}
@@ -1185,15 +1223,31 @@ function onMsg(m){
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
-    case 'host':net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);break;
+    case 'host':
+      net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);
+      // 'host' is only ever sent after a join clears the password gate, so seeing it after our probe join
+      // means the password was right: remember it and start (or resume) the game for real.
+      if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
+      break;
     case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a},cleanName(m.n)||'A camper');break;
     case 'clock':setClock(m);break;
     case 'reset':toast('A new day at Camp Green Lake. The lake bed is being refilled.','',4000);saveSession(true);setTimeout(()=>location.reload(),2500);break;
   }
 }
+// A saved session (e.g. the page reloaded itself after a server 'reset'/'update', or just an accidental refresh)
+// normally resumes straight away. When a camp password is set we still have to clear that gate first, so this
+// waits for word from the server (hello = no password needed / host-after-password = password accepted) before
+// resuming, with a short fallback timer in case that word never arrives (server down, odd network).
+let pendingResume=null;
+{const R0=loadSession();if(R0)pendingResume=R0}
+function maybeResume(){
+  if(!pendingResume||S.started)return;
+  if(net.needPass&&!net.passOk)return; // password required and not yet cleared: let the title screen ask for it
+  const r=pendingResume;pendingResume=null;startGame(r);
+}
 function connect(){
-  if(!/^https?:$/.test(location.protocol)){$('#lobby').textContent='Offline copy. Solo camp.';return}
-  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws')}catch(e){return}
+  if(!/^https?:$/.test(location.protocol)){$('#lobby').textContent='Offline copy. Solo camp.';startBtn.disabled=false;maybeResume();return}
+  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws')}catch(e){startBtn.disabled=false;maybeResume();return}
   net.ws=ws;
   ws.onopen=()=>{net.retry=1000;clearTimeout(net.lostT)};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}onMsg(m)};
@@ -2240,7 +2294,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-{const R0=loadSession();if(R0)startGame(R0)}
+maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass never arrives)
 /* test hook for screenshots: #shot, #shot-fp, #shot-night, #shot-far */
 if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startGame();
   if(h.includes('far')){P.x=140;P.z=-180}
