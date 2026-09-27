@@ -36,6 +36,7 @@ function updatePlayerTent(dt){
 function updatePlayer(dt){
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
+  if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);

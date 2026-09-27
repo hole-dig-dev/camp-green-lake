@@ -9,6 +9,8 @@ const ENV={
   // seed comes from x/z alone (not the clock), so every client hashes the exact same seed from the exact same
   // shared numbers -- only t0 (each client's own twNow() at the moment it hears about it) can drift a little.
   landslide:{spawn:o=>spawnLandslide(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())}, // o.t0: a late joiner replaying a director event already in progress (see 'hello' in 65-net.js)
+  // n (1-3 weeds) also comes from x/z alone, same reasoning as the seed, so every client spawns the same-size gust.
+  tumbleweed:{spawn:o=>spawnTumbleweedGust(o.x,o.z,o.a,1+Math.floor(hash2(Math.round(o.x*10)+7,Math.round(o.z*10)+3)*3),(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,o.t0!=null?o.t0:twNow())},
 };
 function spawnEnv(k,o,by){
   if(!ENV[k])return false;
@@ -67,6 +69,8 @@ command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in fr
   run([d]){const dist=numArg(d,45,10,200);spawnAhead('twister',dist);return`Twister spawned ${dist} m ahead.${campDist(P.x,P.z)<50?' (Twisters fall apart near camp; walk out onto the lake to see it at full strength.)':''}`}});
 command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off Big Thumb, [50] m out from you. Everyone sees it.',
   run([d]){const dist=numArg(d,50,15,200);spawnAhead('landslide',dist);return`Landslide triggered ${dist} m out.`}});
+command('tumbleweed',{usage:'tumbleweed [distance]',help:'Blow in 1-3 giant tumbleweeds, [55] m out, heading your way. Everyone sees them.',
+  run([d]){const dist=numArg(d,55,15,200);spawnAhead('tumbleweed',dist);return`Tumbleweed(s) rolling in ${dist} m out. Get in their way and see what happens (mash Space to wriggle free if one grabs you).`}});
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
 command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',

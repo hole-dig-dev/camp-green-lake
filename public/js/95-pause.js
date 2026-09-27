@@ -240,5 +240,6 @@ if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,apply
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,
+  tbWeeds,tbGusts,spawnTumbleweedGust,tbPhysStep,tbState:()=>({st:tbSt,name:tbStateName(),t:tbStT,mash:tbMashN}),
   VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC,
   bonkSwing,bonked};

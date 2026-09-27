@@ -57,6 +57,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/71-bonk.js` | shovel bonk: whack a friend (harmless tumble), server-checked (`bonk` message) |
 | `public/js/72-twisters.js` | twisters: schedule, pull/suck-up/ragdoll, visuals, sound |
 | `public/js/74-landslide.js` | landslides: deterministic boulder physics, hits, warnings |
+| `public/js/75-tumbleweed.js` | giant tumbleweeds: deterministic bouncy physics, getting stuck to one and wriggling free, visuals, sound |
 | `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
 | `public/js/78-hud.js` | HUD panel and minimap |
 | `public/js/80-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |
