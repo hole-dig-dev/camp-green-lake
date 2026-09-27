@@ -188,6 +188,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
     <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
     <div class="row"><span class="k" id="curK">Curfew in</span><span class="v" id="curfew">9:30</span></div>
     <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
+    <div class="row" id="truckRow" hidden><span class="k">Water truck</span><span class="v" id="truckV"></span></div>
     <div class="row"><span class="k">Warden's mood</span><span class="v" id="mood">A regular day</span></div>
     <div class="row"><span class="k">Dig site</span><span class="v" id="site">Near camp</span></div>
     <div class="row"><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
@@ -610,7 +611,8 @@ function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a
   [[0,4.2,0,2.4],[1.4,3.7,0.6,1.8],[-1.3,3.8,-0.4,1.9],[0.2,5.1,-0.8,1.6]].forEach(([a,b,c,r])=>{const l=new T.Mesh(new T.IcosahedronGeometry(r*s,0),M(0x5f7a3a));l.position.set(a*s,b*s,c*s);l.castShadow=true;g.add(l)});
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,0.9*s,0.9*s)}
 oak(-36.5,38.5,1.1);oak(-24,38,1);
-/* water truck */
+/* water truck (you can rent or steal it: see the water truck section) */
+let WT_G=null,WT_COL=null;
 {
   const g=new T.Group();
   const cab=box(2.2,2,2,0xd8d2c2);cab.position.set(0,1.5,-2.4);g.add(cab);
@@ -619,7 +621,7 @@ oak(-36.5,38.5,1.1);oak(-24,38,1);
   const tank=cyl(1.05,1.05,4.2,10,0xb9b4a6);tank.rotation.x=Math.PI/2;tank.position.set(0,1.95,0.7);g.add(tank);
   for(const[wx,wz]of[[-1.1,-2.4],[1.1,-2.4],[-1.1,1.6],[1.1,1.6]]){const w=cyl(0.45,0.45,0.35,10,0x1e1e1e);w.rotation.z=Math.PI/2;w.position.set(wx,0.45,wz);g.add(w)}
   const tap=cyl(0.08,0.08,0.5,6,0x4f8fb8);tap.rotation.z=Math.PI/2;tap.position.set(-1.3,1.4,1.8);g.add(tap);
-  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,5.4,2.4);
+  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,5.4,2.4);WT_G=g;WT_COL=colliders[colliders.length-1];
 }
 /* flagpole + camp sign */
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
@@ -866,7 +868,7 @@ const sfx={
 };
 
 /* ---------- game state ---------- */
-const S={started:false,seeds:20,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0,stam:100,tonic:0,sackBonus:0,refills:0,out:false,buried:false,broken:false};
+const S={started:false,seeds:20,water:100,sack:[],onions:1,onionT:0,up:{},ko:0,hasKB:false,reported:false,revealed:false,won:false,detOn:true,name:'Caveman',color:0,holesDone:0,carry:null,noise:0,batt:100,light:false,revT:0,climbT:0,respawnAt:0,stam:100,tonic:0,sackBonus:0,refills:0,out:false,buried:false,broken:false,medkit:0,driving:false,riding:false};
 const P={x:0,z:39,y:0,vy:0,fa:Math.PI,yaw:0,pitch:0.32,digT:0,digPh:0,anim:0,grounded:true,moving:false};
 P.y=groundAt(P.x,P.z);
 let me=null,meL=null;
@@ -888,6 +890,7 @@ function toast(msg,cls,ms){const el=document.createElement('div');el.className='
 /* ---------- digging ---------- */
 let lastWarn=0;
 function scoop(){
+  if(truckDigCheck())return;
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa);
   const tx=P.x+fx*1.1,tz=P.z+fz*1.1;
   let h=holeNear(P.x,P.z,HOLE_R*0.8)||holeNear(tx,tz,1.4);
@@ -929,6 +932,7 @@ function foundItem(it,h){
 
 /* ---------- interactions ---------- */
 function nearSpot(){
+  if(S.driving||S.riding)return truckSpot();
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const bu=remoteNear(R=>R.f&32,2.4);if(bu)return{id:'digout',...bu};
@@ -939,6 +943,7 @@ function nearSpot(){
   if(!S.inTown&&Math.hypot(P.x-SPRING.x,P.z-SPRING.z)<3.6)return{id:'spring'};
   {const o=wildNear();if(o)return{id:'wild',o}}
   if(S.holdZer)return{id:'dropZer'};
+  {const tsp=truckSpot();if(tsp)return tsp}
   if(MONV.zer&&Math.hypot(MONV.zer.x-P.x,MONV.zer.z-P.z)<2.4)return{id:'grabZer'};
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   const pr=propNear(2.4);if(pr)return{id:'prop',pr};
@@ -950,6 +955,7 @@ function nearSpot(){
 }
 function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
+  if(truckAction(s))return;
   if(s.id==='revive'||s.id==='digout')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='zback'){zback(true);toast('Madame Zeroni climbs onto your back. "Yo carry me up dat mountain bruh." Head for Big Thumb!','gold',4500);return}
@@ -989,18 +995,23 @@ const SHOP=[
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt'},
   {id:'tonic',name:'Sam\'s onion tonic',desc:'Drink with Z: cures snake and scorpion poison, soothes sunburn and heat, and lizards hate the smell.',cost:20,stack:'tonic'},
   {id:'newshovel',name:'Replacement shovel',desc:'The curse snapped yours? This one digs at full speed again.',cost:12,stack:'fix'},
+  {id:'towrope',name:'Tow rope',desc:'Two campers pull a stuck water truck free twice as fast.',cost:25},
+  {id:'barrow',name:'Wheelbarrow',desc:'Haul heavy loot alone at nearly the speed of two campers.',cost:70},
+  {id:'walkie',name:'Walkie-talkie',desc:'Your chat reaches anyone else with a walkie-talkie, anywhere on the lake.',cost:40},
+  {id:'bigflash',name:'Heavy-duty flashlight',desc:'Brighter, reaches much farther, and the battery lasts twice as long.',cost:35},
+  {id:'medkit',name:'First-aid kit',desc:'Pick up a downed friend in about a second (uses one). Or Z to patch up your own injuries.',cost:15,stack:'medkit'},
 ];
 let shopOpen=false;
 function openShop(){shopOpen=true;releaseLock();$('#shop').hidden=false;renderShop();setTimeout(()=>$('#shopClose').focus(),30)}
 function closeShop(){shopOpen=false;$('#shop').hidden=true}
 function renderShop(){
-  $('#shopSeeds').textContent=S.seeds;const list=$('#shopList');list.textContent='';
+  $('#shopSeeds').textContent=S.seeds+(RUN.angry>0?' (Mr. Sir is angry: prices +50%)':'');const list=$('#shopList');list.textContent='';
   for(const it of SHOP){
     const row=document.createElement('div');row.className='shoprow';
-    const b=document.createElement('b');b.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc+(it.stack==='onions'?` You have ${S.onions}.`:it.stack==='batt'?` Battery: ${Math.round(S.batt)}%.`:'');
-    const btn=document.createElement('button');const owned=!it.stack&&S.up[it.id];
-    btn.textContent=owned?'Owned':`${it.cost} seeds`;btn.disabled=owned||S.seeds<it.cost;btn.id='buy-'+it.id;
-    btn.onclick=()=>{if(S.seeds<it.cost)return;S.seeds-=it.cost;if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack==='tonic')S.tonic++;else if(it.stack==='fix')S.broken=false;else S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax();sfx.coin();renderShop();toast(`Bought: ${it.name}`,'good',2000)};
+    const b=document.createElement('b');b.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc+(it.stack==='onions'?` You have ${S.onions}.`:it.stack==='batt'?` Battery: ${Math.round(S.batt)}%.`:it.stack==='medkit'?` You have ${S.medkit}.`:'');
+    const btn=document.createElement('button');const owned=!it.stack&&S.up[it.id];const cost=Math.round(it.cost*priceMult());
+    btn.textContent=owned?'Owned':`${cost} seeds`;btn.disabled=owned||S.seeds<cost;btn.id='buy-'+it.id;
+    btn.onclick=()=>{if(S.seeds<cost)return;S.seeds-=cost;if(it.stack==='onions')S.onions++;else if(it.stack==='medkit')S.medkit++;else if(it.stack==='batt')S.batt=100;else if(it.stack==='tonic')S.tonic++;else if(it.stack==='fix')S.broken=false;else S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax();sfx.coin();renderShop();toast(`Bought: ${it.name}`,'good',2000)};
     row.append(b,d,btn);list.appendChild(row);
   }
 }
@@ -1008,7 +1019,7 @@ $('#shopClose').onclick=closeShop;
 
 /* KO */
 function knockOut(title,text){
-  if(S.ko||S.out)return;countUp('downs',5,'squid');S.ko=othersOnline()||helpersOn()?25:4;digHeld=false;S.carry=null;S.light=false;S.buried=false;
+  if(S.ko||S.out)return;if(S.driving)stopDriving(false);if(S.riding)hopOff(true);countUp('downs',5,'squid');S.ko=othersOnline()||helpersOn()?25:4;digHeld=false;S.carry=null;S.light=false;S.buried=false;
   const lost=S.sack.length;
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack is still on you. If nobody gets you up, it\'s gone.':'');$('#ko').hidden=false;
 }
@@ -1097,7 +1108,7 @@ const NICKS=['Caveman','Sploosh','Big Thumb','Onion Boy','Lizard Bait','Seeds','
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt','tonic','sackBonus','broken'];
+const SAVE_KEYS=['water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt','tonic','sackBonus','broken','medkit'];
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
@@ -1111,7 +1122,7 @@ function startGame(resume){
     const r=resume.S;S.resumed=true;
     S.water=num(r.water,0,180,100);S.tonic=num(r.tonic,0,99,0)|0;S.sackBonus=num(r.sackBonus,0,1e5,0);S.broken=!!r.broken;S.onions=num(r.onions,0,999,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
-    S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
+    S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope','towrope','barrow','walkie','bigflash'])if(r.up[k])S.up[k]=true;S.medkit=num(r.medkit,0,99,0)|0;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
     const p=resume.P||{};P.x=num(p.x,-HALF+3,HALF-3,0);P.z=num(p.z,-HALF+3,HALF-3,39);P.y=groundAt(P.x,P.z);P.yaw=num(p.yaw,-100,100,0);P.pitch=num(p.pitch,-0.15,1.25,0.32);
   }
@@ -1141,7 +1152,7 @@ try{const q=new URLSearchParams(location.search).get('host');if(q){localStorage.
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0)|(P.climb||P.ledge>0||P.onTop?4096:0);
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0)|(P.climb||P.ledge>0||P.onTop?4096:0)|(S.up.walkie?8192:0)|(S.up.barrow?16384:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.holdZer?-2:S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),+P.yaw.toFixed(2)];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
   net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds});
@@ -1182,6 +1193,7 @@ function onMsg(m){
       if(m.breaches&&typeof m.breaches==='object')for(const k in m.breaches){const b=m.breaches[k];if(b&&!b.closed)addBreach(k,{x:num(b.x,-600,600,0),z:num(b.z,-600,600,0),at:Date.now(),ladder:!!b.ladder,closed:false})}
       if(Array.isArray(m.rot))for(const i of m.rot)ROT.add(i|0);
       if(m.fin)setFin(m.fin,num(m.finNow,0,1e14,0));
+      if(m.truck)setTruck(m.truck);
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
@@ -1203,6 +1215,11 @@ function onMsg(m){
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
+    case 'truck':setTruck(m);break;
+    case 'tpos':if(!S.driving){WT.tx=num(m.x,-600,600,WT.tx);WT.tz=num(m.z,-600,600,WT.tz);WT.th=num(m.h,-1e3,1e3,WT.th);WT.sp=num(m.sp,-20,20,0)}break;
+    case 'truckNote':truckNoteMsg(String(m.k),m);break;
+    case 'truckWaterOk':S.water=waterMax();AFF.heat=0;sfx.splash();break;
+    case 'cargo':{const pr=PROPS.get(num(m.id,0,1e7,-1)|0);if(pr)pr.cargo=!!m.on;break}
     case 'breach':{const k=String(m.k);addBreach(k,{x:num(m.x,-600,600,0),z:num(m.z,-600,600,0),at:Date.now()-(Date.now()-num(m.at,0,1e14,Date.now())),ladder:!!m.ladder,closed:!!m.closed});break}
     case 'ladder':{const b=BREACH.get(String(m.k));if(b){b.ladder=true;if(S.inTown)toast('Someone staked a rope ladder in a shaft. Anyone can climb that one now.','good',3500)}break}
     case 'rot':breakRot(num(m.i,0,35,0)|0,false);break;
@@ -1268,6 +1285,8 @@ function updatePlayer(dt){
   if(S.out){me.g.position.set(P.x,P.y-50,P.z);return}
   if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)goOut();return}
   if(S.stunT>0){S.stunT-=dt;animPerson(me,0,dt);return}
+  if(S.driving){driveTruck(dt);return}
+  if(S.riding)return;
   if(S.buried){S.stam=Math.max(0,S.stam-2*dt);if(KEYS[' ']&&!uiOpen()){S.buryT+=dt;if(S.buryT>=10)unbury()}me.g.position.set(P.x,groundAt(P.x,P.z)-1.1,P.z);animPerson(me,0,dt);return}
   const trap=isTrapped();
   let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0);
@@ -1316,7 +1335,7 @@ function updatePlayer(dt){
 function updateCamera(dt){
   if(S.out&&spectateCam())return;
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
-  const cp=Math.cos(P.pitch),dist=S.inTown?2.6:5.4;
+  const cp=Math.cos(P.pitch),dist=S.inTown?2.6:S.driving?10:S.riding?7:5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
   cy=Math.max(cy,groundAt(cx,cz)+0.5);if(S.inTown)cy=Math.min(cy,SIM.TOWN.Y+SIM.TOWN.H-0.4);
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
@@ -1385,6 +1404,7 @@ const hq={quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   hud.seeds.textContent=S.seeds;
   {const t=clockT(),cur=curfewT();hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&t>cur-120000&&t<cur);$('#quotaK').textContent='Quota by '+hhmm(cur)}
+  {const tr=$('#truckRow');tr.hidden=WT.mode==='parked';if(!tr.hidden){const v=$('#truckV');v.textContent=WT.stuck?'STUCK':truckWanted()?'WANTED: police!':'back by '+fmtT((WT.until-Date.now())/1000);v.classList.toggle('warn',WT.stuck||truckWanted()||(WT.until-Date.now())<45000)}}
   $('#curseBar').style.width=RUN.curse.toFixed(0)+'%';$('#mood').textContent=SIM.MOODS[RUN.mood].name;{const st=SIM.SITES[RUN.site];$('#site').textContent=st.name+' ×'+st.mult}
   {const mx=stamMax(),pc=v=>v.toFixed(1)+'%';$('#stamFill').style.width=pc(Math.min(S.stam,mx));$('#stamGap').style.width=pc(Math.max(0,mx-S.stam));$('#affHeat').style.width=pc(AFF.heat);$('#affBurn').style.width=pc(AFF.burn);$('#affPoison').style.width=pc(AFF.poison);$('#affInjury').style.width=pc(AFF.injury);$('#affHunger').style.width=pc(AFF.hunger)}
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
@@ -1398,7 +1418,7 @@ function updateHUD(){
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
-  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':'',S.broken?'Broken shovel':'',S.tonic?S.tonic+' onion tonic':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
+  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':'',S.broken?'Broken shovel':'',S.tonic?S.tonic+' onion tonic':'',S.medkit?S.medkit+' first-aid':'',RUN.angry>0?'Prices +50%':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){const s=document.createElement('span');if(t==='onion'){s.className='onion';s.textContent='Onion breath'}else s.textContent=t;hud.tools.appendChild(s)}}
   hud.det.hidden=!S.up.detector;hud.sig.style.width=(S.detOn?sig*100:0).toFixed(0)+'%';
   const s=nearSpot();
@@ -1883,9 +1903,9 @@ function updateCurfew(dt){
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
 const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
-function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.holdZer?-2:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,a:P.anim,vy:P.yaw,sg:S.singT>0,kt:!!S.kate,on:S.onionT>0,tn:!!S.inTown}}
+function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.holdZer?-2:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,a:P.anim,vy:P.yaw,sg:S.singT>0,kt:!!S.kate,on:S.onionT>0,tn:!!S.inTown,br:!!S.up.barrow}}
 function stepSoloMonsters(dt){
-  if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN,town:(M2,tps,dt2,ev2)=>SIM.stepTown(M2,tps,dt2,ev2,layNow(),RUN.day)});
+  if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN,wanted:truckWanted()?{x:WT.x,z:WT.z}:null,town:(M2,tps,dt2,ev2)=>SIM.stepTown(M2,tps,dt2,ev2,layNow(),RUN.day)});
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;syncMobs(SIM.packMobs(MONL),dt);
   for(const e of ev)monEvent(e);
 }
@@ -1956,7 +1976,7 @@ function addCurse(d){if(online())return;const was=RUN.curse;RUN.curse=clamp(RUN.
 function setRun(m){
   const was={bank:RUN.bank,curse:RUN.curse,day:RUN.day};
   RUN.day=num(m.day,1,SIM.DAYS,1)|0;RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;RUN.curse=num(m.curse,0,100,0);
-  if(m.mood in SIM.MOODS)RUN.mood=m.mood;if(m.site in SIM.SITES)RUN.site=m.site;RUN.sentence=num(m.sentence,1,99,1)|0;RUN.served=num(m.served,0,999,0)|0;if(m.seed)RUN.seed=m.seed|0;
+  if(m.mood in SIM.MOODS)RUN.mood=m.mood;if(m.site in SIM.SITES)RUN.site=m.site;RUN.sentence=num(m.sentence,1,99,1)|0;RUN.served=num(m.served,0,999,0)|0;if(m.seed)RUN.seed=m.seed|0;RUN.angry=num(m.angry,0,9,0)|0;
   if(S.started&&was.day===RUN.day&&was.bank<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a cushion for tomorrow. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
   if(S.started)curseNote(was.curse);
   runChanged();
@@ -2018,7 +2038,7 @@ function soloAdmin(a){
   else if(a==='town'&&typeof enterTown==='function')enterTown();
   RUN.quota=soloQuota();saveRun();runChanged();
 }
-function soloDawn(){if(online()||FIN.on)return;Object.assign(RUN,SIM.rollDay(RUN.seed,RUN.day,RUN.curse));RUN.quota=soloQuota();saveRun();runChanged();newMorning()}
+function soloDawn(){if(online()||FIN.on)return;RUN.angry=Math.max(0,(RUN.angry||0)-1);Object.assign(RUN,SIM.rollDay(RUN.seed,RUN.day,RUN.curse));RUN.quota=soloQuota();saveRun();runChanged();newMorning()}
 function newMorning(){
   // a night in the tents heals most things; anyone out cold wakes up in the nurse's office
   if(S.out)wakeUp(false);
@@ -2067,6 +2087,7 @@ function sneakersFall(){
 /* eat or drink (Z): onion tonic cures poison and sunburn; Sploosh or peaches fill you up */
 function eatSomething(){
   if(S.ko||S.out)return;
+  if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;sfx.find();toast('You patch yourself up with the first-aid kit.','good',2500);return}
   if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);S.onionT=Math.max(S.onionT,30);tone(330,0.3,'triangle',0.1,220);toast('You drink some of Sam\'s onion tonic. The sting fades, and lizards won\'t like your smell for 30 seconds.','good',4000);return}
   const i=S.sack.findIndex(t=>t==='sploosh'||t==='jar');
   if(i>=0&&AFF.hunger>4){const t=S.sack.splice(i,1)[0];countUp('eat',5,'sploosh');AFF.hunger=0;S.stam=Math.min(stamMax(),S.stam+40);sfx.splash();toast(t==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);return}
@@ -2156,6 +2177,7 @@ function updateHelper(b,dt){
   else if(S.ko){tx=P.x;tz=P.z;act='revive';near=1.3}
   else if(S.buried){tx=P.x+(ix?1:-1);tz=P.z;act='dig';near=1.4}
   else if(isTrapped()){tx=P.x+(ix?1.9:-1.9);tz=P.z;act='pull';near=2.4}
+  else if(WT.stuck&&Math.hypot(WT.x-P.x,WT.z-P.z)<14){tx=WT.x+Math.sin(WT.h)*3.2+(ix?1:-1);tz=WT.z+Math.cos(WT.h)*3.2;near=1}
   else if(S.carry!=null&&PROPS.has(S.carry)){const pr=PROPS.get(S.carry);tx=pr.x+(ix?1:-1);tz=pr.z+0.6;act='carry';near=1.2}
   else if(b.wanderT>0){b.wanderT-=dt;tx=b.wx;tz=b.wz;near=1}
   else{const a=P.fa+Math.PI+(ix?0.8:-0.8);tx=P.x+Math.sin(a)*4;tz=P.z+Math.cos(a)*4;
@@ -2255,9 +2277,9 @@ const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45
 function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Wreck Room sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
 function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?2.4:0;if(!on)return;s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
 function updateLights(dt){
-  if(S.light){S.batt=Math.max(0,S.batt-dt*0.6);if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}
+  if(S.light){S.batt=Math.max(0,S.batt-dt*(S.up.bigflash?0.3:0.6));if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}
   camera.getWorldDirection(pingV);
-  const hy=P.y+(P.crouch?1:1.5);aimLight(FL[0],P.x+pingV.x*0.4,hy,P.z+pingV.z*0.4,pingV.x,pingV.y-0.05,pingV.z,S.light&&!S.ko);
+  const hy=P.y+(P.crouch?1:1.5);aimLight(FL[0],P.x+pingV.x*0.4,hy,P.z+pingV.z*0.4,pingV.x,pingV.y-0.05,pingV.z,S.light&&!S.ko);FL[0].distance=S.up.bigflash?75:42;if(S.light&&!S.ko&&S.up.bigflash)FL[0].intensity=3.6;
   const lit=[...remotes.values()].filter(R=>R.f&4).map(R=>({R,d:(R.p.g.position.x-P.x)**2+(R.p.g.position.z-P.z)**2})).sort((a,b)=>a.d-b.d);
   for(let i=1;i<FL.length;i++){const e=lit[i-1];if(!e){aimLight(FL[i],0,0,0,0,0,0,false);continue}const g=e.R.p.g;const r=g.rotation.y;aimLight(FL[i],g.position.x,g.position.y+1.5,g.position.z,Math.sin(r),-0.15,Math.cos(r),true)}
 }
@@ -2501,6 +2523,127 @@ function mySuit(){const i=num(localStorage.getItem('cgl-suit'),0,JUMPSUITS.lengt
 {const sel=$('#suit');JUMPSUITS.forEach((s,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(s.ok()?'':'🔒 ')+s.n;o.disabled=!s.ok();sel.appendChild(o)});sel.value=mySuit();sel.onchange=()=>{try{localStorage.setItem('cgl-suit',sel.value)}catch(e){}}
   const nb=Object.keys(META.badges||{}).length;$('#records').textContent=`Sentences served: ${META.served||0} · Curse broken: ${META.broken||0} · Badges: ${nb}/${Object.keys(BADGES).length}`+(nb?' ('+Object.keys(META.badges).map(k=>BADGES[k]?BADGES[k][0]:k).join(', ')+')':'')}
 
+/* ================= the water truck: rent it by day, hotwire it by night, get it back before the police catch it ================= */
+const TK=SIM.TRUCK,WT={x:TK.HOME.x,z:TK.HOME.z,h:TK.HOME.h,sp:0,mode:'parked',driver:null,until:0,stuck:false,tank:TK.TANK,tx:TK.HOME.x,tz:TK.HOME.z,th:TK.HOME.h,push:0,dig:0,sent:0,lastY:0};
+const wtLight=new T.SpotLight(0xfff0cc,0,60,0.5,0.5,1);scene.add(wtLight,wtLight.target);
+function priceMult(){return RUN.angry>0?1.5:1}
+function rentPrice(){return Math.round(TK.RENT*priceMult())}
+function truckWanted(){return WT.mode==='stolen'||WT.mode==='late'}
+function setTruck(m){
+  const wasStuck=WT.stuck;WT.mode=['parked','rented','stolen','late'].includes(m.mode)?m.mode:'parked';WT.driver=m.driver==null?null:m.driver;
+  WT.until=Date.now()+num(m.left,0,1e7,0);WT.stuck=!!m.stuck;WT.tank=num(m.tank,0,TK.TANK,0);
+  if(WT.driver!==myId()){WT.tx=num(m.x,-600,600,WT.x);WT.tz=num(m.z,-600,600,WT.z);WT.th=num(m.h,-1e3,1e3,WT.h)}
+  if(WT.driver===myId()&&!S.driving)startDriving();if(S.driving&&WT.driver!==myId())stopDriving(true);
+  if(wasStuck&&!WT.stuck)WT.push=0;
+}
+function truckNoteMsg(k,m){
+  m=m||{};const n=cleanName(m.n)||'Someone';
+  if(k==='rented')toast(`${n} rented the water truck for ${m.price} seeds. Bring it back inside the fence within 3 minutes!`,'gold',6000);
+  else if(k==='stolen'){toast(`${n} hotwired the water truck! The police are coming. Get it back inside the fence before they catch it.`,'bad',7000);siren()}
+  else if(k==='late'){toast('The rental ran out. The water truck counts as stolen now, and the police are coming!','bad',6500);siren()}
+  else if(k==='stuck')toast('The water truck dropped into a hole and is stuck! Push it (2 campers hold F behind it), dig out the front wheels, or use a tow rope.','bad',6500);
+  else if(k==='free'){toast('The water truck is free!','good',2500);sfx.thud()}
+  else if(k==='caught'){toast(`The police caught the water truck. The crew is fined ${m.fine||60} seeds, the curse grows, and Mr. Sir raises all prices 50% for 2 days.`,'bad',8000);if(S.driving)stopDriving(true);if(S.riding)hopOff(false)}
+  else if(k==='returned')toast(m.was==='rented'?'The water truck is back at camp.':'The truck is back inside the fence before the police caught it. Nobody saw a thing…','good',5000);
+}
+/* local (solo) versions of what the server decides */
+function soloTruck(dt){
+  if(online())return;
+  if(WT.mode==='rented'&&Date.now()>WT.until){WT.mode='late';truckNoteMsg('late')}
+  if(WT.stuck){let pushers=(S.pushT>0?1:0);for(const b of HELPERS)if(b.helping&&Math.hypot(b.p.g.position.x-WT.x,b.p.g.position.z-WT.z)<6)pushers++;if(pushers>=2&&S.pushT>0){WT.push+=dt*(S.up.towrope?2:1);if(WT.push>=3){WT.stuck=false;WT.push=0;WT.dig=0;truckNoteMsg('free')}}}
+  if(WT.mode!=='parked'&&!inCamp(WT.x,WT.z))WT.out=true;
+  if(WT.mode!=='parked'&&WT.out&&inCamp(WT.x,WT.z)&&Math.abs(WT.sp)<1&&!S.driving&&!WT.stuck){const was=WT.mode;WT.mode='parked';WT.out=false;WT.tank=TK.TANK;truckNoteMsg('returned',{was})}
+}
+function soloTruckCaught(){for(const pr of PROPS.values())if(pr.cargo){pr.cargo=false;pr.x=WT.x+3;pr.z=WT.z}S.seeds-=60;addCurse(15);RUN.angry=2;saveRun();Object.assign(WT,{x:TK.HOME.x,z:TK.HOME.z,h:TK.HOME.h,tx:TK.HOME.x,tz:TK.HOME.z,th:TK.HOME.h,sp:0,mode:'parked',driver:null,stuck:false,tank:TK.TANK});truckNoteMsg('caught',{fine:60})}
+/* driving */
+function startDriving(){S.driving=true;S.riding=false;S.carry=null;digHeld=false;me.g.visible=false;toast('Driving! W/S gas and brake, A/D steer, F to get out. Watch out for holes: they trap the truck.','',5000)}
+function stopDriving(forced){
+  if(!S.driving)return;S.driving=false;me.g.visible=!FP;WT.sp=0;
+  if(!forced){if(online())wsSend({t:'truckDrive',on:false});else WT.driver=null}
+  const c=Math.cos(WT.h),s=Math.sin(WT.h);P.x=WT.x-2.4*c;P.z=WT.z+2.4*s;P.y=groundAt(P.x,P.z);P.vy=0;
+}
+function hopOff(gentle){S.riding=false;const c=Math.cos(WT.h),s=Math.sin(WT.h),side=Math.random()<0.5?1:-1;P.x=WT.x+side*2.6*c;P.z=WT.z-side*2.6*s;P.y=groundAt(P.x,P.z);P.vy=gentle?0:3;if(!gentle){hurt('injury',6);sfx.thud();toast('You got thrown out of the truck!','bad',2500)}}
+function wheelPts(){const c=Math.cos(WT.h),s=Math.sin(WT.h);return[[-1.1,-2.4],[1.1,-2.4],[-1.1,1.6],[1.1,1.6]].map(([lx,lz])=>({x:WT.x+lx*c+lz*s,z:WT.z-lx*s+lz*c}))}
+function truckFront(){return{x:WT.x-Math.sin(WT.h)*2.6,z:WT.z-Math.cos(WT.h)*2.6}}
+function truckGotStuck(){if(WT.stuck)return;WT.stuck=true;WT.sp=0;WT.push=0;WT.dig=0;sfx.thud();if(online())wsSend({t:'truckStuck'});else truckNoteMsg('stuck')}
+function driveTruck(dt){
+  let thr=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0),st=(KEYS['a']||KEYS['arrowleft']?1:0)-(KEYS['d']||KEYS['arrowright']?1:0);
+  if(uiOpen()){thr=0;st=0}
+  if(WT.stuck)WT.sp=0;
+  else{
+    if(thr>0)WT.sp=Math.min(TK.MAXSP,WT.sp+7*dt);else if(thr<0)WT.sp=Math.max(-4,WT.sp-(WT.sp>0?12:5)*dt);else WT.sp*=Math.pow(0.35,dt);
+    if(Math.abs(WT.sp)<0.05&&!thr)WT.sp=0;
+    WT.h+=st*dt*1.3*Math.min(1,Math.abs(WT.sp)/4)*(WT.sp<0?-1:1);
+    let nx=clamp(WT.x-Math.sin(WT.h)*WT.sp*dt,-EDGE+4,EDGE-4),nz=clamp(WT.z-Math.cos(WT.h)*WT.sp*dt,-EDGE+4,EDGE-4);
+    for(const c of colliders){if(c===WT_COL)continue;if(nx>c.x0-1.4&&nx<c.x1+1.4&&nz>c.z0-1.4&&nz<c.z1+1.4){nx=WT.x;nz=WT.z;WT.sp*=-0.2;break}}
+    if(Math.hypot(nx-SIM.THUMB.x,nz-SIM.THUMB.z)<SIM.THUMB.mound){nx=WT.x;nz=WT.z;WT.sp=0}
+    WT.x=nx;WT.z=nz;
+    if(Math.abs(WT.sp)>1.5)for(const w of wheelPts())if(baseH(w.x,w.z)-groundAt(w.x,w.z)>1.1){truckGotStuck();break}
+  }
+  WT.tx=WT.x;WT.tz=WT.z;WT.th=WT.h;
+  const now=performance.now();if(online()&&now-WT.sent>100){WT.sent=now;wsSend({t:'truckPos',x:+WT.x.toFixed(2),z:+WT.z.toFixed(2),h:+WT.h.toFixed(3),sp:+WT.sp.toFixed(2)})}
+  P.x=WT.x;P.z=WT.z;P.y=groundAt(WT.x,WT.z)+1.2;P.vy=0;P.fa=WT.h+Math.PI;P.anim=0;P.moving=WT.sp!==0;
+  me.g.position.set(P.x,P.y,P.z);
+}
+/* everyone: draw the truck, carry riders, cargo, lights; the hotwire, push and water actions */
+function updateTruck(dt){
+  if(!WT_G)return;
+  if(!S.driving){const k=Math.min(1,dt*8);if(Math.hypot(WT.tx-WT.x,WT.tz-WT.z)>10){WT.x=WT.tx;WT.z=WT.tz}else{WT.x+=(WT.tx-WT.x)*k;WT.z+=(WT.tz-WT.z)*k}let dh=WT.th-WT.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));WT.h+=dh*k}
+  const gy=groundAt(WT.x,WT.z);WT_G.position.set(WT.x,gy-(WT.stuck?0.6:0),WT.z);WT_G.rotation.set(WT.stuck?0.25:0,WT.h,0,'YXZ');
+  if(WT_COL){const r=S.driving?0:1.7;WT_COL.x0=WT.x-r;WT_COL.x1=WT.x+r;WT_COL.z0=WT.z-r;WT_COL.z1=WT.z+r}
+  const on=WT.mode!=='parked'&&nightF()>0.3;wtLight.intensity=on?2.4:0;if(on){const f=truckFront();wtLight.position.set(f.x,gy+1.4,f.z);wtLight.target.position.set(WT.x-Math.sin(WT.h)*25,gy-2,WT.z-Math.cos(WT.h)*25);wtLight.target.updateMatrixWorld()}
+  for(const pr of PROPS.values())if(pr.cargo){pr.x=WT.x;pr.z=WT.z}
+  if(!S.started)return;
+  if(S.driving)return;
+  if(S.riding){
+    // ride in the back; bumps can throw you out
+    const c=Math.cos(WT.h),s=Math.sin(WT.h);P.x=WT.x+1.4*s;P.z=WT.z+1.4*c;P.y=gy+1.0;P.vy=0;me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=WT.h;animPerson(me,0,dt);
+    if(Math.abs(gy-WT.lastY)>0.25&&Math.abs(WT.sp||0)>4&&Math.random()<0.3)hopOff(false);
+    if(WT.mode==='parked'&&!inCamp(P.x,P.z))hopOff(true);
+  }
+  WT.lastY=gy;
+  // holding F: hotwire (night) or push (stuck)
+  const s=nearSpot();
+  if(s&&s.id==='truckSteal'&&KEYS['f']&&!uiOpen()){S.hotT=(S.hotT||0)+dt;S.noise=1;if(Math.random()<dt*6)noise(0.1,2400,4,0.06);if(S.hotT>=5){S.hotT=0;if(online())wsSend({t:'truckSteal'});else{WT.mode='stolen';truckNoteMsg('stolen',{n:S.name})}}}else S.hotT=0;
+  if(s&&s.id==='truckPush'&&KEYS['f']&&!uiOpen()){S.pushT=0.3;if((S.pushSend=(S.pushSend||0)-dt)<=0){S.pushSend=0.4;if(online())wsSend({t:'truckPush',tow:!!S.up.towrope})}useStam(0);S.stam=Math.max(0,S.stam-6*dt)}else S.pushT=Math.max(0,(S.pushT||0)-dt);
+  soloTruck(dt);
+}
+/* dig next to the front wheels of a stuck truck to dig it out */
+function truckDigCheck(){
+  if(!WT.stuck)return false;const f=truckFront();if(Math.hypot(P.x-f.x,P.z-f.z)>3.5)return false;
+  sfx.scoop();puff(f.x,groundAt(f.x,f.z)+0.4,f.z,f.x+1,f.z+1,6);
+  if(online())wsSend({t:'truckDig'});else if(++WT.dig>=8){WT.stuck=false;WT.dig=0;truckNoteMsg('free')}
+  return true;
+}
+function truckAction(s){
+  if(s.id==='truckRent'){const p=rentPrice();if(S.seeds<p){toast(`Renting the truck costs ${p} seeds. The crew only has ${S.seeds}.`,'bad',3000);return true}if(online())wsSend({t:'truckRent'});else{S.seeds-=p;WT.mode='rented';WT.until=Date.now()+TK.SECS*1000;truckNoteMsg('rented',{n:S.name,price:p})}return true}
+  if(s.id==='truckSteal'||s.id==='truckPush')return true; // hold F: handled in updateTruck
+  if(s.id==='truckDrive'){if(online())wsSend({t:'truckDrive',on:true});else{WT.driver=myId();startDriving()}return true}
+  if(s.id==='truckOut'){stopDriving(false);return true}
+  if(s.id==='truckRide'){S.riding=true;S.carry=null;toast('You hop in the back. Hold on! (F to hop off)','',2500);return true}
+  if(s.id==='truckHop'){hopOff(true);return true}
+  if(s.id==='truckWater'){if(online())wsSend({t:'truckWater'});else if(WT.tank>=10){WT.tank-=10;S.water=waterMax();AFF.heat=0;sfx.splash()}return true}
+  if(s.id==='truckLoad'){const id=S.carry;if(online())wsSend({t:'truckLoad',id});else{const pr=PROPS.get(id);if(pr)pr.cargo=true}S.carry=null;toast('Loaded into the truck bed. Drive it to Mr. Sir\'s truck in camp to sell it.','good',3500);sfx.thud();return true}
+  return false;
+}
+function truckSpot(){
+  if(S.driving)return{id:'truckOut'};if(S.riding)return{id:'truckHop'};if(S.inTown||!WT_G)return null;
+  const d=Math.hypot(WT.x-P.x,WT.z-P.z);if(d>5)return null;
+  if(WT.stuck)return{id:'truckPush'};
+  if(WT.mode==='parked')return nightF()>0.5||clockT()>=curfewT()?{id:'truckSteal'}:{id:'truckRent'};
+  if(S.carry!=null&&PROPS.has(S.carry)&&PROPS.get(S.carry).type!=='body')return{id:'truckLoad'};
+  const f=truckFront();if(WT.driver==null&&Math.hypot(P.x-f.x,P.z-f.z)<2.4)return{id:'truckDrive'};
+  if(S.water<waterMax()-5&&WT.tank>=10)return{id:'truckWater'};
+  return{id:'truckRide'};
+}
+const TRUCK_TXT={
+  truckRent:()=>`Rent the water truck (${rentPrice()} crew seeds, 3 minutes)`,truckSteal:()=>'Hold: hotwire the water truck (the police will come)'+(S.hotT>0?`… ${Math.round(S.hotT/5*100)}%`:''),
+  truckDrive:()=>'Drive the truck',truckOut:()=>'Get out of the truck',truckRide:()=>'Hop in the back',truckHop:()=>'Hop off',
+  truckWater:()=>`Fill your canteen from the tank (${Math.round(WT.tank)}% left)`,truckLoad:()=>'Load it into the truck bed',
+  truckPush:()=>'Hold: push the truck out (needs 2 campers'+(S.up.towrope?', tow rope helps':'')+')',
+};
+Object.assign(COOP_TXT,TRUCK_TXT);
+
 /* ---- the day's critters and characters (moved by sim.js; drawn here) ---- */
 const MOBV=new Map();
 function ghostify(g,color){g.traverse(o=>{if(o.isMesh){o.material=new T.MeshBasicMaterial({color,transparent:true,opacity:0.55,depthWrite:false});o.castShadow=false}})}
@@ -2567,6 +2710,7 @@ function mobEvent(e){
     case 'kate':toast('Kate Barlow\'s ghost is out on the lake. She only moves when nobody is looking at her.','bad',6000);zeroniSting(0.5);break;
     case 'queen':if(S.inTown){toast('Something huge stirs in the dark. The lizard queen is awake. Crouch (C) and keep still.','bad',5000);sfx.hiss()}break;
     case 'trout':if(mine){toast('Torches! Trout Walker\'s mob saw your light. Turn it off (L) and hide.','bad',4500);noise(0.8,700,1,0.3)}break;
+    case 'truckCaught':if(!online())soloTruckCaught();break;
     case 'appeased':badge('lullaby');toast('The crew sang Madame Zeroni the lullaby. She smiles, and fades away for the night. The curse eases.','gold',6500);sfx.gold();addCurse(-25);rain.visible=true;setTimeout(()=>{if(!S.won)rain.visible=false},12000);break;
   }
 }
@@ -2624,15 +2768,15 @@ let luckyT=0;
 function updateCoop(dt){
   if(!S.started)return;
   if(clockT()<curfewT())S.dayPlay=(S.dayPlay||0)+dt;
-  updateTown(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
+  updateTown(dt);updateTruck(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
   if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
-  for(const pr of PROPS.values()){const g=pr.g,k=Math.min(1,dt*8);g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y=groundAt(g.position.x,g.position.z)}
+  for(const pr of PROPS.values()){const g=pr.g,k=Math.min(1,dt*8);g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y=groundAt(g.position.x,g.position.z)+(pr.cargo?1.1:0)}
   if(S.carry!=null){const pr=PROPS.get(S.carry);if(!pr||S.ko||Math.hypot(pr.x-P.x,pr.z-P.z)>3.6){S.carry=null;if(pr&&!S.ko)toast('You let go.','',1500)}}
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
-  if(dn){S.revT+=dt;if(S.revT>=3){S.revT=0;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
+  if(dn){S.revT+=dt;if(S.revT>=(S.medkit>0?1:3)){S.revT=0;if(S.medkit>0)S.medkit--;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
   const bu=!S.ko&&!uiOpen()&&KEYS['f']&&!dn?remoteNear(R=>R.f&32,2.4):null;
   if(bu){S.digOutT=(S.digOutT||0)+dt;if(S.digOutT>=3){S.digOutT=0;wsSend({t:'unbury',id:bu.rid});addXP(30);toast(`You dug ${bu.R.name} out.`,'good',2500)}}else S.digOutT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
@@ -2673,6 +2817,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
   if(h.includes('prof'))window.__prof={};
   if(h.includes('dbg2')){const d=document.createElement('div');d.style.cssText='position:fixed;left:300px;top:200px;z-index:999;background:#000;color:#0f0;font:16px monospace;padding:4px';document.body.appendChild(d);setInterval(()=>{d.textContent=`t=${tAcc.toFixed(1)} x=${P.x.toFixed(1)} y=${P.y.toFixed(1)} town=${S.inTown} hudT=${hudT.toFixed(2)}`},300)}
+  if(h.includes('truck')){CLK.pt=150000;CLK.paused=true;setTimeout(()=>{WT.mode='rented';WT.until=Date.now()+150000;WT.x=WT.tx=30;WT.z=WT.tz=-20;WT.h=WT.th=0;WT.driver='me';startDriving();P.yaw=0.3;P.pitch=0.25;if(h.includes('stuck'))truckGotStuck();if(h.includes('drive'))KEYS['w']=true},400)}
   if(h.includes('field')){CLK.pt=150000;CLK.paused=true;P.x=150;P.z=-400;P.yaw=0.45;P.pitch=0.12;P.y=groundAt(P.x,P.z)}
   if(h.includes('finale')){CLK.pt=SIM.curfewT(5)+20000;CLK.paused=true;setTimeout(()=>{startSoloFinale();FIN.holder='me';FIN.waterAt=Date.now()-45000;P.ledge=TH.ledges[1];P.y=P.ledge;ringTo(TH.r+1.1,Math.PI*0.75);P.yaw=Math.PI*0.75;P.pitch=0.35},400)}
   if(h.includes('town')){CLK.pt=150000;CLK.paused=true;RUN.day=3;setTimeout(()=>{enterTown();S.light=true;P.pitch=0.15;if(h.includes('vault')){const c=SIM.cellCenter(LAY.treasure);P.x=c.x+5;P.z=c.z+4;P.y=townFloorAt(P.x,P.z)}},300)}

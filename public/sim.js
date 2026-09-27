@@ -50,12 +50,13 @@
     const sold = [];
     for (const id in props) {
       const pr = props[id];
-      const cs = players.filter(p => p.cy === +id && !p.dn && Math.hypot(p.x - pr.x, p.z - pr.z) < 3.4);
-      pr.n = cs.length; pr.who = cs.map(p => p.id);
+      const cs = pr.cargo ? [] : players.filter(p => p.cy === +id && !p.dn && Math.hypot(p.x - pr.x, p.z - pr.z) < 3.4);
+      pr.n = cs.length + cs.filter(p => p.br).length; // a wheelbarrow counts as a second pair of hands
+      pr.who = cs.map(p => p.id);
       if (cs.length) {
         let ax = 0, az = 0; for (const p of cs) { ax += p.x; az += p.z; } ax /= cs.length; az /= cs.length;
         const dx = ax - pr.x, dz = az - pr.z, d = Math.hypot(dx, dz);
-        if (d > 1.1) { const s = Math.min(d - 1.1, carrySpeed(cs.length, pr.type) * 1.4 * dt); pr.x += dx / d * s; pr.z += dz / d * s; pr.moved = true; }
+        if (d > 1.1) { const s = Math.min(d - 1.1, carrySpeed(pr.n, pr.type) * 1.4 * dt); pr.x += dx / d * s; pr.z += dz / d * s; pr.moved = true; }
       }
       // heavy loot is sold at Mr. Sir's truck; a friend's body only has to make it back inside the fence
       if (pr.type === 'body' ? inCamp(pr.x, pr.z) : Math.hypot(pr.x - SELL.x, pr.z - SELL.z) < SELL.r) sold.push(id);
@@ -80,9 +81,11 @@
     const lake = players.filter(p => !p.tn), outs = lake.filter(p => !inCamp(p.x, p.z));
     if (!night) M.appeased = false;
     const want = night && outs.length && !opt.finale ? (half === 'zeroni' && M.appeased ? null : half) : null;
-    if (want !== 'police') M.trucks = [];
+    // a stolen (or overdue) water truck: the police come after it, day or night
+    if (opt.wanted) { stepWanted(M, opt.wanted, dt, ev); } else if (want !== 'police' && M.trucks.some(k => k.wanted)) M.trucks = [];
+    if (want !== 'police' && !opt.wanted) M.trucks = [];
     if (want !== 'zeroni') M.zer = null;
-    if (want === 'police') {
+    if (want === 'police' && !opt.wanted) {
       if (!M.trucks.length) M.trucks = [0, 1].map(i => { const tk = { x: i ? -32 : 22, z: 8, h: 0, mode: 'patrol', lost: 0, tx: 0, tz: -40, tgt: null }; pickPatrol(tk, outs); return tk; });
       for (const tk of M.trucks) stepTruck(tk, outs, dt, ev);
     }
@@ -323,6 +326,19 @@
       m.cd = Math.max(0, (m.cd || 0) - dt);
     }
   }
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt };
+  // ---- the water truck: rent it by day, hotwire it by night; overdue or stolen, the police come for it ----
+  const TRUCK = { HOME: { x: 5, z: 36, h: Math.PI / 2 }, RENT: 120, SECS: 180, MAXSP: 12, COPSP: 10, TANK: 100 };
+  function stepWanted(M, w, dt, ev) {
+    if (!M.trucks.length || !M.trucks[0].wanted) M.trucks = [0, 1].map(i => ({ x: i ? -32 : 22, z: 8, h: 0, mode: 'chase', lost: 0, tx: w.x, tz: w.z, tgt: null, wanted: true }));
+    for (const tk of M.trucks) {
+      tk.mode = 'chase'; tk.tx = w.x; tk.tz = w.z;
+      let dh = Math.atan2(-(tk.tx - tk.x), -(tk.tz - tk.z)) - tk.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); tk.h += clamp(dh, -2 * dt, 2 * dt);
+      const nx = clamp(tk.x - Math.sin(tk.h) * TRUCK.COPSP * dt, -EDGE + 3, EDGE - 3), nz = clamp(tk.z - Math.cos(tk.h) * TRUCK.COPSP * dt, -EDGE + 3, EDGE - 3);
+      if (!inCamp(nx, nz)) { tk.x = nx; tk.z = nz; }
+      if (Math.hypot(tk.x - w.x, tk.z - w.z) < 4.2 && !inCamp(w.x, w.z)) { ev.push({ k: 'truckCaught' }); M.trucks = []; return; }
+    }
+  }
+
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, SHOP, DAYS, MOODS, SITES, clamp, wrapT, clockT, inCamp, nearCampZone, curfewT, quotaFor, nightSplit, rnd, rollDay, roster, KIND, carrySpeed, stepProps, stepMonsters, bonk, packMobs, TOWN, townLayout, cellAt, cellCenter, breachCell, stepTown, inTownXZ, THUMB, waterAt, TRUCK, stepWanted };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

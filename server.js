@@ -31,7 +31,7 @@ const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').t
 const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'sneakers', 'goldbar'];
 
 function freshRun(sentence) { const seed = (Math.random() * 1e9) | 0; return { day: 1, bank: 30, peak: 1, curse: 0, sentence: sentence || 1, seed, ...SIM.rollDay(seed, 1, 0) }; }
-function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, breaches: {}, rot: [] }; }
+function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, breaches: {}, rot: [], truck: freshTruck() }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -44,6 +44,9 @@ if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
 if (!world.breaches || typeof world.breaches !== 'object') world.breaches = {};
 if (!Array.isArray(world.rot)) world.rot = [];
+if (!world.truck || typeof world.truck !== 'object') world.truck = freshTruck();
+function freshTruck() { const H = SIM.TRUCK.HOME; return { x: H.x, z: H.z, h: H.h, sp: 0, mode: 'parked', driver: null, until: 0, stuck: false, tank: SIM.TRUCK.TANK }; }
+function truckInfo() { const T = world.truck; return { t: 'truck', x: T.x, z: T.z, h: T.h, mode: T.mode, driver: T.driver, left: T.until ? Math.max(0, T.until - Date.now()) : 0, stuck: T.stuck, tank: T.tank }; }
 let layCache = { key: '', lay: null };
 function layout() { const k = world.run.seed + ':' + world.run.day; if (layCache.key !== k) layCache = { key: k, lay: SIM.townLayout(world.run.seed, world.run.day) }; return layCache.lay; }
 let gotSet = new Set(world.got);
@@ -102,7 +105,7 @@ function broadcast(msg, exceptId) {
 }
 function joined() { return [...clients.values()].filter(c => c.joined); }
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
-function runInfo() { const r = world.run, n = Math.max(r.peak, joined().length, 1); return { t: 'run', day: r.day, bank: r.bank, quota: SIM.quotaFor(r.day, n, r.sentence, r.mood), curse: r.curse || 0, mood: r.mood, site: r.site, sentence: r.sentence || 1, seed: r.seed, served: (world.meta && world.meta.served) || 0 }; }
+function runInfo() { const r = world.run, n = Math.max(r.peak, joined().length, 1); return { t: 'run', day: r.day, bank: r.bank, quota: SIM.quotaFor(r.day, n, r.sentence, r.mood), curse: r.curse || 0, mood: r.mood, site: r.site, sentence: r.sentence || 1, seed: r.seed, served: (world.meta && world.meta.served) || 0, angry: r.angry || 0 }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', ws => {
@@ -114,6 +117,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
+    truck: truckInfo(),
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -298,6 +302,41 @@ wss.on('connection', ws => {
         send(o, { t: m.t === 'boost' ? 'boosted' : 'pulledUp', by: c.n, y: num(m.y, -40, 80, 0) });
         break;
       }
+      case 'truckRent': case 'truckSteal': {
+        const T = world.truck; if (T.mode !== 'parked' || !near(c, T, 6)) return;
+        const night = SIM.clockT(world.clock, now) >= SIM.curfewT(world.run.day);
+        if (m.t === 'truckRent') {
+          if (night) return;
+          const price = Math.round(SIM.TRUCK.RENT * (world.run.angry ? 1.5 : 1));
+          if (world.run.bank < price) { send(c, runInfo()); return; }
+          world.run.bank -= price; T.mode = 'rented'; T.until = now + SIM.TRUCK.SECS * 1000; broadcast(runInfo()); truckNote('rented', { n: c.n, price });
+        } else { if (!night) return; T.mode = 'stolen'; truckNote('stolen', { n: c.n }); }
+        dirty = true; broadcast(truckInfo());
+        break;
+      }
+      case 'truckDrive': {
+        const T = world.truck;
+        if (m.on === true) { if (T.mode === 'parked' || T.driver != null || !near(c, T, 5)) return; T.driver = c.id; }
+        else if (T.driver === c.id) { T.driver = null; T.sp = 0; } else return;
+        dirty = true; broadcast(truckInfo());
+        break;
+      }
+      case 'truckPos': {
+        const T = world.truck; if (T.driver !== c.id) return;
+        T.x = r2(num(m.x, -600, 600, T.x)); T.z = r2(num(m.z, -600, 600, T.z)); T.h = r2(num(m.h, -1e3, 1e3, T.h)); T.sp = r2(num(m.sp, -20, 20, 0));
+        broadcast({ t: 'tpos', x: T.x, z: T.z, h: T.h, sp: T.sp }, c.id);
+        break;
+      }
+      case 'truckStuck': { const T = world.truck; if (T.driver !== c.id || T.stuck) return; T.stuck = true; T.push = 0; T.dig = 0; T.pushers = {}; T.sp = 0; broadcast(truckInfo()); truckNote('stuck'); break; }
+      case 'truckPush': { const T = world.truck; if (!T.stuck || !near(c, T, 6)) return; (T.pushers = T.pushers || {})[c.id] = { at: now, tow: m.tow === true }; break; }
+      case 'truckDig': { const T = world.truck; if (!T.stuck || !near(c, T, 6)) return; T.dig = (T.dig || 0) + 1; if (T.dig >= 8) unstick(); break; }
+      case 'truckWater': { const T = world.truck; if (T.tank < 10 || !near(c, T, 6)) return; T.tank -= 10; send(c, { t: 'truckWaterOk' }); broadcast(truckInfo()); break; }
+      case 'truckLoad': {
+        const T = world.truck, id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id];
+        if (!p || p.type === 'body' || p.cargo || c.cy !== id || !near(c, T, 6) || T.mode === 'parked') return;
+        p.cargo = true; dirty = true; broadcast({ t: 'cargo', id, on: true });
+        break;
+      }
       case 'bonk':
         // shovel swing: squashes critters in front of the camper (results go out with the next monster update)
         if (now - (c.bonkAt || 0) < 600) return;
@@ -311,7 +350,7 @@ wss.on('connection', ws => {
         // Proximity chat: only campers within earshot see it.
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
-        for (const o of clients.values()) if (o.joined && o !== c && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+        for (const o of clients.values()) if (o.joined && o !== c && (near(c, o, CHAT_RANGE) || ((c.f & 8192) && (o.f & 8192)))) send(o, { t: 'chat', id: c.id, s });
         break;
       }
       case 'admin':
@@ -381,7 +420,7 @@ const curse = d => { world.run.curse = clamp((world.run.curse || 0) + d, 0, 100)
 function simPlayers(now) {
   return joined().filter(c => !(c.f & 64)).map(c => ({
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, a: c.a, vy: c.vy,
-    hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128), sg: !!(c.f & 256), kt: !!(c.f & 512), on: !!(c.f & 1024),
+    br: !!(c.f & 16384), hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128), sg: !!(c.f & 256), kt: !!(c.f & 512), on: !!(c.f & 1024),
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
   }));
@@ -430,7 +469,39 @@ function finTick(now) {
   if (!f.waterAt && (Math.hypot(f.zx - SIM.THUMB.x, f.zz - SIM.THUMB.z) < SIM.THUMB.mound + 4 || now - f.start > 150000)) { f.waterAt = now; broadcast({ t: 'finale', fin: f, now: Date.now() }); }
   if (f.waterAt && SIM.waterAt(f, now) > SIM.THUMB.y0 + SIM.THUMB.h + 2) { f.on = false; broadcast({ t: 'finaleLost' }); endSentence(false); }
 }
+/* ---- the water truck ---- */
+function truckNote(k, extra) { broadcast({ t: 'truckNote', k, ...(extra || {}) }); }
+function unstick() { const T = world.truck; T.stuck = false; T.push = 0; T.dig = 0; T.pushers = {}; dirty = true; broadcast(truckInfo()); truckNote('free'); }
+function truckCaught() {
+  // the police got the truck back: a fine, more curse, and Mr. Sir raises prices for two days
+  const T = world.truck;
+  for (const id in world.props) { const p = world.props[id]; if (p.cargo) { p.cargo = false; p.x = r2(T.x + 3); p.z = r2(T.z); p.moved = true; } }
+  world.run.bank = Math.max(0, world.run.bank - 60); world.run.curse = clamp((world.run.curse || 0) + 15, 0, 100); world.run.angry = 2;
+  Object.assign(T, freshTruck()); dirty = true;
+  broadcast(truckInfo()); broadcast(runInfo()); truckNote('caught', { fine: 60 });
+}
+function truckTick(now, dt) {
+  const T = world.truck;
+  if (T.driver != null && !(clients.get(T.driver) || {}).joined) { T.driver = null; broadcast(truckInfo()); }
+  if (T.mode === 'rented' && now > T.until) { T.mode = 'late'; dirty = true; broadcast(truckInfo()); truckNote('late'); }
+  // pushing a stuck truck: two campers (twice as fast if one has a tow rope)
+  if (T.stuck) {
+    const ps = Object.values(T.pushers || {}).filter(p => now - p.at < 1200);
+    if (ps.length >= 2) { T.push = (T.push || 0) + dt * (ps.some(p => p.tow) ? 2 : 1); if (T.push >= 3) unstick(); }
+  }
+  // cargo rides in the truck bed (and sells itself at Mr. Sir's truck in camp)
+  const moved = [];
+  for (const id in world.props) { const p = world.props[id]; if (p.cargo) { p.x = r2(T.x); p.z = r2(T.z); moved.push([+id, p.x, p.z, 0]); } }
+  if (moved.length && (T.sp || 0) !== 0) broadcast({ t: 'props', list: moved });
+  // brought back inside the fence: a rental is returned; a stolen truck got away with it
+  if (T.mode !== 'parked' && !SIM.inCamp(T.x, T.z)) T.out = true;
+  if (T.mode !== 'parked' && T.out && SIM.inCamp(T.x, T.z) && Math.abs(T.sp || 0) < 1 && T.driver == null && !T.stuck) {
+    const was = T.mode; T.mode = 'parked'; T.until = 0; T.out = false; T.tank = SIM.TRUCK.TANK; dirty = true;
+    broadcast(truckInfo()); truckNote('returned', { was });
+  }
+}
 function dawn() {
+  world.run.angry = Math.max(0, (world.run.angry || 0) - 1);
   // a new morning: the Warden picks today's mood and dig site; anyone out cold wakes up in the nurse's office
   Object.assign(world.run, SIM.rollDay(world.run.seed, world.run.day, world.run.curse, world.run.sentence)); dirty = true;
   for (const id in world.props) if (world.props[id].type === 'body') delete world.props[id];
@@ -445,7 +516,7 @@ setInterval(() => {
   else if (lastT - t > SIM.CYCLE / 2 && !(world.run.fin && world.run.fin.on)) dawn();
   lastT = t;
   if (t < cur && joined().length) world.run.played = (world.run.played || 0) + dt;
-  finTick(now);
+  finTick(now); truckTick(now, dt);
   const players = simPlayers(now);
   // heavy loot and bodies being carried
   const sold = SIM.stepProps(world.props, players, dt);
@@ -468,8 +539,8 @@ setInterval(() => {
   }
   // monsters
   const ev = pendingEv; pendingEv = [];
-  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, finale: !!(world.run.fin && world.run.fin.on), town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
-  for (const e of ev) { if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
+  SIM.stepMonsters(MON, players, t, dt, ev, { curfew: cur, split: SIM.nightSplit(cur, world.run.curse, world.run.mood), run: world.run, wanted: world.truck.mode === 'stolen' || world.truck.mode === 'late' ? { x: world.truck.x, z: world.truck.z } : null, finale: !!(world.run.fin && world.run.fin.on), town: (M, tps, dt2, ev2) => SIM.stepTown(M, tps, dt2, ev2, layout(), world.run.day) });
+  for (const e of ev) { if (e.k === 'truckCaught') truckCaught(); if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; } if (e.k === 'appeased') { curse(-25); broadcast(runInfo()); } }
   const on = MON.trucks.length > 0 || !!MON.zer || MON.mobs.length > 0 || ev.length > 0;
   if (on || monOn) broadcast({ t: 'mon', trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag, MON.zer.held ? 1 : 0, r2(MON.zer.song || 0)] : null, mobs: SIM.packMobs(MON), ev });
   monOn = on;
