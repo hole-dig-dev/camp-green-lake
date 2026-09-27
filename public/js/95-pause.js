@@ -240,4 +240,5 @@ if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,apply
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,
-  VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC};
+  VOX,remotes,net,setVoiceEnabled,setMicTransmitting,AC:()=>AC,
+  haboobF,addHaboob,get HABOOB_NATURAL(){return HABOOB_NATURAL},set HABOOB_NATURAL(v){HABOOB_NATURAL=v},hbState:()=>({f:HB.f,cur:hbCurId})};
