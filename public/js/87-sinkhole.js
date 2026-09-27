@@ -70,7 +70,7 @@ function spawnSinkhole(x,z,seed,t0){
   sinkSpawned.push({id,x,z,r:rad,t0,forced:true});
 }
 ENV.sinkhole={spawn:o=>spawnSinkhole(o.x,o.z,(hash2(Math.round(o.x*10),Math.round(o.z*10))*4294967296)>>>0,twNow())};
-command('sinkhole',{usage:'sinkhole [distance]',help:'Warn, then open a big sinkhole [50] m ahead of you. Everyone sees it -- a friend has to pull you out if you fall in.',
+command('sinkhole',{usage:'sinkhole [distance]',help:'Warn, then open a big sinkhole [50] m ahead of you. Everyone sees it. A friend has to pull you out if you fall in.',
   run([d]){
     const dist=numArg(d,50,20,150),a=P.yaw+Math.PI;
     let x=clamp(P.x+Math.sin(a)*dist,-EDGE+16,EDGE-16),z=clamp(P.z+Math.cos(a)*dist,-EDGE+16,EDGE-16);
@@ -292,6 +292,6 @@ function updateSinkholes(dt){
 function sinkTrappedText(sh){
   if(sh.soloBot)return sh.soloBot.sinkOverride&&sh.soloBot.sinkOverride.stage==='pull'?'Zero is pulling you up…':'Zero is on his way with a line…';
   if(sinkRescueT>0)return`Being pulled up… ${Math.round(clamp(sinkRescueT/SINK_RESCUE_TIME,0,1)*100)}%`;
-  if(!othersOnline())return`Too steep to climb. Nobody else is around -- someone will come find you in ${Math.max(0,Math.ceil(SINK_SOLO_WAIT-sh.myTrapT))}s.`;
+  if(!othersOnline())return`Too steep to climb. Nobody else is around; someone will come find you in ${Math.max(0,Math.ceil(SINK_SOLO_WAIT-sh.myTrapT))}s.`;
   return'Too steep and loose to climb. A friend has to come to the rim and hold F to pull you up.';
 }

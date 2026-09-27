@@ -7,7 +7,7 @@ const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
-  sinkRescue:s=>`Hold to link hands and pull ${s.R.name} up`+(sinkPulling?' (holding on -- keep it up)':''),
+  sinkRescue:s=>`Hold to link hands and pull ${s.R.name} up`+(sinkPulling?' (holding on, keep it up)':''),
   drop:s=>`Let go of the ${LOOT[s.pr.type].name}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
