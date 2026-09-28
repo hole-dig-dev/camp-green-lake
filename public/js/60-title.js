@@ -36,7 +36,7 @@ function startGame(resume){
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
   if(S.revealed===false&&S.reported)reveal('You');
-  if(!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+  lockMouse();
   if(S.resumed){toast('Welcome back to camp. Your progress was saved.','good',3500)}
   else{setTimeout(()=>say(sirL,'You\'re gonna dig one hole a day. Five feet deep, five feet across.',6000),800);
   setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig.','',5000),1500)}

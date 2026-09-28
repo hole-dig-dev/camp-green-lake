@@ -4,9 +4,27 @@
 const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 function releaseLock(){if(document.pointerLockElement){voluntaryRelease=true;try{document.exitPointerLock()}catch(e){}}}
 function lockOk(){return document.pointerLockElement===canvas}
+// Grab the mouse for looking around. Ask for raw ("unadjusted") movement first: it skips Windows mouse
+// acceleration and avoids a Chrome bug where pointer lock now and then reports a huge jump, which snapped
+// the camera round on JT's gaming PC. Browsers that don't support it reject, so fall back to a plain lock.
+function lockMouse(){
+  if(isTouch||lockOk())return;
+  const plain=()=>{try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}};
+  try{const r=canvas.requestPointerLock({unadjustedMovement:true});if(r&&r.catch)r.catch(e=>{if(e&&e.name==="NotSupportedError")plain()})}catch(e){plain()}
+}
+// Spike filter, the second guard against those jumps: a single mouse reading far bigger than the recent
+// average is thrown away. A real flick builds up over several readings, so it still gets through.
+const LOOK_SPIKE_MIN=120;   // px in one event: anything smaller is always accepted
+const LOOK_SPIKE_MULT=8;    // ...and bigger readings are dropped only if they're this many times the recent average
+let lookAvg=10;
+function lookDelta(mx,my){
+  const m=Math.hypot(mx,my);
+  if(m>LOOK_SPIKE_MIN&&m>lookAvg*LOOK_SPIKE_MULT){lookAvg+=(m-lookAvg)*0.1;return false}
+  lookAvg+=(m-lookAvg)*0.2;return true
+}
 canvas.addEventListener('mousedown',e=>{
   if(!S.started||uiOpen()||S.ko)return;
-  if(!lockOk()&&!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(err){}}
+  lockMouse();
   if(e.button===0&&lockOk())digHeld=true;
   dragLook={x:e.clientX,y:e.clientY};
 });
@@ -15,7 +33,7 @@ let dragLook=null;
 addEventListener('mousemove',e=>{
   if(!S.started)return;
   const iv=SETTINGS.invertY?-1:1;   // pause menu: sensitivity + invert-Y settings
-  if(lockOk()){P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
+  if(lockOk()){if(!lookDelta(e.movementX,e.movementY))return;P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
   else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005*SETTINGS.sens;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004*SETTINGS.sens*iv);dragLook={x:e.clientX,y:e.clientY}}
 });
 document.addEventListener('pointerlockchange',()=>{

@@ -91,7 +91,7 @@ const PAUSE={open:false};
 let voluntaryRelease=false;
 const pauseEl=$('#pause'),pMain=$('#pMain'),pOptionsCard=$('#pOptionsCard'),pControlsCard=$('#pControlsCard'),pConfirmCard=$('#pConfirmCard');
 function overlayBlocking(){return uiOpen()||!$('#admin').hidden||!$('#win').hidden}
-function tryLock(){if(!isTouch)try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+function tryLock(){lockMouse()}
 function showPauseScreen(name){
   stopListening();
   pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';

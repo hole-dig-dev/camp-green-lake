@@ -39,9 +39,11 @@ const TB_SPEED_FLOOR_FRAC=0.65;      // ground speed never decays below this fra
 const TB_BIG_BOUNCE_VY=9;            // an impact at least this hard (m/s) bucks a rider loose next frame
 const TB_DT=1/60;                    // physics step (s): fixed, so results don't depend on render frame rate
 const TB_MAX_STEPS=600;              // caps the catch-up burst for a late joiner (10 sim-seconds per real frame)
-const TB_LIFE=40;                    // seconds before a tumbleweed blows off the map on its own
+const TB_LIFE=150;                   // seconds before a tumbleweed blows apart on its own. Was 40; JT: "roll for WAY longer"
 const TB_FADE_TIME=1.1;              // seconds to pop/shrink away once dead (blew off, or broke on the fence)
-const TB_CAMP_R=18;                  // breaks apart this close (m) to the camp fence -- can't roll through camp
+const TB_CAMP_R=18;                  // glances off this close (m) to the camp fence -- can't roll through camp
+const TB_CAMP_BREAK=2;               // ...but one that somehow ends up right at/inside the fence still breaks apart
+const TB_EDGE_TURN=60;               // the wind turns a weed back this far (m) inside the map edge instead of it blowing off
 const TB_EDGE_KEEP=40;               // a natural spawn stays at least this far inside the lake's edge
 const TB_HIT_PAD=1.2;                // reach (m) past the ball's surface that still snags you: camper half-width + scraggly twigs
 const TB_BODY_LO=0.15,TB_BODY_HI=1.75; // the part of you (m above your feet) a weed can catch: shins to top of the head
@@ -55,7 +57,7 @@ const TB_DOWN_TIME=1.0;              // seconds lying down after a release befor
 const TB_GETUP_TIME=0.4;             // quick stand-up transition, same idea as the twister's
 const TB_DMG_MIN=3,TB_DMG_MAX=8;     // a small bump of damage on a hard release -- comedy hazard, not a real threat
 const TB_WARN_R=110;                 // being this close (m) to a fresh gust gets you the warning toast
-const TB_POOL_CAP=8;                 // max tumbleweeds rendered/simulated at once (a couple of full 3-weed gusts)
+const TB_POOL_CAP=16;                // max tumbleweeds rendered/simulated at once (150 s lives overlap several gusts)
 const TB_TWIG_N=90;                  // twigs per tumbleweed, sticking out of the core so the silhouette reads as brush, not a rock
 const TB_TWIG_THICK=0.35;            // twig box thickness per metre of weed radius (x each twig's own 1.8-3.4 factor)
 const TB_CORE_FRAC=0.62;             // the solid brush core's radius as a fraction of the weed's (the twigs make up the rest)
@@ -94,6 +96,7 @@ function tbPhysStep(w){
   const dirx=Math.cos(w.head),dirz=Math.sin(w.head);
   w.vy-=TB_GRAV*TB_DT;
   w.x+=dirx*w.speed*TB_DT;w.y+=w.vy*TB_DT;w.z+=dirz*w.speed*TB_DT;
+  tbDeflect(w,dirx,dirz);
   const gy=baseH(w.x,w.z)+w.r;                     // deterministic ground, same reasoning as the landslide's boulders
   let bounced=false;
   if(w.y<=gy){
@@ -105,6 +108,21 @@ function tbPhysStep(w){
   }else w.big=false;
   w.rot+=w.speed/w.r*TB_DT;                          // rolling rotation speed matches ground speed
   return bounced;
+}
+
+/* Keep a weed rolling instead of ending it: near the map edge the wind swings it back inward, and at the
+   camp fence it glances off like a ball off a wall (reflect the heading about the fence's outward normal).
+   Pure maths on the weed's own state, so every client still gets the same path. */
+function tbDeflect(w,dx,dz){
+  const lim=EDGE-TB_EDGE_TURN;
+  if((w.x>lim&&dx>0)||(w.x<-lim&&dx<0))dx=-dx;
+  if((w.z>lim&&dz>0)||(w.z<-lim&&dz<0))dz=-dz;
+  const d=campDist(w.x,w.z);
+  if(d<TB_CAMP_R&&d>0){
+    const nx=(w.x-clamp(w.x,-40,30))/d,nz=(w.z-clamp(w.z,27,56))/d,dot=dx*nx+dz*nz;   // same fence box as campDist()
+    if(dot<0){dx-=2*dot*nx;dz-=2*dot*nz}
+  }
+  w.head=Math.atan2(dz,dx);
 }
 
 /* natural gust: deterministic per TB_CELL square and TB_WIN time window, same trick as twPlan()/lsPlan() */
@@ -281,7 +299,7 @@ function updateTumbleweeds(dt){
         puff(w.x,w.y-w.r*0.7,w.z,w.x-Math.cos(w.head)*3,w.z-Math.sin(w.head)*3,12);   // dust kicks up behind it (reuses the shared particle pool)
       }
     }
-    const dead=target>=TB_LIFE||Math.max(Math.abs(w.x),Math.abs(w.z))>EDGE-4||campDist(w.x,w.z)<TB_CAMP_R;
+    const dead=target>=TB_LIFE||Math.max(Math.abs(w.x),Math.abs(w.z))>EDGE-4||campDist(w.x,w.z)<TB_CAMP_BREAK;
     if(dead&&!w.dead){w.dead=true;w.deadT=0;puff(w.x,w.y,w.z,w.x+1,w.z+1,10)}   // blew off, or broke apart on the fence
     if(!w.dead){
       loud=Math.max(loud,clamp(1-Math.hypot(w.x-fx,w.z-fz)/180,0,1));
