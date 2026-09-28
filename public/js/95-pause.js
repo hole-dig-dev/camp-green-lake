@@ -251,7 +251,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('sinkopen')){P.x=200;P.z=-40;P.yaw=0;P.pitch=0.15;spawnSinkhole(200,-70,1,twNow()-10000)}
   if(h.includes('sinktrap')){spawnSinkhole(200,-70,1,twNow()-10000);P.x=200;P.z=-70;P.y=groundAt(200,-70);P.yaw=0;P.pitch=-0.2}
 }
-if(location.hash==='#dbg')window.__cgl={TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,lizards,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
+if(location.hash==='#dbg')window.__cgl={policeDbg:()=>MONV.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.chase})),TW_LIVE,runCommand,twNow,CLK,DAYMS,applyClock,P,S,BJ,DLG,bots,use,nearSpot,lizards,TENTS,BUNKS,SLEEP,enterTent,exitTent,toggleBunk,inTent,clockT,jumpTo,tAtHour,
   twState:()=>({st:twSt,name:twStateName(),t:twStT,pull:twDbgPull}),
   PAUSE,SETTINGS,openPause,closePause,overlayBlocking,remapKey,respawn,quitToTitle,KEYS,
   lsBoulders,lsBursts,spawnLandslide,renderer,groundAt,baseH,

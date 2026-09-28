@@ -256,7 +256,7 @@ function drawMap(){
     const col=playerColorHex(R.ci);mx.fillStyle=col;mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X,Z,7,0,6.3);mx.fill();mx.stroke();
     mx.fillStyle=readableOn(col);mx.font='700 8px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText(initialsOf(R.name),X,Z+0.5);
     if(fieldMapOpen){mx.fillStyle=night?'#EDE2C8':'#2b1d12';mx.font='700 12px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='top';mx.fillText(R.name,X,Z+11)}}
-  for(const tk of trucks)if(tk.active){mx.fillStyle=Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff';mx.fillRect(wx(tk.x)-6,wz(tk.z)-6,12,12)}
+  for(const tk of trucks)if(tk.active){mx.fillStyle=tk.mode==='chase'?(Math.floor(performance.now()/300)%2?'#d12a2a':'#2050ff'):'#2b4f9e';mx.strokeStyle='#0d1830';mx.lineWidth=1.5;mx.beginPath();mx.arc(wx(tk.x),wz(tk.z),tk.mode==='chase'?6:4.5,0,6.3);mx.fill();mx.stroke()}   // police officers
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const X=wx(tw.x),Z=wz(tw.z);mx.strokeStyle='#5a4a3a';mx.lineWidth=2;for(let i=0;i<3;i++){mx.beginPath();mx.arc(X,Z,4+i*3.5,performance.now()/200+i*2,performance.now()/200+i*2+4.2);mx.stroke()}}
   for(const bu of lsBursts)if((twNow()-bu.t0)/1000<LS_LIFE){const X=wx(bu.x),Z=wz(bu.z);mx.strokeStyle='#7a3a1a';mx.lineWidth=2;mx.setLineDash([4,3]);mx.beginPath();mx.arc(X,Z,10,0,6.3);mx.stroke();mx.setLineDash([])}
   for(const w of tbWeeds)if(!w.dead){mx.fillStyle='#6b4f2a';mx.beginPath();mx.arc(wx(w.x),wz(w.z),Math.max(2,ws(w.r)),0,6.3);mx.fill()}

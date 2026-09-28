@@ -30,31 +30,33 @@ function campDist(x,z){return Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,
 const NIGHT_SKY=new T.Color(0.035,0.045,0.1),NIGHT_FOG=new T.Color(0x07090f),SKY_T=new T.Color(),FOG_T=new T.Color();
 const stars=(()=>{const n=1500,p=new Float32Array(n*3);for(let i=0;i<n;i++){const u=Math.random()*Math.PI*2,v=Math.acos(Math.random()*0.95);p[i*3]=Math.sin(v)*Math.cos(u)*850;p[i*3+1]=Math.cos(v)*850;p[i*3+2]=Math.sin(v)*Math.sin(u)*850}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(p,3));const s=new T.Points(g,new T.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}));s.frustumCulled=false;scene.add(s);return s})();
-function makeTruck(){
-  const g=new T.Group();
-  const body=box(2.3,1,5,0x1f2d48);body.position.y=1;g.add(body);
-  const cab=box(2.1,0.9,2.2,0xe6e6e6);cab.position.set(0,1.95,0.3);g.add(cab);
-  const glass=box(2,0.5,0.05,0x111822);glass.position.set(0,2.05,-0.82);g.add(glass);
-  for(const[wx0,wz0]of[[-1.15,-1.6],[1.15,-1.6],[-1.15,1.6],[1.15,1.6]]){const w=cyl(0.45,0.45,0.35,10,0x151515);w.rotation.z=Math.PI/2;w.position.set(wx0,0.45,wz0);g.add(w)}
-  const red=new T.MeshBasicMaterial({color:0xff2020}),blue=new T.MeshBasicMaterial({color:0x2050ff});
-  const lr=new T.Mesh(new T.BoxGeometry(0.7,0.18,0.3),red);lr.position.set(-0.45,2.5,0.3);const lb=new T.Mesh(new T.BoxGeometry(0.7,0.18,0.3),blue);lb.position.set(0.45,2.5,0.3);g.add(lr,lb);
-  const hl=new T.MeshBasicMaterial({color:0xfff6d8});for(const x of[-0.75,0.75]){const h=new T.Mesh(new T.BoxGeometry(0.4,0.2,0.05),hl);h.position.set(x,1.05,-2.52);g.add(h)}
-  const spot=new T.SpotLight(0xfff0cc,0,SIM.COP_RANGE,SIM.COP_HALF_ANGLE,0.5,1);spot.position.set(0,2.6,-1.5);spot.target.position.set(0,-3,-30);g.add(spot,spot.target);
-  const bg=new T.ConeGeometry(Math.tan(SIM.COP_HALF_ANGLE)*SIM.COP_RANGE,SIM.COP_RANGE,18,1,true);bg.translate(0,-SIM.COP_RANGE/2,0);bg.rotateX(Math.PI/2-0.07);
-  const beam=new T.Mesh(bg,new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.05,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));beam.position.copy(spot.position);g.add(beam);
-  g.position.y=-200;scene.add(g);
-  return{g,red,blue,spot,x:0,z:0,h:0,tx:0,tz:0,mode:'patrol',lost:0,active:false};
+/* A police officer on foot (the night patrol, see stepCop in sim.js): dark uniform, campaign hat, and a flashlight whose
+   visible cone matches the light that can actually spot you (SIM.COP_RANGE / COP_HALF_ANGLE). The array is still
+   called `trucks` because the server, minimap and logs already use that name for the police. */
+const COP_LOOKS=[0xe0b08a,0x8a5a3c,0xc68a5e,0x6b4a35];
+function makeTruck(i){
+  const p=makePerson({suit:0x1d2a44,shirt:0x9fb3c8,skin:COP_LOOKS[i%COP_LOOKS.length],hat:'cowboy',shovel:false});
+  const torch=box(0.07,0.07,0.26,0x2a2a2a);torch.position.set(0,-0.5,0.12);p.armR.add(torch);   // flashlight in the right hand
+  const spot=new T.SpotLight(0xfff0cc,0,SIM.COP_RANGE,SIM.COP_HALF_ANGLE,0.55,1);spot.position.set(0.3,1.25,0.35);spot.target.position.set(0.3,0,12);p.g.add(spot,spot.target);
+  const bg=new T.ConeGeometry(Math.tan(SIM.COP_HALF_ANGLE)*SIM.COP_RANGE,SIM.COP_RANGE,16,1,true);bg.translate(0,-SIM.COP_RANGE/2,0);bg.rotateX(-Math.PI/2+0.1);
+  const beam=new T.Mesh(bg,new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.045,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));beam.position.copy(spot.position);p.g.add(beam);
+  p.g.position.y=-200;scene.add(p.g);
+  const L=makeLabel(p.g,'Police','npc');
+  return{g:p.g,p,L,spot,beam,x:0,z:0,h:0,mode:'patrol',active:false};
 }
-const trucks=[makeTruck(),makeTruck()];
+const trucks=[0,1,2,3].map(makeTruck);   // one per officer (SIM COP_N = 4)
 const CUR={phase:clockT()<DAYMS?'day':'night',warned:clockT()>DAYMS-60000,hunter:null,half:null,msgT:0};
 function siren(){for(let i=0;i<3;i++)setTimeout(()=>tone(450,1.4,'sawtooth',0.07,900),i*1500)}
 /* trucks and Zeroni are moved by the shared rules in sim.js (on the server, or right here when you play solo). This just draws them. */
 function showTruck(tk,st,dt){
-  if(!st){if(tk.active){tk.active=false;tk.g.position.y=-200;tk.spot.intensity=0}return}
-  if(!tk.active){tk.active=true;tk.spot.intensity=2.2;tk.x=st.x;tk.z=st.z;tk.h=st.h}
-  const k=Math.min(1,dt*8);tk.x+=(st.x-tk.x)*k;tk.z+=(st.z-tk.z)*k;let dh=st.h-tk.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));tk.h+=dh*k;tk.mode=st.chase?'chase':'patrol';
-  tk.g.position.set(tk.x,groundAt(tk.x,tk.z),tk.z);tk.g.rotation.y=tk.h;
-  const on=Math.floor(performance.now()/160)%2;tk.red.color.setHex(on?0xff2020:0x330000);tk.blue.color.setHex(on?0x000833:0x2050ff);
+  if(!st){if(tk.active){tk.active=false;tk.g.position.y=-200;tk.spot.intensity=0;tk.beam.visible=false}return}
+  if(!tk.active){tk.active=true;tk.x=st.x;tk.z=st.z;tk.h=st.h}
+  const k=Math.min(1,dt*8),px=tk.x,pz=tk.z;tk.x+=(st.x-tk.x)*k;tk.z+=(st.z-tk.z)*k;let dh=st.h-tk.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));tk.h+=dh*k;tk.mode=st.chase?'chase':'patrol';
+  const moving=Math.hypot(tk.x-px,tk.z-pz)/Math.max(dt,1e-3)>0.3;
+  tk.g.position.set(tk.x,groundAt(tk.x,tk.z),tk.z);tk.g.rotation.y=tk.h+Math.PI;   // sim heading faces -z at 0; people models face +z
+  animPerson(tk.p,st.chase?4:moving?1:0,dt);
+  tk.p.armR.rotation.x=-1.25;   // flashlight held out in front
+  const on=nightF()>0.3;tk.spot.intensity=on?2.2:0;tk.beam.visible=on;
 }
 
 /* ---------- Madame Zeroni: she hunts anyone still out on the lake after 01:00 ---------- */
@@ -127,12 +129,12 @@ function updateNightSound(){
   if(!loops())return;const at=AC.currentTime;
   let pd=1e9,chase=false;for(const tk of trucks)if(tk.active){pd=Math.min(pd,Math.hypot(tk.x-P.x,tk.z-P.z));if(tk.mode==='chase')chase=true}
   const pv=Math.pow(clamp(1-pd/140,0,1),1.5),zv=ZER.active?Math.pow(clamp(1-Math.hypot(ZER.x-P.x,ZER.z-P.z)/90,0,1),1.3):0;
-  LOOP.siren.gain.setTargetAtTime(pv*0.1,at,0.25);LOOP.engine.gain.setTargetAtTime(pv*0.18,at,0.25);LOOP.lfo.frequency.setTargetAtTime(chase?2.6:0.45,at,0.3);
+  LOOP.siren.gain.setTargetAtTime(0,at,0.25);LOOP.engine.gain.setTargetAtTime(0,at,0.25);   // officers walk: no car engine or siren loopLOOP.lfo.frequency.setTargetAtTime(chase?2.6:0.45,at,0.3);
   LOOP.drone.gain.setTargetAtTime(zv*0.16,at,0.3);LOOP.whisper.gain.setTargetAtTime(zv*0.05,at,0.3);
 }
 
 function hunterToast(h,was){
-  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police are back out on the lake.':'Curfew patrol: stay out of the tower beams and police headlights. Use a gate to get inside.','bad',6000)}
+  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police patrol is still out there.':'Curfew. Officers with flashlights are walking the lake. Stay out of their lights and the tower beams, or get back through the gate.','bad',6000)}
   else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
@@ -147,7 +149,7 @@ function updateCurfew(dt){
   const half=t<NIGHT_SPLIT?'police':'zeroni';
   if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out)toast('Curfew. Lights out, campers.','',3500)}
   else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast('01:00. The police go home. Out on the lake, someone is asking for a ride up the mountain…','',5000)}}
-  const h=MONV.trucks.length?'police':MONV.zer?'zeroni':null,want=out?h:null;
+  const h=MONV.zer?'zeroni':MONV.trucks.length?'police':null,want=out?h:null;   // Zeroni first: the officers are out all night
   if(want!==CUR.hunter){const was=CUR.hunter;CUR.hunter=want;if(want)hunterToast(want,was);else if(was&&!out&&performance.now()-S.respawnAt>1500)toast(was==='zeroni'?'You made it inside the fence. Madame Zeroni can\'t cross it. She waits out there…':'You made it back inside the fence. The police won\'t follow you into camp.','good',4000)}
 }
 

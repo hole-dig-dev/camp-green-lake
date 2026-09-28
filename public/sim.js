@@ -15,7 +15,7 @@
     { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },
     { x: -39, z: 55, a: -0.79 }, { x: 29, z: 55, a: 0.79 },
   ];
-  const TOWER_RANGE = 52, TOWER_HALF_ANGLE = 0.26, COP_RANGE = 50, COP_HALF_ANGLE = 0.45;
+  const TOWER_RANGE = 52, TOWER_HALF_ANGLE = 0.26, COP_RANGE = 30, COP_HALF_ANGLE = 0.42;   // COP_*: an officer's flashlight cone
   function towerHeading(i, t) { return TOWERS[i].a + Math.sin(t / 2900 + i * 1.7) * 0.86; }
   function inBeam(x, z, ox, oz, h, range, halfAngle) {
     const dx = x - ox, dz = z - oz, d = Math.hypot(dx, dz);
@@ -46,44 +46,84 @@
 
   /* ---- monsters: police trucks until 01:00, then Madame Zeroni until dawn ---- */
   // M: {trucks:[], zer:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
+  /* ---- the night patrol: four police officers on foot with flashlights (JT, 2026-09-27: no more cop cars, which
+     only appeared around whoever was outside and "just teleport in") ----
+     At curfew they walk out of the main gate one by one, then patrol a loop around the camp just outside the watchtower
+     searchlights' reach, all night, whether or not anyone is outside. At dawn they walk back in through the gate.
+     You're spotted when an officer's flashlight cone or a tower beam is on you (crouched down in a deep hole hides
+     you); a tower sighting sends the nearest officer running over. Officers run a bit slower than a sprinting camper,
+     give up after COP_LOSE seconds without seeing you, and never cross the camp fence. The array keeps its old wire
+     name (M.trucks) so the server, logs and client plumbing stay the same; each entry is one officer. */
+  const COP_N = 4;                          // officers on patrol
+  const COP_GATE = { x: 0, z: 29 };         // where they come out of / go back into camp (just inside the main gate)
+  const COP_RING = { x: -5, z: 41, rx: 96, rz: 92 };   // patrol loop around camp, outside the towers' ~52 m beams
+  const COP_WALK = 1.7, COP_BRISK = 2.9;    // m/s strolling the loop / walking out to it or home at dawn
+  const COP_RUN = 6.3;                      // m/s chasing: faster than walking (4.3), slower than sprinting (7.2)
+  const COP_TURN = 3;                       // rad/s turn rate
+  const COP_LOSE = 5;                       // seconds without seeing you before an officer gives up
+  const COP_CATCH = 1.6;                    // m: close enough to cuff you (only while their light or a tower is on you)
+  const COP_STAGGER = 3;                    // s between officers walking out of the gate
+  const COP_WOBBLE = 9;                     // m of in-and-out drift around the loop, so they don't walk a perfect ellipse
+  function ringPoint(th) { return { x: COP_RING.x + Math.sin(th) * COP_RING.rx, z: clamp(COP_RING.z - Math.cos(th) * COP_RING.rz, -EDGE + 6, EDGE - 6) }; }
+  function spawnCops() {
+    return Array.from({ length: COP_N }, (_, i) => {
+      const th = i * Math.PI / 2 + Math.PI / 4;
+      return { x: COP_GATE.x + (i - 1.5) * 1.2, z: COP_GATE.z, h: 0, mode: 'out', th, dir: i % 2 ? -1 : 1, delay: i * COP_STAGGER, lost: 0, tgt: null, tx: 0, tz: 0, wob: i * 1.7 };
+    });
+  }
+  function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, COP_RANGE, COP_HALF_ANGLE); }
   function stepMonsters(M, players, t, dt, ev) {
     const night = t >= DAYMS, half = t < NIGHT_SPLIT ? 'police' : 'zeroni';
     const outs = players.filter(p => !inCamp(p.x, p.z));
-    const want = night && outs.length ? half : null;
-    if (want !== 'police') M.trucks = [];
-    if (want !== 'zeroni') M.zer = null;
-    if (want === 'police') {
-      if (!M.trucks.length) M.trucks = [0, 1].map(i => { const tk = { x: i ? -32 : 22, z: 8, h: 0, mode: 'patrol', lost: 0, tx: 0, tz: -40, tgt: null }; pickPatrol(tk, outs); return tk; });
-      for (const tk of M.trucks) stepTruck(tk, outs, t, dt, ev);
-    }
-    if (want === 'zeroni') {
+    if (night) { if (!M.trucks.length) M.trucks = spawnCops(); }
+    else for (const c of M.trucks) if (c.mode !== 'home') { c.mode = 'home'; c.tgt = null; c.delay = 0; }
+    for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
+    M.trucks = M.trucks.filter(c => !c.gone);
+    // Madame Zeroni: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
+    if (!(night && half === 'zeroni' && outs.length)) M.zer = null;
+    else {
       if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
       stepZeroni(M.zer, outs, t, dt, ev);
     }
   }
   function nearest(list, x, z) { let b = null, bd = 1e9; for (const p of list) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b; }
-  function pickPatrol(tk, outs) {
-    const c = nearest(outs.filter(p => !p.dn), tk.x, tk.z) || outs[0] || { x: 0, z: -40 };
-    for (let k = 0; k < 12; k++) { const x = clamp(c.x + (Math.random() - 0.5) * 170, -EDGE + 6, EDGE - 6), z = clamp(c.z + (Math.random() - 0.5) * 170, -EDGE + 6, EDGE - 6); if (!nearCampZone(x, z)) { tk.tx = x; tk.tz = z; return; } }
-    tk.tx = 0; tk.tz = -40;
-  }
-  function stepTruck(tk, outs, t, dt, ev) {
-    let seenP = null, seenD = 1e9;
-    for (const p of outs) {
-      if (p.dn) continue;
-      const d = Math.hypot(p.x - tk.x, p.z - tk.z);
-      const seen = !p.hd && (towerSees(p, t) || inBeam(p.x, p.z, tk.x, tk.z, tk.h + Math.PI, COP_RANGE, COP_HALF_ANGLE));
-      if (seen && d < seenD) { seenD = d; seenP = p; }
+  function stepCop(c, cops, outs, t, dt, ev) {
+    if (c.delay > 0) { c.delay -= dt; return; }   // waiting their turn at the gate
+    if (c.mode !== 'home') {
+      // what this officer sees: anyone their flashlight is on; otherwise a camper a tower has lit up, if this is the
+      // nearest officer to them (one officer answers each tower sighting, not all four)
+      let seenP = null, seenD = 1e9;
+      for (const p of outs) { if (p.dn || p.hd) continue; const d = Math.hypot(p.x - c.x, p.z - c.z); if (d < seenD && copLit(c, p)) { seenD = d; seenP = p; } }
+      if (!seenP) for (const p of outs) {
+        if (p.dn || p.hd || !towerSees(p, t)) continue;
+        let near = null, nd = 1e9; for (const o of cops) { if (o.mode === 'home' || o.delay > 0) continue; const d = Math.hypot(p.x - o.x, p.z - o.z); if (d < nd) { nd = d; near = o; } }
+        if (near === c) { seenP = p; seenD = nd; break; }
+      }
+      if (seenP) { if (c.mode !== 'chase' || c.tgt !== seenP.id) ev.push({ k: 'spot', id: seenP.id }); c.mode = 'chase'; c.tgt = seenP.id; c.tx = seenP.x; c.tz = seenP.z; c.lost = 0; }
+      else if (c.mode === 'chase' && (c.lost += dt) > COP_LOSE) { if (c.tgt != null) ev.push({ k: 'lost', id: c.tgt }); c.mode = 'return'; c.tgt = null; }
     }
-    if (seenP) { if (tk.mode !== 'chase' || tk.tgt !== seenP.id) ev.push({ k: 'spot', id: seenP.id }); tk.mode = 'chase'; tk.tgt = seenP.id; tk.tx = seenP.x; tk.tz = seenP.z; tk.lost = 0; }
-    else if (tk.mode === 'chase' && (tk.lost += dt) > 4) { if (tk.tgt != null) ev.push({ k: 'lost', id: tk.tgt }); tk.mode = 'patrol'; tk.tgt = null; pickPatrol(tk, outs); }
-    if (tk.mode === 'patrol' && Math.hypot(tk.tx - tk.x, tk.tz - tk.z) < 8) pickPatrol(tk, outs);
-    let dh = Math.atan2(-(tk.tx - tk.x), -(tk.tz - tk.z)) - tk.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); tk.h += clamp(dh, -1.6 * dt, 1.6 * dt);
-    const sp = tk.mode === 'chase' ? 7 : 5.2, nx = clamp(tk.x - Math.sin(tk.h) * sp * dt, -EDGE + 3, EDGE - 3), nz = clamp(tk.z - Math.cos(tk.h) * sp * dt, -EDGE + 3, EDGE - 3);
-    if (!inCamp(nx, nz)) { tk.x = nx; tk.z = nz; }
-    for (const p of outs) if (!p.dn && !p.hd && Math.hypot(p.x - tk.x, p.z - tk.z) < 2.8 &&
-      (towerSees(p, t) || inBeam(p.x, p.z, tk.x, tk.z, tk.h + Math.PI, COP_RANGE, COP_HALF_ANGLE)))
-      ev.push({ k: 'down', id: p.id, by: 'police' });
+    // where to walk, and how fast
+    let gx, gz, sp;
+    if (c.mode === 'chase') { gx = c.tx; gz = c.tz; sp = COP_RUN; }
+    else if (c.mode === 'home') { gx = COP_GATE.x; gz = COP_GATE.z; sp = COP_BRISK; }
+    else {
+      if (c.mode === 'patrol') c.th += c.dir * COP_WALK / ((COP_RING.rx + COP_RING.rz) / 2) * dt;
+      else if (c.mode === 'return') { let best = c.th, bd = 1e9; for (let k = 0; k < 24; k++) { const th = k / 24 * Math.PI * 2, q = ringPoint(th), d = Math.hypot(q.x - c.x, q.z - c.z); if (d < bd) { bd = d; best = th; } } c.th = best; c.mode = 'out'; }
+      c.wob += dt * 0.07;
+      const q = ringPoint(c.th), w = Math.sin(c.wob) * COP_WOBBLE, ox = Math.sin(c.th), oz = -Math.cos(c.th);
+      gx = q.x + ox * w; gz = q.z + oz * w; sp = c.mode === 'out' ? COP_BRISK : COP_WALK;
+      if (c.mode === 'out' && Math.hypot(gx - c.x, gz - c.z) < 3) c.mode = 'patrol';
+    }
+    const dx = gx - c.x, dz = gz - c.z, d = Math.hypot(dx, dz);
+    if (c.mode === 'home' && d < 1.2) { c.gone = true; return; }
+    if (d > 0.3) {
+      let dh = Math.atan2(-dx, -dz) - c.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); c.h += clamp(dh, -COP_TURN * dt, COP_TURN * dt);
+      const step = Math.min(d, sp * dt), nx = clamp(c.x - Math.sin(c.h) * step, -EDGE + 3, EDGE - 3), nz = clamp(c.z - Math.cos(c.h) * step, -EDGE + 3, EDGE - 3);
+      // officers only cross the fence line walking out at curfew or home at dawn (through the gate)
+      if (c.mode === 'out' || c.mode === 'home' || !inCamp(nx, nz)) { c.x = nx; c.z = nz; }
+      else if (!inCamp(nx, c.z)) c.x = nx; else if (!inCamp(c.x, nz)) c.z = nz;
+    }
+    if (c.mode !== 'home') for (const p of outs) { if (p.dn || p.hd) continue; const pd = Math.hypot(p.x - c.x, p.z - c.z); if (pd < COP_CATCH && (copLit(c, p) || towerSees(p, t))) ev.push({ k: 'down', id: p.id, by: 'police' }); }
   }
   // put Zeroni near player p: behind them, or (front=true) right in front of them
   function place(z, p, dist, front) {

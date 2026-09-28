@@ -21,7 +21,7 @@ test('tower spotting follows the rendered sweep, range, and hole cover', () => {
   assert.equal(SIM.towerSees({ ...on, hd: true }, policeTime), false);
 });
 
-test('a police car cannot catch a camper behind its headlights, even at touching distance', () => {
+test('a police officer cannot catch a camper behind their flashlight, even at touching distance', () => {
   const behind = camper(0, -98), M = policeAt(0, -99), ev = [];
   SIM.stepMonsters(M, [behind], policeTime, 0, ev);
   assert.deepEqual(ev, []);
