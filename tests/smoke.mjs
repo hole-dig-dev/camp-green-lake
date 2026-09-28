@@ -212,6 +212,7 @@ async function main() {
       c.P.x = 0; c.P.z = 26.5; c.P.y = c.groundAt(0, 26.5); c.P.vy = 0;
       for (let i = 0; i < 30; i++) updatePlayer(0.05);
       c.KEYS.w = false;
+      c.P.yaw = 0; c.P.fa = Math.PI; // face -z again: the dig check below looks for its hole 1.1 m to the north
       return { wallZ, gateZ: c.P.z };
     });
     assert(fence.wallZ < 27 && fence.gateZ > 30, 'fence must block a jump while its gate stays passable');
