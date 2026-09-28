@@ -154,7 +154,7 @@ function hbSound(level){
   if(!AC)return;
   if(!hbWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=520;
     const lfo=AC.createOscillator();lfo.frequency.value=0.6;const lg=AC.createGain();lg.gain.value=140;lfo.connect(lg).connect(f.frequency);lfo.start();   // gusting: the lowpass wobbles instead of holding steady
-    hbWind=AC.createGain();hbWind.gain.value=0;src.connect(f).connect(hbWind).connect(master);src.start()}
+    hbWind=AC.createGain();hbWind.gain.value=0;src.connect(f).connect(hbWind).connect(fxBus);src.start()}
   hbWind.gain.setTargetAtTime(level*0.5,AC.currentTime,0.25);
 }
 let hbWind=null;

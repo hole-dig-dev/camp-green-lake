@@ -138,7 +138,7 @@ function tbPlan(ci,cj,k){
 
 function tbSound(level){
   if(!AC)return;
-  if(!tbWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=0.6;tbWind=AC.createGain();tbWind.gain.value=0;src.connect(f).connect(tbWind).connect(master);src.start()}
+  if(!tbWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=0.6;tbWind=AC.createGain();tbWind.gain.value=0;src.connect(f).connect(tbWind).connect(fxBus);src.start()}
   tbWind.gain.setTargetAtTime(level*0.5,AC.currentTime,0.3);
 }
 

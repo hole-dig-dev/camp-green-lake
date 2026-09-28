@@ -149,6 +149,9 @@ async function main() {
     await page1.goto(`http://127.0.0.1:${port}/?r=1#dbg`, { waitUntil: 'load' });
     await waitFor(page1, () => !!window.__cgl, 15000, 'window.__cgl to appear');
     record('page loaded, window.__cgl present', true);
+    const clip = await fetch(`http://127.0.0.1:${port}/audio/shovel.mp3`);
+    assert(clip.ok && clip.headers.get('content-type') === 'audio/mpeg' && (await clip.arrayBuffer()).byteLength > 1000, 'CC0 audio file was not served');
+    record('CC0 sound files are served as audio', true);
 
     const titleOk = await page1.evaluate(() => {
       const title = document.querySelector('#title'), btn = document.querySelector('#startBtn');
@@ -164,6 +167,17 @@ async function main() {
     await page1.evaluate(() => document.querySelector('#startBtn').click());
     await waitFor(page1, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start');
     record('HUD shows after start', true);
+    await waitFor(page1, () => audioBuffers.has('shovel') && audioBuffers.has('step-sand-1'), 20000, 'CC0 clips to decode');
+    record('dig and footstep recordings decode in the browser', true);
+    const audioModes = await page1.evaluate(() => {
+      const initial = AUDIO_MODE.wind;
+      window.__cgl.runCommand('audio wind new');const recorded = AUDIO_MODE.wind;
+      window.__cgl.runCommand('audio old');const allOld = Object.values(AUDIO_MODE).every(v => v === 'original');
+      window.__cgl.runCommand('audio new');const allNew = Object.values(AUDIO_MODE).every(v => v === 'recorded');
+      window.__cgl.runCommand('audio wind old');return { initial, recorded, allOld, allNew, restored: AUDIO_MODE.wind };
+    });
+    assert(audioModes.initial === 'original' && audioModes.recorded === 'recorded' && audioModes.allOld && audioModes.allNew && audioModes.restored === 'original', 'audio A/B switch did not preserve the original wind or switch every category');
+    record('audio A/B switches wind and every changed sound category', true);
     await page1.waitForTimeout(400); // let the join round-trip (host flag, etc.) land
 
     // Poll for the effect rather than trusting a fixed wall-clock wait: under software-rendered
