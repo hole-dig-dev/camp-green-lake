@@ -31,7 +31,17 @@ function freePort() {
     srv.listen(0, '127.0.0.1', () => { const { port } = srv.address(); srv.close(() => resolve(port)); });
   });
 }
-const LAUNCH_ARGS = ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
+// Use the real GPU (minipc's Radeon 760M via Vulkan) whenever a render node is usable; software GL
+// (swiftshader) pins 6-7 CPU cores per run. Falls back to swiftshader on GPU-less CI, or force it
+// with SMOKE_GL=swiftshader.
+function gpuUsable() {
+  try { fs.accessSync('/dev/dri/renderD128', fs.constants.R_OK | fs.constants.W_OK); return true; } catch { return false; }
+}
+const USE_GPU = process.env.SMOKE_GL !== 'swiftshader' && gpuUsable();
+const LAUNCH_ARGS = USE_GPU
+  ? ['--use-gl=angle', '--use-angle=vulkan', '--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan',
+     '--ignore-gpu-blocklist', '--enable-gpu', '--enable-webgl']
+  : ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
 
 // Console/page noise that's expected from a software GL renderer in a headless CI box and isn't a
 // real bug. Anything else logged as an error, or any uncaught page error, fails the run.
@@ -337,6 +347,7 @@ async function main() {
       throw new Error('page/console errors were reported:\n' + errors.map(e => '  - ' + e).join('\n'));
     }
   } catch (err) {
+    if (errors.length) console.log('page errors so far:\n  ' + errors.join('\n  '));
     try {
       const pages = browser.contexts().flatMap(c => c.pages());
       if (pages[0]) {
