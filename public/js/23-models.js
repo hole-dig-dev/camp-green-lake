@@ -155,3 +155,16 @@ TENTS.forEach((t,ti)=>{
   }
   Promise.all(['RockA','RockB','RockC'].map((n,i)=>instanceModel(n,byV[i]))).then(()=>TERRAIN_ROCKS.forEach(r=>hideProc(r.m))).catch(()=>{});
 }
+
+/* ---- dug-up finds: Blender models for the item that pops out of your hole (40-fx.js itemMesh). Real size is tiny
+   (the KB tube is 8.5 cm), so each is scaled up to read at game distance, like the old stand-ins. ---- */
+const ITEM_MODELS={};                 // LOOT type -> a ready Group to clone
+const ITEM_MODEL_LIST={kb:['KBTube',5]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
+for(const type in ITEM_MODEL_LIST){
+  const[name,scale]=ITEM_MODEL_LIST[type];
+  loadModel(name).then(({meshes})=>{
+    const g=new T.Group();
+    for(const p of meshes){const m=new T.Mesh(p.geometry,p.material);m.applyMatrix4(p.matrix);m.castShadow=true;g.add(m)}
+    g.scale.setScalar(scale);ITEM_MODELS[type]=g;
+  }).catch(()=>{});
+}
