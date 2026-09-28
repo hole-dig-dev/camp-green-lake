@@ -16,87 +16,109 @@ function sign(text,x,z,ry,w,h){
   for(const s of[-1,1]){const p=cyl(0.06,0.06,1.8+h,5,0x6b4f33);p.position.set(s*(w/2-0.1),(1.8+h)/2,-0.06);g.add(p)}
   g.position.set(x,baseH(x,z),z);g.rotation.y=ry;scene.add(g);return g;
 }
-/* Tents: bigger than before, and each one has an interior you can walk into (see "tent interiors" below).
-   D Tent (the middle one) is where the crew (X-Ray & co) hang out, and where the blackjack table lives now. */
+/* Canvas dorms keep their small outdoor footprint, while the rooms below are broad, instanced spaces.
+   Only the occupied room is drawn, so neighboring rooms may overlap underground without showing through. */
 const TENTS=[
-  {x:-16,z:47,name:'A Tent',hw:3.0,hd:3.6},
-  {x:-8, z:47,name:'B Tent',hw:3.0,hd:3.6},
-  {x:0,  z:47,name:'D Tent',hw:3.6,hd:5.2,crew:true},
-  {x:8,  z:47,name:'C Tent',hw:3.0,hd:3.6},
+  {x:-16,z:47,name:'A Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:-8,z:47,name:'B Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:0,z:47,name:'D Tent',hw:3.6,hd:5.2,roomW:9,roomD:8.5,crew:true},
+  {x:8,z:47,name:'C Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:-30,z:45,name:"Warden's House",hw:4,hd:3,roomW:8,roomD:8,house:true},
 ];
 const D_TENT=TENTS.find(t=>t.crew);
 function tent(t){
-  const g=new T.Group();
-  // The canvas is stretched to cover the tent's real footprint (t.hw x t.hd, the same size as the room inside),
-  // so what you see matches what you bump into. The door flap faces the middle of camp (-z), toward the lake.
-  const tg=new T.CylinderGeometry(1.7,1.7,4.2,3);tg.rotateX(-Math.PI/2);const m=new T.Mesh(tg,M(0x8d8f69));
-  m.scale.set(t.hw/1.47,t.crew?1.6:1.35,t.hd*2/4.2);m.position.y=0.85*m.scale.y;m.castShadow=true;m.receiveShadow=true;g.add(m);
-  const flap=box(1.1,1.7,0.05,0x5a5a3e);flap.position.set(0,0.85,-t.hd-0.03);g.add(flap);
+  if(t.house)return;
+  const g=new T.Group(),canvas=0x777f65,edge=0x444b39;
+  const tg=new T.CylinderGeometry(1.7,1.7,4.2,3);tg.rotateX(-Math.PI/2);
+  const m=new T.Mesh(tg,M(canvas));m.scale.set(t.hw/1.47,t.crew?1.75:1.5,t.hd*2/4.2);m.position.y=0.85*m.scale.y;m.castShadow=true;m.receiveShadow=true;g.add(m);
+  // The broad dark opening, ridge and guy ropes make the tent readable from either gate.
+  const flap=box(1.7,1.85,0.08,edge);flap.position.set(0,0.95,-t.hd-0.055);g.add(flap);
+  const opening=box(1.25,1.58,0.09,0x25251d);opening.position.set(0,0.83,-t.hd-0.11);g.add(opening);
+  const stripe=box(t.hw*1.85,0.11,0.12,0xc9b588);stripe.position.set(0,1.93,-t.hd*0.15);g.add(stripe);
+  for(const side of[-1,1]){
+    const pole=cyl(0.055,0.07,2.1,5,0x5d4a31);pole.position.set(side*(t.hw+0.65),1.05,-t.hd-0.65);g.add(pole);
+    const rope=cyl(0.025,0.025,Math.hypot(t.hw+0.65,2.1),4,0xb29c72);rope.position.set(side*(t.hw+0.65)/2,1.65,-t.hd-0.35);rope.rotation.z=side*0.65;g.add(rope);
+    for(let i=0;i<2;i++){const sack=box(0.65,0.25,0.42,0xa18b63);sack.position.set(side*(t.hw-0.3),0.12,-t.hd+0.5+i*0.5);g.add(sack)}
+  }
   g.position.set(t.x,baseH(t.x,t.z),t.z);scene.add(g);
-  solid(t.x,t.z,t.hw*2,t.hd*2);   // the outdoor footprint matches the interior room, so nobody can walk "through" the tent
+  solid(t.x,t.z,t.hw*2,t.hd*2);
 }
 TENTS.forEach(tent);
 
-/* ---------- tent interiors ----------
-   Each tent has a small room built straight down, under the tent itself: same x/z as the tent outside, just at
-   TENT_FLOOR_Y (comfortably below the terrain, and inside the -5..10 range the network clamps player Y to).
-   Because the room shares x/z with the tent, and the tent's own outdoor collider keeps everyone a couple of metres
-   away from that x/z, nothing outdoors can ever wander into the same spot the room occupies underground: it's
-   effectively "somewhere the outside world can't reach" without needing a whole separate patch of the map. It
-   also means inCamp()/nearCampZone() need no changes at all: your x/z never leaves the camp bounding box, so the
-   police, Madame Zeroni, lizards and the quota walk-back timer already treat you as "in camp" while you're inside. */
-const TENT_FLOOR_Y=-4;         // safely underground, and inside the network's -5..10 clamp on player/remote Y
-const BUNKS=[];                // {tent, x, z, high} - a sleeping spot; "high" ones are the top bunk of a bunk-bed
-const TENT_COLLIDERS=TENTS.map(()=>[]);   // per-tent list of {x0,x1,z0,z1} for furniture, checked only while inside
+/* ---------- broad walkable interiors ---------- */
+const TENT_FLOOR_Y=-4; // Network positions are clamped to -5..10.
+const BUNKS=[];
+const TENT_COLLIDERS=TENTS.map(()=>[]);
+const ROOM_MESHES=[];
+const ROOM_LIGHTS=[];
 function tentSolid(list,x,z,w,d){list.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2})}
-{
-  const parts=[];
-  const wallC=0x726b48,floorC=0x4a3f2e,roofC=0x54503a,frameC=0x5a4632,mattC=0xb0455a,pillowC=0xe8e0cc;
-  const bunk=(list,ti,x,z,doubledecker)=>{
-    parts.push([1.1,0.5,1.9,frameC,x,TENT_FLOOR_Y+0.25,z]);
-    parts.push([0.9,0.12,0.4,pillowC,x,TENT_FLOOR_Y+0.56,z-0.75]);
-    tentSolid(list,x,z,1.2,2.0);
-    BUNKS.push({tent:ti,x,z,high:false});
-    if(doubledecker){
-      for(const dz2 of[-0.85,0.85]){parts.push([0.08,1.7,0.08,frameC,x-0.45,TENT_FLOOR_Y+0.85,z+dz2]);parts.push([0.08,1.7,0.08,frameC,x+0.45,TENT_FLOOR_Y+0.85,z+dz2])}
-      parts.push([1.1,0.08,1.9,frameC,x,TENT_FLOOR_Y+1.4,z]);
-      parts.push([0.9,0.32,1.9,mattC,x,TENT_FLOOR_Y+1.62,z]);
-      parts.push([0.9,0.1,0.4,pillowC,x,TENT_FLOOR_Y+1.84,z-0.75]);
-      BUNKS.push({tent:ti,x,z,high:true});
+TENTS.forEach((t,ti)=>{
+  const parts=[],list=TENT_COLLIDERS[ti],Y=TENT_FLOOR_Y;
+  const wall=t.house?0x7b604a:0x88785b,floor=t.house?0x674b33:0x62563e,roof=t.house?0x604532:0x5d5948;
+  const frame=0x4b392b,pillow=0xe1d7b8,blanket=0x9f694f,H=t.house?3.4:3.2;
+  const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]);
+  add(t.roomW*2,0.2,t.roomD*2,floor,t.x,Y-0.1,t.z);
+  add(t.roomW*2,0.18,t.roomD*2,roof,t.x,Y+H+0.1,t.z);
+  add(t.roomW*2,H,0.18,wall,t.x,Y+H/2,t.z+t.roomD);
+  add(0.18,H,t.roomD*2,wall,t.x-t.roomW,Y+H/2,t.z);
+  add(0.18,H,t.roomD*2,wall,t.x+t.roomW,Y+H/2,t.z);
+  const gap=1.3;
+  add(t.roomW-gap,H,0.18,wall,t.x-(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
+  add(t.roomW-gap,H,0.18,wall,t.x+(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
+  // Timber beams, floor stripes and high canvas panels give long rooms a clear scale.
+  for(let z=t.z-t.roomD+2;z<t.z+t.roomD;z+=3){
+    add(t.roomW*2,0.1,0.14,frame,t.x,Y+H-0.18,z);
+    add(t.roomW*2-0.5,0.025,0.065,0x91744d,t.x,Y+0.02,z);
+  }
+  for(const side of[-1,1])for(let z=t.z-t.roomD+3;z<t.z+t.roomD-1;z+=4){
+    add(0.2,1.1,1.6,t.house?0x35424b:0xb3a681,t.x+side*(t.roomW-0.14),Y+1.9,z);
+    add(0.26,0.11,1.8,frame,t.x+side*(t.roomW-0.25),Y+1.3,z);
+  }
+  add(0.38,0.2,0.38,0xffd89b,t.x,Y+H-0.33,t.z);
+  const bunk=(x,z,double)=>{
+    add(1.3,0.32,2.35,frame,x,Y+0.28,z);
+    add(1.18,0.16,2.08,blanket,x,Y+0.48,z+0.1);
+    add(1.0,0.12,0.42,pillow,x,Y+0.62,z-0.8);
+    tentSolid(list,x,z,1.4,2.45);BUNKS.push({tent:ti,x,z,high:false});
+    if(double){
+      for(const dx of[-0.56,0.56])for(const dz of[-1.03,1.03])add(0.09,1.55,0.09,frame,x+dx,Y+1.03,z+dz);
+      add(1.3,0.16,2.35,frame,x,Y+1.47,z);add(1.18,0.16,2.08,blanket,x,Y+1.64,z+0.1);
+      add(1.0,0.12,0.42,pillow,x,Y+1.78,z-0.8);BUNKS.push({tent:ti,x,z,high:true});
     }
   };
-  TENTS.forEach((t,ti)=>{
-    const wallH=t.crew?3.0:2.6,list=TENT_COLLIDERS[ti];
-    parts.push([t.hw*2,0.2,t.hd*2,floorC,t.x,TENT_FLOOR_Y-0.1,t.z]);
-    parts.push([t.hw*2,0.2,t.hd*2,roofC,t.x,TENT_FLOOR_Y+wallH+0.1,t.z]);
-    parts.push([t.hw*2,wallH,0.16,wallC,t.x,TENT_FLOOR_Y+wallH/2,t.z-t.hd]);           // back wall
-    parts.push([0.16,wallH,t.hd*2,wallC,t.x-t.hw,TENT_FLOOR_Y+wallH/2,t.z]);           // left wall
-    parts.push([0.16,wallH,t.hd*2,wallC,t.x+t.hw,TENT_FLOOR_Y+wallH/2,t.z]);           // right wall
-    const gap=0.95;   // doorway gap in the south (door-side) wall, under the flap
-    parts.push([t.hw-gap,wallH,0.16,wallC,t.x-(t.hw+gap)/2,TENT_FLOOR_Y+wallH/2,t.z+t.hd]);
-    parts.push([t.hw-gap,wallH,0.16,wallC,t.x+(t.hw+gap)/2,TENT_FLOOR_Y+wallH/2,t.z+t.hd]);
+  if(t.house){
+    // The Warden's office has a usable desk interaction and room to circle it.
+    const dx=t.x+2,dz=t.z+1;
+    add(3.1,0.16,1.7,0x3e291e,dx,Y+0.83,dz);
+    for(const sx of[-1.3,1.3])for(const sz of[-0.65,0.65])add(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
+    add(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
+    add(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
+    tentSolid(list,dx,dz,3.2,1.8);t.desk={x:dx,z:dz-1.8};
+    add(3.2,1.6,0.12,0x322b25,t.x-3.2,Y+1.6,t.z+4);
+    add(3.0,1.1,0.12,0xbca16c,t.x-3.2,Y+1.6,t.z+3.9);
+    add(1.6,1.6,0.45,0x483526,t.x-5.4,Y+0.8,t.z-2);
+    tentSolid(list,t.x-5.4,t.z-2,1.8,1.8);
+  }else{
     if(t.crew){
-      // three bunk-beds (6 sleeping spots) down the left wall for the D Tent crew
-      for(let i=0;i<3;i++)bunk(list,ti,t.x-t.hw+1.0,t.z-t.hd+1.5+i*1.9,true);
-      // the blackjack table, moved in from outside, with four chairs
-      const tx=t.x+t.hw-1.9,tz=t.z-0.6;
-      parts.push([1.5,0.08,1.5,0x6b4f33,tx,TENT_FLOOR_Y+0.75,tz]);
-      for(const[dx,dz]of[[-0.65,-0.65],[0.65,-0.65],[-0.65,0.65],[0.65,0.65]])parts.push([0.08,0.75,0.08,frameC,tx+dx,TENT_FLOOR_Y+0.375,tz+dz]);
-      for(const[dx,dz]of[[-1.05,0],[1.05,0],[0,-1.05],[0,1.05]]){
-        parts.push([0.5,0.42,0.5,0x7a5a3a,tx+dx,TENT_FLOOR_Y+0.21,tz+dz]);
-        parts.push([0.5,0.5,0.08,0x7a5a3a,tx+dx*1.35,TENT_FLOOR_Y+0.65,tz+dz*1.35]);
-      }
-      tentSolid(list,tx,tz,1.8,1.8);
-      D_TENT.table={x:tx,z:tz-1.35};      // the 'cards' interaction spot, where you sit down
-      D_TENT.dealerSeat={x:tx,z:tz+1.35}; // where X-Ray sits when he's dealing
+      for(let i=0;i<3;i++)bunk(t.x-t.roomW+1.5,t.z-t.roomD+3+i*3.0,true);
+      const dx=t.x+3.3,dz=t.z+0.5;
+      add(2.3,0.12,2.3,0x65452d,dx,Y+0.8,dz);
+      for(const sx of[-0.95,0.95])for(const sz of[-0.95,0.95])add(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
+      for(const [sx,sz] of [[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]])add(0.65,0.46,0.65,0x765339,dx+sx,Y+0.23,dz+sz);
+      add(0.8,0.03,0.5,0xb99c70,dx,Y+0.88,dz);
+      tentSolid(list,dx,dz,2.4,2.4);
+      D_TENT.table={x:dx,z:dz-1.75};D_TENT.dealerSeat={x:dx,z:dz+1.75};
     }else{
-      // a plain cot on either side for two campers to sleep in
-      bunk(list,ti,t.x-1.3,t.z-t.hd+1.2,false);
-      bunk(list,ti,t.x+1.3,t.z-t.hd+1.2,false);
+      for(const side of[-1,1])for(let i=0;i<2;i++)bunk(t.x+side*(t.roomW-1.55),t.z-t.roomD+3+i*3.4,false);
     }
-  });
-  const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;scene.add(m);
-}
+    // Supply chest and clear center aisle; both are visible from the door.
+    add(1.45,0.8,0.9,0x766243,t.x+t.roomW-1.25,Y+0.4,t.z+t.roomD-1.5);
+    tentSolid(list,t.x+t.roomW-1.25,t.z+t.roomD-1.5,1.5,1);
+  }
+  const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;m.visible=false;scene.add(m);ROOM_MESHES.push(m);
+  const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,2.8,t.crew?27:22,1);
+  light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
+});
 function cabin(x,z,w,d,h,wall,roof){
   const g=new T.Group();const b=box(w,h,d,wall);b.position.y=h/2;g.add(b);
   const R=(d+0.8)/1.732;const rg=new T.CylinderGeometry(R,R,w+0.5,3);rg.rotateX(-Math.PI/2);rg.rotateY(Math.PI/2);
@@ -109,6 +131,18 @@ cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
 sign('WRECK\nROOM',20.2,41.4,Math.PI,2.6,1.1);
 const wardenCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);
+{
+  const g=wardenCabin;
+  for(const x of[-3.45,3.45]){
+    const pillar=box(0.23,2.8,0.23,0x4a3325);pillar.position.set(x,1.4,-4.05);g.add(pillar);
+    const lantern=box(0.32,0.44,0.28,0xffd48a);lantern.position.set(x*0.58,2.25,-3.12);g.add(lantern);
+  }
+  const awning=box(8.8,0.22,2.5,0x493427);awning.position.set(0,2.9,-4);g.add(awning);
+  const step=box(3,0.17,0.6,0x877257);step.position.set(0,0.09,-4.35);g.add(step);
+  const chimney=box(0.9,2.15,0.9,0x6d5948);chimney.position.set(2.45,4.25,0.9);g.add(chimney);
+  const plaque=new T.Mesh(new T.PlaneGeometry(3.2,0.58),new T.MeshStandardMaterial({map:signTex('THE WARDEN',512,96,'#d9c396','#302016',39),roughness:1}));
+  plaque.position.set(0,2.72,-3.1);plaque.rotation.y=Math.PI;g.add(plaque);
+}
 function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a3f28);tr.position.y=1.7*s;g.add(tr);
   [[0,4.2,0,2.4],[1.4,3.7,0.6,1.8],[-1.3,3.8,-0.4,1.9],[0.2,5.1,-0.8,1.6]].forEach(([a,b,c,r])=>{const l=new T.Mesh(new T.IcosahedronGeometry(r*s,0),M(0x5f7a3a));l.position.set(a*s,b*s,c*s);l.castShadow=true;g.add(l)});
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,0.9*s,0.9*s)}
@@ -130,43 +164,57 @@ oak(-36.5,38.5,1.1);oak(-24,38,1);
 sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
 sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
 
-/* ---------- fenced compound ----------
-   A real perimeter fence (posts + two rails) all the way around camp, with a gate gap in the south wall (the lake
-   side, where the CAMP GREEN LAKE sign stands) so there's a proper way in. Purely a look: it's dressing on the same
-   inCamp()/nearCampZone() boundary the game already used (nothing solid, so bots and the existing curfew logic
-   don't need to route around it), plus a water tower, light poles, crates and a second porch to sell the place as
-   a real base. Everything box-shaped is one merged mesh (see mergeBoxes above); the water tower is a few plain
-   cylinders since mergeBoxes only does boxes. */
+/* ---------- secured perimeter ----------
+   Dense steel panels and a solid collision line share the same gate gaps. A player can jump, but the
+   collision line still stops them; the open gate is the only crossing. */
 const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
+const EAST_GATE_Z0=36,EAST_GATE_Z1=42;
 {
-  const parts=[];
-  const POST=0x6b4f33,RAIL=0x7a5a3a,LAMP=0xffdf8a;
-  const post=(x,z,h,r)=>parts.push([r||0.22,h||1.5,r||0.22,POST,x,baseH(x,z)+(h||1.5)/2,z]);
-  const railX=(x0,x1,z,y)=>parts.push([x1-x0,0.09,0.09,RAIL,(x0+x1)/2,(baseH(x0,z)+baseH(x1,z))/2+y,z]);
-  const railZ=(z0,z1,x,y)=>parts.push([0.09,0.09,z1-z0,RAIL,x,(baseH(x,z0)+baseH(x,z1))/2+y,(z0+z1)/2]);
-  for(let x=FENCE_X0;x<=FENCE_X1;x+=2.5){if(x<GATE_X0-1||x>GATE_X1+1)post(x,FENCE_Z0);post(x,FENCE_Z1)}
+  const parts=[],steel=0x4d5a58,mesh=0x75817a,concrete=0x91846e,wire=0xb2a99a;
+  const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]);
+  const post=(x,z)=>{const y=baseH(x,z);add(0.24,3.5,0.24,steel,x,y+1.75,z);add(0.42,0.22,0.42,concrete,x,y+0.11,z);add(0.34,0.12,0.34,wire,x,y+3.57,z)};
+  const spanX=(x0,x1,z)=>{
+    const mid=(x0+x1)/2,y=baseH(mid,z),w=x1-x0;
+    add(w,2.45,0.055,mesh,mid,y+1.65,z);
+    for(const sy of[0.45,2.95,3.35])add(w,0.075,0.09,steel,mid,y+sy,z);
+    for(let x=x0+0.42;x<x1;x+=0.55)add(0.035,2.5,0.075,wire,x,y+1.65,z);
+    solid(mid,z,w,0.22);
+  };
+  const spanZ=(z0,z1,x)=>{
+    const mid=(z0+z1)/2,y=baseH(x,mid),d=z1-z0;
+    add(0.055,2.45,d,mesh,x,y+1.65,mid);
+    for(const sy of[0.45,2.95,3.35])add(0.09,0.075,d,steel,x,y+sy,mid);
+    for(let z=z0+0.42;z<z1;z+=0.55)add(0.075,2.5,0.035,wire,x,y+1.65,z);
+    solid(x,mid,0.22,d);
+  };
   for(let x=FENCE_X0;x<FENCE_X1;x+=2.5){
-    const x1=Math.min(x+2.5,FENCE_X1);
-    if(x1<=GATE_X0||x>=GATE_X1){railX(x,x1,FENCE_Z0,0.45);railX(x,x1,FENCE_Z0,0.95)}
-    railX(x,x1,FENCE_Z1,0.45);railX(x,x1,FENCE_Z1,0.95);
+    const x1=Math.min(x+2.5,FENCE_X1);post(x,FENCE_Z0);post(x,FENCE_Z1);
+    if(x1<=GATE_X0||x>=GATE_X1)spanX(x,x1,FENCE_Z0);
+    spanX(x,x1,FENCE_Z1);
   }
-  for(let z=FENCE_Z0;z<=FENCE_Z1;z+=2.5){post(FENCE_X0,z);post(FENCE_X1,z)}
-  for(let z=FENCE_Z0;z<FENCE_Z1;z+=2.5){
-    const z1=Math.min(z+2.5,FENCE_Z1);
-    railZ(z,z1,FENCE_X0,0.45);railZ(z,z1,FENCE_X0,0.95);railZ(z,z1,FENCE_X1,0.45);railZ(z,z1,FENCE_X1,0.95);
+  post(FENCE_X1,FENCE_Z0);post(FENCE_X1,FENCE_Z1);
+  for(let z=FENCE_Z0;z<FENCE_Z1;z+=2.4){
+    const z1=Math.min(z+2.4,FENCE_Z1);post(FENCE_X0,z);post(FENCE_X1,z);
+    spanZ(z,z1,FENCE_X0);
+    if(z1<=EAST_GATE_Z0||z>=EAST_GATE_Z1)spanZ(z,z1,FENCE_X1);
   }
-  for(const gx of[GATE_X0,GATE_X1])post(gx,FENCE_Z0,2.2,0.3);   // taller, thicker posts framing the gate
-  // a second porch, at the Wreck Room this time
-  parts.push([5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44]);
-  // crates stacked by the water truck
-  parts.push([0.8,0.8,0.8,0x8a6a3f,8,baseH(8,38)+0.4,38.4],[0.8,0.8,0.8,0x8a6a3f,8.9,baseH(8.9,38.3)+0.4,38.3],[0.8,0.8,0.8,0x9a7a4a,8.3,baseH(8.3,38.1)+1.2,38.1]);
-  // light poles around the compound so it reads as lived-in after dark
-  for(const[lx,lz]of[[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
-    parts.push([0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz]);
-    parts.push([0.4,0.22,0.4,LAMP,lx,baseH(lx,lz)+2.55,lz]);
+  for(const x of[GATE_X0,GATE_X1]){post(x,FENCE_Z0);add(0.3,4.2,0.3,steel,x,baseH(x,FENCE_Z0)+2.1,FENCE_Z0)}
+  add(GATE_X1-GATE_X0,0.42,0.36,steel,0,baseH(0,FENCE_Z0)+4.1,FENCE_Z0);
+  for(const z of[EAST_GATE_Z0,EAST_GATE_Z1])post(FENCE_X1,z);
+  add(0.35,0.34,EAST_GATE_Z1-EAST_GATE_Z0,steel,FENCE_X1,baseH(FENCE_X1,39)+4.0,39);
+  // Camp paths visually lead to the two openings.
+  add(8,0.025,7,0xb5a079,0,baseH(0,27)+0.02,27);
+  add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
+  add(5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44);
+  for(const [lx,lz] of [[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
+    add(0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz);
+    add(0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz);
   }
   const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
 }
+sign('MAIN GATE\nLAKE ACCESS',0,25.2,Math.PI,4.2,1.25);
+sign('SERVICE GATE',27.3,39,Math.PI/2,2.5,0.8);
+
 {
   // water tower: four legs, a tank and a cone roof
   const wx0=25,wz0=49,h0=baseH(wx0,wz0);
@@ -175,4 +223,3 @@ const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
   const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(wx0,h0+5.4+3.2+0.7,wz0);scene.add(roof);
   solid(wx0,wz0,2.8,2.8);
 }
-

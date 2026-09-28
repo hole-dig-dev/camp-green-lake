@@ -5,14 +5,18 @@ function inTent(){return S.tent!=null}
 function enterTent(ti){
   if(S.ko||uiOpen()||inTent())return;
   const t=TENTS[ti];S.tent=ti;S.tentBack={x:t.x,z:t.z-t.hd-1.3};S.inBed=null;
-  P.x=t.x;P.z=t.z+t.hd-1.6;P.yaw=0;P.fa=Math.PI;P.y=TENT_FLOOR_Y;   // just inside the door (E again walks back out), facing into the room
+  ROOM_MESHES[ti].visible=true;
+  ROOM_LIGHTS[ti].visible=true;
+  P.x=t.x;P.z=t.z-t.roomD+2.6;P.yaw=Math.PI;P.fa=0;P.y=TENT_FLOOR_Y; // enter at the marked south door, facing the room
   P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
   logEv('tentEnter',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
-  toast(`You duck inside ${t.name}.${t.crew?' The cards table is against the far wall.':''} Press E to go back out.`,'',3200);
+  toast(`You enter ${t.name}.${t.crew?' The cards table is on the right.':''} Press E at the door to leave.`,'',3200);
 }
 function exitTent(){
   if(!inTent())return;
   const ti=S.tent,t=TENTS[S.tent],wasBed=S.inBed!=null;S.tent=null;S.inBed=null;digHeld=false;
+  ROOM_MESHES[ti].visible=false;
+  ROOM_LIGHTS[ti].visible=false;
   P.x=S.tentBack.x;P.z=S.tentBack.z;P.y=groundAt(P.x,P.z);P.vy=0;
   if(wasBed&&online())wsSend({t:'sleep',on:false});
   logEv('tentExit',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
@@ -254,7 +258,7 @@ function knockOut(title,text){
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
+function respawn(){if(inTent())exitTent();S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){
@@ -265,4 +269,3 @@ function triggerWin(who,mine){
   setTimeout(()=>{$('#win').hidden=false;releaseLock()},1600);
 }
 $('#winClose').onclick=()=>{$('#win').hidden=true};
-

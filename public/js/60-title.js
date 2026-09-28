@@ -8,7 +8,7 @@ function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').tr
 const SAVE_KEYS=['seeds','water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt'];
 function saveSession(newDay){
   if(!S.started)return;
-  try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
+  try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch,room:S.tent}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
     sessionStorage.setItem('cgl-session',JSON.stringify(o))}catch(e){}
 }
 setInterval(saveSession,2000);addEventListener('pagehide',()=>saveSession());
@@ -22,6 +22,11 @@ function startGame(resume){
     S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
     const p=resume.P||{};P.x=num(p.x,-HALF+3,HALF-3,0);P.z=num(p.z,-HALF+3,HALF-3,39);P.y=groundAt(P.x,P.z);P.yaw=num(p.yaw,-100,100,0);P.pitch=num(p.pitch,-0.15,1.25,0.32);
+    if(Number.isInteger(p.room)&&TENTS[p.room]){
+      const t=TENTS[p.room];S.tent=p.room;S.tentBack={x:t.x,z:t.z-t.hd-1.3};
+      P.x=clamp(P.x,t.x-t.roomW+0.5,t.x+t.roomW-0.5);P.z=clamp(P.z,t.z-t.roomD+0.5,t.z+t.roomD-0.5);P.y=TENT_FLOOR_Y;
+      ROOM_MESHES[p.room].visible=true;ROOM_LIGHTS[p.room].visible=true;
+    }
   }
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
@@ -55,4 +60,3 @@ addEventListener('pointerdown',()=>{if(AC&&AC.state==='suspended')AC.resume()});
 // Belt-and-suspenders: if the socket never tells us whether a password is needed (server down, odd network),
 // don't leave the Start button, or a pending session resume, stuck waiting forever.
 setTimeout(()=>{startBtn.disabled=false;maybeResume()},4200);
-

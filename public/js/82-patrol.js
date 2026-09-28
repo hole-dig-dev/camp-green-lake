@@ -39,8 +39,8 @@ function makeTruck(){
   const red=new T.MeshBasicMaterial({color:0xff2020}),blue=new T.MeshBasicMaterial({color:0x2050ff});
   const lr=new T.Mesh(new T.BoxGeometry(0.7,0.18,0.3),red);lr.position.set(-0.45,2.5,0.3);const lb=new T.Mesh(new T.BoxGeometry(0.7,0.18,0.3),blue);lb.position.set(0.45,2.5,0.3);g.add(lr,lb);
   const hl=new T.MeshBasicMaterial({color:0xfff6d8});for(const x of[-0.75,0.75]){const h=new T.Mesh(new T.BoxGeometry(0.4,0.2,0.05),hl);h.position.set(x,1.05,-2.52);g.add(h)}
-  const spot=new T.SpotLight(0xfff0cc,0,80,0.45,0.5,1);spot.position.set(0,2.6,-1.5);spot.target.position.set(0,-3,-30);g.add(spot,spot.target);
-  const bg=new T.ConeGeometry(Math.tan(0.45)*45,45,18,1,true);bg.translate(0,-22.5,0);bg.rotateX(Math.PI/2-0.07);
+  const spot=new T.SpotLight(0xfff0cc,0,SIM.COP_RANGE,SIM.COP_HALF_ANGLE,0.5,1);spot.position.set(0,2.6,-1.5);spot.target.position.set(0,-3,-30);g.add(spot,spot.target);
+  const bg=new T.ConeGeometry(Math.tan(SIM.COP_HALF_ANGLE)*SIM.COP_RANGE,SIM.COP_RANGE,18,1,true);bg.translate(0,-SIM.COP_RANGE/2,0);bg.rotateX(Math.PI/2-0.07);
   const beam=new T.Mesh(bg,new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.05,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));beam.position.copy(spot.position);g.add(beam);
   g.position.y=-200;scene.add(g);
   return{g,red,blue,spot,x:0,z:0,h:0,tx:0,tz:0,mode:'patrol',lost:0,active:false};
@@ -132,8 +132,8 @@ function updateNightSound(){
 }
 
 function hunterToast(h,was){
-  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police are back out on the lake.':'You are out on the lake after curfew. The police are coming. Get back to camp, or hide.','bad',6000)}
-  else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
+  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police are back out on the lake.':'Curfew patrol: stay out of the tower beams and police headlights. Use a gate to get inside.','bad',6000)}
+  else if(h==='zeroni'){zeroniSting();toast(was?'The police leave, but the towers keep sweeping. Madame Zeroni hunts anyone caught in their light.':'After 01:00 the towers still sweep. Keep out of their beams: Madame Zeroni follows the light.','bad',6500)}
 }
 function updateCurfew(dt){
   const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);
@@ -198,4 +198,3 @@ function monEvent(e){
 function online(){return!!(net.ws&&net.ws.readyState===1)}
 function othersOnline(){return online()&&remotes.size>0}
 function dropLabel(L){L.el.remove();const i=labeled.indexOf(L);if(i>=0)labeled.splice(i,1)}
-
