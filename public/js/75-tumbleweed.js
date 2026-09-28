@@ -23,12 +23,17 @@ const TB_CHANCE=0.1;                 // per-window chance for a square -- rarer 
 const TB_N_MIN=1,TB_N_MAX=3;         // a gust is 1-3 tumbleweeds, per JT's "just maybe a couple of them"
 const TB_R_MIN=4,TB_R_MAX=7;         // comically huge -- towers over a camper
 const TB_SPEED_MIN=10,TB_SPEED_MAX=16; // m/s blowing across the lake
-const TB_SPREAD=16;                  // how far apart the weeds in one gust start (m)
-const TB_WOBBLE_AMP=0.5;             // steering wobble: how hard the heading swings at the sine's peak (rad/s)
+const TB_SPREAD=9;                   // how far apart the weeds in one gust start (m)
+const TB_AIM_JITTER=0.12;            // +/- rad each weed's heading varies from the gust's (was 0.5 = +/-29 deg, so a gust aimed at
+                                     // you mostly missed)
+const TB_WOBBLE_AMP=0.04;            // steering wobble (rad/s at the sine's peak). Was 0.5: over the ~3 s a gust takes to reach you
+                                     // the heading could swing ~1 rad, so a gust aimed straight at you usually missed by 20+ m
 const TB_WOBBLE_FQ_MIN=0.05,TB_WOBBLE_FQ_MAX=0.15; // wobble cycles per second, randomized a bit per weed
 const TB_GRAV=18;                    // gravity for the bounce arc -- a touch lighter than a boulder, it's basically air
-const TB_BOUNCE_MIN=7;               // minimum upward kick (m/s) on every bounce -- keeps it springy its whole life, never settles
-const TB_BOUNCE_REST=0.55;           // fraction of impact speed kept on top of the minimum kick
+const TB_BOUNCE_MIN=4;               // minimum upward kick (m/s) on every bounce -- keeps it springy its whole life, never settles
+const TB_BOUNCE_REST=0.3;            // fraction of impact speed kept on top of the minimum kick. Was 7 + 0.55x, which settles at a
+                                     // ~15.6 m/s kick = 6.7 m hops, so weeds sailed right over people. 4 + 0.3x settles at ~5.7 m/s
+                                     // (~0.9 m hops): a big ball that bounds along at camper height and actually sweeps you up
 const TB_BOUNCE_FRIC=0.94;           // fraction of ground speed kept through a bounce -- it's the wind pushing it, barely slows
 const TB_SPEED_FLOOR_FRAC=0.65;      // ground speed never decays below this fraction of a weed's starting speed -- blowing wind, not friction, so it can't ever fully stall out
 const TB_BIG_BOUNCE_VY=9;            // an impact at least this hard (m/s) bucks a rider loose next frame
@@ -38,7 +43,8 @@ const TB_LIFE=40;                    // seconds before a tumbleweed blows off th
 const TB_FADE_TIME=1.1;              // seconds to pop/shrink away once dead (blew off, or broke on the fence)
 const TB_CAMP_R=18;                  // breaks apart this close (m) to the camp fence -- can't roll through camp
 const TB_EDGE_KEEP=40;               // a natural spawn stays at least this far inside the lake's edge
-const TB_HIT_PAD=1.0;                // extra touch radius (m) for player<->weed collision -- rough player half-width
+const TB_HIT_PAD=1.2;                // reach (m) past the ball's surface that still snags you: camper half-width + scraggly twigs
+const TB_BODY_LO=0.15,TB_BODY_HI=1.75; // the part of you (m above your feet) a weed can catch: shins to top of the head
 const TB_SAFE_DEPTH=1.2;             // a hole deeper than this (4 ft, same threshold as the twister) shields you
 const TB_HIT_COOL=2.5;               // seconds of immunity to a new stick right after being released
 const TB_STICK_TIME_MAX=7;           // seconds before you're flung off on your own even without mashing
@@ -50,7 +56,9 @@ const TB_GETUP_TIME=0.4;             // quick stand-up transition, same idea as 
 const TB_DMG_MIN=3,TB_DMG_MAX=8;     // a small bump of damage on a hard release -- comedy hazard, not a real threat
 const TB_WARN_R=110;                 // being this close (m) to a fresh gust gets you the warning toast
 const TB_POOL_CAP=8;                 // max tumbleweeds rendered/simulated at once (a couple of full 3-weed gusts)
-const TB_TWIG_N=24;                  // twigs per tumbleweed -- enough to read as a scraggly ball, still cheap
+const TB_TWIG_N=90;                  // twigs per tumbleweed, sticking out of the core so the silhouette reads as brush, not a rock
+const TB_TWIG_THICK=0.35;            // twig box thickness per metre of weed radius (x each twig's own 1.8-3.4 factor)
+const TB_CORE_FRAC=0.62;             // the solid brush core's radius as a fraction of the weed's (the twigs make up the rest)
 
 let tbWeeds=[],tbGusts=[];            // active tumbleweeds, and the gust "events" they belong to (warning + minimap)
 const tbSeen=new Map();               // natural-gust plan-id -> the window k it belongs to, so each plan spawns once
@@ -65,11 +73,13 @@ function tbStateName(){return['free','stuck','airborne','down','gettingup'][tbSt
 function spawnTumbleweedGust(x,z,a,n,seed,t0){
   const r=mulberry32(seed>>>0);r();
   for(let i=0;i<n&&tbWeeds.length<TB_POOL_CAP;i++){
-    const bx=x+(r()*2-1)*TB_SPREAD,bz=z+(r()*2-1)*TB_SPREAD,rad=TB_R_MIN+r()*(TB_R_MAX-TB_R_MIN);
+    // the first weed of a gust starts dead on the gust's line (a gust aimed at you always has one coming straight at
+    // you); the rest fan out around it. Still the same seeded numbers for everyone.
+    const ox=(r()*2-1)*TB_SPREAD,oz=(r()*2-1)*TB_SPREAD,bx=x+(i?ox:0),bz=z+(i?oz:0),rad=TB_R_MIN+r()*(TB_R_MAX-TB_R_MIN);
     const spd=TB_SPEED_MIN+r()*(TB_SPEED_MAX-TB_SPEED_MIN);
     tbWeeds.push({id:t0+'_'+i,r:rad,t0,simT:0,dead:false,deadT:0,rot:0,big:false,
       x:bx,y:baseH(bx,bz)+rad,z:bz,
-      head:a+(r()*2-1)*0.5,speed:spd,speedMin:spd*TB_SPEED_FLOOR_FRAC,vy:TB_BOUNCE_MIN,
+      head:a+(i?(r()*2-1)*TB_AIM_JITTER:(r(),0)),speed:spd,speedMin:spd*TB_SPEED_FLOOR_FRAC,vy:TB_BOUNCE_MIN,
       wobPh:r()*6.2832,wobFq:TB_WOBBLE_FQ_MIN+r()*(TB_WOBBLE_FQ_MAX-TB_WOBBLE_FQ_MIN),wobAmp:TB_WOBBLE_AMP*(0.6+r()*0.6)});
   }
   tbGusts.push({x,z,t0,warned:false,n});
@@ -118,21 +128,32 @@ function tbSound(level){
    calls total. Each twig's own local offset/length/tilt is picked once at load (cosmetic layout only, like the
    twister's flying debris) and just re-transformed per weed per frame -- no per-frame allocation. */
 const TB_TWIG_GEO=new T.BoxGeometry(0.05,0.05,1);
-const tbMatA=new T.MeshStandardMaterial({color:0x8a6a3c,flatShading:true,roughness:1}),
+const tbMatA=new T.MeshStandardMaterial({color:0xb08a52,flatShading:true,roughness:1}),
       tbMatB=new T.MeshStandardMaterial({color:0x6b4f2a,flatShading:true,roughness:1});
 const tbMeshA=new T.InstancedMesh(TB_TWIG_GEO,tbMatA,TB_POOL_CAP*TB_TWIG_N),
       tbMeshB=new T.InstancedMesh(TB_TWIG_GEO,tbMatB,TB_POOL_CAP*TB_TWIG_N);
-for(const im of[tbMeshA,tbMeshB]){im.castShadow=true;im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(im)}
+/* The core is what makes it read as a solid ball of tangled brush instead of a scribble of lines: a lumpy low-poly
+   ball (an icosphere with every vertex pushed in or out a little, and patchy tan/brown faces), shared by every weed,
+   one instance each. Fixed seeds, so it looks the same for everyone. */
+const TB_CORE_GEO=(()=>{const g=new T.IcosahedronGeometry(1,2).toNonIndexed(),pos=g.attributes.position,rnd=mulberry32(4242),bump=new Map(),col=[],c=new T.Color();
+  for(let i=0;i<pos.count;i++){const k=pos.getX(i).toFixed(3)+','+pos.getY(i).toFixed(3)+','+pos.getZ(i).toFixed(3);if(!bump.has(k))bump.set(k,0.82+rnd()*0.3);const m=bump.get(k);pos.setXYZ(i,pos.getX(i)*m,pos.getY(i)*m,pos.getZ(i)*m)}
+  for(let f=0;f<pos.count/3;f++){c.setHex([0xb8955a,0xc9a86a,0x9c7a45,0xd4b67a,0xa8864f][Math.floor(rnd()*5)]);for(let v=0;v<3;v++)col.push(c.r,c.g,c.b)}
+  g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();return g})();
+const tbCoreMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1});
+const tbMeshCore=new T.InstancedMesh(TB_CORE_GEO,tbCoreMat,TB_POOL_CAP);
+for(const im of[tbMeshA,tbMeshB,tbMeshCore]){im.castShadow=true;im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(im)}
+tbMeshCore.receiveShadow=true;
 const tbTwigs=[];
 {
-  const baseZ=new T.Vector3(0,0,1);
+  const baseZ=new T.Vector3(0,0,1),rnd=mulberry32(777);
   for(let i=0;i<TB_TWIG_N;i++){
-    const dir=new T.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1);
+    const dir=new T.Vector3(rnd()*2-1,rnd()*2-1,rnd()*2-1);
     if(dir.lengthSq()<0.01)dir.set(1,0,0);dir.normalize();
-    const len=0.6+Math.random()*0.9,rad=Math.max(0.15,1-len*0.42);   // longer twigs sit closer to center, tips reach the shell
+    // twigs are rooted around the core's surface and poke out past it, tilted so they criss-cross like real brush
+    const len=0.45+rnd()*0.55,rad=TB_CORE_FRAC*(0.7+rnd()*0.35);
     const q=new T.Quaternion().setFromUnitVectors(baseZ,dir);
-    q.multiply(new T.Quaternion().setFromEuler(new T.Euler((Math.random()-0.5)*1.1,(Math.random()-0.5)*1.1,(Math.random()-0.5)*1.1)));
-    tbTwigs.push({dir,rad,len,thick:0.7+Math.random()*0.7,q,a:Math.random()<0.5});
+    q.multiply(new T.Quaternion().setFromEuler(new T.Euler((rnd()-0.5)*1.6,(rnd()-0.5)*1.6,(rnd()-0.5)*1.6)));
+    tbTwigs.push({dir,rad,len,thick:1.2+rnd()*1.4,q,a:rnd()<0.5});
   }
 }
 const tbAxis=new T.Vector3(),tbQuat=new T.Quaternion(),tbVec=new T.Vector3();
@@ -142,21 +163,23 @@ function tbRender(){
     if(slot>=TB_POOL_CAP)break;
     const fade=w.dead?clamp(1-w.deadT/TB_FADE_TIME,0,1):1;
     tbAxis.set(-Math.sin(w.head),0,Math.cos(w.head));tbQuat.setFromAxisAngle(tbAxis,w.rot);   // rolling axis matches travel direction
+    dummy.position.set(w.x,w.y,w.z);dummy.quaternion.copy(tbQuat);dummy.scale.setScalar(w.r*TB_CORE_FRAC*fade);dummy.updateMatrix();tbMeshCore.setMatrixAt(slot,dummy.matrix);
     const base=slot*TB_TWIG_N;
     for(let i=0;i<TB_TWIG_N;i++){
       const t=tbTwigs[i];
       tbVec.copy(t.dir).multiplyScalar(w.r*t.rad).applyQuaternion(tbQuat);
       dummy.position.set(w.x+tbVec.x,w.y+tbVec.y,w.z+tbVec.z);
       dummy.quaternion.copy(tbQuat).multiply(t.q);
-      dummy.scale.set(t.thick*0.16*fade,t.thick*0.16*fade,t.len*w.r*0.95*fade);
+      const tw=t.thick*w.r*TB_TWIG_THICK*fade;   // twig thickness scales with the ball (it was a fixed ~1-2 cm on a ball up to 14 m wide)
+      dummy.scale.set(tw,tw,t.len*w.r*0.95*fade);
       dummy.updateMatrix();
       (t.a?tbMeshA:tbMeshB).setMatrixAt(base+i,dummy.matrix);
     }
     slot++;
   }
   dummy.scale.setScalar(0);dummy.updateMatrix();
-  for(let s=slot;s<TB_POOL_CAP;s++)for(let i=0;i<TB_TWIG_N;i++){tbMeshA.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix);tbMeshB.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix)}
-  tbMeshA.instanceMatrix.needsUpdate=true;tbMeshB.instanceMatrix.needsUpdate=true;
+  for(let s=slot;s<TB_POOL_CAP;s++){tbMeshCore.setMatrixAt(s,dummy.matrix);for(let i=0;i<TB_TWIG_N;i++){tbMeshA.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix);tbMeshB.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix)}}
+  tbMeshA.instanceMatrix.needsUpdate=true;tbMeshB.instanceMatrix.needsUpdate=true;tbMeshCore.instanceMatrix.needsUpdate=true;
 }
 
 /* hit test: are you close enough to a live weed to get swept up? Only checked while free (not already stuck/KO'd),
@@ -164,8 +187,10 @@ function tbRender(){
 function tbHit(w){
   if(inTent())return;
   if(holeDepthHere()>TB_SAFE_DEPTH)return;
-  const d=Math.hypot(w.x-P.x,w.z-P.z);
-  if(d>w.r+TB_HIT_PAD||Math.abs(P.y-w.y)>w.r+2)return;
+  // Real 3D contact: the ball against your body (a vertical segment from shins to head), not a flat radius plus a
+  // loose height window. Anything the ball's surface touches gets swept up; a ball bounding over your head doesn't.
+  const cy=clamp(w.y,P.y+TB_BODY_LO,P.y+TB_BODY_HI);
+  if(Math.hypot(w.x-P.x,w.y-cy,w.z-P.z)>w.r+TB_HIT_PAD)return;
   tbStart(w);
 }
 function tbStart(w){

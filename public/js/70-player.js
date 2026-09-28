@@ -85,7 +85,8 @@ function updatePlayer(dt){
 }
 function updateCamera(dt){
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
-  const cp=Math.cos(P.pitch),dist=inTent()?3.2:5.4;
+  // riding a giant tumbleweed: pull way back so the camera isn't inside the ball and you can see yourself go round
+  const cp=Math.cos(P.pitch),dist=inTent()?3.2:tbSt===1?Math.max(5.4,tbRideR*2.6):5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
   if(inTent()){
     const room=TENTS[S.tent];
