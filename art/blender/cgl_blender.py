@@ -155,7 +155,7 @@ def tris():
             m = o.evaluated_get(dg).to_mesh(); n += sum(len(p.vertices) - 2 for p in m.polygons); o.evaluated_get(dg).to_mesh_clear()
     return n
 
-def export_glb(path):
+def export_glb(path, vcol=False):
     """Export ONLY this scene's Asset, baked into ONE mesh (modifiers + transforms applied, one
     material slot per material) so the game draws each asset in a handful of calls. +Y up."""
     sc = bpy.context.window.scene; dg = bpy.context.evaluated_depsgraph_get()
@@ -176,7 +176,8 @@ def export_glb(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_active_scene=True, use_active_collection=True,
                               export_apply=True, export_yup=True, export_normals=True, export_materials='EXPORT',
-                              export_extras=False, export_cameras=False, export_lights=False, export_texcoords=True)
+                              export_extras=False, export_cameras=False, export_lights=False, export_texcoords=True,
+                              **({'export_vertex_color': 'ACTIVE'} if vcol else {}))   # vcol: rocks/tumbleweed carry their paint as vertex colours
     info = (len(j.data.polygons), len(j.material_slots))
     me = j.data; bpy.data.objects.remove(j, do_unlink=True); bpy.data.meshes.remove(me); bpy.data.collections.remove(tmpc)
     return path, os.path.getsize(path), info
@@ -198,3 +199,12 @@ def text(name, s, loc, size, material, fontname='Anton', extrude=0.006, rot=(mat
     o.select_set(True); bpy.ops.object.convert(target='MESH')
     o = bpy.context.active_object; o.name = name
     return _finish(o, material, 0, parent)
+
+def vcol_mat(name, rough=1.0):
+    """A material that shows the mesh's colour attribute (what vertex-painted rocks export as COLOR_0)."""
+    m = bpy.data.materials.get('cgl_' + name)
+    if m: return m
+    m = bpy.data.materials.new('cgl_' + name); m.use_nodes = True; nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    a = nt.nodes.new('ShaderNodeVertexColor'); a.layer_name = 'Col'
+    nt.links.new(a.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = rough
+    return m
