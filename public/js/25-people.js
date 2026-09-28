@@ -3,7 +3,6 @@
 /* ---------- people ---------- */
 const CAMPER_COLORS=[0xd94f3a,0x2f7bb8,0x6b9a3a,0x8a4bb0,0xd9a21a,0x2a9a8a,0xe07ab0,0x444444];
 function makePerson(o){
-  if(o.camper)return makeCamper(o);   // the rounded camper model (24-camper.js): players and the D Tent crew
   const g=new T.Group();
   const suit=o.suit||0xe8742a;
   const legL=new T.Group(),legR=new T.Group(),armL=new T.Group(),armR=new T.Group();
@@ -41,7 +40,6 @@ function sleepPose(p,bk){
   if(p.shovel)p.shovel.visible=false;
 }
 function animPerson(p,mode,dt,digPhase,speed){
-  animateCamperFace(p,mode,dt,digPhase||0);
   if(p.shovel&&!p.shovel.visible)p.shovel.visible=true;   // back in hand when you're up (sleepPose hides it)
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));

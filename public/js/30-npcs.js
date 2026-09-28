@@ -34,7 +34,7 @@ const BOTDEF=[
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
 const bots=BOTDEF.map(d=>{
-  const p=makePerson({camper:true,skin:d.skin,band:d.band});scene.add(p.g);
+  const p=makePerson({skin:d.skin,band:d.band});scene.add(p.g);
   const hole=addHole({x:r1(d.x),z:r1(d.z),d:0.2+botRng()*1.0,bot:true});touchHole(hole);
   p.g.position.set(hole.x,groundAt(hole.x,hole.z),hole.z);p.g.rotation.y=Math.PI+(botRng()-0.5);
   const L=makeLabel(p.g,d.n,'bot');

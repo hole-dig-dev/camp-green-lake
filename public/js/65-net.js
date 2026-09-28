@@ -36,7 +36,7 @@ function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
-  const p=makePerson({camper:true,skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][ci%4],band:CAMPER_COLORS[ci]});scene.add(p.g);
+  const p=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][ci%4],band:CAMPER_COLORS[ci]});scene.add(p.g);
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
