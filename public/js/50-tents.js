@@ -48,6 +48,11 @@ const SHOP=[
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
+// painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
+// and inventory cards in place of the SVG line icons, which stay as the fallback for anything without art
+const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds']);
+function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg':''}" src="icons/${path}.png" alt="">`}
+function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
 const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'}];
 const shopCatLabel=id=>(SHOP_CATS.find(c=>c.id===id)||{}).label||'';
 let shopOpen=false,shopCat='all',shopSel='spade',shopConfirming=false,shopPrevFocus=null,shopGpTimer=null;
@@ -107,7 +112,7 @@ function buildShopGrid(){
     const b=document.createElement('button');b.type='button';b.className='shop-item';b.dataset.item=it.id;
     b.setAttribute('aria-pressed','false');b.setAttribute('aria-controls','shopDetail');
     const icon=document.createElement('span');icon.className='shop-item__icon';icon.setAttribute('aria-hidden','true');
-    icon.innerHTML=`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`;
+    icon.innerHTML=shopIconHTML(it,false);
     const body=document.createElement('span');body.className='shop-item__body';
     const copy=document.createElement('span');copy.className='shop-item__copy';
     const strong=document.createElement('strong');strong.textContent=it.name;
@@ -139,7 +144,7 @@ function renderShopDetail(){
   if(!it){const p=document.createElement('p');p.className='shop-empty';p.textContent='Nothing in this category yet.';box.appendChild(p);return}
   const st=shopStatus(it);
   const h=document.createElement('h3');h.className='shop-detail__title';
-  h.innerHTML=`<svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-${it.icon}"></use></svg>${it.name}`;
+  h.innerHTML=shopIconHTML(it,true);h.append(it.name);
   const desc=document.createElement('p');desc.className='shop-detail__desc';desc.textContent=it.desc;
   box.append(h,desc);
   const eff=shopEffect(it);

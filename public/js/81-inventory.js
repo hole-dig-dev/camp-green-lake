@@ -29,19 +29,19 @@ function invEntries(){
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
   if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's truck: worth ${LOOT[pr.type].val} seeds to the team.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
   // supplies
-  out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
+  out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
-  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
+  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
-  out.push({id:'water',cat:'supplies',name:'Water',icon:'water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
+  out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
     meta:`${Math.round(S.water)} / ${waterMax()}`,state:S.water<waterMax()*0.25?'Low':'Water'});
   // gear from the store: owned ones first, the rest greyed out with where to get them
   const gear=SHOP.filter(it=>!it.stack);
   for(const it of [...gear.filter(g=>S.up[g.id]),...gear.filter(g=>!S.up[g.id])]){
     const own=!!S.up[it.id];
-    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
+    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
   }
-  if(!S.up.spade&&!S.up.long)out.push({id:'shovel',cat:'gear',name:'Camp shovel',icon:'shovel',desc:'Standard issue. Holes go down to 5 feet.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
+  if(!S.up.spade&&!S.up.long)out.push({id:'shovel',cat:'gear',name:'Camp shovel',icon:'shovel',art:'gear/shovel',desc:'Standard issue. Holes go down to 5 feet.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
   return out;
 }
 function invVisible(){const all=invEntries();return invCat==='all'?all:all.filter(e=>e.cat===invCat)}
@@ -50,12 +50,13 @@ function invSwatch(color){const s=document.createElement('span');s.className='in
 // treasure art: 128px cut-outs in public/icons/loot/<LOOT key>.png (ChatGPT sheet, background removed).
 // Falls back to the find's colour dot if an image is missing.
 function invLootImg(type,big){
-  const img=document.createElement('img');img.className='inv-loot'+(big?' inv-loot--lg':'');img.alt='';img.src=`icons/loot/${type}.png`;
+  const img=document.createElement('img');img.className='item-art'+(big?' item-art--lg':'');img.alt='';img.src=`icons/loot/${type}.png`;
   img.onerror=()=>img.replaceWith(invSwatch(LOOT[type].color));return img;
 }
 function invIconEl(e,big){
   if(e.loot)return invLootImg(e.loot,big);
   if(e.swatch!=null)return invSwatch(e.swatch);
+  if(e.art){const span=document.createElement('span');span.innerHTML=itemArtHTML(e.art,big);return span.firstChild}
   const span=document.createElement('span');span.innerHTML=`<svg class="ui-icon${big?' ui-icon--lg':''}"><use href="#icon-${e.icon}"></use></svg>`;return span.firstChild;
 }
 
