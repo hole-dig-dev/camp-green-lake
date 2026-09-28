@@ -36,7 +36,7 @@ const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
 /* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
 const SETTINGS_KEY='cgl-settings';
 const SETTINGS={sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
-  shadows:true,quality:'auto',showFps:false,mapStyle:'square',binds:defaultBinds()};
+  shadows:true,quality:'auto',showFps:false,mapStyle:'square',mapScale:1,mapOpacity:1,binds:defaultBinds()};
 function loadSettings(){
   try{
     const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
@@ -46,6 +46,8 @@ function loadSettings(){
     if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
     if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
     if(['square','compass'].includes(o.mapStyle))SETTINGS.mapStyle=o.mapStyle;
+    if(Number.isFinite(o.mapScale))SETTINGS.mapScale=clamp(o.mapScale,0.6,1.6);
+    if(Number.isFinite(o.mapOpacity))SETTINGS.mapOpacity=clamp(o.mapOpacity,0.2,1);
     if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
   }catch(e){}
 }
@@ -79,7 +81,10 @@ function applyQuality(){
   PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight);
 }
 function applyFpsVisibility(){if(PERF.el)PERF.el.hidden=!(SETTINGS.showFps||/fps/.test(location.hash))}
-function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility();setMapStyle(SETTINGS.mapStyle)}
+/* minimap size + opacity (Options > Minimap): CSS variables on the map panel, so both map styles and the zoom/field-map
+   buttons scale together from the top-right corner. The J field map moves the canvas out, so it isn't affected. */
+function applyMapLook(){const m=$('#mapbox');m.style.setProperty('--map-scale',SETTINGS.mapScale);m.style.setProperty('--map-opacity',SETTINGS.mapOpacity)}
+function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility();setMapStyle(SETTINGS.mapStyle);applyMapLook()}
 
 /* ---- pause state + screens ---- */
 const PAUSE={open:false};
@@ -129,13 +134,15 @@ function quitToTitle(){
 }
 
 /* ---- options screen ---- */
-const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('#oTouchSens'),oTouchSensV=$('#oTouchSensV'),
+const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('#oTouchSens'),oTouchSensV=$('#oTouchSensV'),oMapScale=$('#oMapScale'),oMapScaleV=$('#oMapScaleV'),oMapOpacity=$('#oMapOpacity'),oMapOpacityV=$('#oMapOpacityV'),
       oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
       oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
       oVolVoice=$('#oVolVoice'),oVolVoiceV=$('#oVolVoiceV'),
       oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle');
 function renderOptions(){
   oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
+  oMapScale.value=SETTINGS.mapScale;oMapScaleV.textContent=Math.round(SETTINGS.mapScale*100)+'%';
+  oMapOpacity.value=Math.round(SETTINGS.mapOpacity*100);oMapOpacityV.textContent=Math.round(SETTINGS.mapOpacity*100)+'%';
   oInvert.checked=SETTINGS.invertY;
   oTouchSens.value=SETTINGS.touchSens;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';
   oFov.value=SETTINGS.fov;oFovV.textContent=SETTINGS.fov+'°';
@@ -148,6 +155,8 @@ function renderOptions(){
   for(const b of oMapStyle.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.mapStyle?'true':'false');
   renderBindList();
 }
+oMapScale.oninput=()=>{SETTINGS.mapScale=+oMapScale.value;oMapScaleV.textContent=Math.round(SETTINGS.mapScale*100)+'%';applyMapLook();saveSettings()};
+oMapOpacity.oninput=()=>{SETTINGS.mapOpacity=+oMapOpacity.value/100;oMapOpacityV.textContent=oMapOpacity.value+'%';applyMapLook();saveSettings()};
 oSens.oninput=()=>{SETTINGS.sens=+oSens.value;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';saveSettings()};
 oInvert.onchange=()=>{SETTINGS.invertY=oInvert.checked;saveSettings()};
 oTouchSens.oninput=()=>{SETTINGS.touchSens=+oTouchSens.value;oTouchSensV.textContent=SETTINGS.touchSens.toFixed(2)+'x';saveSettings()};
