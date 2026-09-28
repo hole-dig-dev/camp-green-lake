@@ -903,7 +903,7 @@ function toggleView(){FP=!FP;if(me)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(F
 const vm=new T.Group();
 {const hd=new T.Mesh(new T.CylinderGeometry(0.02,0.02,0.9,5),M(0x8a6440));hd.rotation.x=Math.PI/2;hd.position.z=-0.25;const bl=new T.Mesh(new T.BoxGeometry(0.22,0.02,0.26),M(0x7d8288));bl.position.z=-0.78;const sh=new T.Group();sh.rotation.x=-0.35;sh.add(hd,bl);vm.add(sh)}
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
-function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&!atRanch();if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
+function updateViewmodel(){vm.visible=FP&&S.started&&!S.ko&&(!atRanch()||P.anim===2);if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}
@@ -1071,7 +1071,7 @@ canvas.addEventListener('mousedown',e=>{
   if(S.out){S.specI=(S.specI||0)+1;return}
   if(!S.started||uiOpen()||S.ko)return;
   if(!lockOk()&&!isTouch){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(err){}}
-  if(e.button===0&&(lockOk()||isTouch)&&!tryGrab()&&!atRanch())digHeld=true;
+  if(e.button===0&&(lockOk()||isTouch)&&!tryGrab())digHeld=true;
   dragLook={x:e.clientX,y:e.clientY};
 });
 addEventListener('mouseup',e=>{if(e.button===0){digHeld=false;releaseGrab()}dragLook=null});
@@ -1215,7 +1215,7 @@ function onMsg(m){
   if(!m||typeof m!=='object')return;
   switch(m.t){
     case 'hello':{
-      net.id=m.id;poClear();if(Array.isArray(m.pw))for(const a of m.pw)if(Array.isArray(a))poSet(a,true);net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
+      net.id=m.id;poClear();buildMounds(m.pwd);if(Array.isArray(m.pw))for(const a of m.pw)if(Array.isArray(a))poSet(a,true);net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       for(const id of [...remotes.keys()])removeRemote(id);
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
@@ -1258,9 +1258,10 @@ function onMsg(m){
     case 'truck':setTruck(m);break;
     case 'mission':setMission(m);break;
     case 'propGone':removeProp(num(m.id,0,1e7,-1)|0);break;
-    case 'pwinit':poClear();if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,true);break;
+    case 'pwinit':poClear();buildMounds(m.digs);if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,true);break;
     case 'pw':if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,false);break;
     case 'pwend':poClear();break;
+    case 'pdug':setDug(m.i|0);break;
     case 'pdmg':case 'pring':physEvent({k:m.t,id:m.id|0,loss:num(m.loss,0,1e4,0)|0,val:num(m.val,0,1e4,0)|0,x:num(m.x,-600,3400,0),y:num(m.y,-40,80,0),z:num(m.z,-600,600,0)});break;
     case 'pslip':if(GR.id!=null){GR.id=null;toast('Lost your grip!','',1500)}break;
     case 'tpos':if(!S.driving){WT.tx=num(m.x,-600,3400,WT.tx);WT.tz=num(m.z,-600,600,WT.tz);WT.th=num(m.h,-1e3,1e3,WT.th);WT.sp=num(m.sp,-20,20,0)}break;
@@ -1344,11 +1345,12 @@ function updatePlayer(dt){
   const sprint=KEYS['shift']&&S.water>0&&S.carry==null&&S.stam>2;
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
-  const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0);
+  const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0)&&GR.id==null&&(atRanch()?!!moundNear():!(MISSIONS&&inCamp(P.x,P.z)));
+  if(digHeld&&MISSIONS&&!atRanch()&&inCamp(P.x,P.z)&&!uiOpen()&&(S.noDigT=(S.noDigT||0)-dt)<=0){S.noDigT=5;toast('No digging in camp. The digging is out on the trips: TRIP BOARD, press F.','',3500)}
   P.moving=false;
   if(digging){
     P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=0.42;P.digPh=(P.digT%iv)/iv;
-    if(P.digT>=iv){P.digT-=iv;scoop()}
+    if(P.digT>=iv){P.digT-=iv;if(atRanch())digMound();else scoop()}
     P.anim=2;
   }else{
     P.digT=0.3;
@@ -1499,6 +1501,7 @@ function drawMap(){
     for(const b of BREACH.values()){if(b.closed)continue;const p=shaftPos(b),cx=(p.x-(TW.X-N*TW.C/2))/TW.C*s,cz=(p.z-(TW.Z-N*TW.C/2))/TW.C*s;mx.strokeStyle='#fff0cc';mx.lineWidth=3;mx.beginPath();mx.arc(cx,cz,7,0,6.3);mx.stroke()}
     const px=(P.x-(TW.X-N*TW.C/2))/TW.C*s,pz=(P.z-(TW.Z-N*TW.C/2))/TW.C*s;mx.fillStyle='#e8742a';mx.beginPath();mx.arc(px,pz,6,0,6.3);mx.fill();return;
   }
+  if(atRanch()){drawRanchMap();return}
   if(RUN.mood==='sandstorm'&&!inCamp(P.x,P.z)){mx.fillStyle='#c9a37a';mx.fillRect(0,0,W,W);mx.fillStyle='#5a4028';mx.font='700 30px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.fillText('SANDSTORM',W/2,W/2);return}
   mx.fillStyle='#b98a5e';const e0=wx(-EDGE),e1=wx(EDGE),f0=wz(-EDGE),f1=wz(EDGE);
   if(e0>0)mx.fillRect(0,0,e0,W);if(e1<W)mx.fillRect(e1,0,W-e1,W);if(f0>0)mx.fillRect(0,0,W,f0);if(f1<W)mx.fillRect(0,f1,W,W-f1);
@@ -3008,7 +3011,7 @@ function buildRanch(){
 }
 /* the valuables: drawn from the physics world's positions */
 const PO=new Map();let PWL=null;
-const poType=id=>{const s=PHYS.SPAWN[id-50001];return s?s[0]:null};
+const poType=id=>{const s=PHYS.SPAWN[id-50001];if(s)return s[0];const m=MOUNDS.find(q=>q.id===id);return m&&PHYS.LOOT[m.type]?m.type:null};
 function poMesh(type){
   const L=PHYS.LOOT[type];let m;
   if(L.shape==='cyl')m=new T.Mesh(new T.CylinderGeometry(L.r,L.r,L.h,12),M(L.color));else m=new T.Mesh(new T.BoxGeometry(L.hx*2,L.hy*2,L.hz*2),M(L.color));
@@ -3026,8 +3029,8 @@ function poSet(a,snap){
   o.tp.set(a[1],a[2],a[3]);o.tq.set(a[4],a[5],a[6],a[7]);if(a[8]!=null)o.val=a[8];
   if(snap){o.mesh.position.copy(o.tp);o.mesh.quaternion.copy(o.tq)}
 }
-function poClear(){for(const o of PO.values())scene.remove(o.mesh);PO.clear();PWL=null;GR.id=null}
-function startLocalPhysics(){if(online())return;poClear();if(!CANNON){toast('The physics engine is still loading (it needs the internet the first time). Try the trip again in a moment.','bad',6000);return}PWL=PHYS.create(CANNON,RUN.seed);for(const a of PHYS.snapshot(PWL,true))poSet(a,true)}
+function poClear(){for(const o of PO.values())scene.remove(o.mesh);PO.clear();PWL=null;GR.id=null;buildMounds(null)}
+function startLocalPhysics(){if(online())return;poClear();if(!CANNON){toast('The physics engine is still loading (it needs the internet the first time). Try the trip again in a moment.','bad',6000);return}PWL=PHYS.create(CANNON,RUN.seed);buildMounds(PWL.digs);for(const a of PHYS.snapshot(PWL,true))poSet(a,true)}
 /* value popups: every bump shows what it cost you */
 const POPS=[];
 function popText(x,y,z,txt,cls){const el=document.createElement('div');el.className='dmgpop '+(cls||'');el.textContent=txt;document.body.appendChild(el);POPS.push({el,p:new T.Vector3(x,y,z),t:0})}
@@ -3058,6 +3061,7 @@ function yeetGrab(){if(GR.id==null)return;camera.getWorldDirection(camDir);const
 addEventListener('wheel',e=>{if(GR.id!=null){GR.dist=clamp(GR.dist-Math.sign(e.deltaY)*0.25,1,3.2)}},{passive:true});
 function updateFeel(dt){
   const ar=atRanch();if(ar)buildRanch();
+  if(ar!==S.keysRanch){S.keysRanch=ar;const k=$('#keys');if(!k.dataset.camp)k.dataset.camp=k.textContent;k.textContent=ar?'WASD move · Shift run · Space jump · Hold click: grab things / dig mounds · Right-click throw · Scroll: hold closer/farther · F use / climb aboard · V view · 1–5 shout':k.dataset.camp}
   if(WT_G){const tk=WT_G.getObjectByName('tank'),sd=WT_G.getObjectByName('sides');if(tk.visible===ar){tk.visible=!ar;sd.visible=ar}}
   if(GR.id!=null&&(S.ko||S.out||S.riding||!PO.has(GR.id)))releaseGrab();
   GR.hover=GR.id==null?hoverPO():null;
@@ -3076,9 +3080,54 @@ function updateFeel(dt){
   const xh=$('#xhair');xh.hidden=!(atRanch()&&MIS.phase==='site');xh.classList.toggle('on',!!(GR.hover||GR.id!=null));
 }
 function feelPrompt(){
+  if(GR.id==null&&!GR.hover&&atRanch()&&MIS.phase==='site'){const m=moundNear();if(m)return m.hits?`Digging… ${m.hits}/4`:"Hold click or E: dig up this mound. Something's buried here."}
   if(GR.id!=null){const o=PO.get(GR.id);return o?`Holding the ${PHYS.LOOT[o.type].name} (${o.val} seeds). Right-click: throw · scroll: closer/farther · let go of the button to drop it`:null}
   if(GR.hover){const o=GR.hover.o,L=PHYS.LOOT[o.type];return `Click and hold: grab the ${L.name} (${o.val} seeds${L.m>=140?', needs 3 campers to lift':L.m>=72?', needs 2 campers to lift':L.m>=20?', heavy':''})`}
   return null;
+}
+
+/* dirt mounds in the ranch yard: dig one up (hold click or E) and something valuable pops out */
+let MOUNDS=[];
+function buildMounds(digs){
+  for(const m of MOUNDS)if(m.mesh)scene.remove(m.mesh);MOUNDS=[];if(!Array.isArray(digs))return;
+  for(const d of digs.slice(0,20)){
+    const m={i:d.i|0,id:d.id|0,x:num(d.x,2500,3400,RN.X),z:num(d.z,-600,600,0),type:String(d.type),dug:!!d.dug,mesh:null,hits:0};
+    if(!m.dug){const g=new T.Group(),h=new T.Mesh(new T.SphereGeometry(0.9,10,6),M(0x9a6a3e));h.scale.set(1,0.38,1);g.add(h);
+      for(let k=0;k<4;k++){const r=box(0.18,0.1,0.14,0x8a8070);r.position.set(Math.cos(k*1.7)*0.95,0.05,Math.sin(k*1.7)*0.95);r.rotation.y=k;g.add(r)}
+      g.position.set(m.x,0,m.z);scene.add(g);m.mesh=g}
+    MOUNDS.push(m);
+  }
+}
+function setDug(i){const m=MOUNDS.find(q=>q.i===i);if(!m||m.dug)return;m.dug=true;if(m.mesh){scene.remove(m.mesh);m.mesh=null}
+  if(Math.hypot(m.x-P.x,m.z-P.z)<40)sfx.find()}
+function moundNear(){let b=null,bd=2.4;for(const m of MOUNDS){if(m.dug)continue;const d=Math.hypot(m.x-P.x,m.z-P.z);if(d<bd){bd=d;b=m}}return b}
+function digMound(){ // one shovelful (called from the dig swing)
+  const m=moundNear();if(!m)return;sfx.scoop();m.hits++;
+  if(m.hits>=4){if(online())wsSend({t:'pdig',i:m.i});else if(PWL&&PHYS.unbury(PWL,m.i))setDug(m.i)}
+}
+/* camp is the hub now: a fence all the way round, and the only way out is Mr. Sir's truck */
+const CAMPBOX={x0:-40,x1:30,z0:27,z1:56};
+{const g=new T.Group(),post=(x,z)=>{const p=box(0.14,1.4,0.14,0x8a6a44);p.position.set(x,baseH(x,z)+0.7,z);g.add(p)};
+ const rail=(x0,z0,x1,z1)=>{const L=Math.hypot(x1-x0,z1-z0);for(const y of[0.55,1.1]){const r=box(L,0.08,0.06,0xa07a50);r.position.set((x0+x1)/2,baseH((x0+x1)/2,(z0+z1)/2)+y,(z0+z1)/2);r.rotation.y=-Math.atan2(z1-z0,x1-x0);g.add(r)}};
+ const B=CAMPBOX,c=[[B.x0,B.z0],[B.x1,B.z0],[B.x1,B.z1],[B.x0,B.z1],[B.x0,B.z0]];
+ for(let k=0;k<4;k++){const a=c[k],b=c[k+1],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/4);for(let j=0;j<n;j++){const x0=a[0]+(b[0]-a[0])*j/n,z0=a[1]+(b[1]-a[1])*j/n,x1=a[0]+(b[0]-a[0])*(j+1)/n,z1=a[1]+(b[1]-a[1])*(j+1)/n;post(x0,z0);rail(x0,z0,x1,z1)}}
+ if(MISSIONS)scene.add(g)}
+function campFence(dt){
+  if(!MISSIONS||!S.started||S.riding||S.driving||S.out||S.inTown||atRanch())return;
+  const B=CAMPBOX,x=clamp(P.x,B.x0+0.6,B.x1-0.6),z=clamp(P.z,B.z0+0.6,B.z1-0.6);
+  if(x!==P.x||z!==P.z){P.x=x;P.z=z;if((S.fenceHubT=(S.fenceHubT||0)-dt)<=0){S.fenceHubT=4;toast("That's the camp fence. The only way out is Mr. Sir's truck: press F at the TRIP BOARD.",'',3500)}}
+}
+/* the ranch on the minimap: its own close-up view */
+function drawRanchMap(){
+  const W=mm.width,SPAN=64,k=W/SPAN,X=v=>(v-RN.X+SPAN/2)*k,Z=v=>(v-RN.Z+SPAN/2)*k;
+  mx.fillStyle='#dcab6e';mx.fillRect(0,0,W,W);
+  mx.strokeStyle='#d12a2a';mx.lineWidth=2;mx.setLineDash([5,4]);mx.strokeRect(X(RN.X-RN.HALF),Z(RN.Z-RN.HALF),RN.HALF*2*k,RN.HALF*2*k);mx.setLineDash([]);
+  mx.fillStyle='#6d5238';for(const b of PHYS.layout())if(b.block)mx.fillRect(X(b.x-b.hx),Z(b.z-b.hz),Math.max(2,b.hx*2*k),Math.max(2,b.hz*2*k));
+  mx.save();mx.translate(X(WT.x),Z(WT.z));mx.rotate(-WT.h);mx.fillStyle='#4f8fb8';mx.fillRect(-1.1*k,-3.4*k,2.2*k,6.2*k);mx.fillStyle='#2b1d12';mx.fillRect(-1.1*k,-3.4*k,2.2*k,2*k);mx.restore();
+  mx.fillStyle='#7a4a24';for(const m of MOUNDS)if(!m.dug){mx.beginPath();mx.arc(X(m.x),Z(m.z),5,0,6.3);mx.fill()}
+  mx.fillStyle='#e8c040';mx.strokeStyle='#2b1d12';mx.lineWidth=1;for(const o of PO.values()){mx.beginPath();mx.arc(X(o.mesh.position.x),Z(o.mesh.position.z),3.5,0,6.3);mx.fill();mx.stroke()}
+  for(const R2 of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X(R2.p.g.position.x),Z(R2.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
+  mx.save();mx.translate(X(P.x),Z(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore();
 }
 
 /* ---- the day's critters and characters (moved by sim.js; drawn here) ---- */
@@ -3205,7 +3254,7 @@ let luckyT=0;
 function updateCoop(dt){
   if(!S.started)return;
   if(clockT()<curfewT())S.dayPlay=(S.dayPlay||0)+dt;
-  updateMission(dt);updateFeel(dt);updateTown(dt);updateTruck(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
+  updateMission(dt);updateFeel(dt);campFence(dt);updateTown(dt);updateTruck(dt);updateFinale(dt);updateStamina(dt);updateSinging(dt);S.kate=kateLoot();S.bonkCd=Math.max(0,(S.bonkCd||0)-dt);
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
   if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
@@ -3274,6 +3323,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
 if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot};
-if(location.hash.includes('expose'))window.__t={GR,PO,get PWL(){return PWL},tryGrab,releaseGrab,yeetGrab,camera,atRanch,P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes,toggleRope,putInCart,cartNear,KEYS};
+if(location.hash.includes('expose'))window.__t={GR,PO,get PWL(){return PWL},get MOUNDS(){return MOUNDS},get nHoles(){return holes.length},tryGrab,releaseGrab,yeetGrab,camera,atRanch,P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes,toggleRope,putInCart,cartNear,KEYS};
 })();
 </script>

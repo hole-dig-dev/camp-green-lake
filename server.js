@@ -124,7 +124,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null,
+    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null, pwd: PW ? PW.digs : null,
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -384,6 +384,13 @@ wss.on('connection', ws => {
         else { const d = v3(m.dir); if (d) { const l = Math.hypot(d[0], d[1], d[2]) || 1; PHYS.yeet(PW, c.id, d.map(x => x / l)); } }
         break;
       }
+      case 'pdig': {
+        // digging up a dirt mound in the ranch yard (you have to be standing at it)
+        if (!PW) return; const i = num(m.i, 0, 99, -1) | 0, d = PW.digs[i];
+        if (!d || d.dug || Math.hypot(d.x - c.x, d.z - c.z) > 3.5) return;
+        if (PHYS.unbury(PW, i)) broadcast({ t: 'pdug', i, by: c.id });
+        break;
+      }
       case 'unearth': {
         // dug down to a buried object: it comes up out of the hole
         const MS = world.mission, L = MS.phase === 'site' && (MS.loot || []).find(l => l.id === (num(m.id, 0, 1e7, -1) | 0));
@@ -601,7 +608,7 @@ function truckTick(now, dt) {
 let PW = null, pwTimer = null, pwLast = 0, pwSent = 0;
 function startPhysics() {
   stopPhysics(); PW = PHYS.create(CANNON, world.run.seed); pwLast = Date.now();
-  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true) });
+  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true), digs: PW.digs });
   pwTimer = setInterval(physTick, 16);
 }
 function stopPhysics() { if (pwTimer) clearInterval(pwTimer); pwTimer = null; if (PW) broadcast({ t: 'pwend' }); PW = null; }

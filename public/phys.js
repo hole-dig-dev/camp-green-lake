@@ -25,6 +25,11 @@
     bell: { name: 'School bell', shape: 'cyl', r: 0.36, h: 0.55, m: 22, val: 90, frag: 0.3, color: 0xb08a3a, noisy: true },
     safe: { name: 'Iron safe', shape: 'box', hx: 0.45, hy: 0.5, hz: 0.45, m: 120, val: 300, frag: 0.15, color: 0x3b3f45 },
     piano: { name: 'Upright piano', shape: 'box', hx: 1.0, hy: 0.65, hz: 0.33, m: 190, val: 420, frag: 0.35, color: 0x2a1a10 },
+    // buried in the yard (dug out of dirt mounds)
+    can: { name: 'Tin of old coins', shape: 'cyl', r: 0.1, h: 0.16, m: 3, val: 55, frag: 0.4, color: 0x9a9a8a },
+    fossil: { name: 'Fossil', shape: 'box', hx: 0.2, hy: 0.06, hz: 0.14, m: 4, val: 65, frag: 0.7, color: 0xcfc2a0 },
+    tube: { name: 'Gold KB tube', shape: 'cyl', r: 0.05, h: 0.2, m: 0.4, val: 150, frag: 0.5, color: 0xd8b040 },
+    chest: { name: 'Buried chest', shape: 'box', hx: 0.4, hy: 0.28, hz: 0.28, m: 45, val: 190, frag: 0.5, color: 0x5a3a1e },
   };
 
   // the ranch: static boxes {x,y,z,hx,hy,hz,c,block} (block = players can't walk through it)
@@ -73,10 +78,30 @@
     addPart(0, 0.85, 0.6, 1.1, 0.15, 2.2); addPart(0, 1.5, -2.4, 1.1, 1.0, 1.0);             // bed, cab
     addPart(-1.15, 1.25, 0.6, 0.05, 0.25, 2.2); addPart(1.15, 1.25, 0.6, 0.05, 0.25, 2.2);  // low sides
     addPart(0, 1.25, -1.55, 1.1, 0.25, 0.05);                                               // front board (tailgate is open)
-    const W = { C, world, bodies: new Map(), grabs: new Map(), players: new Map(), truck, events: [], t: 0 };
+    const W = { C, world, bodies: new Map(), grabs: new Map(), players: new Map(), truck, events: [], t: 0, digs: digSpots(seed) };
     placeTruck(W, truck.x, truck.z, truck.h, 0);
     let id = 1; for (const [type, x, y, z] of SPAWN) addObj(W, 50000 + id++, type, RANCH.X + x, y, RANCH.Z + z);
     return W;
+  }
+  // dirt mounds in the yard, each hiding something (a different set every trip)
+  function rng(seed) { let a = (seed >>> 0) || 1; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const BURIED = ['can', 'fossil', 'tube', 'chest', 'can', 'fossil'];
+  function digSpots(seed) {
+    const r = rng((seed | 0) + 77), out = [];
+    for (let tries = 0; out.length < BURIED.length && tries < 500; tries++) {
+      const x = (r() * 2 - 1) * 26, z = (r() * 2 - 1) * 26;
+      if (Math.abs(x) < 9 && Math.abs(z) < 7.5) continue;              // not in or right next to the house
+      if (Math.abs(x) < 4 && z > 8 && z < 22) continue;                 // not under the truck
+      if (Math.abs(x + 10) < 3 && Math.abs(z - 9) < 2.5 || Math.abs(x - 10) < 2.5 && Math.abs(z - 7) < 3) continue; // trough, woodpile
+      if (out.some(o => Math.hypot(o.x - RANCH.X - x, o.z - RANCH.Z - z) < 6)) continue;
+      out.push({ i: out.length, id: 50100 + out.length, x: +(RANCH.X + x).toFixed(2), z: +(RANCH.Z + z).toFixed(2), type: BURIED[out.length], dug: false });
+    }
+    return out;
+  }
+  function unbury(W, i) {
+    const d = W.digs[i]; if (!d || d.dug) return false; d.dug = true;
+    const bd = addObj(W, d.id, d.type, d.x, 0.45, d.z); if (bd) { bd.velocity.set(0, 2.5, 0); bd.cgl.lastHit = W.t + 0.5; }
+    return true;
   }
   function placeTruck(W, x, z, h, dt) {
     const T = W.truck, s = Math.sin(h), c = Math.cos(h), tp = dt && Math.hypot(x - T.x, z - T.z) < 2, vx = tp ? (x - T.x) / dt : 0, vz = tp ? (z - T.z) / dt : 0; // a jump (arriving) is a teleport
@@ -152,6 +177,6 @@
   // what's in the truck bed right now (and its total value)
   function bedLoad(W) { const T = W.truck, list = []; let val = 0; for (const [id, bd] of W.bodies) if (inBed(bd.position, T.x, T.z, T.h)) { list.push(id); val += bd.cgl.val; } return { list, val }; }
 
-  const PHYS = { RANCH, TRUCK, GRAB, DMG, LOOT, SPAWN, layout, bedBox, inBed, create, addObj, placeTruck, setPlayer, dropPlayer, grab, hold, release, yeet, step, snapshot, bedLoad };
+  const PHYS = { RANCH, TRUCK, GRAB, DMG, LOOT, SPAWN, layout, digSpots, unbury, bedBox, inBed, create, addObj, placeTruck, setPlayer, dropPlayer, grab, hold, release, yeet, step, snapshot, bedLoad };
   if (typeof module === 'object' && module.exports) module.exports = PHYS; else root.PHYS = PHYS;
 })(this);

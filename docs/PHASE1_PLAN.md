@@ -162,3 +162,6 @@ After playtest feedback (carrying felt clunky, trips felt empty), trips now go t
 - The minimap still shows camp.
 - The key hint bar still mentions digging.
 - The camp hub is still open lake.
+
+## Missions only (2026-09-27) ✅
+The open lake is no longer part of the game. Camp is a small fenced hub (x -40..30, z 27..56) with no digging, and the only way out is the truck (TRIP BOARD). Digging now happens on the trips: 6 dirt mounds in the ranch yard (seeded, different every trip) each hide a valuable (tin of coins, fossil, gold KB tube, 45 kg buried chest). Hold click or E at a mound for 4 shovelfuls and it pops out as a physics object (`pdig` / `pdug`). The minimap switches to a ranch close-up (house, truck, mounds, loot), and the key hints change at the ranch.
