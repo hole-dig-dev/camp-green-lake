@@ -47,7 +47,7 @@ TENTS.forEach(tent);
 
 /* ---------- broad walkable interiors ---------- */
 const TENT_FLOOR_Y=-4; // Network positions are clamped to -5..10.
-const ROOM_LAMP=1.4;   // brightness of the one warm lamp in each tent/office room
+const ROOM_LAMP=1.0;   // brightness of the one warm lamp in each tent/office room
 const BUNKS=[];
 const TENT_COLLIDERS=TENTS.map(()=>[]);
 const ROOM_MESHES=[];
@@ -66,6 +66,15 @@ TENTS.forEach((t,ti)=>{
   const gap=1.3;
   add(t.roomW-gap,H,0.18,wall,t.x-(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
   add(t.roomW-gap,H,0.18,wall,t.x+(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
+  // A closed door in the doorway (it used to be an open gap you could see the outside world through). You still leave
+  // with E at the door (the 'exit' spot); this is just the look: a lintel above, two leaves, a seam and handles.
+  {const DH=2.3,zi=t.z-t.roomD,leaf=t.house?0x5a3b24:0x6d6448,trim=t.house?0x3a2618:0x4b4533;
+    add(gap*2,H-DH,0.18,wall,t.x,Y+DH+(H-DH)/2,zi);                               // lintel over the door
+    add(gap*2-0.08,DH,0.1,leaf,t.x,Y+DH/2,zi+0.02);                              // the two door leaves, closed
+    add(0.07,DH,0.14,trim,t.x,Y+DH/2,zi+0.05);                                   // seam between the leaves
+    for(const sx of[-1,1])add(0.1,DH+0.12,0.16,trim,t.x+sx*(gap-0.02),Y+(DH+0.12)/2,zi+0.04);   // jambs
+    for(const sx of[-1,1])add(0.1,0.1,0.09,0xc9a24a,t.x+sx*0.24,Y+1.1,zi+0.12);  // brass handles
+  }
   // Timber beams, floor stripes and high canvas panels give long rooms a clear scale.
   for(let z=t.z-t.roomD+2;z<t.z+t.roomD;z+=3){
     add(t.roomW*2,0.1,0.14,frame,t.x,Y+H-0.18,z);
