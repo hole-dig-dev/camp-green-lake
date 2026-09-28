@@ -40,7 +40,15 @@ const rainSeed=[];for(let i=0;i<RAIN;i++)rainSeed.push({x:(Math.random()-0.5)*60
 function updateRain(dt){if(!rain.visible)return;const cx=camera.position.x,cz=camera.position.z;for(let i=0;i<RAIN;i++){const d=rainSeed[i];d.y-=d.v*dt;if(d.y<-2){d.y=28;d.x=(Math.random()-0.5)*60;d.z=(Math.random()-0.5)*60}const x=cx+d.x,z=cz+d.z,y=d.y+P.y;rainPos.set([x,y,z,x-0.05,y+0.7,z],i*6)}rainGeo.attributes.position.needsUpdate=true}
 
 /* ---------- audio: CC0 foley and ambience, with synthesized fallbacks ---------- */
-let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null,windNoiseGain=null;
+let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null,windNoiseGain=null,windLfoGain=null;
+// A/B modes are local to this browser. Preserve the original wind by default; every changed sound is selectable by category.
+const AUDIO_MODE={wind:'original',ambience:'recorded',rain:'recorded',steps:'recorded',dig:'recorded',metal:'recorded',props:'recorded'};
+function audioModeStatus(){return Object.entries(AUDIO_MODE).map(([k,v])=>`${k}: ${v}`).join(', ')}
+function setAudioMode(category,mode){
+  if(category==='all'){for(const k of Object.keys(AUDIO_MODE))AUDIO_MODE[k]=mode}
+  else AUDIO_MODE[category]=mode;
+  return audioModeStatus();
+}
 const AUDIO_FILES={
   shovel:'shovel.mp3',wind:'wind.mp3',birds:'birds.mp3',crickets:'crickets.mp3',rain:'rain.mp3',
   'step-sand-1':'step-sand-1.mp3','step-sand-2':'step-sand-2.mp3','step-sand-3':'step-sand-3.mp3',
@@ -74,6 +82,7 @@ function setAmbientClip(name,volume){
 let footstepT=0,footstepN=0;
 function updateFootsteps(dt){
   if(!AC||!S.started)return;
+  if(AUDIO_MODE.steps==='original'){footstepT=0;return}
   if(!P.moving||!P.grounded||S.ko||S.inBed!=null||digHeld){footstepT=0;return}
   footstepT-=dt;if(footstepT>0)return;
   const running=P.anim===4,kind=inTent()?'stone':'sand';
@@ -84,19 +93,22 @@ function updateFootsteps(dt){
 function updateAudioScene(){
   if(!AC||!S.started)return;
   const outside=inTent()?0.14:1,night=nightF(),dust=haboobF();
-  setAmbientClip('wind',outside*(0.36+dust*0.14));
-  setAmbientClip('birds',outside*(1-night)*(1-dust)*0.24);
-  setAmbientClip('crickets',outside*night*(1-dust)*0.43);
-  setAmbientClip('rain',S.won?0.33:0);
+  const recordedWind=AUDIO_MODE.wind==='recorded',recordedRain=AUDIO_MODE.rain==='recorded';
+  setAmbientClip('wind',recordedWind?outside*(0.16+dust*0.06):0);
+  setAmbientClip('birds',AUDIO_MODE.ambience==='recorded'?outside*(1-night)*(1-dust)*0.24:0);
+  setAmbientClip('crickets',AUDIO_MODE.ambience==='recorded'?outside*night*(1-dust)*0.43:0);
+  setAmbientClip('rain',S.won&&recordedRain?0.33:0);
   const at=AC.currentTime;
-  if(windNoiseGain)windNoiseGain.gain.setTargetAtTime(outside*(audioBuffers.has('wind')?0.013:0.06),at,1);
-  if(rainGain)rainGain.gain.setTargetAtTime(S.won?(audioBuffers.has('rain')?0.02:0.18):0,at,1);
+  if(windNoiseGain)windNoiseGain.gain.setTargetAtTime(recordedWind?outside*(audioBuffers.has('wind')?0.013:0.06):0.07,at,0.6);
+  if(windLfoGain)windLfoGain.gain.setTargetAtTime(recordedWind?0:0.04,at,0.6);
+  if(rainGain)rainGain.gain.setTargetAtTime(S.won?(recordedRain&&audioBuffers.has('rain')?0.02:0.18):0,at,0.6);
 }
 function initAudio(){
   if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=SETTINGS.volMaster;master.connect(AC.destination);
   fxBus=AC.createGain();fxBus.gain.value=SETTINGS.volFx;fxBus.connect(master);   // pause menu: ambient + one-shot sfx share this bus, so Effects volume is independent of Music
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-  const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;windNoiseGain=AC.createGain();windNoiseGain.gain.value=0.06;
+  const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;windNoiseGain=AC.createGain();windNoiseGain.gain.value=0.07;
+  const lfo=AC.createOscillator();lfo.frequency.value=0.08;windLfoGain=AC.createGain();windLfoGain.gain.value=0.04;lfo.connect(windLfoGain).connect(windNoiseGain.gain);lfo.start();
   wind.connect(wf).connect(windNoiseGain).connect(fxBus);wind.start();
   const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(fxBus);rn.start();
   for(const name of Object.keys(AUDIO_FILES))loadAudioClip(name);
@@ -105,8 +117,8 @@ function initAudio(){
 function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
 function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
 const sfx={
-  scoop(){if(!playAudioClip('shovel',0.48,0.94+Math.random()*0.12)){noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)}},
-  clank(){if(!playAudioClip('metalClick',1.15)){tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)}},
+  scoop(){if(AUDIO_MODE.dig==='recorded'&&playAudioClip('shovel',0.48,0.94+Math.random()*0.12))return;noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
+  clank(){if(AUDIO_MODE.metal==='recorded'&&playAudioClip('metalClick',1.15))return;tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)},
   find(){[660,880,1320].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.16),i*85))},
   gold(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,0.3,'triangle',0.16),i*110))},
   coin(){tone(988,0.08,'square',0.07);setTimeout(()=>tone(1319,0.18,'square',0.07),70)},

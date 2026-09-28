@@ -169,6 +169,15 @@ async function main() {
     record('HUD shows after start', true);
     await waitFor(page1, () => audioBuffers.has('shovel') && audioBuffers.has('step-sand-1'), 20000, 'CC0 clips to decode');
     record('dig and footstep recordings decode in the browser', true);
+    const audioModes = await page1.evaluate(() => {
+      const initial = AUDIO_MODE.wind;
+      window.__cgl.runCommand('audio wind new');const recorded = AUDIO_MODE.wind;
+      window.__cgl.runCommand('audio old');const allOld = Object.values(AUDIO_MODE).every(v => v === 'original');
+      window.__cgl.runCommand('audio new');const allNew = Object.values(AUDIO_MODE).every(v => v === 'recorded');
+      window.__cgl.runCommand('audio wind old');return { initial, recorded, allOld, allNew, restored: AUDIO_MODE.wind };
+    });
+    assert(audioModes.initial === 'original' && audioModes.recorded === 'recorded' && audioModes.allOld && audioModes.allNew && audioModes.restored === 'original', 'audio A/B switch did not preserve the original wind or switch every category');
+    record('audio A/B switches wind and every changed sound category', true);
     await page1.waitForTimeout(400); // let the join round-trip (host flag, etc.) land
 
     // Poll for the effect rather than trusting a fixed wall-clock wait: under software-rendered

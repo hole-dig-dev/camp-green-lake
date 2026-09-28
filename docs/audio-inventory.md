@@ -2,12 +2,28 @@
 
 The game starts Web Audio on the player's first game-start click. Master volume controls everything; Effects controls recordings, ambience, and synthesized effects; Music controls the synthesized disco track; Voice controls live proximity chat. **M** mutes the master bus. Recordings load asynchronously, so the first use of a clip can play its synthesized fallback.
 
+The **original synthesized wind remains the default**, because it already suits the lakebed. Other newly added recordings default on. To A/B at the same spot, open the developer console with backtick and use `audio wind old`, `audio wind new`, or `audio status`. `audio old` and `audio new` compare the whole soundscape. Categories are `wind`, `ambience` (birds/crickets), `rain`, `steps`, `dig`, `metal`, and `props` (tent/house/bunk). These choices affect only your browser and reset on reload. The old game had no footsteps, birds, crickets, or tent/bunk Foley, so their "old" mode is silent.
+
+## A/B against the previous game audio
+
+| Category | `old` | `new` | Current default |
+| --- | --- | --- | --- |
+| Wind | Soft, slowly pulsing, low-pass noise | Short CC0 whoosh loop with a quieter noise bed | **Old**; the recorded loop adds texture but repeats more often |
+| Day/night ambience | Silence | Birds by day, crickets by night | New |
+| Rain at the ending | Filtered noise | Longer CC0 rain loop with noise beneath it | New |
+| Footsteps | Silence | Six alternating sand/stone recordings | New |
+| Digging | Noise scrape plus low tone | CC0 shovel-in-dirt hit | New |
+| Metal hits | Triangle sweep plus noise | CC0 metal click | New |
+| Tent, house, bunk | Silence | Cloth and wooden-door recordings | New |
+
+The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded wind capture](audio-ab/wind-new.webm) are eight seconds each, taken at the same open-lakebed location with the other new ambience off. Their average levels are within 1 dB. Compare them in-game as well, because the first capture cannot show how the wind behaves during a storm or inside a tent.
+
 ## Current soundscape
 
 | When you hear it | What makes the sound |
 | --- | --- |
-| Open lakebed by day | CC0 wind and bird recordings. A quiet filtered-noise wind layer remains beneath the recording. |
-| Open lakebed by night | CC0 wind and cricket recordings, crossfaded with the day sounds. Tent interiors muffle all three. |
+| Open lakebed by day | Original pulsing synthesized wind by default, plus a CC0 bird recording. The optional recorded-wind mode replaces most of the synthesized wind with a CC0 wind loop. |
+| Open lakebed by night | Original wind and a CC0 cricket recording. Recorded-wind mode and tent muffling can be compared separately. |
 | Rain at the suitcase ending | CC0 rain loop, with a quiet filtered-noise fallback. |
 | Walking and running | Three CC0 sand-step recordings, rotated and slightly pitch-varied; three stone-step recordings for tent/office floors. A short filtered-noise step is the loading fallback. Running has a faster cadence. These are local-player footsteps only. |
 | Digging | A short CC0 shovel-in-dirt recording, varied slightly in pitch; the old filtered-noise scrape and low tone are the loading fallback. |

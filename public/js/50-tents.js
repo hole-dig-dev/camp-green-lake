@@ -9,7 +9,7 @@ function enterTent(ti){
   ROOM_LIGHTS[ti].visible=true;
   P.x=t.x;P.z=t.z-t.roomD+2.6;P.yaw=Math.PI;P.fa=0;P.y=TENT_FLOOR_Y; // enter at the marked south door, facing the room
   P.vy=0;P.kx=P.kz=0;P.crouch=false;digHeld=false;
-  if(!playAudioClip(t.house?'doorOpen':'cloth1',0.45))noise(0.16,700,0.7,0.08,'lowpass');
+  if(AUDIO_MODE.props==='recorded'&&!playAudioClip(t.house?'doorOpen':'cloth1',0.45))noise(0.16,700,0.7,0.08,'lowpass');
   logEv('tentEnter',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   toast(`You enter ${t.name}.${t.crew?' The cards table is on the right.':''} Press E at the door to leave.`,'',3200);
 }
@@ -19,17 +19,17 @@ function exitTent(){
   ROOM_MESHES[ti].visible=false;
   ROOM_LIGHTS[ti].visible=false;
   P.x=S.tentBack.x;P.z=S.tentBack.z;P.y=groundAt(P.x,P.z);P.vy=0;
-  if(!playAudioClip(t.house?'doorClose':'cloth1',0.42,0.9))noise(0.15,600,0.7,0.07,'lowpass');
+  if(AUDIO_MODE.props==='recorded'&&!playAudioClip(t.house?'doorClose':'cloth1',0.42,0.9))noise(0.15,600,0.7,0.07,'lowpass');
   if(wasBed&&online())wsSend({t:'sleep',on:false});
   logEv('tentExit',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   toast(`You step back outside ${t.name}.`,'',2200);
 }
 function toggleBunk(bi){
   if(!inTent())return;
-  if(S.inBed===bi){S.inBed=null;playAudioClip('cloth2',0.42);if(online())wsSend({t:'sleep',on:false});toast('You get up.','',1600);return}
+  if(S.inBed===bi){S.inBed=null;if(AUDIO_MODE.props==='recorded')playAudioClip('cloth2',0.42);if(online())wsSend({t:'sleep',on:false});toast('You get up.','',1600);return}
   const b=BUNKS[bi];if(b.tent!==S.tent)return;   // not one of this tent's own bunks
   S.inBed=bi;P.x=b.x;P.z=b.z;digHeld=false;
-  playAudioClip('cloth2',0.42);
+  if(AUDIO_MODE.props==='recorded')playAudioClip('cloth2',0.42);
   if(online()){wsSend({t:'sleep',on:true});toast('You lie down. Everyone in camp needs to be asleep for the night to pass.','',3600)}
   else if(clockT()>=DAYMS){jumpTo(tAtHour(6));toast('You get some sleep. Morning already.','good',3200);S.inBed=null}
   else toast('You lie down and rest. Nothing to skip yet - it\'s still daytime.','',3200);

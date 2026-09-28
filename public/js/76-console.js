@@ -66,6 +66,15 @@ const numArg=(v,def,a,b)=>{if(v===undefined)return def;const n=Number(v);if(!Num
 
 command('help',{needsGame:false,usage:'help',help:'List every command.',run(){return[...CMDS.values()].map(c=>c.usage.padEnd(22)+c.help).join('\n')}});
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
+command('audio',{usage:'audio [status|old|new|<category> old|new]',help:'A/B the original and recorded sounds locally. Categories: wind, ambience, rain, steps, dig, metal, props.',
+  run([a,b]){
+    a=(a||'').toLowerCase();b=(b||'').toLowerCase();
+    if(!a||a==='status')return audioModeStatus();
+    const modes={old:'original',new:'recorded',original:'original',recorded:'recorded'};
+    if(modes[a]&&!b)return setAudioMode('all',modes[a]);
+    if(!(a in AUDIO_MODE)||!modes[b])throw new Error('Usage: audio old | audio new | audio <wind|ambience|rain|steps|dig|metal|props> <old|new> | audio status');
+    return setAudioMode(a,modes[b]);
+  }});
 command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in front of you, heading your way. Everyone sees it.',
   run([d]){const dist=numArg(d,45,10,200);spawnAhead('twister',dist);return`Twister spawned ${dist} m ahead.${campDist(P.x,P.z)<50?' (Twisters fall apart near camp; walk out onto the lake to see it at full strength.)':''}`}});
 command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off Big Thumb, [50] m out from you. Everyone sees it.',
