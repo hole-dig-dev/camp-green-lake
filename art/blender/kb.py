@@ -99,4 +99,4 @@ bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=0.06,locati
 for k in range(8):
     a=rnd.uniform(0,6.28);d=rnd.uniform(0.06,0.1);bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1,radius=rnd.uniform(0.006,0.012),location=(math.cos(a)*d,math.sin(a)*d,0.004));o=bpy.context.active_object;o.name=f'clump{k}';_finish(o,DIRT,0,r)
 finish(n,elev=30,margin=1.2)
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

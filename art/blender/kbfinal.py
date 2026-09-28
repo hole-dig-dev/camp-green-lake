@@ -11,4 +11,4 @@ cyl('cap',R*1.04,L*0.45,(0,0,L*0.55+0.004+L*0.225),GOLD,verts=24,bevel=0.003,par
 cyl('capend',R*0.96,0.003,(0,0,L*0.55+0.004+L*0.45+0.0015),PALE,verts=24,bevel=0,parent=r)
 engrave(ob('base'),'KB',L*0.3,0.02,r=R)
 finish(n,margin=1.15)
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

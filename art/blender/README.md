@@ -1,6 +1,6 @@
 # Camp Green Lake Blender art
 
-`camp-green-lake-art.blend` holds every 3D asset, **one scene per asset** (plus the `Camper` scene
+`camp-green-lake-art.blend` holds every 3D asset, **one scene per asset** (plus `ARCHIVED_Camper_minipc`, the archived minipc camper scene
 from the character work). In each scene the `<Name>.Asset` collection is the model and
 `<Name>.Studio` is the preview camera, lights and floor.
 

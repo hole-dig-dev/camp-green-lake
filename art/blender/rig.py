@@ -179,4 +179,4 @@ def vpose(ph,flap):
 clip(arm,'Glide',48,lambda ph:vpose(ph,0),loc_fn=lambda ph:(0,0,0.02*S2(ph*TAU)))
 clip(arm,'Flap',16,lambda ph:vpose(ph,38),loc_fn=lambda ph:(0,0,-0.05*S2(ph*TAU)))
 print('vulture exported',export_rig('Vulture','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureVulture.glb'))
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

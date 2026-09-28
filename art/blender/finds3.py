@@ -105,4 +105,4 @@ n='Pistol_4';scene(n);r=root(n);revolver('p',r,metal=SILVER,grip=PEARL,derringer
 n='Pistol_5';scene(n);r=root(n);revolver('p',r,metal=BLUED,grip=WALNUT,accents=GOLDM,drum=BLUED)
 for k in range(6):box(f'scroll{k}',(0.012,0.0005,0.0015),(0.06+k*0.014,-0.0078,0.035+0.002*math.sin(k)),GOLDM,rot=(0,0,0),bevel=0,parent=r)
 finish(n,elev=25,azim=-10)
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

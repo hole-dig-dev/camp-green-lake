@@ -200,4 +200,4 @@ L=bpy.data.objects.new('WardenRoom.lamp',bpy.data.lights.new('WardenRoom.lamp','
 for o in coll('Studio').objects:
     if o.type=='LIGHT' and o.data.type=='SUN':o.data.energy=0
 print('warden room',tris());render()
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

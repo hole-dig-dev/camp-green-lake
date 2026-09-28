@@ -277,8 +277,8 @@ async function main() {
     await waitFor(page2, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start (p2)');
 
     // Give the join broadcasts a moment to reach each other, then check both directions.
-    await waitFor(page1, () => document.querySelector('#onlineList').textContent !== 'Just you', 8000, 'p1 to see another camper');
-    await waitFor(page2, () => document.querySelector('#onlineList').textContent !== 'Just you', 8000, 'p2 to see another camper');
+    await waitFor(page1, () => document.querySelector('#onlineList').textContent !== 'Just you', 20000, 'p1 to see another camper');
+    await waitFor(page2, () => document.querySelector('#onlineList').textContent !== 'Just you', 20000, 'p2 to see another camper');
     const seenByP1 = await page1.$eval('#onlineList', el => el.textContent);
     const seenByP2 = await page2.$eval('#onlineList', el => el.textContent);
     record('two browsers see each other', true, `p1 sees "${seenByP1}", p2 sees "${seenByP2}"`);

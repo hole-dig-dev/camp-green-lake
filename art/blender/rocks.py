@@ -93,4 +93,4 @@ for m_ in (LIGHT,DARK):
     for o in objs:o.select_set(True)
     bpy.context.view_layer.objects.active=objs[0];bpy.ops.object.join()
 studio(elev=12,azim=-30,lens=50,target=(0,0,0));frame(margin=1.25);bpy.data.objects['Tumbleweed.floor'].location.z=-1.0;print('tumbleweed',tris());render()
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

@@ -218,4 +218,4 @@ for s in (-1,1):
 for k in range(9):feather(f'tail{k}',(0,0.36,Z-0.01),((k-4)*0.09,1,0),0.26,0.07,FEAT,r)
 for s in (-1,1):limb(f'leg{s}',[(s*0.05,0.12,Z-0.06),(s*0.06,0.26,Z-0.1),(s*0.06,0.36,Z-0.1)],0.018,M_('c_vfoot',(0xc8,0xb8,0xa8),0.7),r)
 shot('Vulture',elev=48,azim=-25,margin=1.1)
-bpy.context.window.scene=bpy.data.scenes['Camper'];bpy.ops.wm.save_mainfile()
+bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
