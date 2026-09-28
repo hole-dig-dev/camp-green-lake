@@ -78,15 +78,6 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
-  if (url === '/models/camper.glb') {
-    // The Blender camper (see blender/cgl_rig.py). The page asks for it with a ?v= version, so it can cache hard.
-    fs.readFile(path.join(PUB, 'models', 'camper.glb'), (err, buf) => {
-      if (err) { res.writeHead(404); return res.end(); }
-      res.writeHead(200, { 'content-type': 'model/gltf-binary', 'cache-control': 'public, max-age=604800' });
-      res.end(buf);
-    });
-    return;
-  }
   if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8');
   if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8');
   res.writeHead(404, { 'content-type': 'text/plain' });

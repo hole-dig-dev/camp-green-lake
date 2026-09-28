@@ -2,4 +2,3 @@ node_modules/
 data/
 ecosystem.config.cjs
 .env
-*.blend1
