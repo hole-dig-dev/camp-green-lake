@@ -60,7 +60,8 @@ function updateBots(dt,now){
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     if(b.state==='inside'){
       /* hanging out in D Tent: sitting at the table (X-Ray) or lying on a bunk (everyone else) */
-      g.position.y=TENT_FLOOR_Y;animPerson(b.p,b.d.n==='X-Ray'?0:5,dt);
+      if(b.d.n==='X-Ray'){g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt)}          // dealing at the card table
+      else{animPerson(b.p,0,dt);sleepPose(b.p,botIndoorSpot(b))}                      // everyone else lies on their own bunk
       b.t-=dt;
       if(!isNight&&b.t<=0){b.state='leaving';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
       continue;

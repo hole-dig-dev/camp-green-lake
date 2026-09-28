@@ -168,6 +168,12 @@ function updateRemotes(dt){
     const dx=R.tx-g.position.x,dz=R.tz-g.position.z;
     if(dx*dx+dz*dz>100){g.position.set(R.tx,R.ty,R.tz)}else{g.position.x+=dx*k;g.position.z+=dz*k;g.position.y+=(R.ty-g.position.y)*k}
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
-    R.dph=(R.dph+dt/0.42)%1;animPerson(R.p,R.anim,dt,R.dph);
+    R.dph=(R.dph+dt/0.42)%1;
+    if(R.anim===3&&R.room!=null){   // lying down inside a tent = asleep in a bunk: snap onto the nearest one in that room
+      let bk=null,bd=9;for(const u of BUNKS)if(u.tent===R.room){const d=(u.x-R.tx)**2+(u.z-R.tz)**2;if(d<bd){bd=d;bk=u}}
+      if(bk){animPerson(R.p,0,dt);sleepPose(R.p,bk);continue}
+    }
+    if(R.p.g.rotation.x===-Math.PI/2&&R.anim!==3)R.p.g.rotation.x=0;   // got up out of a bunk
+    animPerson(R.p,R.anim,dt,R.dph);
   }
 }

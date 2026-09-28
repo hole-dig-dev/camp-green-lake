@@ -28,7 +28,19 @@ function makePerson(o){
 /* one scoop: [phase, lean, twist, right arm, left arm] — drive in, lift, toss onto the pile, reset */
 const DIGK=[[0,0.15,0,-0.5,-0.6],[0.3,0.55,0,-0.95,-0.8],[0.5,0.25,0.1,-1.6,-1.25],[0.72,0.08,0.7,-1.9,-1.5],[1,0.15,0,-0.5,-0.6]];
 function digPose(t){for(let i=1;i<DIGK.length;i++){if(t<=DIGK[i][0]){const a=DIGK[i-1],b=DIGK[i],k=sm((t-a[0])/(b[0]-a[0]));return[lerp(a[1],b[1],k),lerp(a[2],b[2],k),lerp(a[3],b[3],k),lerp(a[4],b[4],k)]}}return DIGK[0].slice(1)}
+/* Asleep in a bunk: flat on your back on the mattress, head on the pillow (pillows sit toward the bunk's -z end), arms
+   at your sides, shovel put away. The body's origin is at the feet, so rotation.x = -PI/2 lays it back with the head
+   toward -z. Used for you, other campers (they send anim 3 while in a room) and the D Tent crew. */
+const BUNK_TOP_LO=0.56,BUNK_TOP_HI=1.72;   // mattress top above the room floor for a lower / upper bunk (20-world.js)
+const SLEEP_FEET_DZ=0.98,SLEEP_BACK=0.17;  // feet this far toward +z from the bunk centre; body centre-line above the mattress
+function sleepPose(p,bk){
+  p.g.position.set(bk.x,TENT_FLOOR_Y+(bk.high?BUNK_TOP_HI:BUNK_TOP_LO)+SLEEP_BACK,bk.z+SLEEP_FEET_DZ);
+  p.g.rotation.set(-Math.PI/2,0,0);
+  p.upper.rotation.set(0,0,0);p.armL.rotation.set(0,0,0.08);p.armR.rotation.set(0,0,-0.08);p.legL.rotation.set(0,0,0);p.legR.rotation.set(0,0,0);
+  if(p.shovel)p.shovel.visible=false;
+}
 function animPerson(p,mode,dt,digPhase,speed){
+  if(p.shovel&&!p.shovel.visible)p.shovel.visible=true;   // back in hand when you're up (sleepPose hides it)
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));
   const k=Math.min(1,dt*10);

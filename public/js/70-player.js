@@ -15,7 +15,7 @@ function updatePlayerTent(dt){
   if(uiOpen()||S.inBed!=null){ix=0;iz=0}
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
-  P.moving=false;P.anim=S.inBed!=null?5:0;
+  P.moving=false;P.anim=S.inBed!=null?3:0;   // 3 = lying down, which other campers render as asleep while you're in a room
   if(ml>0.1&&S.inBed==null){
     mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:4.3)*Math.min(1,ml);
     let nx=clamp(P.x+mx*sp*dt,t.x-t.roomW+0.5,t.x+t.roomW-0.5),nz=clamp(P.z+mz*sp*dt,t.z-t.roomD+0.5,t.z+t.roomD-0.5);
@@ -23,10 +23,12 @@ function updatePlayerTent(dt){
     P.x=nx;P.z=nz;P.fa=Math.atan2(mx,mz);P.moving=true;P.anim=1;
   }
   P.y=TENT_FLOOR_Y;P.vy=0;P.kx=P.kz=0;P.grounded=true;
-  me.g.position.set(P.x,P.y,P.z);
-  me.g.rotation.x=S.inBed!=null?-Math.PI/2:0;
-  if(S.inBed==null){let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14)}
-  animPerson(me,P.anim,dt,P.digPh);
+  if(S.inBed!=null){animPerson(me,0,dt);sleepPose(me,BUNKS[S.inBed])}   // lying on the mattress (was a standing "drink" pose with the shovel up)
+  else{
+    me.g.position.set(P.x,P.y,P.z);me.g.rotation.x=0;me.g.rotation.z=0;
+    let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
+    animPerson(me,P.anim,dt,P.digPh);
+  }
   // shelter: water drains slowly just standing around inside, and resting in a bunk restores health and water
   if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);S.hp=Math.min(HP_MAX,S.hp+8*dt)}
   else S.water=Math.max(0,S.water-0.15*dt);
