@@ -31,7 +31,7 @@ const SINK_FORCE_EMPTY_AFTER=25;             // if someone's still down there bl
 const SINK_TRAP_DEPTH=2.9;                   // deeper than the deepest a shovel can dig (EIGHT_FT=2.6): tells a
                                               // sinkhole apart from an ordinary dug hole so isTrapped()'s climb-out
                                               // never fires for one (a sinkhole's walls are "too steep and loose")
-const SINK_RESCUE_R=4;                       // how close a rescuer has to stand to the rim to link hands
+const SINK_RESCUE_R=6;                       // how close (m, flat distance) a rescuer at the rim must be to the trapped camper; the trapped one is held within SINK_FLOOR_FRAC of the radius, so on a 14 m crater the rim is up to ~5 m away
 const SINK_RESCUE_TIME=2;                    // seconds to hold, solo, before you're hauled up (JT: "hold with E or something")
 const SINK_CHAIN_BONUS=0.5;                  // each extra simultaneous rescuer adds this much rate (2 friends = 1.5x, 3 = 2x, ...)
 const SINK_MAX_CHAIN=4;                      // helpers beyond this stop adding speed (diminishing returns, not exploitable)
@@ -50,6 +50,13 @@ let sinkSpawned=[];          // console/env-triggered ones (mirrors twSpawned/EN
 let sinkRumbleNode=null;
 let sinkPulling=false;                        // am I (locally) holding the rescue key at someone's rim right now?
 let sinkRescueT=0, sinkPrevSh=null, sinkFallSlideT=0;
+/* Once you fall in you STAY in: sinkTrapped remembers which crater has you until a friend's pull, Zero's line, the
+   crater filling in, a knockout, or another hazard carrying you off (twister/tumbleweed/vulture) ends it. The old
+   check only stopped a single step that climbed more than 0.6 m, but the crater's wall rises 4.4 m over ~3.4 m, so
+   every step climbed only ~7 cm and you could just walk up the side (and halfway up you no longer counted as "in").
+   While trapped, updateSinkholes() keeps you on the crater floor and 70-player.js blocks jumping. */
+const SINK_FLOOR_FRAC=0.66;                  // you're held inside this fraction of the radius: the flat, full-depth floor
+let sinkTrapped=null;
 
 /* one grid cell + time window, exactly like twPlan/lsPlan: same seed math everywhere gives the same answer everywhere */
 function sinkPlan(ci,cj,k){
@@ -117,7 +124,9 @@ function sinkStillOccupied(sh){
 /* am I, right now, standing down inside an open sinkhole? Distance-to-centre AND depth-below-base both have to say
    so, the same two-part test isTrapped() uses for an ordinary deep hole (see 84-coop.js). */
 function inSinkhole(){
-  if(!S.started||S.ko||inTent()||!P.grounded)return null;
+  if(!S.started||S.ko||inTent())return null;
+  if(sinkTrapped){const live=SINK_LIVE.get(sinkTrapped.id)===sinkTrapped&&(sinkTrapped.stage==='open'||sinkTrapped.stage==='settled'||sinkTrapped.stage==='filling');if(live)return sinkTrapped;sinkTrapped=null}
+  if(!P.grounded)return null;
   for(const sh of SINK_LIVE.values()){
     if(sh.stage!=='open'&&sh.stage!=='settled'&&sh.stage!=='filling')continue;
     if(Math.hypot(P.x-sh.x,P.z-sh.z)<sh.r*0.82&&holeDepthHere()>SINK_TRAP_DEPTH)return sh;
@@ -127,6 +136,7 @@ function inSinkhole(){
 /* haul the local player up onto the rim, in whatever direction they're already offset from the centre (same idea as
    popOut() for an ordinary hole). Also cleans up a mid-rescue solo bot, if Zero was on his way or already pulling. */
 function popOutOfSinkhole(sh,by){
+  sinkTrapped=null;
   if(sh.soloBot){const b=sh.soloBot;b.sinkOverride=null;b.state='return';b.tx=b.hole.x;b.tz=b.hole.z;b.p.upper.rotation.x=0;b.p.armR.rotation.x=0;sh.soloBot=null}
   const dx=P.x-sh.x,dz=P.z-sh.z,d=Math.hypot(dx,dz)||1;
   P.x=sh.x+dx/d*(sh.r*0.92);P.z=sh.z+dz/d*(sh.r*0.92);P.y=groundAt(P.x,P.z);P.vy=0;P.grounded=true;
@@ -254,8 +264,18 @@ function updateSinkholes(dt){
   if(!inTent()&&nearestShakeD<45){const a=clamp(1-nearestShakeD/45,0,1)*0.1*shakeK;camera.position.x+=(Math.random()-0.5)*a;camera.position.y+=(Math.random()-0.5)*a}
 
   /* ---- am I trapped? fall-in slide + reach-up pose + tallying rescuers + the solo fallback ---- */
+  // Another hazard grabbing you (twister, tumbleweed, vulture) or a knockout frees you from the crater; so does
+  // anything that moved you well outside it (a console tp, a respawn).
+  if(sinkTrapped&&(S.ko||twSt||tbSt||vSt||Math.hypot(P.x-sinkTrapped.x,P.z-sinkTrapped.z)>sinkTrapped.r))sinkTrapped=null;
   const sh=inSinkhole();
-  if(sh&&sh!==sinkPrevSh){sinkFallSlideT=SINK_SLIDE_TIME;sfx.thud();toast('You fell into a sinkhole. Only a friend can pull you out.','bad',5500);logEv('sinkFellIn',{x:+P.x.toFixed(1),z:+P.z.toFixed(1)})}
+  if(sh&&!sinkTrapped)sinkTrapped=sh;
+  if(sh){   // hold you on the crater floor: no walking, sprinting or jumping up the wall
+    const dx=P.x-sh.x,dz=P.z-sh.z,d=Math.hypot(dx,dz),maxR=sh.r*SINK_FLOOR_FRAC;
+    if(d>maxR){P.x=sh.x+dx/d*maxR;P.z=sh.z+dz/d*maxR}
+    const gy=groundAt(P.x,P.z);if(P.y>gy+0.05||d>maxR){P.y=gy;P.vy=0;P.grounded=true}
+    me.g.position.set(P.x,P.y,P.z);
+  }
+  if(sh&&sh!==sinkPrevSh){sinkFallSlideT=SINK_SLIDE_TIME;sfx.thud();toast('You fell into a sinkhole! The walls are too steep to climb. A friend at the rim can hold E to pull you out.','bad',6000);logEv('sinkFellIn',{x:+P.x.toFixed(1),z:+P.z.toFixed(1)})}
   sinkPrevSh=sh;
   if(sh){
     if(sinkFallSlideT>0){sinkFallSlideT-=dt;const dx=sh.x-P.x,dz=sh.z-P.z,d=Math.hypot(dx,dz);if(d>0.3){const s=Math.min(d,dt*3.2);P.x+=dx/d*s;P.z+=dz/d*s;P.y=groundAt(P.x,P.z)}}
@@ -275,8 +295,9 @@ function updateSinkholes(dt){
     for(const b of bots)if(b.sinkOverride){b.p.upper.rotation.x=lerp(b.p.upper.rotation.x,0,dt*4);b.p.armR.rotation.x=lerp(b.p.armR.rotation.x,0,dt*4)}
   }
 
-  /* ---- am I rescuing someone? hold the interact key (F) at the rim of a sinkhole-trapped remote ---- */
-  const target=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&32,SINK_RESCUE_R):null;
+  /* ---- am I rescuing someone? hold E or F at the rim of a sinkhole-trapped friend to link hands (E is also dig,
+     but scoop() in 45-state.js skips digging while a trapped friend is in reach, so E pulls instead) ---- */
+  const target=!S.ko&&!uiOpen()&&!sh&&(KEYS['f']||KEYS['e'])?remoteNear(R=>R.f&32,SINK_RESCUE_R):null;
   sinkPulling=!!target;
   if(target){me.upper.rotation.x=lerp(me.upper.rotation.x,0.5,Math.min(1,dt*SINK_POSE_K));me.armR.rotation.x=lerp(me.armR.rotation.x,1.3,Math.min(1,dt*SINK_POSE_K))}
   else if(!sh){me.upper.rotation.x=lerp(me.upper.rotation.x,0,dt*4);me.armR.rotation.x=lerp(me.armR.rotation.x,0,dt*4)}
@@ -293,5 +314,5 @@ function sinkTrappedText(sh){
   if(sh.soloBot)return sh.soloBot.sinkOverride&&sh.soloBot.sinkOverride.stage==='pull'?'Zero is pulling you up…':'Zero is on his way with a line…';
   if(sinkRescueT>0)return`Being pulled up… ${Math.round(clamp(sinkRescueT/SINK_RESCUE_TIME,0,1)*100)}%`;
   if(!othersOnline())return`Too steep to climb. Nobody else is around; someone will come find you in ${Math.max(0,Math.ceil(SINK_SOLO_WAIT-sh.myTrapT))}s.`;
-  return'Too steep and loose to climb. A friend has to come to the rim and hold F to pull you up.';
+  return'Too steep and loose to climb. A friend has to come to the rim and hold E (or F) to link hands and pull you up.';
 }
