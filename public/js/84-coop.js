@@ -52,6 +52,7 @@ function soloEndOfDay(){
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
+  if(ITEM_MODELS[type]){g.add(itemMesh(type));scene.add(g);return g}   // the Blender safe / strongbox (23-models.js), once loaded
   if(type==='safe'){const b=box(1.1,1.1,1,0x3b3f45);b.position.y=0.55;const d=cyl(0.18,0.18,0.06,10,0xb8b8b8);d.rotation.x=Math.PI/2;d.position.set(0,0.62,0.52);const h=box(0.3,0.06,0.06,0xd4af37);h.position.set(0.3,0.35,0.52);g.add(b,d,h)}
   else{const b=box(1.2,0.7,0.8,0x5b3a1e);b.position.y=0.35;g.add(b);for(const x of[-0.4,0.4]){const s=box(0.1,0.72,0.82,0xd4af37);s.position.set(x,0.36,0);g.add(s)}}
   scene.add(g);return g;

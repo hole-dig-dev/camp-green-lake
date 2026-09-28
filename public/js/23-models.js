@@ -122,6 +122,7 @@ const CAMP_PROPS=[
   {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
   {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Wreck Room, doors facing the yard
   {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
+  {m:'MrSirTruck',x:6.1,z:31.2,ry:Math.PI/2,w:2.0,d:5.2},      // Mr. Sir's pickup, tailgate down toward him: heavy loot sells here (sim.js SELL)
 ];
 {
   const byModel={};
@@ -160,7 +161,7 @@ TENTS.forEach((t,ti)=>{
 /* ---- dug-up finds: Blender models for the item that pops out of your hole (40-fx.js itemMesh). Real size is tiny
    (the KB tube is 8.5 cm), so each is scaled up to read at game distance, like the old stand-ins. ---- */
 const ITEM_MODELS={};                 // LOOT type -> a ready Group to clone
-const ITEM_MODEL_LIST={kb:['KBTube',5],lipstick:['FindLipstick',3],sploosh:['FindSploosh',2.2],locket:['FindLocket',4],pistol:['FindPistol',1.4],cap:['FindBottleCap',6],can:['FindCan',2],spoon:['FindSpoon',2],shoe:['FindHorseshoe',2.6],arrow:['FindArrowhead',4.5],jar:['FindPeaches',2.2],fossil:['FindFossil',2.2]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
+const ITEM_MODEL_LIST={kb:['KBTube',5],safe:['FindSafe',1],strongbox:['FindStrongbox',1],suitcase:['FindSuitcase',1.15],lipstick:['FindLipstick',3],sploosh:['FindSploosh',2.2],locket:['FindLocket',4],pistol:['FindPistol',1.4],cap:['FindBottleCap',6],can:['FindCan',2],spoon:['FindSpoon',2],shoe:['FindHorseshoe',2.6],arrow:['FindArrowhead',4.5],jar:['FindPeaches',2.2],fossil:['FindFossil',2.2]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
 for(const type in ITEM_MODEL_LIST){
   const[name,scale]=ITEM_MODEL_LIST[type];
   loadModel(name).then(({meshes})=>{

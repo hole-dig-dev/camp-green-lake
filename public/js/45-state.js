@@ -84,7 +84,7 @@ function foundItem(it,h){
   logEv('found',{item:it.id,type:it.type,value:L.val,x:+h.x.toFixed(1),z:+h.z.toFixed(1),heavy:!!L.heavy,kb:it.type==='kb'});
   if(it.type==='suitcase'){sfx.gold();triggerWin(S.name,true);return}
   if(it.type==='kb'){S.hasKB=true;sfx.gold();toast('A gold tube marked "KB"! The Warden will want this. Take it to her cabin.','gold',6000);shout(2);return}
-  if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} seeds). It won't fit in your sack. Grab it with F and haul it to Mr. Sir's truck. Two campers carry it much faster.`,'gold',7000);
+  if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} seeds). It won't fit in your sack. Grab it with F and haul it to Mr. Sir's pickup, just inside the main gate. Two campers carry it much faster.`,'gold',7000);
     if(online())wsSend({t:'prop',item:it.id,type:it.type,x:h.mx,z:h.mz});else addProp(it.id,it.type,h.mx,h.mz);return}
   S.sack.push(it.type);sfx.find();sfx.clank();addXP(4+L.val/4);toast(`Found: ${L.name} (worth ${L.val} seeds). Sell it to Mr. Sir.`+(L.val>=40?' A rare one!':''),L.val>=40?'gold':'',3200);
 }
@@ -114,7 +114,7 @@ function use(){
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='sinkRescue')return; // hold F to link hands: handled every frame in updateSinkholes (87-sinkhole.js)
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
-  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's truck. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
+  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's pickup by the main gate. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');
