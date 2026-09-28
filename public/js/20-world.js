@@ -47,6 +47,7 @@ TENTS.forEach(tent);
 
 /* ---------- broad walkable interiors ---------- */
 const TENT_FLOOR_Y=-4; // Network positions are clamped to -5..10.
+const ROOM_LAMP=1.4;   // brightness of the one warm lamp in each tent/office room
 const BUNKS=[];
 const TENT_COLLIDERS=TENTS.map(()=>[]);
 const ROOM_MESHES=[];
@@ -116,7 +117,7 @@ TENTS.forEach((t,ti)=>{
     tentSolid(list,t.x+t.roomW-1.25,t.z+t.roomD-1.5,1.5,1);
   }
   const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;m.visible=false;scene.add(m);ROOM_MESHES.push(m);
-  const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,2.8,t.crew?27:22,1);
+  const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,ROOM_LAMP,t.crew?27:22,1);   // 2.8 blew out anyone standing near the door and facing the lamp
   light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
 });
 function cabin(x,z,w,d,h,wall,roof){
