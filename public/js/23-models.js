@@ -21,7 +21,8 @@ function gameMat(m){
   // (and decodes textures) as linear light, which would come out much darker. Convert back so a model's paint
   // matches the palette it was built from.
   const g=new T.MeshStandardMaterial({color:m.color.clone().convertLinearToSRGB(),map:m.map||null,flatShading:true,roughness:Math.max(0.55,m.roughness),metalness:0});
-  if(m.vertexColors)g.vertexColors=true;   // rocks carry their strata/sun-bleach as vertex colours
+  if(m.vertexColors)g.vertexColors=true;
+  if(m.transparent){g.transparent=true;g.opacity=m.opacity;g.depthWrite=false}   // the peach jar's glass   // rocks carry their strata/sun-bleach as vertex colours
   if(m.map){m.map.encoding=T.LinearEncoding;g.alphaTest=0.45;g.transparent=false;g.side=T.DoubleSide;m.map.anisotropy=4}
   modelMatCache.set(m,g);return g;
 }
@@ -159,7 +160,7 @@ TENTS.forEach((t,ti)=>{
 /* ---- dug-up finds: Blender models for the item that pops out of your hole (40-fx.js itemMesh). Real size is tiny
    (the KB tube is 8.5 cm), so each is scaled up to read at game distance, like the old stand-ins. ---- */
 const ITEM_MODELS={};                 // LOOT type -> a ready Group to clone
-const ITEM_MODEL_LIST={kb:['KBTube',5]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
+const ITEM_MODEL_LIST={kb:['KBTube',5],shoe:['FindHorseshoe',2.6],arrow:['FindArrowhead',4.5],jar:['FindPeaches',2.2],fossil:['FindFossil',2.2]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
 for(const type in ITEM_MODEL_LIST){
   const[name,scale]=ITEM_MODEL_LIST[type];
   loadModel(name).then(({meshes})=>{
