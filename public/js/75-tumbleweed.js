@@ -175,12 +175,23 @@ const tbTwigs=[];
   }
 }
 const tbAxis=new T.Vector3(),tbQuat=new T.Quaternion(),tbVec=new T.Vector3();
+/* The Blender tumbleweed (art/blender/rocks.py: ~120 curling stems round a packed core, unit radius). Once it loads it
+   takes over from the core + twigs above: same pool size, one InstancedMesh per part (3 draws for every weed). */
+let tbModel=null;
+modelParts('Tumbleweed').then(parts=>{
+  tbModel=parts.map(p=>{const im=new T.InstancedMesh(p.geometry,p.material,TB_POOL_CAP);im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(im);return im});
+  for(const im of[tbMeshA,tbMeshB,tbMeshCore])im.visible=false;
+}).catch(()=>{});
 function tbRender(){
   let slot=0;
   for(const w of tbWeeds){
     if(slot>=TB_POOL_CAP)break;
     const fade=w.dead?clamp(1-w.deadT/TB_FADE_TIME,0,1):1;
     tbAxis.set(-Math.sin(w.head),0,Math.cos(w.head));tbQuat.setFromAxisAngle(tbAxis,w.rot);   // rolling axis matches travel direction
+    if(tbModel){   // the Blender tangle: one instance per weed per part, sized to the whole weed
+      dummy.position.set(w.x,w.y,w.z);dummy.quaternion.copy(tbQuat);dummy.scale.setScalar(w.r*fade);dummy.updateMatrix();
+      for(const im of tbModel)im.setMatrixAt(slot,dummy.matrix);slot++;continue;
+    }
     dummy.position.set(w.x,w.y,w.z);dummy.quaternion.copy(tbQuat);dummy.scale.setScalar(w.r*TB_CORE_FRAC*fade);dummy.updateMatrix();tbMeshCore.setMatrixAt(slot,dummy.matrix);
     const base=slot*TB_TWIG_N;
     for(let i=0;i<TB_TWIG_N;i++){
@@ -196,6 +207,7 @@ function tbRender(){
     slot++;
   }
   dummy.scale.setScalar(0);dummy.updateMatrix();
+  if(tbModel){for(const im of tbModel){for(let s=slot;s<TB_POOL_CAP;s++)im.setMatrixAt(s,dummy.matrix);im.instanceMatrix.needsUpdate=true}return}
   for(let s=slot;s<TB_POOL_CAP;s++){tbMeshCore.setMatrixAt(s,dummy.matrix);for(let i=0;i<TB_TWIG_N;i++){tbMeshA.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix);tbMeshB.setMatrixAt(s*TB_TWIG_N+i,dummy.matrix)}}
   tbMeshA.instanceMatrix.needsUpdate=true;tbMeshB.instanceMatrix.needsUpdate=true;tbMeshCore.instanceMatrix.needsUpdate=true;
 }

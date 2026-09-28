@@ -330,3 +330,8 @@ function updateLandslides(dt){
   }
   lsRender();
 }
+
+/* Blender boulders (art/blender/rocks.py): once loaded they replace the pool's geometry -- same instances, same
+   unit radius, so the physics, radii and roll are untouched */
+modelParts('BoulderA').then(([p])=>{lsMeshA.geometry=p.geometry;lsMeshA.material=p.material}).catch(()=>{});
+modelParts('BoulderB').then(([p])=>{lsMeshB.geometry=p.geometry;lsMeshB.material=p.material}).catch(()=>{});

@@ -21,14 +21,24 @@ function gameMat(m){
   // (and decodes textures) as linear light, which would come out much darker. Convert back so a model's paint
   // matches the palette it was built from.
   const g=new T.MeshStandardMaterial({color:m.color.clone().convertLinearToSRGB(),map:m.map||null,flatShading:true,roughness:Math.max(0.55,m.roughness),metalness:0});
+  if(m.vertexColors)g.vertexColors=true;   // rocks carry their strata/sun-bleach as vertex colours
   if(m.map){m.map.encoding=T.LinearEncoding;g.alphaTest=0.45;g.transparent=false;g.side=T.DoubleSide;m.map.anisotropy=4}
   modelMatCache.set(m,g);return g;
 }
+/* vertex colours arrive as linear light (often as normalised 16-bit ints): turn them into the game's as-is floats */
+function srgbVertexColors(geo){
+  const a=geo.attributes.color;if(!a||geo.userData.srgb)return;geo.userData.srgb=true;
+  const max=a.array instanceof Uint16Array?65535:a.array instanceof Uint8Array?255:1,c=new T.Color(),out=new Float32Array(a.count*3);
+  for(let i=0;i<a.count;i++){c.setRGB(a.getX(i)/max,a.getY(i)/max,a.getZ(i)/max).convertLinearToSRGB();out[i*3]=c.r;out[i*3+1]=c.g;out[i*3+2]=c.b}
+  geo.setAttribute('color',new T.BufferAttribute(out,3));
+}
+/* a model's parts baked to its own origin, for systems that run their own InstancedMesh pools (boulders, tumbleweeds) */
+function modelParts(name){return loadModel(name).then(({meshes})=>meshes.map(p=>({geometry:p.geometry.clone().applyMatrix4(p.matrix),material:p.material})))}
 function loadModel(name){
   if(!MODEL_CACHE[name])MODEL_CACHE[name]=new Promise((res,rej)=>{
     new T.GLTFLoader().load(MODEL_DIR+name+'.glb',gl=>{
       const root=gl.scene,meshes=[];root.updateMatrixWorld(true);
-      root.traverse(o=>{if(o.isMesh)meshes.push({geometry:o.geometry,material:gameMat(o.material),matrix:o.matrixWorld.clone()})});
+      root.traverse(o=>{if(o.isMesh){srgbVertexColors(o.geometry);meshes.push({geometry:o.geometry,material:gameMat(o.material),matrix:o.matrixWorld.clone()})}});
       res({meshes});
     },undefined,e=>{console.warn('model failed',name,e&&e.message);rej(e)});
   });
@@ -132,3 +142,16 @@ TENTS.forEach((t,ti)=>{
     at(-3,-(t.roomD-0.5),0.6,0.6);                      // coat rack by the door
   }else at(-3.2,-(t.roomD-0.35),2.3,0.6);              // shovel rack by the door
 });
+
+/* ---- lakebed rocks: the 30 pebbles from 15-terrain.js become three Blender rock shapes, plus a wider scatter
+   across the lakebed (purely visual, no collisions; fixed seed so everyone sees the same rocks) ---- */
+{
+  const ROCK_SCATTER_N=260,ROCK_SCATTER_R=420,rnd=mulberry32(90210),byV=[[],[],[]];
+  TERRAIN_ROCKS.forEach((r,i)=>byV[i%3].push({x:r.x,y:r.y,z:r.z,ry:r.ry,s:r.size/0.3}));
+  for(let i=0;i<ROCK_SCATTER_N;i++){
+    const a=rnd()*Math.PI*2,d=30+Math.sqrt(rnd())*ROCK_SCATTER_R,x=Math.cos(a)*d,z=20+Math.sin(a)*d,sz=0.2+rnd()*rnd()*1.1;
+    if(Math.max(Math.abs(x),Math.abs(z))>EDGE-8||nearCampZone(x,z))continue;
+    byV[i%3].push({x,y:baseH(x,z),z,ry:rnd()*6.28,s:sz/0.3});
+  }
+  Promise.all(['RockA','RockB','RockC'].map((n,i)=>instanceModel(n,byV[i]))).then(()=>TERRAIN_ROCKS.forEach(r=>hideProc(r.m))).catch(()=>{});
+}
