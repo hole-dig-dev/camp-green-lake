@@ -6,14 +6,14 @@ The **original synthesized wind remains the default**, because it already suits 
 
 ## Listening review (September 28, 2026)
 
-JT listened to the [labeled reel](audio-showcase-narrated.mp3) and decided:
+JT listened to the [labeled reel](../asset-library/audio/review-reels/2026-09-28-full-reel-labeled.mp3) and decided:
 
 | Sound | Verdict | In the game |
 | --- | --- | --- |
 | Wind | Keep A, the original | Default stays `original` |
 | Rain | B, the recording, is better | Default `recorded` |
 | Metal | B, the recording, is better | Default `recorded` |
-| Digging | **Pinned: revisit later** | Unchanged (`recorded`) for now |
+| Digging | Picked the four-way rotation of shovel + sand layers (review round 3) | Four `dig-shovel-sand-*` clips played in turn |
 | Crickets | Good addition for night | Kept |
 | Footsteps | Don't change | Kept |
 | Tent cloth | Good | Kept |
@@ -31,7 +31,7 @@ Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-
 | Day/night ambience | Silence | Birds by day, crickets by night | New |
 | Rain at the ending | Filtered noise | Longer CC0 rain loop with noise beneath it | New |
 | Footsteps | Silence | Six alternating sand/stone recordings | New |
-| Digging | Noise scrape plus low tone | CC0 shovel-in-dirt hit | New |
+| Digging | Noise scrape plus low tone | CC0 shovel hit layered with a CC0 sand step, four variants in rotation | New |
 | Metal hits | Triangle sweep plus noise | CC0 metal click | New |
 | Tent, house, bunk | Silence | Cloth and wooden-door recordings | New |
 
@@ -45,7 +45,7 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Open lakebed by night | Original wind and a CC0 cricket recording. Recorded-wind mode and tent muffling can be compared separately. |
 | Rain at the suitcase ending | CC0 rain loop, with a quiet filtered-noise fallback. |
 | Walking and running | Three CC0 sand-step recordings, rotated and slightly pitch-varied; three stone-step recordings for tent/office floors. A short filtered-noise step is the loading fallback. Running has a faster cadence. These are local-player footsteps only. |
-| Digging | A short CC0 shovel-in-dirt recording, varied slightly in pitch; the old filtered-noise scrape and low tone are the loading fallback. |
+| Digging | Four pre-mixed clips, each the CC0 shovel hit layered with a different CC0 sand step (Fantozzi L1, R1, L3, R3), played in turn and varied slightly in pitch so back-to-back digs never repeat. The bare shovel, then the old filtered-noise scrape and low tone, cover loading. |
 | Entering/leaving tents or the Warden's house | CC0 cloth rustle for tents. The Warden's house plays a CC0 wooden-door-opening recording both ways; leaving plays it slightly lower. |
 | Lying down/getting up | CC0 cloth rustle. |
 | Metal hit, loot collision, shovel bonk | CC0 metal click; the old high triangle tone plus noise are the loading fallback. |
@@ -59,6 +59,8 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Disco party | A four-bar sequenced Web Audio composition: synthesized kick, hat, snare, bass, and chords. It is the game's only continuous music. |
 | Other campers talking | Live WebRTC microphone audio, heard through a positional HRTF panner. Browser text-to-speech is used for the police/Zeroni lines above, not for regular text dialogue. |
 
+Unused variants, retired clips, source recordings, and review reels are kept in the [asset library](../asset-library/CATALOG.md).
+
 ## Recording sources and license
 
 All shipped recordings below are **CC0**. They were converted to mono 22.05 kHz MP3 to keep the download small. The older `feature/immersive-audio` branch contains 21 unwired MP3s with no source/license record; those files were reviewed but were **not** included here.
@@ -66,6 +68,7 @@ All shipped recordings below are **CC0**. They were converted to mono 22.05 kHz 
 | Shipped files in `public/audio/` | Original recording | Source/license |
 | --- | --- | --- |
 | `shovel.mp3` | `shovel.ogg`, trimmed to 0.52 s with a short fade | [Shovel Sound by themightyglider, derived from RavenWolfProds](https://opengameart.org/content/shovel-sound), CC0 |
+| `dig-shovel-sand-l1/r1/l3/r3.mp3` | `shovel.ogg` mixed with Fantozzi `SandL1`, `SandR1`, `SandL3`, `SandR3`, level-matched to `shovel.mp3` | Shovel Sound and Fantozzi's Footsteps (both linked in this table), CC0 |
 | `step-sand-1..3.mp3`, `step-stone-1..3.mp3` | Fantozzi `SandL1..3` and `StoneL1..3` | [Fantozzi's Footsteps](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone), CC0 |
 | `birds.mp3` | `birds-isaiah658.ogg` | [Ambient Bird Sounds by isaiah658](https://opengameart.org/content/ambient-bird-sounds), CC0 |
 | `crickets.mp3` | `crickets-oneloop.mp3` | [Crickets Ambient Noise by Wolfgang_/Ted Kerr](https://opengameart.org/content/crickets-ambient-noise-loopable), CC0 |

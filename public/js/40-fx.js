@@ -54,7 +54,8 @@ const AUDIO_FILES={
   shovel:'shovel.mp3',wind:'wind.mp3',birds:'birds.mp3',crickets:'crickets.mp3',rain:'rain.mp3',
   'step-sand-1':'step-sand-1.mp3','step-sand-2':'step-sand-2.mp3','step-sand-3':'step-sand-3.mp3',
   'step-stone-1':'step-stone-1.mp3','step-stone-2':'step-stone-2.mp3','step-stone-3':'step-stone-3.mp3',
-  cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',metalClick:'metalClick.mp3'
+  cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',metalClick:'metalClick.mp3',
+  'dig-1':'dig-shovel-sand-l1.mp3','dig-2':'dig-shovel-sand-r1.mp3','dig-3':'dig-shovel-sand-l3.mp3','dig-4':'dig-shovel-sand-r3.mp3'
 };
 const audioBuffers=new Map(),audioLoads=new Map(),ambientLoops=new Map();
 function loadAudioClip(name){
@@ -117,8 +118,10 @@ function initAudio(){
 }
 function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
 function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
+let digClip=0;
 const sfx={
-  scoop(){if(AUDIO_MODE.dig==='recorded'&&playAudioClip('shovel',0.48,0.94+Math.random()*0.12))return;noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
+  // Four shovel+sand layers played in turn so back-to-back digs never repeat; the bare shovel covers loading.
+  scoop(){if(AUDIO_MODE.dig==='recorded'){const r=0.94+Math.random()*0.12;digClip=digClip%4+1;if(playAudioClip('dig-'+digClip,0.56,r)||playAudioClip('shovel',0.48,r))return}noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
   clank(){if(AUDIO_MODE.metal==='recorded'&&playAudioClip('metalClick',1.15))return;tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)},
   find(){[660,880,1320].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.16),i*85))},
   gold(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,0.3,'triangle',0.16),i*110))},
