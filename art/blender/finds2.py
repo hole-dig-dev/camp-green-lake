@@ -77,10 +77,11 @@ n='Cap2_5';scene(n);r=root(n);crimp2('c',r,DEEP,DEEP,tips=TIN);box('scratch',(0.
 def spoon2(name,parent,L=0.17,bowl=(0.02,0.03),seed=0,patina=0.0,bentv=0.0,fiddle=False,handle_w=0.009):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=(0,-L*0.36,0.006));b=bpy.context.active_object;b.name=name+'_bowl'
     b.scale=(bowl[0],bowl[1],0.006);bpy.ops.object.transform_apply(scale=True);_finish(b,TARN,0,parent)
-    h=box(name+'_handle',(handle_w,L*0.62,0.003),(0,L*0.12,0.008),TARN,bevel=0.0015,parent=parent)
+    h=box(name+'_handle',(handle_w,L*0.68,0.003),(0,L*0.09,0.0075),TARN,bevel=0.0015,parent=parent)   # runs into the bowl: one piece
+    neck=box(name+'_neck',(handle_w*1.25,0.02,0.0035),(0,-L*0.2,0.0072),TARN,rot=(math.radians(-8),0,0),bevel=0.0012,parent=parent)
     bm=bmesh.new();bm.from_mesh(h.data);bmesh.ops.subdivide_edges(bm,edges=[e for e in bm.edges if abs(e.verts[0].co.y-e.verts[1].co.y)>0.05],cuts=10,use_grid_fill=True);bm.to_mesh(h.data);bm.free()
     for v in h.data.vertices:v.co.x*=1+max(0,(v.co.y-L*0.3))*18   # handle widens toward the end, like a real spoon
-    parts=[b,h]
+    parts=[b,h,neck]
     if fiddle:e=cyl(name+'_end',0.008,0.003,(0,L*0.43,0.008),TARN,verts=14,bevel=0.001,parent=parent);parts.append(e)
     if bentv:
         for o in parts:bend(o,lambda c:Vector((c.x+max(0,c.y-0.02)*bentv*0.3,c.y,c.z+max(0,c.y-0.02)*bentv)))
