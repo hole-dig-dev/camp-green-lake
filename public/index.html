@@ -308,6 +308,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="sim.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 (function(){
 'use strict';
@@ -608,12 +610,15 @@ function makePerson(o){
   if(o.shovel!==false){shovel=new T.Group();const hd=cyl(0.028,0.028,1.2,5,0x8a6440);hd.position.y=-0.3;const bl=box(0.24,0.3,0.035,0x7d8288);bl.position.y=-0.98;shovel.add(hd,bl);shovel.position.set(0,-0.52,0.05);shovel.rotation.x=-0.45;armR.add(shovel)}
   if(o.shades){const s=box(0.3,0.07,0.02,0x111111);s.position.set(0,0.89,0.18);upper.add(s)}
   upper.add(torso,collar,armL,armR,head,eyeL,eyeR,hat);g.add(legL,legR,upper);
-  return{g,upper,legL,legR,armL,armR,shovel,hat,ph:0};
+  const p={g,upper,legL,legR,armL,armR,shovel,hat,ph:0,o};
+  if(MODEL.ready)upgradePerson(p);else MODEL.people.push(p);
+  return p;
 }
 /* one scoop: [phase, lean, twist, right arm, left arm] — drive in, lift, toss onto the pile, reset */
 const DIGK=[[0,0.15,0,-0.5,-0.6],[0.3,0.55,0,-0.95,-0.8],[0.5,0.25,0.1,-1.6,-1.25],[0.72,0.08,0.7,-1.9,-1.5],[1,0.15,0,-0.5,-0.6]];
 function digPose(t){for(let i=1;i<DIGK.length;i++){if(t<=DIGK[i][0]){const a=DIGK[i-1],b=DIGK[i],k=sm((t-a[0])/(b[0]-a[0]));return[lerp(a[1],b[1],k),lerp(a[2],b[2],k),lerp(a[3],b[3],k),lerp(a[4],b[4],k)]}}return DIGK[0].slice(1)}
 function animPerson(p,mode,dt,digPhase,speed){
+  if(p.model){animModel(p,mode,dt,digPhase,speed);return}
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));
   const k=Math.min(1,dt*10);
@@ -637,6 +642,124 @@ function animPerson(p,mode,dt,digPhase,speed){
     p.legL.rotation.x*=0.8;p.legR.rotation.x*=0.8;p.armL.rotation.x=lerp(p.armL.rotation.x,0,dt*6);p.armR.rotation.x=lerp(p.armR.rotation.x,-0.1,dt*6);
   }
 }
+
+/* ---------- the Blender camper (models/camper.glb, built by blender/cgl_rig.py) ----------
+   The box people above are the fallback until the model arrives (or if it can't load). Every person from
+   makePerson is upgraded in place, keeping the same p.g group, so movement/labels/network code is unchanged. */
+const MODEL={ready:false,scene:null,clips:[],people:[]};
+const MODEL_SCALE=0.68;
+const SKIN_TONES=[0xf3d3b5,0xe8bb92,0xd6a077,0xc68a5e,0xa56b43,0x7f5134,0x5e3a25,0x43291b];
+const HAIR_COLORS=[0x1f1511,0x3b2618,0x6a4426,0xb88a4a,0x8a3a1c];
+/* w/d = torso width/depth, h = overall height, limb = arm/leg thickness */
+const BODY_TYPES={average:{w:1,d:1,h:1,limb:1},slim:{w:0.86,d:0.9,h:1.03,limb:0.88},stocky:{w:1.17,d:1.14,h:0.97,limb:1.12},tall:{w:0.95,d:0.97,h:1.09,limb:0.96},short:{w:1.06,d:1.05,h:0.9,limb:1.04}};
+const BODY_KEYS=Object.keys(BODY_TYPES);
+/* cowboy hats are staff-only (Mr. Sir + the Warden) */
+const HAT_ROLL=['bucket','bucket','bucket','desert','desert','desert','none','none'];
+const HAT_NODE={bucket:'Bucket',desert:'DesertCap',cowboy:'Cowboy'};
+/* animPerson modes -> clips. 0-6 are the game's existing modes; 7 jump, 8 dance, 9 wave are local-only */
+const MODE_CLIP=['Idle','Walk','Dig','KO','Run','Drink','WipeSweat','Jump','Dance','Wave'];
+const CLIP_ONCE={KO:1,Jump:1,Drink:1,WipeSweat:1,Wave:1};
+function strHash(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0}
+/* same name + color -> same camper on every client */
+function playerLook(name,ci){
+  const h=strHash(String(name).toLowerCase()+'#'+ci);
+  return{skin:SKIN_TONES[h%SKIN_TONES.length],band:CAMPER_COLORS[ci],hat:HAT_ROLL[(h>>>4)%HAT_ROLL.length],
+    body:BODY_KEYS[(h>>>8)%BODY_KEYS.length],hair:HAIR_COLORS[(h>>>12)%HAIR_COLORS.length]};
+}
+function upgradePerson(p){
+  if(p.model||!MODEL.ready)return;
+  const o=p.o||{},bt=BODY_TYPES[o.body]||BODY_TYPES.average;
+  const m=T.SkeletonUtils?T.SkeletonUtils.clone(MODEL.scene):MODEL.scene.clone(true);
+  m.scale.setScalar(MODEL_SCALE*bt.h);
+  const hat=o.hat==='none'?null:HAT_NODE[o.hat]||'Bucket';
+  const tint={CGL_Skin:o.skin,CGL_HatBand:o.band,CGL_Hair:o.hair!=null?o.hair:HAIR_COLORS[0],CGL_Jumpsuit:o.suit};
+  if(o.band!=null)tint.CGL_Patch=new T.Color(o.band).lerp(new T.Color(0xffffff),0.55).getHex();
+  const mats={},torso=[];
+  m.traverse(n=>{
+    if(!n.isMesh)return;
+    n.castShadow=true;n.receiveShadow=true;
+    const nm=n.name;
+    if(/_(Bucket|Cowboy|DesertCap)_/.test(nm))n.visible=!!hat&&nm.includes('_'+hat+'_');
+    else if(nm.includes('_Hair_'))n.visible=!hat;
+    else if(nm.includes('_Shades_'))n.visible=!!o.shades;
+    else if(nm.includes('_R_Shovel'))n.visible=o.shovel!==false;
+    const mn=n.material&&n.material.name;
+    if(mn&&tint[mn]!=null){if(!mats[mn]){mats[mn]=n.material.clone();mats[mn].color.setHex(tint[mn])}n.material=mats[mn]}
+    if(/_(Torso|Zipper|Patch|Neck)$/.test(nm))torso.push(n);
+    if(/_[LR]_(Sleeve|Elbow|Forearm|Leg)$/.test(nm))n.scale.set(bt.limb,1,bt.limb);
+  });
+  /* body width: scale the torso pieces in spine space, then push shoulders/hips out to match (after each mixer update) */
+  const spine=m.getObjectByName('spine');
+  if(spine&&(bt.w!==1||bt.d!==1)){const wg=new T.Group();spine.add(wg);for(const n of torso)wg.add(n);wg.scale.set(bt.w,1,bt.d)}
+  /* [bone, x offset, rest position]: the GLB drops constant position tracks, so restore the rest spot before
+     every mixer update and add the offset after it (otherwise the offset piles up frame after frame) */
+  const W=bt.w-1;p.adj=[];
+  for(const[bn,dx]of[['armL',-0.355*W],['armR',0.355*W],['legL',-0.15*W],['legR',0.15*W]]){const b=m.getObjectByName(bn);if(b)p.adj.push([b,dx,b.position.clone()])}
+  p.mixer=new T.AnimationMixer(m);p.acts={};
+  for(const c of MODEL.clips){const a=p.mixer.clipAction(c);if(CLIP_ONCE[c.name]){a.setLoop(T.LoopOnce,1);a.clampWhenFinished=true}p.acts[c.name]=a}
+  for(const c of p.g.children)c.visible=false;   /* hide the box fallback */
+  p.g.rotation.x=0;p.g.add(m);p.model=m;p.cur=null;p.lastT=performance.now();
+  setClip(p,'Idle',0);stepMixer(p,0);
+  if(p.hatT)modelHat(p,p.hatT);
+}
+/* level-reward hats on the model: recolor the camper's own hat (cowboy hats stay staff-only, so hair gets a
+   bucket hat), and the top tier puts a pig on their head */
+const TIER_HAT=[0,0xd9c27a,0x222222,0xd4af37];
+function modelHat(p,t){
+  const m=p.model;if(!m||!t)return;
+  if(p.pig){p.pig.parent.remove(p.pig);p.pig=null}
+  const own=p.o&&p.o.hat==='desert'?'DesertCap':'Bucket';
+  m.traverse(n=>{
+    if(!n.isMesh)return;const nm=n.name;
+    if(/_(Bucket|Cowboy|DesertCap)_/.test(nm))n.visible=t<4&&nm.includes('_'+own+'_');
+    else if(nm.includes('_Hair_'))n.visible=t===4;
+    if(t<4&&nm.includes('_'+own+'_')&&!/HatBand$/.test(nm)){n.material=n.material.clone();n.material.color.setHex(TIER_HAT[t])}
+  });
+  if(t===4){
+    const head=m.getObjectByName('head');if(!head)return;
+    const g=new T.Group(),b=box(0.3,0.22,0.42,0xf2a0b0),hd=box(0.2,0.18,0.14,0xf2a0b0),sn=box(0.09,0.06,0.04,0xd97a8e);
+    b.position.y=0.12;hd.position.set(0,0.16,0.26);sn.position.set(0,0.14,0.34);g.add(b,hd,sn);
+    g.scale.setScalar(1/MODEL_SCALE);g.position.set(0,0.68,0);head.add(g);p.pig=g;
+  }
+}
+function stepMixer(p,dt){
+  for(const[b,,rest]of p.adj)b.position.copy(rest);
+  p.mixer.update(dt);
+  for(const[b,dx]of p.adj)b.position.x+=dx;
+}
+function setClip(p,name,fade){
+  if(p.cur===name||!p.acts[name])return;
+  const a=p.acts[name],f=fade==null?0.18:fade;
+  a.reset();a.timeScale=1;a.setEffectiveWeight(1);a.fadeIn(f).play();
+  if(p.cur&&p.acts[p.cur])p.acts[p.cur].fadeOut(f);
+  p.cur=name;
+}
+function animModel(p,mode,dt,digPhase,speed){
+  const now=performance.now();if(dt==null)dt=Math.min(0.05,(now-p.lastT)/1000);p.lastT=now;
+  p.g.rotation.x=0;
+  if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
+  const name=MODE_CLIP[mode]||'Idle';
+  setClip(p,name);
+  const a=p.acts[name];
+  if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
+  else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
+  stepMixer(p,dt);
+}
+function loadCamperModel(){
+  if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
+  new T.GLTFLoader().load('models/camper.glb?v=1',g=>{
+    MODEL.scene=g.scene;
+    /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
+       so the model's orange matches the rest of the camp */
+    const seen=new Set();
+    g.scene.traverse(n=>{if(n.isMesh&&n.material&&!seen.has(n.material)){seen.add(n.material);n.material.color.convertLinearToSRGB()}});
+    MODEL.clips=g.animations.map(c=>{c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));return c});
+    MODEL.ready=true;
+    for(const p of MODEL.people)upgradePerson(p);
+    MODEL.people.length=0;
+  },undefined,e=>console.warn('Camper model failed to load, keeping the box people.',e));
+}
+loadCamperModel();
 
 /* ---------- labels (names + speech bubbles) ---------- */
 const labelLayer=$('#labels');const labeled=[];
@@ -662,10 +785,10 @@ function updateLabels(now){
 }
 
 /* ---------- NPCs ---------- */
-const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false});
+const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e});
 sir.g.position.set(1.2,baseH(1.2,34),34);sir.g.rotation.y=Math.PI;scene.add(sir.g);
 const sirL=makeLabel(sir.g,'Mr. Sir','npc');
-const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'none',shovel:false});
+const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
 warden.g.position.set(-30,baseH(-30,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
 const wardenL=makeLabel(warden.g,'The Warden','npc');
 const SPOTS=[
@@ -677,16 +800,16 @@ const SPOTS=[
 
 /* the D Tent crew (they're here even when your friends aren't) */
 const BOTDEF=[
-  {n:'X-Ray',skin:0x6b4a35,band:0x3a3a3a,x:-14,z:20,rate:0.07,lines:['Anything shiny, you bring it to me first.','You dig like a lawn chair.','I can\'t see a thing without my glasses.']},
-  {n:'Armpit',skin:0x5a3b28,band:0x8a2020,x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','Don\'t call me Armpit. Fine, call me Armpit.']},
-  {n:'Squid',skin:0xe0b48f,band:0x2f5f8a,x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
-  {n:'Zigzag',skin:0xf0c9a2,band:0x6b2f8a,x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
-  {n:'Magnet',skin:0xb07a52,band:0xc78a1a,x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','Mr. Sir is coming. Look busy.']},
-  {n:'Zero',skin:0x4a3021,band:0xd9d2c0,x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
+  {n:'X-Ray',skin:0x6b4a35,band:0x3a3a3a,hat:'desert',body:'slim',x:-14,z:20,rate:0.07,lines:['Anything shiny, you bring it to me first.','You dig like a lawn chair.','I can\'t see a thing without my glasses.']},
+  {n:'Armpit',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','Don\'t call me Armpit. Fine, call me Armpit.']},
+  {n:'Squid',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
+  {n:'Zigzag',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
+  {n:'Magnet',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','Mr. Sir is coming. Look busy.']},
+  {n:'Zero',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
 const bots=BOTDEF.map(d=>{
-  const p=makePerson({skin:d.skin,band:d.band});scene.add(p.g);
+  const p=makePerson({skin:d.skin,band:d.band,hat:d.hat,body:d.body,hair:d.hair});scene.add(p.g);
   const hole=addHole({x:r1(d.x),z:r1(d.z),d:0.2+botRng()*1.0,bot:true});touchHole(hole);
   p.g.position.set(hole.x,groundAt(hole.x,hole.z),hole.z);p.g.rotation.y=Math.PI+(botRng()-0.5);
   const L=makeLabel(p.g,d.n,'bot');
@@ -989,7 +1112,7 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEYS[k]=false;if(k==='e')digHeld=false});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false});
-function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i})}
+function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i});if(me)me.waveT=1.4}
 function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
 /* touch */
@@ -1032,7 +1155,7 @@ function startGame(resume){
   }
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
-  me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color]});scene.add(me.g);
+  me=makePerson(playerLook(S.name,S.color));scene.add(me.g);
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();
@@ -1065,7 +1188,7 @@ function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
-  const p=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][ci%4],band:CAMPER_COLORS[ci]});scene.add(p.g);
+  const p=makePerson(playerLook(name,ci));scene.add(p.g);
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
@@ -1106,7 +1229,7 @@ function onMsg(m){
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
-    case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout()}break}
+    case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
     case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;const sc=num(m.sc,0,1e6,0)|0;if(sc>S.seeds){S.seeds=sc;toast('Welcome back. Your '+sc+' seeds were saved.','good',4000)}P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
@@ -1191,7 +1314,8 @@ function updatePlayer(dt){
   if(P.y<g+0.02)P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
-  animPerson(me,P.anim,dt,P.digPh);
+  const air=P.y-g>0.2&&P.anim!==2;
+  animPerson(me,PARTY.on&&P.anim===0?8:air?7:P.anim,dt,P.digPh);
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
@@ -1526,6 +1650,7 @@ function endParty(){
   toast("The party's over. Back to digging.",'',3000);
 }
 function danceArms(p,beat,style){
+  if(p.model){animModel(p,8,null);return}
   const w=Math.sin(beat*Math.PI*2);
   if(style===0){p.armL.rotation.x=-2.8+w*0.3;p.armR.rotation.x=-2.8-w*0.3}
   else if(style===1){const up=Math.floor(beat)%2===0;p.armR.rotation.x=up?-2.9:-0.6;p.armL.rotation.x=up?-0.3:-1.2}
@@ -1771,7 +1896,7 @@ const PROG={xp:0,sent:0};
 const xpNeed=l=>60+l*40;
 function levelOf(xp){let l=1;while(l<20&&xp>=xpNeed(l)){xp-=xpNeed(l);l++}return{l,into:xp,need:xpNeed(l)}}
 function myLevel(){return levelOf(PROG.xp).l}
-const PERKS=[[2,'digging 10% faster'],[3,'a straw cowboy hat'],[4,'+20 water'],[5,'one more sack slot'],[6,'a black cowboy hat'],[8,'Lucky Eye: dust puffs up over buried loot near you'],[10,'a gold hat'],[12,'crawling faster when downed'],[15,'a piggy for your head'],[16,'one more sack slot']];
+const PERKS=[[2,'digging 10% faster'],[3,'a straw hat'],[4,'+20 water'],[5,'one more sack slot'],[6,'a black hat'],[8,'Lucky Eye: dust puffs up over buried loot near you'],[10,'a gold hat'],[12,'crawling faster when downed'],[15,'a piggy for your head'],[16,'one more sack slot']];
 function loadProg(){try{PROG.xp=num(JSON.parse(localStorage.getItem('cgl-prog-'+S.name.toLowerCase())||'{}').xp,0,1e8,0)|0}catch(e){}}
 function saveProg(){try{localStorage.setItem('cgl-prog-'+S.name.toLowerCase(),JSON.stringify({xp:PROG.xp}))}catch(e){}}
 function myTag(){return`${S.name} (you) · LV ${myLevel()}`}
@@ -1783,7 +1908,7 @@ setInterval(()=>{if(online()&&PROG.xp!==PROG.sent){PROG.sent=PROG.xp;wsSend({t:'
 function sackMax(){const l=myLevel();return 6+(S.up.bigsack?3:0)+(l>=5?1:0)+(l>=16?1:0)}
 const hatTier=l=>l>=15?4:l>=10?3:l>=6?2:l>=3?1:0;
 function setHat(p,l){
-  const t=hatTier(l);if(!p||!p.hat||p.hatT===t)return;p.hatT=t;if(!t)return;const h=p.hat;while(h.children.length)h.remove(h.children[0]);
+  const t=hatTier(l);if(!p||!p.hat||p.hatT===t)return;p.hatT=t;if(p.model){modelHat(p,t);return}if(!t)return;const h=p.hat;while(h.children.length)h.remove(h.children[0]);
   if(t===4){const b=box(0.3,0.22,0.42,0xf2a0b0);b.position.y=0.12;const hd=box(0.2,0.18,0.14,0xf2a0b0);hd.position.set(0,0.16,0.26);const sn=box(0.09,0.06,0.04,0xd97a8e);sn.position.set(0,0.14,0.34);h.add(b,hd,sn);return}
   const c=[0,0xd9c27a,0x222222,0xd4af37][t];const br=cyl(0.42,0.42,0.04,10,c),cr=cyl(0.2,0.24,0.2,8,c);cr.position.y=0.12;h.add(br,cr);
 }
@@ -1950,6 +2075,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
-if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot};
+if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot,makePerson,playerLook,scene,animPerson,setHat,get me(){return me}};
 })();
 </script>
