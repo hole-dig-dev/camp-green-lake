@@ -122,6 +122,7 @@ const CAMP_PROPS=[
   {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
   {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Wreck Room, doors facing the yard
   {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
+  {m:'MrSirTruck',x:6.1,z:31.2,ry:Math.PI/2,w:2.0,d:5.2},      // Mr. Sir's pickup, tailgate down toward him: heavy loot sells here (sim.js SELL)
 ];
 {
   const byModel={};
