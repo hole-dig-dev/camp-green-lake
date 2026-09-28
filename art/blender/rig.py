@@ -51,7 +51,7 @@ def build_armature(name,nodes,edges,root_i,extra=()):
     for b in eb:
         d=(b.tail-b.head).normalized();b.align_roll(Vector((0,0,1)) if abs(d.z)<0.7 else Vector((0,-1,0)))
     bpy.ops.object.mode_set(mode='OBJECT');return arm
-def weight(mesh,arm,allow=None,power=4):
+def weight(mesh,arm,allow=None,power=2,top=3,smooth=4):
     bones=[b for b in arm.data.bones if b.name!='root'];segs=[(b.name,b.head_local.copy(),b.tail_local.copy()) for b in bones]
     groups={n:mesh.vertex_groups.new(name=n) for n,_,_ in segs}
     for v in mesh.data.vertices:
@@ -59,8 +59,15 @@ def weight(mesh,arm,allow=None,power=4):
         for n,h,t in segs:
             if allow and not allow(n,p):continue
             d=t-h;L2=d.length_squared or 1e-9;u=max(0,min(1,(p-h).dot(d)/L2));ds.append(((p-(h+d*u)).length,n))
-        ds.sort();top=ds[:2];ws=[1/((dd+1e-4)**power) for dd,_ in top];S_=sum(ws)
-        for (dd,n),w in zip(top,ws):groups[n].add([v.index],w/S_,'REPLACE')
+        ds.sort();tp=ds[:top];ws=[1/((dd+1e-3)**power) for dd,_ in tp];S_=sum(ws)
+        for (dd,n),w in zip(tp,ws):groups[n].add([v.index],w/S_,'REPLACE')
+    # smooth the weights across neighbouring vertices so joints bend instead of tearing at a seam
+    bpy.context.view_layer.objects.active=mesh
+    for x in bpy.context.selected_objects:x.select_set(False)
+    mesh.select_set(True);bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
+    bpy.ops.object.vertex_group_smooth(group_select_mode='ALL',factor=0.6,repeat=smooth)
+    bpy.ops.object.vertex_group_limit_total(group_select_mode='ALL',limit=4);bpy.ops.object.vertex_group_normalize_all(lock_active=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
     m=mesh.modifiers.new('arm','ARMATURE');m.object=arm;mesh.parent=arm
 def clip(arm,name,frames,fn,loc_fn=None):
     """fn(phase 0..1) -> {bone: [(world_axis, degrees), ...]}; keyed every 2 frames over one loop."""
@@ -81,14 +88,14 @@ def clip(arm,name,frames,fn,loc_fn=None):
 S2=math.sin;TAU=2*math.pi;X,Y,Zax=(1,0,0),(0,1,0),(0,0,1)
 def export_rig(sc_name,path):
     sc=bpy.data.scenes[sc_name];bpy.context.window.scene=sc
-    for x in bpy.context.selected_objects:x.select_set(False)
-    for o in coll('Asset').all_objects:o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,export_apply=False,export_animations=True,export_skins=True,export_yup=True,
+    lc=bpy.context.view_layer.layer_collection.children[sc.name+'.Asset'];bpy.context.view_layer.active_layer_collection=lc
+    bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_active_scene=True,use_active_collection=True,use_selection=False,export_apply=False,export_animations=True,export_skins=True,export_yup=True,
         export_vertex_color='ACTIVE',export_animation_mode='NLA_TRACKS',export_force_sampling=True,export_def_bones=False,export_cameras=False,export_lights=False,export_materials='EXPORT')
     return os.path.getsize(path)
 
 # ---------------- LIZARD ----------------
-b=bake_and_join('Lizard','liz');N,E=SKEL['liz'];arm=build_armature('Lizard',N,E,5);weight(b,arm)
+b=bake_and_join('Lizard','liz');N,E=SKEL['liz'];arm=build_armature('Lizard',N,E,5)
+weight(b,arm,allow=lambda n,p:(int(n[1:])<7 or int(n[1:])>11 or p.y>0.16) and (int(n[1:])<12 or abs(p.x)>0.05))
 LEG={'FL':(12,-1,0.0),'BR':(24,1,0.0),'FR':(20,1,0.5),'BL':(16,-1,0.5)}
 def liz_gait(amp,body):
     def fn(ph):
@@ -108,13 +115,14 @@ clip(arm,'Idle',48,lambda ph:{'b2':[(Zax,12*S2(ph*TAU))],'b1':[(X,4*S2(ph*TAU*2)
 print('lizard exported',export_rig('Lizard','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureLizard.glb'))
 
 # ---------------- JAVELINA ----------------
-b=bake_and_join('Javelina','jav');N,E=SKEL['jav'];arm=build_armature('Javelina',N,E,4);weight(b,arm)
+b=bake_and_join('Javelina','jav');N,E=SKEL['jav'];arm=build_armature('Javelina',N,E,4)
+weight(b,arm,allow=lambda n,p:(not(10<=int(n[1:])<=25) or p.z<0.3) and (int(n[1:])!=26 or p.y>0.48))
 JL={'FL':(10,0.0),'BR':(22,0.0),'FR':(18,0.5),'BL':(14,0.5)}
 def jav_gait(amp,bob,head):
     def fn(ph):
         p=ph*TAU;R={}
         for nm,(i,off) in JL.items():
-            q=p+off*TAU;R[f'b{i}']=[(X,-amp*S2(q))];R[f'b{i+1}']=[(X,amp*0.6*max(0,math.cos(q)))]
+            q=p+off*TAU;R[f'b{i+1}']=[(X,-amp*S2(q))];R[f'b{i+2}']=[(X,amp*0.6*max(0,math.cos(q)))]   # b{i} is the spine-to-hip stub: leave it
         R['b6']=[(X,head*S2(p*2))];R['b26']=[(Zax,25*S2(p*2))]
         return R
     return fn
@@ -124,13 +132,14 @@ clip(arm,'Idle',48,lambda ph:{'b6':[(X,-10+8*S2(ph*TAU))],'b7':[(X,-6*S2(ph*TAU)
 print('javelina exported',export_rig('Javelina','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureJavelina.glb'))
 
 # ---------------- LION ----------------
-b=bake_and_join('Lion','lion');N,E=SKEL['lion'];arm=build_armature('Lion',N,E,3);weight(b,arm)
+b=bake_and_join('Lion','lion');N,E=SKEL['lion'];arm=build_armature('Lion',N,E,3)
+weight(b,arm,allow=lambda n,p:(not(10<=int(n[1:])<=14) or p.y>0.62) and (not(15<=int(n[1:])<=30) or p.z<0.62),smooth=8)
 LL={'BL':(19,0.0),'FL':(15,0.25),'BR':(27,0.5),'FR':(23,0.75)}
 def lion_walk(amp):
     def fn(ph):
         p=ph*TAU;R={}
         for nm,(i,off) in LL.items():
-            q=p+off*TAU;R[f'b{i}']=[(X,-amp*S2(q))];R[f'b{i+1}']=[(X,amp*0.7*max(0,math.cos(q)))];R[f'b{i+2}']=[(X,-amp*0.4*max(0,math.cos(q)))]
+            q=p+off*TAU;R[f'b{i+1}']=[(X,-amp*S2(q))];R[f'b{i+2}']=[(X,amp*0.7*max(0,math.cos(q)))];R[f'b{i+3}']=[(X,-amp*0.4*max(0,math.cos(q)))]
         R['b5']=[(Zax,3*S2(p))]
         for k,i in enumerate(range(10,15)):R[f'b{i}']=[(Zax,(6+k*3)*S2(p-0.7*k)),(X,-4)]
         return R
@@ -138,7 +147,8 @@ def lion_walk(amp):
 def lion_run(ph):
     p=ph*TAU;R={}
     for nm,(i,off) in {'FL':(15,0.0),'FR':(23,0.08),'BL':(19,0.5),'BR':(27,0.58)}.items():
-        q=p+off*TAU;R[f'b{i}']=[(X,-42*S2(q))];R[f'b{i+1}']=[(X,35*max(0,math.cos(q)))];R[f'b{i+2}']=[(X,-20*max(0,math.cos(q)))]
+        hind=i in (19,27);up=34 if hind else 40   # hind thighs swing less (they're wrapped in the hip); the lower leg does more of the reach
+        q=p+off*TAU;R[f'b{i+1}']=[(X,-up*S2(q))];R[f'b{i+2}']=[(X,(45 if hind else 35)*max(0,math.cos(q)))];R[f'b{i+3}']=[(X,-(30 if hind else 20)*max(0,math.cos(q)))]
     R['b2']=[(X,10*S2(p))];R['b4']=[(X,-8*S2(p))];R['b5']=[(X,6*S2(p))]
     for k,i in enumerate(range(10,15)):R[f'b{i}']=[(X,-10+(5+k*3)*S2(p-0.6*k))]
     return R

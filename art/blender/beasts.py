@@ -1,19 +1,45 @@
 exec(open('/tmp/claude-1001/bl/creatures.py').read().split("# ================== yellow-spotted lizard")[0])
 from mathutils import noise
 SKEL={};ARMS={}
-def skin(name,nodes,edges,parent,sub=2,dec=0.35,seed=0):
-    """nodes: [(x,y,z,rx,rz)]; a Skin-modifier body, subdivided, then decimated back to crisp low-poly facets."""
+def skin(name,nodes,edges,parent,sub=2,dec=0.35,seed=0,vox=None):
+    """Skin-modifier body built WITHOUT junctions: the graph is split into simple chains (spine, each leg, tail), each
+    skinned as its own tube, then all tubes are fused by a voxel remesh. (Skinning the branched graph directly makes
+    inside-out hulls where legs meet the body -- the lion's hip sockets.) Then smoothed and decimated to facets."""
     SKEL[name]=([tuple(n) for n in nodes],list(edges))
-    me=bpy.data.meshes.new(name);me.from_pydata([n[:3] for n in nodes],edges,[]);o=bpy.data.objects.new(name,me);bpy.context.window.scene.collection.objects.link(o)
-    o.modifiers.new('skin','SKIN')
-    for i,n in enumerate(nodes):me.skin_vertices[0].data[i].radius=(n[3],n[4])
-    me.skin_vertices[0].data[0].use_root=True
-    ss=o.modifiers.new('sub','SUBSURF');ss.levels=sub;ss.render_levels=sub
-    d=o.modifiers.new('dec','DECIMATE');d.ratio=dec
-    bpy.context.view_layer.objects.active=o
+    adj={}
+    for a,b in edges:adj.setdefault(a,[]).append(b);adj.setdefault(b,[]).append(a)
+    ends=[i for i in adj if len(adj[i])!=2];used=set();paths=[]
+    for st_ in ends:
+        for nb in adj[st_]:
+            e=tuple(sorted((st_,nb)))
+            if e in used:continue
+            path=[st_,nb];used.add(e)
+            while len(adj[path[-1]])==2:
+                nx=[k for k in adj[path[-1]] if k!=path[-2]][0];used.add(tuple(sorted((path[-1],nx))));path.append(nx)
+            paths.append(path)
+    parts=[]
+    for k,path in enumerate(paths):
+        me=bpy.data.meshes.new(f'{name}_p{k}');me.from_pydata([nodes[i][:3] for i in path],[(j,j+1) for j in range(len(path)-1)],[])
+        o=bpy.data.objects.new(f'{name}_p{k}',me);bpy.context.window.scene.collection.objects.link(o)
+        o.modifiers.new('skin','SKIN')
+        for j,i in enumerate(path):me.skin_vertices[0].data[j].radius=(nodes[i][3],nodes[i][4])
+        me.skin_vertices[0].data[0].use_root=True
+        ss=o.modifiers.new('sub','SUBSURF');ss.levels=2
+        bpy.context.view_layer.objects.active=o
+        for x in bpy.context.selected_objects:x.select_set(False)
+        o.select_set(True);bpy.ops.object.modifier_apply(modifier='skin');bpy.ops.object.modifier_apply(modifier='sub');parts.append(o)
     for x in bpy.context.selected_objects:x.select_set(False)
-    o.select_set(True)
-    for m in ('skin','sub','dec'):bpy.ops.object.modifier_apply(modifier=m)
+    for o in parts:o.select_set(True)
+    bpy.context.view_layer.objects.active=parts[0];bpy.ops.object.join();o=bpy.context.active_object;o.name=name;o.data.name=name
+    vs=vox or 0.012
+    rm=o.modifiers.new('rem','REMESH');rm.mode='VOXEL';rm.voxel_size=vs;rm.adaptivity=0;bpy.ops.object.modifier_apply(modifier='rem')
+    sm=o.modifiers.new('smo','SMOOTH');sm.factor=0.7;sm.iterations=8;bpy.ops.object.modifier_apply(modifier='smo')
+    tgt={'liz':2400,'jav':2600,'lion':3200,'vul':1400}.get(name,2500)
+    d=o.modifiers.new('dec','DECIMATE');d.ratio=min(1.0,tgt/max(1,len(o.data.polygons)));bpy.ops.object.modifier_apply(modifier='dec')
+    bm=bmesh.new();bm.from_mesh(o.data)
+    bmesh.ops.remove_doubles(bm,verts=bm.verts,dist=0.002);bmesh.ops.holes_fill(bm,edges=bm.edges,sides=0)
+    bmesh.ops.triangulate(bm,faces=[f for f in bm.faces if len(f.verts)>4]);bmesh.ops.recalc_face_normals(bm,faces=bm.faces)
+    bm.to_mesh(o.data);bm.free()
     for p in o.data.polygons:p.use_smooth=False
     _link(o);o.parent=parent;return o
 def paintfn(o,fn):
@@ -63,7 +89,7 @@ def leg(root_i,side,base,front):
     i0=len(N);N.extend(pts);E.append((root_i,i0));E.extend([(i0+k,i0+k+1) for k in range(3)]);return pts[-1]
 paws=[]
 for s in (-1,1):paws.append((leg(4,s,N[4],True),s,True));paws.append((leg(6,s,N[6],False),s,False))
-body=skin('liz',N,E,r,sub=2,dec=0.75)
+body=skin('liz',N,E,r,vox=0.005)
 GREEN=lin((0x6a,0x7a,0x2a));DARK=lin((0x3e,0x4a,0x1c));BELLY=lin((0xc8,0xb8,0x6a));YEL=lin((0xf0,0xcc,0x1a))
 def lizpaint(c,n):
     t=mix(BELLY,GREEN,(n.z+0.4)/0.8);t=mix(t,DARK,max(0,noise.noise(c*18)*0.8))
@@ -90,7 +116,7 @@ for s in (-1,1):
         pts=[(s*0.1,y,0.36,0.07,0.08),(s*0.11,y+0.02,0.2,0.042,0.045),(s*0.11,y-0.01,0.07,0.032,0.032),(s*0.11,y-0.02,0.02,0.035,0.028)]
         i0=len(N);N.extend(pts);E.append((ri,i0));E.extend([(i0+k,i0+k+1) for k in range(3)]);feet.append(pts[-1])
 N.append((0,0.55,0.42,0.015,0.015));E.append((0,len(N)-1))
-body=skin('jav',N,E,r,dec=0.4)
+body=skin('jav',N,E,r,vox=0.012)
 COAT=lin((0x3a,0x34,0x2e));GRIZ=lin((0x7a,0x70,0x62));COLL=lin((0xc8,0xb8,0x98));SNOUT=lin((0x4a,0x36,0x30))
 def javpaint(c,n):
     t=mix(COAT,GRIZ,max(0,noise.noise(c*22))*0.9)
@@ -123,7 +149,7 @@ for s in (-1,1):
     bl=[(s*0.13,0.42,0.6,0.15,0.17),(s*0.15,0.32,0.4,0.11,0.12),(s*0.145,0.48,0.2,0.065,0.065),(s*0.14,0.43,0.05,0.07,0.05)]
     for ri,pts in ((4,fl),(1,bl)):
         i0=len(N);N.extend(pts);E.append((ri,i0));E.extend([(i0+k,i0+k+1) for k in range(3)]);lpaws.append(pts[-1])
-body=skin('lion',N,E,r,dec=0.38)
+body=skin('lion',N,E,r,vox=0.016)
 FUR=lin((0x9a,0x6a,0x3e));CREAM=lin((0xe6,0xd2,0xa6));DARKP=lin((0x2a,0x1c,0x14));SHADE=lin((0x7a,0x52,0x2e))
 def lionpaint(c,n):
     t=mix(FUR,SHADE,max(0,noise.noise(c*9))*0.7)
@@ -156,7 +182,7 @@ shot('Lion',elev=16,azim=-52,margin=1.12)
 scene('Vulture');r=root('Vulture');Z=1.2
 N=[(0,0.46,Z,0.09,0.02),(0,0.28,Z+0.01,0.12,0.08),(0,0.05,Z+0.02,0.16,0.12),(0,-0.17,Z+0.04,0.15,0.12),(0,-0.29,Z+0.07,0.05,0.05),(0,-0.35,Z+0.085,0.026,0.026),(0,-0.41,Z+0.095,0.047,0.044),(0,-0.46,Z+0.09,0.026,0.024),(0,-0.495,Z+0.08,0.015,0.017),(0,-0.51,Z+0.062,0.007,0.008)]
 E=[(i,i+1) for i in range(len(N)-1)]
-body=skin('vul',N,E,r,dec=0.45)
+body=skin('vul',N,E,r,vox=0.008)
 BLK=lin((0x24,0x20,0x1e));BRN=lin((0x3a,0x30,0x28));RED=lin((0x9a,0x26,0x22));IVORY=lin((0xe8,0xdc,0xb8));PINK=lin((0xc0,0x50,0x48))
 def vulpaint(c,n):
     if c.y<-0.455:return IVORY
