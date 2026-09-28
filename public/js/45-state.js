@@ -69,10 +69,11 @@ function scoop(){
   const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});
-  const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();
+  const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
   for(const it of items){
     if(it.found)continue;const dx=it.x-h.x,dz=it.z-h.z;
+    if(dx*dx+dz*dz<(h.r*0.9)**2&&it.depth>h.d&&it.depth-h.d<HINT_AHEAD)hintFind(it,h);   // the shovel clinks on it a scoop or two early
     if(dx*dx+dz*dz<(h.r*0.9)**2&&it.depth<=h.d){
       if(!LOOT[it.type].key&&!LOOT[it.type].heavy&&S.sack.length>=sackMax()){if(now-lastWarn>2500){lastWarn=now;toast(`Your sack is full (${sackMax()} items). Sell to Mr. Sir, then come back for it.`,'bad')}continue}
       foundItem(it,h);

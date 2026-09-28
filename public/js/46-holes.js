@@ -1,0 +1,159 @@
+'use strict';
+/* public/js/46-holes.js -- how a hole looks while you dig it.
+   The terrain is a 40 cm grid, so a 1.25 m hole used to come out as a jagged, faceted dip. Now every hole near
+   you gets its own finely-sampled "liner" mesh, and the terrain is cut away (a shader discard) inside the rim:
+     - clean shovel-cut walls with soil strata, darker and damper toward the bottom
+     - faint marks on the wall at every foot of depth, so 5 ft is visible without reading the HUD
+   plus two bits of dig feedback:
+     - each scoop throws dirt clods in an arc from the hole onto its spoil pile
+     - a clink and a glint in the bottom of the hole a scoop or two before a find comes up
+   Purely visual: collisions/standing still use the terrain heights (groundAt), and the liner samples the same
+   surfaceAt() shape, so what you see matches where you stand to within a few centimetres. */
+
+const HL_N=40;               // holes that get a liner (the nearest ones); farther holes keep the plain terrain dip
+const HL_SEG=28;             // segments around each hole
+const HL_LIP=0.6;            // m past the rim the liner still covers: the terrain triangles that straddle the rim dip down this far
+const HL_CUT=0.55;           // m past the rim the terrain is discarded (a little less than the lip, so the seam sits under terrain)
+const HL_SCAN_R=45;          // look for holes this far around you
+const HL_RESCAN=0.25;        // seconds between re-picking which holes get liners
+const FOOT=0.3048;
+
+/* ---- the terrain cut: chunk fragments inside a lined hole's (rim + HL_CUT) are discarded ---- */
+const hlHoleU={value:Array.from({length:HL_N},()=>new T.Vector4(0,0,0,0))};
+chunkMat.onBeforeCompile=sh=>{
+  sh.uniforms.uHoles=hlHoleU;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vHW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvHW=(modelMatrix*vec4(transformed,1.0)).xz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>\nvarying vec2 vHW;uniform vec4 uHoles[${HL_N}];`)
+    .replace('void main() {',`void main() {\nfor(int i=0;i<${HL_N};i++){vec4 h=uHoles[i];if(h.z>0.0&&distance(vHW,h.xy)<h.z)discard;}`);
+};
+
+/* ---- liner geometry: fixed topology, rings from the lip in to the centre ---- */
+// each ring: [radius as a fraction of r (or r + metres for the lip), isWall]
+const HL_RINGS=(()=>{const R=[];
+  R.push(['lip',HL_LIP],['lip',HL_LIP*0.5],['lip',0.02]);
+  for(let k=0;k<=12;k++)R.push(['t',1-0.28*k/12,1]);   // the wall: t from the rim (1) down to the floor edge (0.72)
+  R.push(['t',0.5,0],['t',0.25,0],['t',0,0]);
+  return R})();
+const HL_VPR=HL_SEG+1;   // vertices per ring (a seam column, so the triangle strips close)
+function hlGeometry(){
+  const nr=HL_RINGS.length,nv=nr*HL_VPR,g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(new Float32Array(nv*3),3));
+  g.setAttribute('color',new T.BufferAttribute(new Float32Array(nv*3),3));
+  g.setAttribute('aDepth',new T.BufferAttribute(new Float32Array(nv),1));
+  g.setAttribute('aWall',new T.BufferAttribute(new Float32Array(nv),1));
+  const idx=[];
+  for(let r=0;r<nr-1;r++)for(let s=0;s<HL_SEG;s++){const a=r*HL_VPR+s,b=a+1,c=a+HL_VPR,d=c+1;idx.push(a,c,b,b,c,d)}
+  g.setIndex(idx);return g;
+}
+const hlMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
+hlMat.onBeforeCompile=sh=>{
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aDepth;attribute float aWall;varying float vDepth;varying float vWall;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\nvDepth=aDepth;vWall=aWall;');
+  // walls: soil strata by depth (a wobbly sine so the bands aren't ruler-straight), darker the deeper you go,
+  // and a thin dark line at every foot
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vDepth;varying float vWall;')
+    .replace('#include <color_fragment>',`#include <color_fragment>
+      if(vWall>0.5){
+        float d=max(vDepth,0.0);
+        float s=sin(d*19.0+sin(d*6.3)*1.4);
+        vec3 strata=s>0.4?vec3(0.80,0.58,0.36):(s<-0.5?vec3(0.60,0.39,0.24):vec3(0.71,0.49,0.31));
+        strata*=mix(1.0,0.58,clamp(d/2.4,0.0,1.0));
+        float f=fract(d/${FOOT.toFixed(4)});
+        float mark=d>0.12?1.0-smoothstep(0.0,0.03,min(f,1.0-f)):0.0;
+        diffuseColor.rgb=mix(strata,strata*0.42,mark*0.85);
+      }`);
+};
+const hlPool=[];
+for(let i=0;i<HL_N;i++){const m=new T.Mesh(hlGeometry(),hlMat);m.receiveShadow=true;m.castShadow=false;m.visible=false;m.frustumCulled=false;scene.add(m);hlPool.push({m,h:null,d:-1})}
+const _hlC=new T.Color();
+
+/* sample the true (smooth) ground shape around one hole into its liner */
+function hlBuild(slot,h){
+  const g=slot.m.geometry,pos=g.attributes.position.array,col=g.attributes.color.array,dep=g.attributes.aDepth.array,wall=g.attributes.aWall.array;
+  let v=0;
+  for(const ring of HL_RINGS){
+    const rad=ring[0]==='lip'?h.r+ring[1]:h.r*ring[1],isWall=ring[0]==='t'&&ring[2]===1;
+    for(let s=0;s<HL_VPR;s++){
+      const a=s/HL_SEG*Math.PI*2,x=h.x+Math.cos(a)*rad,z=h.z+Math.sin(a)*rad,b=baseH(x,z);
+      let y=surfaceAt(x,z,b);if(ring[0]==='lip'&&ring[1]>=HL_LIP-0.01)y-=0.012;   // tuck the outer edge just under the terrain
+      pos[v*3]=x;pos[v*3+1]=y;pos[v*3+2]=z;dep[v]=b-y;wall[v]=isWall?1:0;
+      // floor and lip use the terrain's own colouring; the floor a bit darker and damper
+      const tmp=[0,0,0];shade(tmp,0,x,z,b,y,toneAt(x,z));_hlC.setRGB(tmp[0],tmp[1],tmp[2]);
+      if(!isWall&&ring[0]==='t')_hlC.multiplyScalar(0.8);
+      col[v*3]=_hlC.r;col[v*3+1]=_hlC.g;col[v*3+2]=_hlC.b;v++;
+    }
+  }
+  g.attributes.position.needsUpdate=true;g.attributes.color.needsUpdate=true;g.attributes.aDepth.needsUpdate=true;g.attributes.aWall.needsUpdate=true;
+  g.computeVertexNormals();g.computeBoundingSphere();
+  slot.h=h;slot.d=h.d;slot.m.visible=true;
+}
+let hlScanT=0;
+function updateHoleLiners(dt){
+  hlScanT-=dt;
+  const fx=S.started?P.x:0,fz=S.started?P.z:12;
+  if(hlScanT<=0){
+    hlScanT=HL_RESCAN;
+    // the nearest real holes (not sinkhole craters, which draw themselves) get a liner
+    const near=[],R2=HL_SCAN_R*HL_SCAN_R,cr=Math.ceil(HL_SCAN_R/CELL),cx=cellOf(fx),cz=cellOf(fz);
+    for(let i=-cr;i<=cr;i++)for(let j=-cr;j<=cr;j++){const L=grid.get(gkey(cx+i,cz+j));if(!L)continue;
+      for(const h of L){if(h.d<0.04||h.r>HOLE_R*1.5)continue;const d2=(h.x-fx)**2+(h.z-fz)**2;if(d2<R2)near.push([d2,h])}}
+    near.sort((a,b)=>a[0]-b[0]);
+    const want=new Set(near.slice(0,HL_N).map(e=>e[1]));
+    for(const s of hlPool)if(s.h&&!want.has(s.h)){s.h=null;s.m.visible=false}
+    const held=new Set(hlPool.filter(s=>s.h).map(s=>s.h));
+    for(const h of want)if(!held.has(h)){const s=hlPool.find(q=>!q.h);if(s)hlBuild(s,h)}
+  }
+  for(let i=0;i<HL_N;i++){
+    const s=hlPool[i],u=hlHoleU.value[i];
+    if(s.h){if(Math.abs(s.h.d-s.d)>0.001)hlBuild(s,s.h);u.set(s.h.x,s.h.z,s.h.r+HL_CUT,0)}else u.set(0,0,0,0);
+  }
+}
+
+/* ---- dirt clods: each scoop tosses a couple from the hole onto its spoil pile ---- */
+const CLOD_MAX=60,CLOD_T=0.55,CLOD_G=14,CLOD_LINGER=0.9;
+const clodGeo=(()=>{const g=new T.IcosahedronGeometry(1,0),p=g.attributes.position,rnd=mulberry32(99),bump=new Map();   // shared corners move together, so the lump stays closed
+  for(let i=0;i<p.count;i++){const key=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!bump.has(key))bump.set(key,0.75+rnd()*0.4);const k=bump.get(key);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k*0.8,p.getZ(i)*k)}g.computeVertexNormals();return g})();
+const clodMesh=new T.InstancedMesh(clodGeo,new T.MeshStandardMaterial({color:0x8a5a34,flatShading:true,roughness:1}),CLOD_MAX);
+clodMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);clodMesh.frustumCulled=false;clodMesh.castShadow=true;scene.add(clodMesh);
+const clods=[];let clodNext=0;
+for(let i=0;i<CLOD_MAX;i++)clods.push({life:0});
+function throwClods(h,n){
+  for(let k=0;k<n;k++){
+    const c=clods[clodNext];clodNext=(clodNext+1)%CLOD_MAX;
+    const sx=h.x+(Math.random()-0.5)*h.r*0.8,sz=h.z+(Math.random()-0.5)*h.r*0.8,sy=groundAt(sx,sz)+0.25;
+    const tx=h.mx+(Math.random()-0.5)*MR*0.9,tz=h.mz+(Math.random()-0.5)*MR*0.9,ty=groundAt(tx,tz)+0.04,T_=CLOD_T*(0.85+Math.random()*0.3);
+    Object.assign(c,{x:sx,y:sy,z:sz,vx:(tx-sx)/T_,vz:(tz-sz)/T_,vy:(ty-sy+0.5*CLOD_G*T_*T_)/T_,t:0,land:T_,life:T_+CLOD_LINGER,s:0.07+Math.random()*0.07,spin:Math.random()*6});
+  }
+}
+function updateClods(dt){
+  for(let i=0;i<CLOD_MAX;i++){
+    const c=clods[i];
+    if(c.life>0){
+      c.life-=dt;c.t+=dt;
+      if(c.t<c.land){c.x+=c.vx*dt;c.z+=c.vz*dt;c.vy-=CLOD_G*dt;c.y+=c.vy*dt;c.spin+=dt*9}
+      const k=c.life<0.3?Math.max(0,c.life/0.3):1;
+      dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(c.spin,c.spin*0.7,0);dummy.scale.setScalar(c.s*k);
+    }else dummy.scale.setScalar(0);
+    dummy.updateMatrix();clodMesh.setMatrixAt(i,dummy.matrix);
+  }
+  clodMesh.instanceMatrix.needsUpdate=true;
+}
+
+/* ---- the clink: a scoop or two before a find, a metallic tick and a glint down in the hole ---- */
+const HINT_AHEAD=0.2;   // m above a buried find's depth where the shovel first "hits something"
+const glintTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=64;const x=cv.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,255,230,1)');g.addColorStop(0.25,'rgba(255,230,150,0.8)');g.addColorStop(1,'rgba(255,220,120,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);x.fillStyle='rgba(255,255,240,0.95)';x.fillRect(30,2,4,60);x.fillRect(2,30,60,4);return new T.CanvasTexture(cv)})();
+const glint=new T.Sprite(new T.SpriteMaterial({map:glintTex,transparent:true,depthWrite:false,blending:T.AdditiveBlending}));glint.visible=false;scene.add(glint);
+let glintT=0;
+function hintFind(it,h){
+  if(it.hinted)return;it.hinted=true;
+  sfx.clank();
+  const x=h.x+(it.x-h.x)*0.5,z=h.z+(it.z-h.z)*0.5;glint.position.set(x,groundAt(x,z)+0.12,z);glintT=0.9;glint.visible=true;
+}
+function updateGlint(dt){
+  if(glintT<=0)return;glintT-=dt;
+  const k=Math.max(0,glintT)/0.9,s=0.25+Math.sin((1-k)*Math.PI)*0.45;glint.scale.set(s,s,1);glint.material.rotation+=dt*3;glint.material.opacity=Math.min(1,k*2);
+  if(glintT<=0)glint.visible=false;
+}
+function updateHoles(dt){updateHoleLiners(dt);updateClods(dt);updateGlint(dt)}
