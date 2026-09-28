@@ -185,11 +185,24 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 #tools span.tool-badge--text{width:auto;height:auto;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 7px}
 
 /* ---- minimap: shallow metal survey frame (docs/ui-redesign-spec.md section 3) ---- */
-#mapbox{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;width:192px}
-.map-canvas-wrap{position:relative;width:176px;height:176px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:#d9a86c;box-shadow:inset 0 0 0 3px var(--canvas-deep),inset 0 0 0 5px rgba(40,29,21,.3)}
+#mapbox{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));padding:7px;display:flex;flex-direction:column;align-items:center;gap:5px;width:158px}
+.map-canvas-wrap{position:relative;width:144px;height:144px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:#d9a86c;box-shadow:inset 0 0 0 3px var(--canvas-deep),inset 0 0 0 5px rgba(40,29,21,.3)}
 #minimap{display:block;width:100%;height:100%}
 .map-north{position:absolute;left:50%;top:3px;transform:translateX(-50%);font:900 10px/1 var(--display);color:var(--ink);background:var(--canvas);padding:1px 4px 2px;border-radius:2px;z-index:2;letter-spacing:.05em;pointer-events:none}
 .map-north::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:6px;background:var(--ink);transform:translateX(-50%)}
+.map-compass,.map-heading{display:none}
+/* Compass style: a round map that turns so the way you're looking is always up (78-hud.js spins the canvas and
+   this ring every frame), with N/E/S/W riding the rim and a fixed tick at the top for your heading. */
+#mapbox.map--compass .map-canvas-wrap{border-radius:50%;box-shadow:inset 0 0 0 3px var(--canvas-deep),0 0 0 3px var(--canvas-deep),0 0 0 5px var(--ink)}
+#mapbox.map--compass .map-north{display:none}
+#mapbox.map--compass #minimap{transform-origin:50% 50%;will-change:transform}
+#mapbox.map--compass .map-compass{display:block;position:absolute;inset:0;pointer-events:none;z-index:2;will-change:transform}
+.map-compass span{position:absolute;width:15px;height:15px;margin:-7.5px 0 0 -7.5px;border-radius:50%;background:var(--canvas);border:1.5px solid var(--ink);font:900 9px/12px var(--display);text-align:center;color:var(--ink)}
+.map-compass span[data-d=n]{left:50%;top:10px;background:var(--danger);color:#fff4e0}
+.map-compass span[data-d=s]{left:50%;top:calc(100% - 10px)}
+.map-compass span[data-d=e]{left:calc(100% - 10px);top:50%}
+.map-compass span[data-d=w]{left:10px;top:50%}
+#mapbox.map--compass .map-heading{display:block;position:absolute;left:50%;top:-1px;width:0;height:0;margin-left:-6px;border:6px solid transparent;border-top:9px solid var(--jump);z-index:3;pointer-events:none;filter:drop-shadow(0 1px 0 var(--ink))}
 .map-zoom{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
 .map-zoom-label{font:700 11px/1 var(--ui);letter-spacing:.03em;color:var(--ink-soft);min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
 .map-zoom .ui-button{min-height:30px;min-width:30px;padding:4px 8px}
@@ -379,8 +392,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   .hud-strip--camper,.hud-strip--objective{width:152px}
   #stats .who b{font-size:18px}
   .row.big .v{font-size:22px}
-  #mapbox{width:136px;padding:6px}
-  .map-canvas-wrap{width:120px;height:120px}
+  #mapbox{width:118px;padding:5px}
+  .map-canvas-wrap{width:106px;height:106px}
   .map-zoom .ui-button{min-height:44px;min-width:44px}
   #online{display:none}
   #keys{display:none}

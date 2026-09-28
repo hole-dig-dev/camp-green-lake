@@ -36,7 +36,7 @@ const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
 /* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
 const SETTINGS_KEY='cgl-settings';
 const SETTINGS={sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
-  shadows:true,quality:'auto',showFps:false,binds:defaultBinds()};
+  shadows:true,quality:'auto',showFps:false,mapStyle:'square',binds:defaultBinds()};
 function loadSettings(){
   try{
     const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
@@ -45,6 +45,7 @@ function loadSettings(){
     if(typeof o.shadows==='boolean')SETTINGS.shadows=o.shadows;
     if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
     if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
+    if(['square','compass'].includes(o.mapStyle))SETTINGS.mapStyle=o.mapStyle;
     if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
   }catch(e){}
 }
@@ -78,7 +79,7 @@ function applyQuality(){
   PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight);
 }
 function applyFpsVisibility(){if(PERF.el)PERF.el.hidden=!(SETTINGS.showFps||/fps/.test(location.hash))}
-function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility()}
+function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility();setMapStyle(SETTINGS.mapStyle)}
 
 /* ---- pause state + screens ---- */
 const PAUSE={open:false};
@@ -132,7 +133,7 @@ const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('
       oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
       oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
       oVolVoice=$('#oVolVoice'),oVolVoiceV=$('#oVolVoiceV'),
-      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality');
+      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle');
 function renderOptions(){
   oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
   oInvert.checked=SETTINGS.invertY;
@@ -144,6 +145,7 @@ function renderOptions(){
   oVolVoice.value=Math.round(SETTINGS.volVoice*100);oVolVoiceV.textContent=oVolVoice.value+'%';
   oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;
   for(const b of oQuality.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.quality?'true':'false');
+  for(const b of oMapStyle.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.mapStyle?'true':'false');
   renderBindList();
 }
 oSens.oninput=()=>{SETTINGS.sens=+oSens.value;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';saveSettings()};
@@ -155,6 +157,7 @@ oVolFx.oninput=()=>{SETTINGS.volFx=+oVolFx.value/100;oVolFxV.textContent=oVolFx.
 oVolMusic.oninput=()=>{SETTINGS.volMusic=+oVolMusic.value/100;oVolMusicV.textContent=oVolMusic.value+'%';applyVolume();saveSettings()};
 oVolVoice.oninput=()=>{SETTINGS.volVoice=+oVolVoice.value/100;oVolVoiceV.textContent=oVolVoice.value+'%';applyVolume();saveSettings()};
 oShadows.onchange=()=>{SETTINGS.shadows=oShadows.checked;applyShadows();saveSettings()};
+oMapStyle.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.mapStyle=b.dataset.v;for(const c of oMapStyle.children)c.setAttribute('aria-pressed',c===b?'true':'false');setMapStyle(SETTINGS.mapStyle);saveSettings()};
 oFps.onchange=()=>{SETTINGS.showFps=oFps.checked;applyFpsVisibility();saveSettings()};
 oQuality.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.quality=b.dataset.v;for(const c of oQuality.children)c.setAttribute('aria-pressed',c===b?'true':'false');applyQuality();saveSettings()};
 

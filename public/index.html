@@ -70,6 +70,9 @@
     <div class="map-canvas-wrap">
       <span class="map-north" aria-hidden="true">N</span>
       <canvas id="minimap" width="320" height="320" aria-label="Map of the lake bed"></canvas>
+      <!-- compass style only (Options > Minimap): N/E/S/W turn with the map; the tick marks the way you're facing -->
+      <div class="map-compass" aria-hidden="true"><span data-d="n">N</span><span data-d="e">E</span><span data-d="s">S</span><span data-d="w">W</span></div>
+      <span class="map-heading" aria-hidden="true"></span>
     </div>
     <div class="map-zoom" role="group" aria-label="Map zoom">
       <button id="mapZoomOut" type="button" class="ui-button ui-button--quiet" aria-label="Zoom out">&minus;</button>
@@ -313,6 +316,9 @@
     </div>
     <div class="optgrp">
       <h3>Graphics</h3>
+      <div class="optrow"><span>Minimap</span><div class="seg" id="oMapStyle">
+        <button type="button" data-v="square">Square (north up)</button><button type="button" data-v="compass">Compass (turns with you)</button>
+      </div></div>
       <div class="optrow chk"><input type="checkbox" id="oShadows"><span>Shadows</span></div>
       <div class="optrow chk"><input type="checkbox" id="oFps"><span>Show FPS counter</span></div>
       <div class="optrow"><span>Render quality</span><div class="seg" id="oQuality">

@@ -142,8 +142,24 @@ function initialsOf(name){const s=String(name||'').trim();if(!s)return'?';const 
    then objective, ping, camp, friend last -- except overlapping FRIENDS collapse into one "+N"
    marker instead of dropping the lower one. */
 const EDGE_PRIORITY={threat:0,objective:1,ping:2,camp:3,friend:4};
+/* ---------- minimap style: square (north up) or compass (turns with you) ----------
+   The map is always drawn north-up (drawMap below, 5x a second). In compass style the canvas element itself is
+   rotated by the camera's heading every frame, which is one CSS transform: cheap, smooth, and it leaves all of
+   drawMap's coordinate math alone. The N/E/S/W ring turns with it; its letters counter-rotate to stay upright. */
+let MAP_COMPASS=false;
+const mapCompassEl=document.querySelector('.map-compass'),mapCompassLetters=[...document.querySelectorAll('.map-compass span')];
+function setMapStyle(style){MAP_COMPASS=style==='compass';$('#mapbox').classList.toggle('map--compass',MAP_COMPASS);if(!MAP_COMPASS){mm.style.transform='';mapCompassEl.style.transform=''}}
+function spinMap(){
+  if(MAP_COMPASS&&S.started&&!fieldMapOpen){
+    const a=P.yaw;   // heading up: rotate the north-up map by the camera yaw
+    mm.style.transform=`rotate(${a}rad)`;mapCompassEl.style.transform=`rotate(${a}rad)`;
+    for(const l of mapCompassLetters)l.style.transform=`rotate(${-a}rad)`;
+  }else if(fieldMapOpen&&mm.style.transform)mm.style.transform='';   // the field map is always north-up
+  requestAnimationFrame(spinMap);
+}
+requestAnimationFrame(spinMap);   // first run on the next frame: fieldMapOpen is declared further down this file
 function drawMapEdgeIndicators(W,night){
-  const pad=10,cxm=W/2,czm=W/2,maxX=W/2-pad,maxZ=W/2-pad;
+  const pad=MAP_COMPASS&&!fieldMapOpen?22:10,cxm=W/2,czm=W/2,maxX=W/2-pad,maxZ=W/2-pad;
   const cands=[];
   let bestThreat=null,bestThreatD=Infinity;
   for(const tk of trucks)if(tk.active){const d=(tk.x-mcx)**2+(tk.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tk.x,z:tk.z,color:'#d12a2a'}}}
@@ -167,6 +183,7 @@ function drawMapEdgeIndicators(W,night){
       if(da<0.35){collided=true;if(c.kind==='friend'&&p.kind==='friend')p.count=(p.count||1)+1;break}}
     if(collided)continue;
     let t=1;if(Math.abs(dx)>1e-6)t=Math.min(t,maxX/Math.abs(dx));if(Math.abs(dz)>1e-6)t=Math.min(t,maxZ/Math.abs(dz));
+    if(MAP_COMPASS&&!fieldMapOpen)t=Math.min(t,maxX/Math.hypot(dx,dz));   // round map: keep arrows inside the circle
     placed.push(Object.assign({},c,{ang,ex:cxm+dx*t,ez:czm+dz*t,count:1}));
   }
   for(const p of placed){
