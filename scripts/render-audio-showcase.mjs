@@ -48,8 +48,8 @@ try{
   await page.waitForFunction(()=>!document.querySelector('#hud').hidden,null,{polling:100});
   console.log('Game started');
   await page.evaluate(async()=>{
-    // The host display denies this account iGPU access. Keep game timing and Web Audio,
-    // but skip every 3D draw while making an audio-only review file.
+    // Audio-only export: keep game timing and Web Audio, but skip every 3D draw.
+    // Nothing here needs pixels, so don't spend GPU (or CPU fallback) time rendering frames.
     renderer.render=()=>{};
     await AC.resume();setAudioMode('all','original');
     windNoiseGain.disconnect();rainGain.disconnect();
@@ -142,7 +142,7 @@ try{
   source('Day birds','birds.mp3',4,'Background ambience',0.24);
   source('Night crickets','crickets.mp3',4,'Background ambience',0.43);
   for(const [kind,file] of [['Sand step 1','step-sand-1.mp3'],['Sand step 2','step-sand-2.mp3'],['Sand step 3','step-sand-3.mp3'],['Stone step 1','step-stone-1.mp3'],['Stone step 2','step-stone-2.mp3'],['Stone step 3','step-stone-3.mp3']])source(kind,file,0.85,'Footsteps',0.4);
-  for(const [kind,file] of [['Tent cloth 1','cloth1.mp3'],['Bunk cloth 2','cloth2.mp3'],['House door open','doorOpen_1.mp3'],['House door close','doorClose_1.mp3']])source(kind,file,1.3,'Tent and house',0.45);
+  for(const [kind,file] of [['Tent cloth 1','cloth1.mp3'],['Bunk cloth 2','cloth2.mp3'],['House door open','doorOpen_1.mp3']])source(kind,file,1.3,'Tent and house',0.45);
 
   for(const [label,kind,seconds] of [
     ['Twister wind','twister',2.6],['Tumbleweed gust','tumbleweed',2.6],['Haboob wind','haboob',2.6],

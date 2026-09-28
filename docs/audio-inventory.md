@@ -4,6 +4,25 @@ The game starts Web Audio on the player's first game-start click. Master volume 
 
 The **original synthesized wind remains the default**, because it already suits the lakebed. Other newly added recordings default on. To A/B at the same spot, open the developer console with backtick and use `audio wind old`, `audio wind new`, or `audio status`. `audio old` and `audio new` compare the whole soundscape. Categories are `wind`, `ambience` (birds/crickets), `rain`, `steps`, `dig`, `metal`, and `props` (tent/house/bunk). These choices affect only your browser and reset on reload. The old game had no footsteps, birds, crickets, or tent/bunk Foley, so their "old" mode is silent.
 
+## Listening review (September 28, 2026)
+
+JT listened to the [labeled reel](audio-showcase-narrated.mp3) and decided:
+
+| Sound | Verdict | In the game |
+| --- | --- | --- |
+| Wind | Keep A, the original | Default stays `original` |
+| Rain | B, the recording, is better | Default `recorded` |
+| Metal | B, the recording, is better | Default `recorded` |
+| Digging | **Pinned: revisit later** | Unchanged (`recorded`) for now |
+| Crickets | Good addition for night | Kept |
+| Footsteps | Don't change | Kept |
+| Tent cloth | Good | Kept |
+| House door open | Good | Kept |
+| House door close | Not good | Removed; leaving the house replays the door-open recording, slightly lower |
+| Tumbleweed | Good | Kept |
+
+Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
+
 ## A/B against the previous game audio
 
 | Category | `old` | `new` | Current default |
@@ -27,7 +46,7 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Rain at the suitcase ending | CC0 rain loop, with a quiet filtered-noise fallback. |
 | Walking and running | Three CC0 sand-step recordings, rotated and slightly pitch-varied; three stone-step recordings for tent/office floors. A short filtered-noise step is the loading fallback. Running has a faster cadence. These are local-player footsteps only. |
 | Digging | A short CC0 shovel-in-dirt recording, varied slightly in pitch; the old filtered-noise scrape and low tone are the loading fallback. |
-| Entering/leaving tents or the Warden's house | CC0 cloth rustle for tents and CC0 wooden-door recordings for the house. |
+| Entering/leaving tents or the Warden's house | CC0 cloth rustle for tents. The Warden's house plays a CC0 wooden-door-opening recording both ways; leaving plays it slightly lower. |
 | Lying down/getting up | CC0 cloth rustle. |
 | Metal hit, loot collision, shovel bonk | CC0 metal click; the old high triangle tone plus noise are the loading fallback. |
 | Finding ordinary loot, important loot, receiving seeds, detector beeps | Web Audio oscillators: ascending three-note find, longer five-note gold fanfare, two-note coin chirp, or a signal-dependent square-wave beep. |
@@ -52,6 +71,6 @@ All shipped recordings below are **CC0**. They were converted to mono 22.05 kHz 
 | `crickets.mp3` | `crickets-oneloop.mp3` | [Crickets Ambient Noise by Wolfgang_/Ted Kerr](https://opengameart.org/content/crickets-ambient-noise-loopable), CC0 |
 | `wind.mp3` | `wind woosh loop_0.ogg` | [wind whoosh loop by SketchMan3](https://opengameart.org/content/wind-whoosh-loop), CC0 |
 | `rain.mp3` | `1.ogg` from `Rain OGG.zip` | [Rain (loopable) by Ylmir](https://opengameart.org/content/rain-loopable), CC0 |
-| `cloth1.mp3`, `cloth2.mp3`, `doorOpen_1.mp3`, `doorClose_1.mp3`, `metalClick.mp3` | Same-named OGGs | [RPG Audio by Kenney](https://kenney.nl/assets/rpg-audio), CC0 |
+| `cloth1.mp3`, `cloth2.mp3`, `doorOpen_1.mp3`, `metalClick.mp3` | Same-named OGGs | [RPG Audio by Kenney](https://kenney.nl/assets/rpg-audio), CC0 |
 
 The original CC0 licenses are linked on each source page. Kenney also includes a `License.txt` in the RPG Audio download. This table credits the makers even though CC0 does not require attribution.

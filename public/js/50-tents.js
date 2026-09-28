@@ -19,7 +19,7 @@ function exitTent(){
   ROOM_MESHES[ti].visible=false;
   ROOM_LIGHTS[ti].visible=false;
   P.x=S.tentBack.x;P.z=S.tentBack.z;P.y=groundAt(P.x,P.z);P.vy=0;
-  if(AUDIO_MODE.props==='recorded'&&!playAudioClip(t.house?'doorClose':'cloth1',0.42,0.9))noise(0.15,600,0.7,0.07,'lowpass');
+  if(AUDIO_MODE.props==='recorded'&&!playAudioClip(t.house?'doorOpen':'cloth1',0.42,0.9))noise(0.15,600,0.7,0.07,'lowpass');
   if(wasBed&&online())wsSend({t:'sleep',on:false});
   logEv('tentExit',{tent:ti,name:t.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   toast(`You step back outside ${t.name}.`,'',2200);

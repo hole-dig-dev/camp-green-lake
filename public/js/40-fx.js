@@ -53,7 +53,7 @@ const AUDIO_FILES={
   shovel:'shovel.mp3',wind:'wind.mp3',birds:'birds.mp3',crickets:'crickets.mp3',rain:'rain.mp3',
   'step-sand-1':'step-sand-1.mp3','step-sand-2':'step-sand-2.mp3','step-sand-3':'step-sand-3.mp3',
   'step-stone-1':'step-stone-1.mp3','step-stone-2':'step-stone-2.mp3','step-stone-3':'step-stone-3.mp3',
-  cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',doorClose:'doorClose_1.mp3',metalClick:'metalClick.mp3'
+  cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',metalClick:'metalClick.mp3'
 };
 const audioBuffers=new Map(),audioLoads=new Map(),ambientLoops=new Map();
 function loadAudioClip(name){
