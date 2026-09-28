@@ -366,7 +366,7 @@
 
   // ---- missions (GAME_DESIGN.md): hub -> truck ride -> timed dig site -> truck leaves -> results -> hub ----
   const MISSION = {
-    SECS: 540,              // time on site before the truck leaves (9 minutes)
+    SECS: 360,              // time on site before the truck leaves (6 minutes: short, dense trips)
     RIDE: 4000,             // ms of truck ride from camp to the site
     RESULTS: 12000,         // ms the results card shows before everyone is back at camp
     HORNS: [180, 60, 30, 10], // seconds left: distant horn, engine starts, repeated horn, truck rolls
@@ -375,7 +375,9 @@
     HALF: 75,               // the site is a square this many metres from its centre to each edge
     BED: 3.2,               // loot within this distance of the truck counts as "in the bed"
   };
-  function newMission(seed, trip, now) {
+  const RANCH_SITE = { x: 3000, z: 0, half: 30 }; // the physics feel test site (see phys.js)
+  function newMission(seed, trip, now, site) {
+    if (site === 'ranch') return { phase: 'ride', site: 'ranch', trip, cx: RANCH_SITE.x, cz: RANCH_SITE.z, half: RANCH_SITE.half, rideEnd: now + MISSION.RIDE, endsAt: now + MISSION.RIDE + MISSION.SECS * 1000, horn: 0, loot: [] };
     const r = rnd(seed * 17 + trip * 101);
     let cx = 0, cz = -200;
     for (let k = 0; k < 40; k++) {

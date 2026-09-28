@@ -144,3 +144,21 @@ Each checkpoint gets a timestamped commit on this branch, with two-player server
 ## 7. Acceptance test (from GAME_DESIGN.md)
 
 Not "rope implemented." Success is **four players having a funny, tense 10–15 minute trip**, yelling "pull," "hold," "catch," "leave it," "get him," "truck," "rope." If that doesn't happen, fix the interactions before adding more content.
+
+## Physics feel test (2026-09-27) ✅
+After playtest feedback (carrying felt clunky, trips felt empty), trips now go to one small, dense site: **Walker Ranch** (x=3000, off the lake map).
+- `public/phys.js`: shared cannon-es world (house with a narrow inner doorway, furniture, a yard, and a truck with a flat bed). It has 12 valuables with mass, value and fragility.
+- **Grabbing (R.E.P.O. style):** aim with the crosshair and hold the left button. The object hangs from your hand on a spring (FMAX 700 N per camper). The scroll wheel moves it closer or farther; right-click throws.
+  - The 120 kg safe needs 2 campers to lift; the 190 kg piano needs 3. Alone you can only drag them.
+- **Damage:** every hard bump costs value, shown as a red "-N" popup.
+- **Payout:** what's resting in the truck bed when it leaves is paid out.
+- **Solo vs. online:**
+  - Solo runs the physics in the page (cannon-es from the CDN).
+  - Online, the server runs it at 60 Hz and sends snapshots at 20 Hz (`pw`, `pwinit`, `pwend`, `pdmg`, `pring`, `pslip`, `pheld`).
+  - Clients send `pgrab`, `phold`, `prelease` and `pyeet`.
+- **Other changes:** trips are 6 minutes, and the ranch is first person.
+
+**Known gaps:**
+- The minimap still shows camp.
+- The key hint bar still mentions digging.
+- The camp hub is still open lake.

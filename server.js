@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const SIM = require('./public/sim.js');
+const CANNON = require('cannon-es');
+const PHYS = require('./public/phys.js'); // the physics feel test: real rigid-body loot at the ranch
 
 const PORT = Number(process.env.PORT) || 4300;
 const PUB = path.join(__dirname, 'public');
@@ -92,6 +94,7 @@ const server = http.createServer((req, res) => {
   if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
   if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8');
   if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8');
+  if (url === '/phys.js') return sendFile(res, 'phys.js', 'text/javascript; charset=utf-8');
   res.writeHead(404, { 'content-type': 'text/plain' });
   res.end('not found');
 });
@@ -121,7 +124,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    truck: truckInfo(), mission: { ...world.mission, now: Date.now() },
+    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null,
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -154,7 +157,7 @@ wss.on('connection', ws => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 80, c.y); c.z = num(m.z, -620, 620, c.z);
+        c.x = num(m.x, -620, 3400, c.x); c.y = num(m.y, -40, 80, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0; c.sv = num(m.sv, 0, 1e5, 0) | 0; c.rp = num(m.rp, -1, 1e7, -1) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
@@ -189,7 +192,7 @@ wss.on('connection', ws => {
         // Someone dug up something too heavy for the sack. It sits on the ground until campers carry it to the truck.
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
-        world.props[id] = { type, x: r2(num(m.x, -595, 2100, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
+        world.props[id] = { type, x: r2(num(m.x, -595, 3400, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
       }
@@ -198,7 +201,7 @@ wss.on('connection', ws => {
         const items = (Array.isArray(m.items) ? m.items : []).filter(t => LOOT_KEYS.includes(t)).slice(0, 12);
         if (!items.length) return;
         const ids = Object.keys(world.bags); if (ids.length >= MAX_BAGS) delete world.bags[ids[0]];
-        const id = nextObj++; world.bags[id] = { x: r2(num(m.x, -600, 600, 0)), z: r2(num(m.z, -600, 600, 0)), items, n: c.n }; dirty = true;
+        const id = nextObj++; world.bags[id] = { x: r2(num(m.x, -600, 3400, 0)), z: r2(num(m.z, -600, 600, 0)), items, n: c.n }; dirty = true;
         broadcast({ t: 'bag', id, ...world.bags[id] });
         break;
       }
@@ -235,7 +238,7 @@ wss.on('connection', ws => {
         if (c.f & 64) return;
         c.f |= 64; curse(10);
         const id = 900000 + c.id; delete world.props[id];
-        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 600, c.x)), z: r2(num(m.z, -600, 600, c.z)) };
+        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 3400, c.x)), z: r2(num(m.z, -600, 600, c.z)) };
         broadcast({ t: 'prop', id, ...world.props[id] }); broadcast(runInfo());
         break;
       }
@@ -309,7 +312,7 @@ wss.on('connection', ws => {
       case 'misStart': {
         // anyone at camp can send the crew out; the Warden picks a fresh patch of the lake
         if (!MISSIONS || world.mission.phase !== 'hub') return;
-        world.mission = SIM.newMission(world.run.seed, (world.mission.trip || 0) + 1, now);
+        world.mission = SIM.newMission(world.run.seed, (world.mission.trip || 0) + 1, now, 'ranch');
         world.clock = { off: 0, paused: true, pt: SIM.DAYMS * 0.45 }; broadcast({ t: 'clock', ...world.clock });
         dirty = true; broadcast(missionInfo()); broadcast({ t: 'truckNote', k: 'misStart', n: c.n });
         break;
@@ -356,7 +359,7 @@ wss.on('connection', ws => {
         // on a trip, a downed camper is immediately a body the others can carry, rope, cart or throw aboard
         if (!MISSIONS) return;
         const id = 900000 + c.id; if (world.props[id]) return;
-        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 2100, c.x)), z: r2(num(m.z, -600, 600, c.z)) }; dirty = true;
+        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 3400, c.x)), z: r2(num(m.z, -600, 600, c.z)) }; dirty = true;
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
       }
@@ -367,6 +370,18 @@ wss.on('connection', ws => {
         if (Object.values(world.props).filter(q => q.inCart === cid).length >= 3) return;
         p.inCart = cid; p.cargo = false; p.x = cart.x; p.z = cart.z; dirty = true;
         broadcast({ t: 'cartPut', id, cart: cid });
+        break;
+      }
+      case 'pgrab': case 'phold': case 'prelease': case 'pyeet': {
+        // grabbing physics loot: your hand pulls the grabbed point on a spring (only as strong as one camper)
+        if (!PW) return;
+        const v3 = a => Array.isArray(a) && a.length === 3 ? a.map(x => num(x, -5000, 5000, 0)) : null;
+        const hand = v3(m.hand);
+        if (hand && Math.hypot(hand[0] - c.x, hand[2] - c.z) > 4.5) return; // your hand has to be near you
+        if (m.t === 'pgrab') { const lp = v3(m.lp); if (lp && hand && PHYS.grab(PW, c.id, num(m.id, 0, 1e7, -1) | 0, lp.map(x => clamp(x, -2, 2)), hand)) broadcast({ t: 'pheld', id: m.id | 0, by: c.id }, c.id); }
+        else if (m.t === 'phold') { if (hand) PHYS.hold(PW, c.id, hand); }
+        else if (m.t === 'prelease') PHYS.release(PW, c.id);
+        else { const d = v3(m.dir); if (d) { const l = Math.hypot(d[0], d[1], d[2]) || 1; PHYS.yeet(PW, c.id, d.map(x => x / l)); } }
         break;
       }
       case 'unearth': {
@@ -388,13 +403,13 @@ wss.on('connection', ws => {
       }
       case 'pfly': {
         const p = world.props[num(m.id, 0, 1e7, -1) | 0]; if (!p || !p.air || p.owner !== c.id) return;
-        p.x = r2(num(m.x, -600, 2100, p.x)); p.z = r2(num(m.z, -600, 600, p.z));
+        p.x = r2(num(m.x, -600, 3400, p.x)); p.z = r2(num(m.z, -600, 600, p.z));
         broadcast({ t: 'pfly', id: +m.id, x: p.x, y: r2(num(m.y, -40, 80, 0)), z: p.z }, c.id);
         break;
       }
       case 'pland': {
         const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id]; if (!p || !p.air || p.owner !== c.id) return;
-        p.air = false; p.x = r2(num(m.x, -600, 2100, p.x)); p.z = r2(num(m.z, -600, 600, p.z)); dirty = true;
+        p.air = false; p.x = r2(num(m.x, -600, 3400, p.x)); p.z = r2(num(m.z, -600, 600, p.z)); dirty = true;
         const o = SIM.OBJ[p.type], imp = num(m.impact, 0, 60, 0);
         if (o && o.fragile && imp > o.fragile && !p.broken) { p.broken = true; broadcast({ t: 'pbreak', id }); }
         const T = world.truck;
@@ -422,7 +437,7 @@ wss.on('connection', ws => {
         SIM.bonk(MON, { id: c.id, x: c.x, z: c.z, fa: c.r }, pendingEv);
         break;
       case 'ping':
-        broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 600, 0)), z: r1(num(m.z, -600, 600, 0)) });
+        broadcast({ t: 'ping', id: c.id, x: r1(num(m.x, -600, 3400, 0)), z: r1(num(m.z, -600, 600, 0)) });
         break;
       case 'chat': {
         // Proximity chat: only campers within earshot see it.
@@ -487,6 +502,7 @@ wss.on('connection', ws => {
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
+    if (PW) PHYS.dropPlayer(PW, c.id);
     if (c.joined) broadcast({ t: 'leave', id: c.id });
   });
 });
@@ -581,6 +597,34 @@ function truckTick(now, dt) {
   }
 }
 /* ---- missions (GAME_DESIGN.md sections 4-8): the truck takes the crew out, and only what's aboard when it leaves counts ---- */
+/* ---- the physics feel test: the server runs the real rigid-body world while the crew is at the ranch ---- */
+let PW = null, pwTimer = null, pwLast = 0, pwSent = 0;
+function startPhysics() {
+  stopPhysics(); PW = PHYS.create(CANNON, world.run.seed); pwLast = Date.now();
+  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true) });
+  pwTimer = setInterval(physTick, 16);
+}
+function stopPhysics() { if (pwTimer) clearInterval(pwTimer); pwTimer = null; if (PW) broadcast({ t: 'pwend' }); PW = null; }
+function physTick() {
+  if (!PW) return;
+  const now = Date.now(), dt = Math.min(0.05, (now - pwLast) / 1000); pwLast = now; if (dt <= 0) return;
+  // campers walking around push things; riders, the downed and anyone far away don't
+  // positions arrive 10-20 times a second: glide the bodies between them so they push smoothly instead of in kicks
+  for (const c of joined()) {
+    if ((c.f & (2 | 64 | 32768)) || !SIM.inSite(world.mission, c.x, c.z)) { if (PW.players.has(c.id)) PHYS.dropPlayer(PW, c.id); c.sx = null; continue; }
+    if (c.sx == null || Math.hypot(c.x - c.sx, c.z - c.sz) > 4) { c.sx = c.x; c.sy = c.y; c.sz = c.z; } else { const k = Math.min(1, dt * 15); c.sx += (c.x - c.sx) * k; c.sy += (c.y - c.sy) * k; c.sz += (c.z - c.sz) * k; }
+    PHYS.setPlayer(PW, c.id, c.sx, c.sy, c.sz, dt);
+  }
+  // the truck rolls smoothly here too (its real position only updates 10 times a second), so the loot in the bed rides along
+  const T = world.truck;
+  if (T.sp > 0 && T.mode === 'mission') { const P = PW.truck; let x = P.x - Math.sin(T.h) * T.sp * dt, z = P.z - Math.cos(T.h) * T.sp * dt; if (Math.hypot(x - T.x, z - T.z) > 1) { x = T.x; z = T.z; } PHYS.placeTruck(PW, x, z, T.h, dt); }
+  PHYS.step(PW, dt);
+  for (const e of PW.events.splice(0)) {
+    if (e.k === 'slip') { const c = clients.get(e.pid); if (c) send(c, { t: 'pslip', id: e.id }); }
+    else broadcast({ t: 'p' + e.k, id: e.id, loss: e.loss, val: e.val, x: r2(e.x || 0), y: r2(e.y || 0), z: r2(e.z || 0) });
+  }
+  if (now - pwSent >= 50) { pwSent = now; const s = PHYS.snapshot(PW, false); if (s.length) broadcast({ t: 'pw', s }); }
+}
 function missionInfo() { return { t: 'mission', ...world.mission, now: Date.now() }; }
 function missionTick(now, dt) {
   const MS = world.mission, T = world.truck, ev = [];
@@ -588,14 +632,17 @@ function missionTick(now, dt) {
   for (const e of ev) {
     if (e.k === 'arrive') {
       // the truck parks in the middle of the site, nose pointing home; it's the only way back
-      const h = Math.atan2(-(0 - MS.cx), -(20 - MS.cz));
-      Object.assign(T, { x: MS.cx, z: MS.cz, h, sp: 0, mode: 'mission', driver: null, stuck: false, tank: SIM.TRUCK.TANK, out: false, until: 0 });
+      const h = MS.site === 'ranch' ? PHYS.TRUCK.h : Math.atan2(-(0 - MS.cx), -(20 - MS.cz));
+      const tx = MS.site === 'ranch' ? PHYS.TRUCK.x : MS.cx, tz = MS.site === 'ranch' ? PHYS.TRUCK.z : MS.cz;
+      Object.assign(T, { x: tx, z: tz, h, sp: 0, mode: 'mission', driver: null, stuck: false, tank: SIM.TRUCK.TANK, out: false, until: 0 });
+      if (MS.site === 'ranch') startPhysics();
       // a cart comes along on every trip, parked by the tailgate
-      const cid = 70000 + (MS.trip % 400); world.props[cid] = { type: 'cart', x: r2(MS.cx + Math.sin(h) * 4.5), z: r2(MS.cz + Math.cos(h) * 4.5) }; broadcast({ t: 'prop', id: cid, ...world.props[cid] });
+      if (MS.site !== 'ranch') { const cid = 70000 + (MS.trip % 400); world.props[cid] = { type: 'cart', x: r2(MS.cx + Math.sin(h) * 4.5), z: r2(MS.cz + Math.cos(h) * 4.5) }; broadcast({ t: 'prop', id: cid, ...world.props[cid] }); }
       broadcast(truckInfo());
     }
     if (e.k === 'depart') missionDepart();
     if (e.k === 'home') {
+      stopPhysics();
       Object.assign(T, freshTruck()); broadcast(truckInfo());
       for (const id in world.props) { delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
     }
@@ -619,6 +666,7 @@ function missionDepart() {
     const p = world.props[id]; if (p.type === 'body' || p.type === 'cart') continue;
     if (onTruck(p)) { const v = Math.round((SIM.HEAVY[p.type] || 0) * (p.broken ? 0.2 : 1)); payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
   }
+  if (PW) { const L = PHYS.bedLoad(PW); if (L.val) { payout += L.val; items.push(`${L.list.length} things in the truck bed: ${L.val}`); } }
   world.run.bank += payout;
   MS.results = { payout, aboard: aboard.map(c => c.n), lost: lost.map(c => c.n), items, failed: aboard.length === 0 };
   broadcast(runInfo());
