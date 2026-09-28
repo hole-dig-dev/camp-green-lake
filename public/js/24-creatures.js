@@ -19,7 +19,7 @@ for(const key in CREATURE_DEFS){
   new T.GLTFLoader().load(MODEL_DIR+d.file+'.glb',gl=>{
     gl.scene.traverse(o=>{if(!o.isMesh)return;
       srgbVertexColors(o.geometry);   // linear glTF colours -> the game's as-is colours (23-models.js)
-      const m=o.material;o.material=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9,metalness:0,skinning:true,color:m.color.clone().convertLinearToSRGB()});
+      const m=o.material;o.material=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.9,metalness:0,skinning:true,side:T.DoubleSide,color:m.color.clone().convertLinearToSRGB()});
       o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;   // bind-pose bounds don't cover the animated poses
     });
     // the exporter can bundle other creatures' same-boned clips: keep this creature's, drop the prefix
