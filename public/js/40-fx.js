@@ -11,6 +11,7 @@ function updateParts(dt){for(let i=0;i<PMAX;i++){const p=parts[i];if(p.life>0){p
 /* found-item pop */
 const pops=[];
 function itemMesh(type){
+  if(ITEM_MODELS[type]){const g=ITEM_MODELS[type].clone();g.scale.copy(ITEM_MODELS[type].scale);return g}   // Blender model (23-models.js), once loaded
   const c=LOOT[type].color;
   if(type==='suitcase'){const g=new T.Group();const b=box(0.8,0.55,0.25,c);const h=box(0.3,0.08,0.06,0x2a1a0e);h.position.y=0.32;g.add(b,h);return g}
   if(type==='kb')return cyl(0.06,0.06,0.3,8,c);
