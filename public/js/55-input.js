@@ -92,7 +92,7 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false;if(k==='b'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
-function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i})}
+function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i});if(me)me.waveT=1.4}   // the camper waves while shouting
 function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
 /* touch */

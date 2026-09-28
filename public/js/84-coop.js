@@ -5,7 +5,7 @@ const PROG={xp:0,sent:0};
 const xpNeed=l=>60+l*40;
 function levelOf(xp){let l=1;while(l<20&&xp>=xpNeed(l)){xp-=xpNeed(l);l++}return{l,into:xp,need:xpNeed(l)}}
 function myLevel(){return levelOf(PROG.xp).l}
-const PERKS=[[2,'digging 10% faster'],[3,'a straw cowboy hat'],[4,'+20 water'],[5,'one more sack slot'],[6,'a black cowboy hat'],[8,'Lucky Eye: dust puffs up over buried loot near you'],[10,'a gold hat'],[12,'crawling faster when downed'],[15,'a piggy for your head'],[16,'one more sack slot']];
+const PERKS=[[2,'digging 10% faster'],[3,'a straw hat'],[4,'+20 water'],[5,'one more sack slot'],[6,'a black hat'],[8,'Lucky Eye: dust puffs up over buried loot near you'],[10,'a gold hat'],[12,'crawling faster when downed'],[15,'a piggy for your head'],[16,'one more sack slot']];
 function loadProg(){try{PROG.xp=num(JSON.parse(localStorage.getItem('cgl-prog-'+S.name.toLowerCase())||'{}').xp,0,1e8,0)|0}catch(e){}}
 function saveProg(){try{localStorage.setItem('cgl-prog-'+S.name.toLowerCase(),JSON.stringify({xp:PROG.xp}))}catch(e){}}
 function myTag(){return`${S.name} (you) · LV ${myLevel()}`}
@@ -17,7 +17,7 @@ setInterval(()=>{if(online()&&PROG.xp!==PROG.sent){PROG.sent=PROG.xp;wsSend({t:'
 function sackMax(){const l=myLevel();return 6+(S.up.bigsack?3:0)+(l>=5?1:0)+(l>=16?1:0)}
 const hatTier=l=>l>=15?4:l>=10?3:l>=6?2:l>=3?1:0;
 function setHat(p,l){
-  const t=hatTier(l);if(!p||!p.hat||p.hatT===t)return;p.hatT=t;if(!t)return;const h=p.hat;while(h.children.length)h.remove(h.children[0]);
+  const t=hatTier(l);if(!p||!p.hat||p.hatT===t)return;p.hatT=t;if(p.model){modelHat(p,t);return}if(!t)return;const h=p.hat;while(h.children.length)h.remove(h.children[0]);
   if(t===4){const b=box(0.3,0.22,0.42,0xf2a0b0);b.position.y=0.12;const hd=box(0.2,0.18,0.14,0xf2a0b0);hd.position.set(0,0.16,0.26);const sn=box(0.09,0.06,0.04,0xd97a8e);sn.position.set(0,0.14,0.34);h.add(b,hd,sn);return}
   const c=[0,0xd9c27a,0x222222,0xd4af37][t];const br=cyl(0.42,0.42,0.04,10,c),cr=cyl(0.2,0.24,0.2,8,c);cr.position.y=0.12;h.add(br,cr);
 }

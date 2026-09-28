@@ -23,7 +23,9 @@ function makePerson(o){
   if(o.shovel!==false){shovel=new T.Group();const hd=cyl(0.028,0.028,1.2,5,0x8a6440);hd.position.y=-0.3;const bl=box(0.24,0.3,0.035,0x7d8288);bl.position.y=-0.98;shovel.add(hd,bl);shovel.position.set(0,-0.52,0.05);shovel.rotation.x=-0.45;armR.add(shovel)}
   if(o.shades){const s=box(0.3,0.07,0.02,0x111111);s.position.set(0,0.89,0.18);upper.add(s)}
   upper.add(torso,collar,armL,armR,head,eyeL,eyeR,hat);g.add(legL,legR,upper);
-  return{g,upper,legL,legR,armL,armR,shovel,hat,ph:0};
+  const p={g,upper,legL,legR,armL,armR,shovel,hat,ph:0,o};
+  if(MODEL.ready)upgradePerson(p);else MODEL.people.push(p);   // the Blender camper replaces these boxes once it loads (below)
+  return p;
 }
 /* one scoop: [phase, lean, twist, right arm, left arm] — drive in, lift, toss onto the pile, reset */
 const DIGK=[[0,0.15,0,-0.5,-0.6],[0.3,0.55,0,-0.95,-0.8],[0.5,0.25,0.1,-1.6,-1.25],[0.72,0.08,0.7,-1.9,-1.5],[1,0.15,0,-0.5,-0.6]];
@@ -38,8 +40,10 @@ function sleepPose(p,bk){
   p.g.rotation.set(-Math.PI/2,0,0);
   p.upper.rotation.set(0,0,0);p.armL.rotation.set(0,0,0.08);p.armR.rotation.set(0,0,-0.08);p.legL.rotation.set(0,0,0);p.legR.rotation.set(0,0,0);
   if(p.shovel)p.shovel.visible=false;
+  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=false;
 }
 function animPerson(p,mode,dt,digPhase,speed){
+  if(p.model){animModel(p,mode,dt,digPhase,speed);return}
   if(p.shovel&&!p.shovel.visible)p.shovel.visible=true;   // back in hand when you're up (sleepPose hides it)
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));
@@ -64,6 +68,125 @@ function animPerson(p,mode,dt,digPhase,speed){
     p.legL.rotation.x*=0.8;p.legR.rotation.x*=0.8;p.armL.rotation.x=lerp(p.armL.rotation.x,0,dt*6);p.armR.rotation.x=lerp(p.armR.rotation.x,-0.1,dt*6);
   }
 }
+
+/* ---------- the Blender camper (models/camper.glb, built by blender/cgl_rig.py) ----------
+   The box people above are the fallback until the model arrives (or if it can't load). Every person from
+   makePerson is upgraded in place, keeping the same p.g group, so movement/labels/network code is unchanged. */
+const MODEL={ready:false,scene:null,clips:[],people:[]};
+const MODEL_SCALE=0.68;
+const SKIN_TONES=[0xf3d3b5,0xe8bb92,0xd6a077,0xc68a5e,0xa56b43,0x7f5134,0x5e3a25,0x43291b];
+const HAIR_COLORS=[0x1f1511,0x3b2618,0x6a4426,0xb88a4a,0x8a3a1c];
+/* w/d = torso width/depth, h = overall height, limb = arm/leg thickness */
+const BODY_TYPES={average:{w:1,d:1,h:1,limb:1},slim:{w:0.86,d:0.9,h:1.03,limb:0.88},stocky:{w:1.17,d:1.14,h:0.97,limb:1.12},tall:{w:0.95,d:0.97,h:1.09,limb:0.96},short:{w:1.06,d:1.05,h:0.9,limb:1.04}};
+const BODY_KEYS=Object.keys(BODY_TYPES);
+/* cowboy hats are staff-only (Mr. Sir + the Warden) */
+const HAT_ROLL=['bucket','bucket','bucket','desert','desert','desert','none','none'];
+const HAT_NODE={bucket:'Bucket',desert:'DesertCap',cowboy:'Cowboy'};
+/* animPerson modes -> clips. 0-6 are the game's existing modes; 7 jump, 8 dance, 9 wave are local-only */
+const MODE_CLIP=['Idle','Walk','Dig','KO','Run','Drink','WipeSweat','Jump','Dance','Wave'];
+const CLIP_ONCE={KO:1,Jump:1,Drink:1,WipeSweat:1,Wave:1};
+function strHash(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0}
+/* same name + color -> same camper on every client */
+function playerLook(name,ci){
+  const h=strHash(String(name).toLowerCase()+'#'+ci);
+  return{skin:SKIN_TONES[h%SKIN_TONES.length],band:CAMPER_COLORS[ci],hat:HAT_ROLL[(h>>>4)%HAT_ROLL.length],
+    body:BODY_KEYS[(h>>>8)%BODY_KEYS.length],hair:HAIR_COLORS[(h>>>12)%HAIR_COLORS.length]};
+}
+function upgradePerson(p){
+  if(p.model||!MODEL.ready)return;
+  const o=p.o||{},bt=BODY_TYPES[o.body]||BODY_TYPES.average;
+  const m=T.SkeletonUtils?T.SkeletonUtils.clone(MODEL.scene):MODEL.scene.clone(true);
+  m.scale.setScalar(MODEL_SCALE*bt.h);
+  const hat=o.hat==='none'?null:HAT_NODE[o.hat]||'Bucket';
+  const tint={CGL_Skin:o.skin,CGL_HatBand:o.band,CGL_Hair:o.hair!=null?o.hair:HAIR_COLORS[0],CGL_Jumpsuit:o.suit};
+  if(o.band!=null)tint.CGL_Patch=new T.Color(o.band).lerp(new T.Color(0xffffff),0.55).getHex();
+  const mats={},torso=[];
+  m.traverse(n=>{
+    if(!n.isMesh)return;
+    n.castShadow=true;n.receiveShadow=true;
+    const nm=n.name;
+    if(/_(Bucket|Cowboy|DesertCap)_/.test(nm))n.visible=!!hat&&nm.includes('_'+hat+'_');
+    else if(nm.includes('_Hair_'))n.visible=!hat;
+    else if(nm.includes('_Shades_'))n.visible=!!o.shades;
+    else if(nm.includes('_R_Shovel')){n.visible=o.shovel!==false;(p.shovelMeshes=p.shovelMeshes||[]).push(n)}
+    const mn=n.material&&n.material.name;
+    if(mn&&tint[mn]!=null){if(!mats[mn]){mats[mn]=n.material.clone();mats[mn].color.setHex(tint[mn])}n.material=mats[mn]}
+    if(/_(Torso|Zipper|Patch|Neck)$/.test(nm))torso.push(n);
+    if(/_[LR]_(Sleeve|Elbow|Forearm|Leg)$/.test(nm))n.scale.set(bt.limb,1,bt.limb);
+  });
+  /* body width: scale the torso pieces in spine space, then push shoulders/hips out to match (after each mixer update) */
+  const spine=m.getObjectByName('spine');
+  if(spine&&(bt.w!==1||bt.d!==1)){const wg=new T.Group();spine.add(wg);for(const n of torso)wg.add(n);wg.scale.set(bt.w,1,bt.d)}
+  /* [bone, x offset, rest position]: the GLB drops constant position tracks, so restore the rest spot before
+     every mixer update and add the offset after it (otherwise the offset piles up frame after frame) */
+  const W=bt.w-1;p.adj=[];
+  for(const[bn,dx]of[['armL',-0.355*W],['armR',0.355*W],['legL',-0.15*W],['legR',0.15*W]]){const b=m.getObjectByName(bn);if(b)p.adj.push([b,dx,b.position.clone()])}
+  p.mixer=new T.AnimationMixer(m);p.acts={};
+  for(const c of MODEL.clips){const a=p.mixer.clipAction(c);if(CLIP_ONCE[c.name]){a.setLoop(T.LoopOnce,1);a.clampWhenFinished=true}p.acts[c.name]=a}
+  for(const c of p.g.children)c.visible=false;   /* hide the box fallback */
+  p.g.rotation.x=0;p.g.add(m);p.model=m;p.cur=null;p.lastT=performance.now();
+  setClip(p,'Idle',0);stepMixer(p,0);
+  if(p.hatT)modelHat(p,p.hatT);
+}
+/* level-reward hats on the model: recolor the camper's own hat (cowboy hats stay staff-only, so hair gets a
+   bucket hat), and the top tier puts a pig on their head */
+const TIER_HAT=[0,0xd9c27a,0x222222,0xd4af37];
+function modelHat(p,t){
+  const m=p.model;if(!m||!t)return;
+  if(p.pig){p.pig.parent.remove(p.pig);p.pig=null}
+  const own=p.o&&p.o.hat==='desert'?'DesertCap':'Bucket';
+  m.traverse(n=>{
+    if(!n.isMesh)return;const nm=n.name;
+    if(/_(Bucket|Cowboy|DesertCap)_/.test(nm))n.visible=t<4&&nm.includes('_'+own+'_');
+    else if(nm.includes('_Hair_'))n.visible=t===4;
+    if(t<4&&nm.includes('_'+own+'_')&&!/HatBand$/.test(nm)){n.material=n.material.clone();n.material.color.setHex(TIER_HAT[t])}
+  });
+  if(t===4){
+    const head=m.getObjectByName('head');if(!head)return;
+    const g=new T.Group(),b=box(0.3,0.22,0.42,0xf2a0b0),hd=box(0.2,0.18,0.14,0xf2a0b0),sn=box(0.09,0.06,0.04,0xd97a8e);
+    b.position.y=0.12;hd.position.set(0,0.16,0.26);sn.position.set(0,0.14,0.34);g.add(b,hd,sn);
+    g.scale.setScalar(1/MODEL_SCALE);g.position.set(0,0.68,0);head.add(g);p.pig=g;
+  }
+}
+function stepMixer(p,dt){
+  for(const[b,,rest]of p.adj)b.position.copy(rest);
+  p.mixer.update(dt);
+  for(const[b,dx]of p.adj)b.position.x+=dx;
+}
+function setClip(p,name,fade){
+  if(p.cur===name||!p.acts[name])return;
+  const a=p.acts[name],f=fade==null?0.18:fade;
+  a.reset();a.timeScale=1;a.setEffectiveWeight(1);a.fadeIn(f).play();
+  if(p.cur&&p.acts[p.cur])p.acts[p.cur].fadeOut(f);
+  p.cur=name;
+}
+function animModel(p,mode,dt,digPhase,speed){
+  const now=performance.now();if(dt==null)dt=Math.min(0.05,(now-p.lastT)/1000);p.lastT=now;
+  p.g.rotation.x=0;
+  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=!p.o||p.o.shovel!==false;   // back in hand once you're up (sleepPose hides it)
+  if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
+  const name=MODE_CLIP[mode]||'Idle';
+  setClip(p,name);
+  const a=p.acts[name];
+  if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
+  else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
+  stepMixer(p,dt);
+}
+function loadCamperModel(){
+  if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
+  new T.GLTFLoader().load('models/camper.glb?v=1',g=>{
+    MODEL.scene=g.scene;
+    /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
+       so the model's orange matches the rest of the camp */
+    const seen=new Set();
+    g.scene.traverse(n=>{if(n.isMesh&&n.material&&!seen.has(n.material)){seen.add(n.material);n.material.color.convertLinearToSRGB()}});
+    MODEL.clips=g.animations.map(c=>{c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));return c});
+    MODEL.ready=true;
+    for(const p of MODEL.people)upgradePerson(p);
+    MODEL.people.length=0;
+  },undefined,e=>console.warn('Camper model failed to load, keeping the box people.',e));
+}
+loadCamperModel();
 
 /* ---------- labels (names + speech bubbles) ---------- */
 const labelLayer=$('#labels');const labeled=[];

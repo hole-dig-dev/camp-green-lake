@@ -224,6 +224,7 @@ function endParty(){
   toast("The party's over. Back to digging.",'',3000);
 }
 function danceArms(p,beat,style){
+  if(p.model){animModel(p,8,null);return}
   const w=Math.sin(beat*Math.PI*2);
   if(style===0){p.armL.rotation.x=-2.8+w*0.3;p.armR.rotation.x=-2.8-w*0.3}
   else if(style===1){const up=Math.floor(beat)%2===0;p.armR.rotation.x=up?-2.9:-0.6;p.armL.rotation.x=up?-0.3:-1.2}

@@ -76,7 +76,8 @@ function updatePlayer(dt){
   if(P.y<g+0.02)P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
-  animPerson(me,P.anim,dt,P.digPh);
+  const air=P.y-g>0.2&&P.anim!==2;   // off the ground (not digging): the camper's Jump clip; the disco: its Dance clip
+  animPerson(me,PARTY.on&&P.anim===0?8:air?7:P.anim,dt,P.digPh);
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;

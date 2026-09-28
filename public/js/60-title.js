@@ -30,7 +30,7 @@ function startGame(resume){
   }
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
-  me=makePerson({skin:[0xf0c9a2,0xc68a5e,0x7a5236,0xe0b48f][S.color%4],band:CAMPER_COLORS[S.color]});scene.add(me.g);
+  me=makePerson(playerLook(S.name,S.color));scene.add(me.g);
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
