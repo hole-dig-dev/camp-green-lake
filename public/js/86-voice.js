@@ -103,6 +103,7 @@ function voiceProximityTick(){
   for(const[id,R]of remotes){
     const dist=Math.hypot(R.p.g.position.x-P.x,R.p.g.position.z-P.z);
     const peer=VOX.peers.get(id);
+    if(R.room!==S.tent){if(peer)dropVoicePeer(id);continue}
     if(!peer){if(dist<VOICE_CONNECT&&net.id<id)makeVoicePeer(id,true)} // lower id offers, so both sides never offer at once
     else if(dist>VOICE_DROP)dropVoicePeer(id);
     else if(!peer.pc.remoteDescription&&performance.now()-peer.createdAt>VOICE_STALE_MS)dropVoicePeer(id); // unanswered offer: retry next tick
@@ -148,4 +149,3 @@ function updateVoice(now){
 $('#voiceBtn').onclick=()=>setVoiceEnabled(!VOX.enabled);
 $('#voiceModeBtn').onclick=()=>{VOX.mode=VOX.mode==='ptt'?'open':'ptt';if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud()};
 $('#voiceMuteBtn').onclick=()=>{VOX.muted=!VOX.muted;applyVolume();updateVoiceHud()};
-

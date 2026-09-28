@@ -248,7 +248,7 @@ function maybeSkipNight() {
   for (const c of js) c.sleeping = false;
   broadcastSleep();
 }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }; }
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, room: c.room }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -260,7 +260,7 @@ wss.on('connection', (ws, req) => {
   if (!ipWithinRate(ipConnWindow, ip, MAX_CONNS_PER_IP_PER_MIN, 60000)) { LOG.log('joinRejected', { ip, reason: 'slow down' }); ws.close(1013, 'slow down'); return; }
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
-    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
+    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, room: null, cy: -1, nz: 0, lv: 1, sc: 0, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
     digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
@@ -333,9 +333,10 @@ wss.on('connection', (ws, req) => {
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
-        c.f = num(m.f, 0, 255, 0) | 0; c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
+        c.f = num(m.f, 0, 255, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null;
+        c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, room: c.room }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;
@@ -434,7 +435,7 @@ wss.on('connection', (ws, req) => {
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
         LOG.log('chat', { id: c.id, n: c.n, s });
-        for (const o of clients.values()) if (o.joined && o !== c && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+        for (const o of clients.values()) if (o.joined && o !== c && o.room === c.room && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
         break;
       }
       case 'admin':

@@ -181,6 +181,42 @@ async function main() {
     moved = Math.hypot(after.x - before.x, after.z - before.z);
     record('holding W moves the player', true, `${moved.toFixed(1)}m`);
 
+    // Room IDs matter for both shelter and multiplayer visibility. Exercise the real use action
+    // at each door, then verify the larger D room and the Warden's office are reachable.
+    const rooms = await page1.evaluate(() => {
+      const c = window.__cgl;
+      c.P.x = 0; c.P.z = 47 - c.TENTS[2].hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
+      c.use();
+      const d = { inside: c.S.tent === 2, width: c.TENTS[2].roomW * 2, depth: c.TENTS[2].roomD * 2 };
+      c.exitTent();
+      c.P.x = -30; c.P.z = 45 - c.TENTS[4].hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
+      c.use();
+      const office = { inside: c.S.tent === 4, spot: null };
+      c.P.x = c.TENTS[4].desk.x; c.P.z = c.TENTS[4].desk.z;
+      office.spot = c.nearSpot()?.id;
+      c.exitTent();
+      c.P.yaw = 0; // the digging check below faces -z
+      return { d, office, outside: c.S.tent === null };
+    });
+    assert(rooms.d.inside && rooms.d.width >= 18 && rooms.d.depth >= 16, 'D Tent must open into a broad walkable room');
+    assert(rooms.office.inside && rooms.office.spot === 'office' && rooms.outside, "Warden's office must be enterable, usable and exitable");
+    record('large D Tent and Warden office work', true);
+
+    const fence = await page1.evaluate(() => {
+      const c = window.__cgl;
+      c.P.x = 10; c.P.z = 26.5; c.P.y = c.groundAt(10, 26.5); c.P.yaw = Math.PI;
+      c.KEYS.w = true; c.KEYS[' '] = true;
+      for (let i = 0; i < 80; i++) updatePlayer(0.05);
+      const wallZ = c.P.z;
+      c.KEYS[' '] = false;
+      c.P.x = 0; c.P.z = 26.5; c.P.y = c.groundAt(0, 26.5); c.P.vy = 0;
+      for (let i = 0; i < 30; i++) updatePlayer(0.05);
+      c.KEYS.w = false;
+      return { wallZ, gateZ: c.P.z };
+    });
+    assert(fence.wallZ < 27 && fence.gateZ > 30, 'fence must block a jump while its gate stays passable');
+    record('fence blocks jumps and main gate opens', true);
+
     // scoop() digs into a spot ~1.1m in front of wherever the player is facing, not at the
     // player's own feet -- so the '#depth' HUD readout (which reports the hole under the
     // player, via holeDepthHere() = baseH(P.x,P.z) - P.y) stays "0.0 ft" while you're digging
@@ -251,6 +287,13 @@ async function main() {
     await waitFor(page3, () => !!window.__cgl, 15000, 'window.__cgl to appear (p3)');
     await page3.evaluate(() => document.querySelector('#startBtn').click());
     await waitFor(page3, () => document.querySelector('#hud') && !document.querySelector('#hud').hidden, 20000, 'HUD to show after start (p3)');
+    await page3.waitForTimeout(400);
+    await page3.evaluate(() => {
+      const c = window.__cgl, t = c.TENTS[2];
+      c.P.x = t.x; c.P.z = t.z - t.hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
+      c.use();
+    });
+    assert(await page3.evaluate(() => window.__cgl.S.tent === 2), 'D Tent entry failed before reload');
     await page3.waitForTimeout(3000); // saveSession()'s setInterval autosaves to sessionStorage every 2s
 
     const errorsBeforeReload = errors.length;
@@ -267,9 +310,11 @@ async function main() {
       return !!title && title.hidden && !!hud && !hud.hidden;
     });
     assert(resumedOk, 'saved session did not auto-resume after reload (#title should be hidden, #hud visible)');
+    assert(await page3.evaluate(() => window.__cgl.S.tent === 2 && window.__cgl.P.y === -4), 'saved interior position did not resume inside D Tent');
     const newErrors = errors.slice(errorsBeforeReload);
     assert(newErrors.length === 0, 'page/console errors after reload:\n' + newErrors.map(e => '  - ' + e).join('\n'));
     record('returning player auto-resumes after reload without errors', true);
+    record('interior position survives reload', true);
 
     await ctx3.close();
 

@@ -65,11 +65,17 @@ function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
-  const pr=propNear(2.4);if(pr)return{id:'prop',pr};
-  const b=bagNear(2);if(b)return{id:'bag',b};
-  for(const s of SPOTS){if((P.x-s.x)**2+(P.z-s.z)**2<s.r*s.r)return s}
+  if(!inTent()){
+    const pr=propNear(2.4);if(pr)return{id:'prop',pr};
+    const b=bagNear(2);if(b)return{id:'bag',b};
+  }
+  for(const s of SPOTS){
+    const roomSpot=s.id==='exit'||s.id==='bunk'||s.id==='cards'||s.id==='office';
+    if(roomSpot?S.tent==null||(s.ti!=null&&s.ti!==S.tent)||(s.id==='bunk'&&BUNKS[s.bi].tent!==S.tent)||(s.id==='cards'&&S.tent!==TENTS.indexOf(D_TENT)):S.tent!=null)continue;
+    if((P.x-s.x)**2+(P.z-s.z)**2<s.r*s.r)return s;
+  }
   let best=null,bd=2.8*2.8;
-  for(const b of bots){const dx=b.p.g.position.x-P.x,dz=b.p.g.position.z-P.z,d2=dx*dx+dz*dz;if(d2<bd){bd=d2;best=b}}
+  for(const b of bots){if(!b.p.g.visible)continue;const dx=b.p.g.position.x-P.x,dz=b.p.g.position.z-P.z,d2=dx*dx+dz*dz;if(d2<bd){bd=d2;best=b}}
   return best?{id:'bot',bot:best}:null;
 }
 function use(){
@@ -83,9 +89,9 @@ function use(){
   else if(s.id==='warden')openDialog('warden');
   else if(s.id==='store')openShop();
   else if(s.id==='cards')openCards();
+  else if(s.id==='office')toast('The Warden\'s ledgers cover every camper, every hole, and every found object.','',4000);
   else if(s.id==='bot')openDialog('bot',s.bot);
   else if(s.id==='tentdoor')enterTent(s.ti);
   else if(s.id==='exit')exitTent();
   else if(s.id==='bunk')toggleBunk(s.bi);
 }
-

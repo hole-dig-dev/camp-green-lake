@@ -13,6 +13,7 @@ const COOP_TXT={
   tentdoor:s=>`Go inside ${TENTS[s.ti].name}`,
   exit:()=>'Step back outside',
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
+  office:()=>"Read the Warden's ledger",
 };
 const hq={hp:$('#hpBar'),hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
@@ -75,4 +76,3 @@ function drawMap(){
   {const cx=wx(-5),cz=wz(41);if(cx<0||cz<0||cx>W||cz>W){const a=Math.atan2(cz-W/2,cx-W/2),r=W/2-22;mx.fillStyle='#2b1d12';mx.font='700 24px "Barlow Condensed",sans-serif';mx.textAlign='center';mx.textBaseline='middle';mx.fillText('CAMP',W/2+Math.cos(a)*r,W/2+Math.sin(a)*r)}}
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 }
-

@@ -70,13 +70,13 @@ command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off 
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
 command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',
-  run([a,b]){if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <z>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;return`Teleported to ${P.x.toFixed(0)}, ${P.z.toFixed(0)}.`}});
+  run([a,b]){if(inTent())exitTent();if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <z>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;return`Teleported to ${P.x.toFixed(0)}, ${P.z.toFixed(0)}.`}});
 command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
   run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
 command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
-command('tent',{usage:'tent <A|B|D|C|out>',help:'Teleport straight into (or out of) a tent, for testing.',
-  run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a tent.';exitTent();return'Stepped outside.'}
-    const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such tent. Try A, B, D or C.');
+command('tent',{usage:'tent <A|B|D|C|W|out>',help:'Teleport into a tent or the Warden house, for testing.',
+  run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|W|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a room.';exitTent();return'Stepped outside.'}
+    const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such room. Try A, B, D, C or W.');
     if(inTent())exitTent();enterTent(ti);return`Inside ${TENTS[ti].name}.`}});
 
 /* detector */
@@ -88,4 +88,3 @@ function updateDetector(dt){
   sig=best;beepT-=dt;
   if(sig>0.02&&beepT<=0){sfx.beep(sig);beepT=lerp(1.1,0.07,sig*sig)}
 }
-

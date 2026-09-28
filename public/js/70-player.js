@@ -18,7 +18,7 @@ function updatePlayerTent(dt){
   P.moving=false;P.anim=S.inBed!=null?5:0;
   if(ml>0.1&&S.inBed==null){
     mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:4.3)*Math.min(1,ml);
-    let nx=clamp(P.x+mx*sp*dt,t.x-t.hw+0.5,t.x+t.hw-0.5),nz=clamp(P.z+mz*sp*dt,t.z-t.hd+0.5,t.z+t.hd-0.5);
+    let nx=clamp(P.x+mx*sp*dt,t.x-t.roomW+0.5,t.x+t.roomW-0.5),nz=clamp(P.z+mz*sp*dt,t.z-t.roomD+0.5,t.z+t.roomD-0.5);
     for(const c of TENT_COLLIDERS[S.tent]){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
     P.x=nx;P.z=nz;P.fa=Math.atan2(mx,mz);P.moving=true;P.anim=1;
   }
@@ -84,8 +84,13 @@ function updateCamera(dt){
   if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
   const cp=Math.cos(P.pitch),dist=inTent()?3.2:5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
+  if(inTent()){
+    const room=TENTS[S.tent];
+    cx=clamp(cx,room.x-room.roomW+0.28,room.x+room.roomW-0.28);
+    cz=clamp(cz,room.z-room.roomD+0.28,room.z+room.roomD-0.28);
+  }
   cy=Math.max(cy,(inTent()?TENT_FLOOR_Y:groundAt(cx,cz))+0.5);
-  if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+2.2);   // keep the camera under the tent's low ceiling
+  if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+2.7);   // keep the camera under the interior ceiling
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);
 }
@@ -140,4 +145,3 @@ function updateHealth(dt){
     if(S.hurtT>=HEAL_DELAY)S.hp=Math.min(HP_MAX,S.hp+HEAL_RATE*dt);
   }
 }
-

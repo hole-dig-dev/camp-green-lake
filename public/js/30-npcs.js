@@ -5,12 +5,12 @@ const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',sh
 sir.g.position.set(1.2,baseH(1.2,34),34);sir.g.rotation.y=Math.PI;scene.add(sir.g);
 const sirL=makeLabel(sir.g,'Mr. Sir','npc');
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'none',shovel:false});
-warden.g.position.set(-30,baseH(-30,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
+warden.g.position.set(-34,baseH(-34,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
 const wardenL=makeLabel(warden.g,'The Warden','npc');
 const SPOTS=[
   {id:'sir',x:1.4,z:32.6,r:3.6},
   {id:'store',x:16,z:41.2,r:3.4},
-  {id:'warden',x:-30,z:39.2,r:3.6},
+  {id:'warden',x:-34,z:40,r:2.0},
   {id:'cards',x:D_TENT.table.x,z:D_TENT.table.z,r:1.6},   // moved inside D Tent (see "tent interiors" above)
 ];
 /* tent doors (outside: press E or F to go in), and, once inside, the way back out and every bunk.
@@ -18,7 +18,8 @@ const SPOTS=[
    close enough to trigger them by accident - they're only reachable via enterTent()/the teleport it does. */
 TENTS.forEach((t,ti)=>{
   SPOTS.push({id:'tentdoor',ti,x:t.x,z:t.z-t.hd-1.3,r:1.4});   // outside, at the flap on the camp-facing side
-  SPOTS.push({id:'exit',ti,x:t.x,z:t.z+t.hd-1.0,r:1.0});
+  SPOTS.push({id:'exit',ti,x:t.x,z:t.z-t.roomD+0.85,r:1.4});
+  if(t.house)SPOTS.push({id:'office',ti,x:t.desk.x,z:t.desk.z,r:1.8});
 });
 BUNKS.forEach((b,bi)=>SPOTS.push({id:'bunk',bi,x:b.x,z:b.z,r:1.2}));
 
@@ -50,6 +51,7 @@ function updateBots(dt,now){
   const isNight=clockT()>=DAYMS;
   for(const b of bots){
     const g=b.p.g;
+    g.visible=b.state!=='inside'||S.tent===TENTS.indexOf(D_TENT);
     if(DLG.open&&DLG.bot===b){ /* mid-conversation: stop and face the player */
       let dr=Math.atan2(P.x-g.position.x,P.z-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*8);
       animPerson(b.p,0,dt);continue;
@@ -83,7 +85,7 @@ function updateBots(dt,now){
       animPerson(b.p,b.restT<2.2?5:b.restT<3.8?6:0,dt);
       if(b.t<=0){
         /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
-        if(isNight||botRng()<0.22){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
+        if(isNight||botRng()<0.22){b.state='gateout';b.tx=0;b.tz=25}
         else{
           for(let k=0;k<20;k++){const a=botRng()*Math.PI*2;const x=r1(b.hole.x+Math.cos(a)*3.3),z=r1(clamp(b.hole.z+Math.sin(a)*3.3,14,26));if(!holeNear(x,z,2.9)){b.tx=x;b.tz=z;break}}
           if(b.tx||b.tz)b.state='walk';else b.t=4;
@@ -92,13 +94,16 @@ function updateBots(dt,now){
     }else{
       const dx=b.tx-g.position.x,dz=b.tz-g.position.z,d=Math.hypot(dx,dz);
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=FIVE_FT?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
+      else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=0;b.tz=30}
+      else if(d<0.1&&b.state==='gatein'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
       else if(d<0.1&&b.state==='gotent'){
         const spot=botIndoorSpot(b);g.position.set(spot.x,TENT_FLOOR_Y,spot.z);b.state='inside';b.t=20+botRng()*40;
       }
-      else if(d<0.1&&b.state==='leaving'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
+      else if(d<0.1&&b.state==='leaving'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);b.state='gatebackin';b.tx=0;b.tz=30}
+      else if(d<0.1&&b.state==='gatebackin'){b.state='gatebackout';b.tx=0;b.tz=25}
+      else if(d<0.1&&b.state==='gatebackout'){b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
       else if(d<0.1){b.hole=addHole({x:b.tx,z:b.tz,d:0.05,bot:true});b.tx=b.tz=0;b.state='dig';b.dph=0;touchHole(b.hole)}
       else{const s=Math.min(d,dt*(b.state==='return'?3.5:2.2));g.position.x+=dx/d*s;g.position.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);g.position.y=groundAt(g.position.x,g.position.z);animPerson(b.p,1,dt)}
     }
   }
 }
-

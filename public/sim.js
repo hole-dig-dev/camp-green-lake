@@ -10,6 +10,20 @@
   const nearCampZone = (x, z) => x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   const HEAVY = { safe: 120, strongbox: 80 };
+  // Tower optics are shared with the renderer, so the light a player sees is the light that can spot them.
+  const TOWERS = [
+    { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },
+    { x: -39, z: 55, a: -0.79 }, { x: 29, z: 55, a: 0.79 },
+  ];
+  const TOWER_RANGE = 52, TOWER_HALF_ANGLE = 0.26, COP_RANGE = 50, COP_HALF_ANGLE = 0.45;
+  function towerHeading(i, t) { return TOWERS[i].a + Math.sin(t / 2900 + i * 1.7) * 0.86; }
+  function inBeam(x, z, ox, oz, h, range, halfAngle) {
+    const dx = x - ox, dz = z - oz, d = Math.hypot(dx, dz);
+    return d < range && d > 0.01 && (dx * Math.sin(h) + dz * Math.cos(h)) / d > Math.cos(halfAngle);
+  }
+  function towerSees(p, t) {
+    return !p.hd && TOWERS.some((o, i) => inBeam(p.x, p.z, o.x, o.z, towerHeading(i, t), TOWER_RANGE, TOWER_HALF_ANGLE));
+  }
 
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
   function carrySpeed(n) { return n >= 2 ? 3.5 : 1.2; }
@@ -40,11 +54,11 @@
     if (want !== 'zeroni') M.zer = null;
     if (want === 'police') {
       if (!M.trucks.length) M.trucks = [0, 1].map(i => { const tk = { x: i ? -32 : 22, z: 8, h: 0, mode: 'patrol', lost: 0, tx: 0, tz: -40, tgt: null }; pickPatrol(tk, outs); return tk; });
-      for (const tk of M.trucks) stepTruck(tk, outs, dt, ev);
+      for (const tk of M.trucks) stepTruck(tk, outs, t, dt, ev);
     }
     if (want === 'zeroni') {
       if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
-      stepZeroni(M.zer, outs, dt, ev);
+      stepZeroni(M.zer, outs, t, dt, ev);
     }
   }
   function nearest(list, x, z) { let b = null, bd = 1e9; for (const p of list) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b; }
@@ -53,12 +67,12 @@
     for (let k = 0; k < 12; k++) { const x = clamp(c.x + (Math.random() - 0.5) * 170, -EDGE + 6, EDGE - 6), z = clamp(c.z + (Math.random() - 0.5) * 170, -EDGE + 6, EDGE - 6); if (!nearCampZone(x, z)) { tk.tx = x; tk.tz = z; return; } }
     tk.tx = 0; tk.tz = -40;
   }
-  function stepTruck(tk, outs, dt, ev) {
+  function stepTruck(tk, outs, t, dt, ev) {
     let seenP = null, seenD = 1e9;
     for (const p of outs) {
       if (p.dn) continue;
-      const dx = p.x - tk.x, dz = p.z - tk.z, d = Math.hypot(dx, dz), cosA = d > 0.01 ? (dx * -Math.sin(tk.h) + dz * -Math.cos(tk.h)) / d : 1;
-      const range = 55 * (p.cr ? 0.6 : 1), seen = !p.hd && ((cosA > 0.85 && d < range) || d < (p.cr ? 5 : 11));
+      const d = Math.hypot(p.x - tk.x, p.z - tk.z);
+      const seen = !p.hd && (towerSees(p, t) || inBeam(p.x, p.z, tk.x, tk.z, tk.h + Math.PI, COP_RANGE, COP_HALF_ANGLE));
       if (seen && d < seenD) { seenD = d; seenP = p; }
     }
     if (seenP) { if (tk.mode !== 'chase' || tk.tgt !== seenP.id) ev.push({ k: 'spot', id: seenP.id }); tk.mode = 'chase'; tk.tgt = seenP.id; tk.tx = seenP.x; tk.tz = seenP.z; tk.lost = 0; }
@@ -67,7 +81,9 @@
     let dh = Math.atan2(-(tk.tx - tk.x), -(tk.tz - tk.z)) - tk.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); tk.h += clamp(dh, -1.6 * dt, 1.6 * dt);
     const sp = tk.mode === 'chase' ? 7 : 5.2, nx = clamp(tk.x - Math.sin(tk.h) * sp * dt, -EDGE + 3, EDGE - 3), nz = clamp(tk.z - Math.cos(tk.h) * sp * dt, -EDGE + 3, EDGE - 3);
     if (!inCamp(nx, nz)) { tk.x = nx; tk.z = nz; }
-    for (const p of outs) if (!p.dn && Math.hypot(p.x - tk.x, p.z - tk.z) < 2.8) ev.push({ k: 'down', id: p.id, by: 'police' });
+    for (const p of outs) if (!p.dn && !p.hd && Math.hypot(p.x - tk.x, p.z - tk.z) < 2.8 &&
+      (towerSees(p, t) || inBeam(p.x, p.z, tk.x, tk.z, tk.h + Math.PI, COP_RANGE, COP_HALF_ANGLE)))
+      ev.push({ k: 'down', id: p.id, by: 'police' });
   }
   // put Zeroni near player p: behind them, or (front=true) right in front of them
   function place(z, p, dist, front) {
@@ -79,7 +95,7 @@
     }
     return false;
   }
-  function stepZeroni(z, outs, dt, ev) {
+  function stepZeroni(z, outs, t, dt, ev) {
     // dragging someone off toward the edge of the lake; a friend reviving them makes her let go
     if (z.drag != null) {
       const v = outs.find(p => p.id === z.drag);
@@ -91,7 +107,7 @@
     }
     // she goes after whoever is closest, and noise (shouting, sprinting, chatting) counts like being 40 m closer
     let tgt = null, best = 1e9;
-    for (const p of outs) { if (p.dn) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40; if (s < best) { best = s; tgt = p; } }
+    for (const p of outs) { if (p.dn || !towerSees(p, t)) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40; if (s < best) { best = s; tgt = p; } }
     z.tgt = tgt ? tgt.id : null;
     if (!tgt) return;
     let dx = tgt.x - z.x, dz = tgt.z - z.z, d = Math.hypot(dx, dz) || 0.01;
@@ -106,6 +122,6 @@
     if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
   }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters };
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

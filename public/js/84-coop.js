@@ -78,7 +78,7 @@ function dropBag(){if(!S.sack.length)return;const items=S.sack.slice(0,12);S.sac
 function takeBag(items,n){const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
 
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
-function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
+function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
 function holeDepthHere(){return Math.max(0,baseH(P.x,P.z)-P.y)}
 function isTrapped(){return S.started&&!S.ko&&!inTent()&&P.grounded&&holeDepthHere()>1.8}
 function popOut(){
@@ -151,4 +151,3 @@ function updateCoop(dt){
   // Lucky Eye (level 8): dust puffs up over loot buried near you
   if(myLevel()>=8&&(luckyT-=dt)<=0){luckyT=1.3;let best=null,bd=36;for(const it of items){if(it.found||LOOT[it.type].key)continue;const d2=(it.x-P.x)**2+(it.z-P.z)**2;if(d2<bd){bd=d2;best=it}}if(best){const y=groundAt(best.x,best.z);puff(best.x,y+0.1,best.z,best.x,best.z,3)}}
 }
-
