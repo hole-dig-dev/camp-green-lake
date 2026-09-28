@@ -124,7 +124,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null, pwd: PW ? PW.digs : null,
+    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null, pwd: PW ? PW.digs : null, pwdog: PW ? PHYS.dogSnap(PW) : null,
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -607,8 +607,8 @@ function truckTick(now, dt) {
 /* ---- the physics feel test: the server runs the real rigid-body world while the crew is at the ranch ---- */
 let PW = null, pwTimer = null, pwLast = 0, pwSent = 0;
 function startPhysics() {
-  stopPhysics(); PW = PHYS.create(CANNON, world.run.seed); pwLast = Date.now();
-  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true), digs: PW.digs });
+  stopPhysics(); PW = PHYS.create(CANNON, world.run.seed, joined().length >= 2 ? 2 : 1); // one guard dog for a solo camper, two for a crew pwLast = Date.now();
+  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true), digs: PW.digs, d: PHYS.dogSnap(PW) });
   pwTimer = setInterval(physTick, 16);
 }
 function stopPhysics() { if (pwTimer) clearInterval(pwTimer); pwTimer = null; if (PW) broadcast({ t: 'pwend' }); PW = null; }
@@ -620,7 +620,7 @@ function physTick() {
   for (const c of joined()) {
     if ((c.f & (2 | 64 | 32768)) || !SIM.inSite(world.mission, c.x, c.z)) { if (PW.players.has(c.id)) PHYS.dropPlayer(PW, c.id); c.sx = null; continue; }
     if (c.sx == null || Math.hypot(c.x - c.sx, c.z - c.sz) > 4) { c.sx = c.x; c.sy = c.y; c.sz = c.z; } else { const k = Math.min(1, dt * 15); c.sx += (c.x - c.sx) * k; c.sy += (c.y - c.sy) * k; c.sz += (c.z - c.sz) * k; }
-    PHYS.setPlayer(PW, c.id, c.sx, c.sy, c.sz, dt);
+    PHYS.setPlayer(PW, c.id, c.sx, c.sy, c.sz, dt, { a: c.a, crouch: !!(c.f & 8) });
   }
   // the truck rolls smoothly here too (its real position only updates 10 times a second), so the loot in the bed rides along
   const T = world.truck;
@@ -628,9 +628,11 @@ function physTick() {
   PHYS.step(PW, dt);
   for (const e of PW.events.splice(0)) {
     if (e.k === 'slip') { const c = clients.get(e.pid); if (c) send(c, { t: 'pslip', id: e.id }); }
+    else if (e.k === 'bite') broadcast({ t: 'pbite', pid: e.pid, id: e.id, x: r2(e.x), z: r2(e.z) });
+    else if (e.k === 'bark') broadcast({ t: 'pbark', id: e.id });
     else broadcast({ t: 'p' + e.k, id: e.id, loss: e.loss, val: e.val, x: r2(e.x || 0), y: r2(e.y || 0), z: r2(e.z || 0) });
   }
-  if (now - pwSent >= 50) { pwSent = now; const s = PHYS.snapshot(PW, false); if (s.length) broadcast({ t: 'pw', s }); }
+  if (now - pwSent >= 50) { pwSent = now; broadcast({ t: 'pw', s: PHYS.snapshot(PW, false), d: PHYS.dogSnap(PW) }); }
 }
 function missionInfo() { return { t: 'mission', ...world.mission, now: Date.now() }; }
 function missionTick(now, dt) {
