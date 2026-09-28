@@ -21,13 +21,13 @@ function invEntries(){
   for(const t of types){
     const L=LOOT[t],n=counts[t];
     out.push({id:'find:'+t,cat:'sack',type:t,name:L.name,desc:`Find · worth ${L.val} seeds${n>1?' each':''}. Sell it to Mr. Sir at camp.`,
-      swatch:L.color,meta:`${L.val*n} seeds`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
+      loot:t,swatch:L.color,meta:`${L.val*n} seeds`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
   }
   if(!types.length)out.push({id:'sack:empty',cat:'sack',name:'Empty sack',desc:`Nothing dug up yet. Room for ${sackMax()} finds.`,icon:'sack',meta:'',state:`0 / ${sackMax()}`,dim:true});
   // special items: the KB tube, and heavy loot you're dragging
-  if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Warden will want this. Take it to her cabin.',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
+  if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Warden will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
-  if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's truck: worth ${LOOT[pr.type].val} seeds to the team.`,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
+  if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's truck: worth ${LOOT[pr.type].val} seeds to the team.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
   // supplies
   out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
@@ -47,7 +47,14 @@ function invEntries(){
 function invVisible(){const all=invEntries();return invCat==='all'?all:all.filter(e=>e.cat===invCat)}
 
 function invSwatch(color){const s=document.createElement('span');s.className='inv-swatch';s.style.background='#'+color.toString(16).padStart(6,'0');return s}
+// treasure art: 128px cut-outs in public/icons/loot/<LOOT key>.png (ChatGPT sheet, background removed).
+// Falls back to the find's colour dot if an image is missing.
+function invLootImg(type,big){
+  const img=document.createElement('img');img.className='inv-loot'+(big?' inv-loot--lg':'');img.alt='';img.src=`icons/loot/${type}.png`;
+  img.onerror=()=>img.replaceWith(invSwatch(LOOT[type].color));return img;
+}
 function invIconEl(e,big){
+  if(e.loot)return invLootImg(e.loot,big);
   if(e.swatch!=null)return invSwatch(e.swatch);
   const span=document.createElement('span');span.innerHTML=`<svg class="ui-icon${big?' ui-icon--lg':''}"><use href="#icon-${e.icon}"></use></svg>`;return span.firstChild;
 }

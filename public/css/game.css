@@ -335,6 +335,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 /* ---- inventory (81-inventory.js): reuses the store's frame, tabs, cards and detail panel ---- */
 .shop-item.is-dim{opacity:.6}
 .inv-swatch{display:inline-block;width:22px;height:22px;flex:none;border-radius:50%;border:2px solid var(--ink);box-shadow:inset -3px -3px 0 rgba(0,0,0,.18)}   /* a find's colour, in place of an icon */
+.inv-loot{width:40px;height:40px;flex:none;object-fit:contain;filter:drop-shadow(0 2px 0 rgba(40,29,21,.25))}   /* treasure icons (public/icons/loot) */
+.shop-detail__title .inv-loot--lg{width:56px;height:56px}
 .inv-actions{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 #hudSupplies{cursor:pointer}   /* click/tap the supplies panel to open the inventory */
 .shop-item__icon{flex:none;display:flex;align-items:center;color:var(--ink-soft)}
