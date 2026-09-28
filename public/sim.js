@@ -107,7 +107,8 @@
     }
     // she goes after whoever is closest, and noise (shouting, sprinting, chatting) counts like being 40 m closer
     let tgt = null, best = 1e9;
-    for (const p of outs) { if (p.dn || !towerSees(p, t)) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40; if (s < best) { best = s; tgt = p; } }
+    // Light doesn't matter to her (JT, 2026-09-27): the watchtower searchlights are a police thing only.
+    for (const p of outs) { if (p.dn) continue; const s = Math.hypot(p.x - z.x, p.z - z.z) - (p.nz || 0) * 40; if (s < best) { best = s; tgt = p; } }
     z.tgt = tgt ? tgt.id : null;
     if (!tgt) return;
     let dx = tgt.x - z.x, dz = tgt.z - z.z, d = Math.hypot(dx, dz) || 0.01;

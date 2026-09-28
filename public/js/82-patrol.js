@@ -133,7 +133,7 @@ function updateNightSound(){
 
 function hunterToast(h,was){
   if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police are back out on the lake.':'Curfew patrol: stay out of the tower beams and police headlights. Use a gate to get inside.','bad',6000)}
-  else if(h==='zeroni'){zeroniSting();toast(was?'The police leave, but the towers keep sweeping. Madame Zeroni hunts anyone caught in their light.':'After 01:00 the towers still sweep. Keep out of their beams: Madame Zeroni follows the light.','bad',6500)}
+  else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
   const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);

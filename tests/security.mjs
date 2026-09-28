@@ -34,9 +34,9 @@ test('a police car cannot catch a camper behind its headlights, even at touching
   assert.deepEqual(hidden, []);
 });
 
-test('Zeroni waits when the towers have not exposed anyone', () => {
+test('Zeroni hunts a camper out on the lake whether or not a searchlight is on them', () => {
+  // The searchlights are a police mechanic only; Madame Zeroni ignores light and goes after whoever is out there.
   const M = { trucks: [], zer: { x: 0, z: -95, tgt: null, blink: 10, talk: 10, drag: null } }, ev = [];
   SIM.stepMonsters(M, [camper(0, -100)], zeroniTime, 0.1, ev);
-  assert.equal(M.zer.tgt, null);
-  assert.equal(ev.some(e => e.k === 'down' || e.k === 'blink'), false);
+  assert.equal(M.zer.tgt, 1);
 });
