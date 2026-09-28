@@ -498,3 +498,5 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .bindwarn{color:var(--danger);font-size:13px;margin:0}
 #tPause{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:30;font:700 18px/1 var(--ui);width:46px;height:40px;padding:0;box-shadow:0 3px 0 var(--ink);border-radius:6px}
 @media (max-width:700px){.optrow>span:first-child{flex-basis:110px;font-size:13px}}
+/* god mode (console: god): a gold edge on the HUD so a recording or test run shows it's on */
+#hud.god #stats{box-shadow:0 0 0 3px #d4af37}

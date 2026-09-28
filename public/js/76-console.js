@@ -78,6 +78,8 @@ command('haboob',{usage:'haboob [direction]',help:'Start a dust storm blowing in
     const a=k?HB_BRG[k]:Math.random()*Math.PI*2,o={x:P.x,z:P.z,a};   // spawn point = wherever the host is standing right now
     spawnEnv('haboob',o);if(online())wsSend({t:'env',k:'haboob',...o});
     return`Dust storm rolling in from the ${compass(Math.sin(a)*100,-Math.cos(a)*100)}.`}});   // same fromVec math as hbCalc's warning toast in 75-haboob.js
+command('god',{usage:'god [on|off]',help:'God mode for you: no damage, no knockouts, water never runs out. Hazards still push you around.',
+  run([a]){const k=(a||'').toLowerCase();GOD=k==='on'?true:k==='off'?false:!GOD;if(GOD){S.hp=HP_MAX;S.water=waterMax()}$('#hud').classList.toggle('god',GOD);return GOD?'God mode on.':'God mode off.'}});
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
 command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',

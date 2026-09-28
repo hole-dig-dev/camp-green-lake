@@ -138,6 +138,7 @@ let hurtFx=0,hurtHoldT=0;
    then a decay to nothing over ~500ms -- a flash, not a lingering full-screen tint. */
 const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text){
+  if(GOD)return;
   if(!S.started||S.ko||n<=0)return;
   S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
@@ -148,6 +149,7 @@ function updateHealth(dt){
   $('#hurtFx').style.opacity=hurtFx.toFixed(2);
   if(S.ko)return;
   S.hurtT+=dt;
+  if(GOD)S.water=waterMax();
   if(S.water<=0&&!uiOpen()&&!PARTY.on){
     if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and losing health. Get to Mr. Sir for a refill.','bad',5000)}
     S.hurtT=0;S.hp=Math.max(0,S.hp-THIRST_DPS*dt);hurtFx=Math.max(hurtFx,0.25);
