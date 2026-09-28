@@ -60,7 +60,7 @@ function onMsg(m){
   switch(m.t){
     case 'hello':{
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
-      if(Array.isArray(m.iceServers)&&m.iceServers.length)ICE_SERVERS=m.iceServers;
+      if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}

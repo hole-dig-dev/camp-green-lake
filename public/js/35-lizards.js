@@ -22,4 +22,6 @@ function makeLizard(){
 const lizards=[];
 {const homes=preHoles.filter(h=>Math.hypot(h.x,h.z-20)>45).sort(()=>rng()-0.5).slice(0,48);
  homes.forEach((h,i)=>{const m=makeLizard();scene.add(m.g);lizards.push({home:h,m,x:h.x,z:h.z,ph:i*1.7,w:0.08+rng()*0.06,mode:'wander',hissT:0,yaw:0})})}
+// the Blender lizard (24-creatures.js): each lizard gets an animated copy and its box body is hidden
+creatureUpgrade('lizard',()=>{for(const L of lizards){const r=spawnCreature('lizard');for(const c of L.m.g.children)c.visible=false;L.m.g.add(r.obj);L.m.rig=r}});
 

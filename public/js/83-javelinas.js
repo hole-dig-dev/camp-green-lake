@@ -113,7 +113,19 @@ command('javelinas', {
 });
 
 /* ---------- per-frame update: interpolate toward the latest snapshot (like showTruck) and build the instances ---------- */
-function placeJavelina(i, s) {
+let javRigs = null; // the Blender javelinas (24-creatures.js), one per herd slot, once loaded
+creatureUpgrade('javelina', () => { javRigs = JR.map(() => { const r = spawnCreature('javelina'); r.obj.visible = false; scene.add(r.obj); return r; }); javBodyMesh.visible = false; javLegMesh.visible = false; });
+function placeJavelina(i, s, dt) {
+  if (javRigs) {
+    const r = javRigs[i], o = r.obj, visible = s.active && s.state !== 2 && nearCam(s.x, s.z, JAV_DRAW_R);
+    o.visible = visible; if (!visible) return;
+    const dying = s.state === 1, tumble = dying ? Math.min(1, s.dT / 0.9) : 0, hitPop = s.hitT > 0 ? 1 + Math.sin(s.hitT * 40) * 0.08 * (s.hitT / 0.25) : 1;
+    const spd = Math.hypot(s.tx - s.x, s.tz - s.z) / Math.max(dt || 0.016, 1e-3);
+    o.position.set(s.x, groundAt(s.x, s.z) - tumble * 0.1, s.z); o.rotation.set(tumble * Math.PI * 1.6, s.h, tumble * 1.1);
+    o.scale.setScalar(CREATURE_DEFS.javelina.scale * (1 - tumble * 0.4) * hitPop);
+    creatureAnim(r, dying ? 'Idle' : spd > 3 ? 'Run' : spd > 0.3 ? 'Trot' : 'Idle', dt || 0.016, spd > 3 ? 1 : 1.2);
+    return;
+  }
   const visible = s.active && s.state !== 2 && nearCam(s.x, s.z, JAV_DRAW_R);
   if (!visible) {
     jdo.scale.setScalar(0); jdo.updateMatrix(); javBodyMesh.setMatrixAt(i, jdo.matrix);
@@ -159,7 +171,7 @@ function updateJavelinas(dt) {
       s.hitT = Math.max(0, s.hitT - dt);
       if (s.state === 1) s.dT += dt; else s.phase += dt * 9;
     } else s.active = false;
-    placeJavelina(i, s);
+    placeJavelina(i, s, dt);
   }
   javBodyMesh.instanceMatrix.needsUpdate = true; javLegMesh.instanceMatrix.needsUpdate = true;
 }

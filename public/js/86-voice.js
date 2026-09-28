@@ -47,7 +47,7 @@ async function setVoiceEnabled(on){
   updateVoiceHud();
 }
 function makeVoicePeer(id,initiator){
-  const pc=new RTCPeerConnection({iceServers:ICE_SERVERS});
+  const pc=new RTCPeerConnection({iceServers:window.CGL_ICE||ICE_SERVERS});
   const peer={pc,state:'connecting',audioEl:null,panner:null,gain:null,analyser:null,levelBuf:null,level:0,pendingIce:[],createdAt:performance.now()};
   if(VOX.localStream)for(const t of VOX.localStream.getTracks())pc.addTrack(t,VOX.localStream);
   pc.onicecandidate=e=>{if(e.candidate)sendRtc(id,{k:'ice',c:e.candidate.toJSON()})};

@@ -33,6 +33,7 @@ function buildLion(){
   return{g,legs,tail};
 }
 const LION_M=buildLion();
+creatureUpgrade('lion',()=>{const r=spawnCreature('lion');for(const c of LION_M.g.children)c.visible=false;LION_M.g.add(r.obj);LION_M.rig=r});   // the Blender lion (24-creatures.js)
 
 /* ---------- client-side view state: smoothed toward whatever the server (or the solo sim) last reported ---------- */
 const LIONV={active:false,x:0,z:0,h:0,mode:'stalk',tgt:null,hp:SIM.LION_HP,init:false,lx:0,lz:0,lh:0,gaitPh:0};
@@ -147,6 +148,7 @@ function updateLion(dt){
   g.scale.y=lerp(g.scale.y,LION_CROUCH[LIONV.mode]||0.85,Math.min(1,dt*6));
   // leg speed follows its actual ground speed this frame, so a slow stalk creeps and a pounce/flee sprints -- no per-mode guessing
   const moveSpd=Math.min(6,Math.hypot(LIONV.lx-ox,LIONV.lz-oz)/Math.max(dt,0.001));
+  if(LION_M.rig)creatureAnim(LION_M.rig,moveSpd<0.3?'Idle':moveSpd<3.5?'Walk':'Run',dt,moveSpd<0.3?1:moveSpd<3.5?0.5+moveSpd/3:0.7+moveSpd/12);
   if(LIONV.mode!=='pin'){LIONV.gaitPh+=dt*(1.6+moveSpd*1.3);
     const s=Math.sin(LIONV.gaitPh)*0.5;LION_M.legs.fl.rotation.x=s;LION_M.legs.br.rotation.x=s;LION_M.legs.fr.rotation.x=-s;LION_M.legs.bl.rotation.x=-s}
   const agitated=LIONV.mode==='pounce'||LIONV.mode==='pin'||LIONV.mode==='flee';

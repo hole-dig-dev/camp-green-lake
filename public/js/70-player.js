@@ -123,6 +123,7 @@ function updateLizards(dt,t){
     g.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);   // PERF: skip drawing far-away lizards (they still move and hunt)
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
+    if(L.m.rig&&g.visible)creatureAnim(L.m.rig,L.mode==='wander'?'Walk':'Run',dt,L.mode==='wander'?1:1.3);
     if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
   }
 }

@@ -74,7 +74,9 @@ const VULTURE_BODY=mergeBoxes([
 const vMesh=new T.InstancedMesh(VULTURE_BODY,mergedMat,VULTURE_COUNT);
 vMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);vMesh.frustumCulled=false;vMesh.castShadow=false;scene.add(vMesh);
 const vFlock=Array.from({length:VULTURE_COUNT},(_,i)=>({a:i/VULTURE_COUNT*Math.PI*2,w:0.12+Math.random()*0.08,r0:VULTURE_ORBIT_MIN+Math.random()*(VULTURE_ORBIT_MAX-VULTURE_ORBIT_MIN),dAlt:(Math.random()*2-1)*VULTURE_ALT_SPREAD,ph:Math.random()*6.28}));
-let vFlockX=0,vFlockZ=39;   // smoothed flock center, starts near the camp/spawn area
+let vFlockX=0,vFlockZ=39;
+let vFlockRigs=null;   // the Blender vulture (24-creatures.js): one animated copy per flock bird, once loaded
+   // smoothed flock center, starts near the camp/spawn area
 function updateVultureFlock(dt){
   // who the flock is watching: whichever camper (you or a friend) is hurt worst, defaulting to you
   let tx=P.x,tz=P.z,worstFrac=S.started?S.hp/HP_MAX:1;
@@ -89,6 +91,8 @@ function updateVultureFlock(dt){
     const b=vFlock[i];b.a+=dt*b.w;
     const r=b.r0*tight,x=vFlockX+Math.cos(b.a)*r,z=vFlockZ+Math.sin(b.a)*r,y=VULTURE_ALT_BASE+b.dAlt;
     dummy.position.set(x,y,z);dummy.rotation.set(0,b.a+Math.PI/2,Math.sin(b.a*3+b.ph)*0.12);dummy.scale.setScalar(dayVis);dummy.updateMatrix();
+    if(vFlockRigs){const r=vFlockRigs[i],o=r.obj;o.position.copy(dummy.position);o.rotation.copy(dummy.rotation);o.scale.setScalar(dayVis*CREATURE_DEFS.vulture.scale);o.visible=dayVis>0.01;
+      if(o.visible)creatureAnim(r,Math.sin(b.a*0.7+b.ph)>0.93?'Flap':'Glide',dt,1)}   // mostly gliding, the odd few wingbeats
     vMesh.setMatrixAt(i,dummy.matrix);
   }
   vMesh.instanceMatrix.needsUpdate=true;
@@ -121,12 +125,14 @@ function makeVultureModel(){
 }
 const VPOOL_N=4;   // 1 for whoever has YOU, a few spares so several carried friends can be seen at once
 const vPool=Array.from({length:VPOOL_N},makeVultureModel);
+creatureUpgrade('vulture',()=>{vFlockRigs=vFlock.map(()=>{const r=spawnCreature('vulture');scene.add(r.obj);return r});vMesh.visible=false;
+  for(const v of vPool){const r=spawnCreature('vulture');for(const c of v.g.children)c.visible=false;v.g.add(r.obj);v.rig=r}});   // (registered after vPool exists)
 function vPoolGet(key){
   let v=vPool.find(p=>p.used===key);if(v)return v;
   v=vPool.find(p=>!p.used);if(v){v.used=key;v.g.visible=true}return v;
 }
 function vPoolFree(key){const v=vPool.find(p=>p.used===key);if(v){v.used=null;v.g.visible=false}}
-function vFlap(v,dt,rate,amp){v.ph+=dt*rate;const s=Math.sin(v.ph)*amp;v.wingL.rotation.z=s;v.wingR.rotation.z=-s;v.tail.rotation.x=Math.sin(v.ph*0.5)*0.08}
+function vFlap(v,dt,rate,amp){if(v.rig){creatureAnim(v.rig,'Flap',dt,rate/7);return}v.ph+=dt*rate;const s=Math.sin(v.ph)*amp;v.wingL.rotation.z=s;v.wingR.rotation.z=-s;v.tail.rotation.x=Math.sin(v.ph*0.5)*0.08}
 function vDrawCarrier(key,x,y,z,yaw,mode,dt){
   const v=vPoolGet(key);if(!v)return;
   v.g.position.set(x,y,z);v.g.rotation.y=yaw;
