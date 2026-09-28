@@ -40,7 +40,7 @@ function tent(t){
     const rope=cyl(0.025,0.025,Math.hypot(t.hw+0.65,2.1),4,0xb29c72);rope.position.set(side*(t.hw+0.65)/2,1.65,-t.hd-0.35);rope.rotation.z=side*0.65;g.add(rope);
     for(let i=0;i<2;i++){const sack=box(0.65,0.25,0.42,0xa18b63);sack.position.set(side*(t.hw-0.3),0.12,-t.hd+0.5+i*0.5);g.add(sack)}
   }
-  g.position.set(t.x,baseH(t.x,t.z),t.z);scene.add(g);
+  g.position.set(t.x,baseH(t.x,t.z),t.z);scene.add(g);t.ext=g;   // t.ext: hidden when the Blender model loads (23-models.js)
   solid(t.x,t.z,t.hw*2,t.hd*2);
 }
 TENTS.forEach(tent);
@@ -52,12 +52,15 @@ const BUNKS=[];
 const TENT_COLLIDERS=TENTS.map(()=>[]);
 const ROOM_MESHES=[];
 const ROOM_LIGHTS=[];
+const ROOM_FURN=[],ROOM_FURN_SPOTS=[];   // per room: the procedural furniture mesh, and where each Blender furniture model goes
 function tentSolid(list,x,z,w,d){list.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2})}
 TENTS.forEach((t,ti)=>{
   const parts=[],list=TENT_COLLIDERS[ti],Y=TENT_FLOOR_Y;
   const wall=t.house?0x7b604a:0x88785b,floor=t.house?0x674b33:0x62563e,roof=t.house?0x604532:0x5d5948;
   const frame=0x4b392b,pillow=0xe1d7b8,blanket=0x9f694f,H=t.house?3.4:3.2;
   const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]);
+  // furniture: its own merged mesh + a list of Blender models to stand in for it (23-models.js hides this mesh once they load)
+  const furn=[],addF=(w,h,d,c,x,y,z)=>furn.push([w,h,d,c,x,y,z]),spots=ROOM_FURN_SPOTS[ti]=[];
   add(t.roomW*2,0.2,t.roomD*2,floor,t.x,Y-0.1,t.z);
   add(t.roomW*2,0.18,t.roomD*2,roof,t.x,Y+H+0.1,t.z);
   add(t.roomW*2,H,0.18,wall,t.x,Y+H/2,t.z+t.roomD);
@@ -86,23 +89,25 @@ TENTS.forEach((t,ti)=>{
   }
   add(0.38,0.2,0.38,0xffd89b,t.x,Y+H-0.33,t.z);
   const bunk=(x,z,double)=>{
-    add(1.3,0.32,2.35,frame,x,Y+0.28,z);
-    add(1.18,0.16,2.08,blanket,x,Y+0.48,z+0.1);
-    add(1.0,0.12,0.42,pillow,x,Y+0.62,z-0.8);
+    addF(1.3,0.32,2.35,frame,x,Y+0.28,z);
+    addF(1.18,0.16,2.08,blanket,x,Y+0.48,z+0.1);
+    addF(1.0,0.12,0.42,pillow,x,Y+0.62,z-0.8);
+    spots.push({m:double?'BunkBed':'Cot',x,y:Y,z,ry:Math.PI},{m:'Footlocker',x,y:Y,z:z+1.45,ry:Math.PI});
     tentSolid(list,x,z,1.4,2.45);BUNKS.push({tent:ti,x,z,high:false});
     if(double){
-      for(const dx of[-0.56,0.56])for(const dz of[-1.03,1.03])add(0.09,1.55,0.09,frame,x+dx,Y+1.03,z+dz);
-      add(1.3,0.16,2.35,frame,x,Y+1.47,z);add(1.18,0.16,2.08,blanket,x,Y+1.64,z+0.1);
-      add(1.0,0.12,0.42,pillow,x,Y+1.78,z-0.8);BUNKS.push({tent:ti,x,z,high:true});
+      for(const dx of[-0.56,0.56])for(const dz of[-1.03,1.03])addF(0.09,1.55,0.09,frame,x+dx,Y+1.03,z+dz);
+      addF(1.3,0.16,2.35,frame,x,Y+1.47,z);addF(1.18,0.16,2.08,blanket,x,Y+1.64,z+0.1);
+      addF(1.0,0.12,0.42,pillow,x,Y+1.78,z-0.8);BUNKS.push({tent:ti,x,z,high:true});
     }
   };
   if(t.house){
     // The Warden's office has a usable desk interaction and room to circle it.
     const dx=t.x+2,dz=t.z+1;
-    add(3.1,0.16,1.7,0x3e291e,dx,Y+0.83,dz);
-    for(const sx of[-1.3,1.3])for(const sz of[-0.65,0.65])add(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
-    add(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
-    add(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
+    addF(3.1,0.16,1.7,0x3e291e,dx,Y+0.83,dz);
+    for(const sx of[-1.3,1.3])for(const sz of[-0.65,0.65])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
+    addF(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
+    addF(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
+    spots.push({m:'WardenDesk',x:dx,y:Y,z:dz,ry:Math.PI});   // chair on the +z side, facing the visitor spot at t.desk
     tentSolid(list,dx,dz,3.2,1.8);t.desk={x:dx,z:dz-1.8};
     add(3.2,1.6,0.12,0x322b25,t.x-3.2,Y+1.6,t.z+4);
     add(3.0,1.1,0.12,0xbca16c,t.x-3.2,Y+1.6,t.z+3.9);
@@ -112,10 +117,11 @@ TENTS.forEach((t,ti)=>{
     if(t.crew){
       for(let i=0;i<3;i++)bunk(t.x-t.roomW+1.5,t.z-t.roomD+3+i*3.0,true);
       const dx=t.x+3.3,dz=t.z+0.5;
-      add(2.3,0.12,2.3,0x65452d,dx,Y+0.8,dz);
-      for(const sx of[-0.95,0.95])for(const sz of[-0.95,0.95])add(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
-      for(const [sx,sz] of [[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]])add(0.65,0.46,0.65,0x765339,dx+sx,Y+0.23,dz+sz);
-      add(0.8,0.03,0.5,0xb99c70,dx,Y+0.88,dz);
+      addF(2.3,0.12,2.3,0x65452d,dx,Y+0.8,dz);
+      for(const sx of[-0.95,0.95])for(const sz of[-0.95,0.95])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
+      for(const [sx,sz] of [[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]]){addF(0.65,0.46,0.65,0x765339,dx+sx,Y+0.23,dz+sz);spots.push({m:'Stool',x:dx+sx,y:Y,z:dz+sz,ry:0})}
+      addF(0.8,0.03,0.5,0xb99c70,dx,Y+0.88,dz);
+      spots.push({m:'CardTable',x:dx,y:Y,z:dz,ry:0});
       tentSolid(list,dx,dz,2.4,2.4);
       D_TENT.table={x:dx,z:dz-1.75};D_TENT.dealerSeat={x:dx,z:dz+1.75};
     }else{
@@ -126,6 +132,7 @@ TENTS.forEach((t,ti)=>{
     tentSolid(list,t.x+t.roomW-1.25,t.z+t.roomD-1.5,1.5,1);
   }
   const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;m.visible=false;scene.add(m);ROOM_MESHES.push(m);
+  if(furn.length){const fm=new T.Mesh(mergeBoxes(furn),mergedMat);fm.castShadow=true;fm.receiveShadow=true;m.add(fm);ROOM_FURN[ti]=fm}   // a child: shows/hides with the room
   const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,ROOM_LAMP,t.crew?27:22,1);   // 2.8 blew out anyone standing near the door and facing the lamp
   light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
 });
@@ -137,8 +144,8 @@ function cabin(x,z,w,d,h,wall,roof){
   for(const s of[-1,1]){const win=box(1,0.8,0.08,0x2f3a44);win.position.set(s*w*0.3,1.6,-d/2-0.03);g.add(win)}
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,w,d);return g;
 }
-cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
-sign('WRECK\nROOM',20.2,41.4,Math.PI,2.6,1.1);
+const wreckCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
+const wreckSign=sign('WRECK\nROOM',20.2,41.4,Math.PI,2.6,1.1);
 const wardenCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);
 {
@@ -171,7 +178,7 @@ oak(-36.5,38.5,1.1);oak(-24,38,1);
 /* flagpole + camp sign */
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
  const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);}
-sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
+const campSign=sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
 sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
 
 /* ---------- secured perimeter ----------
@@ -179,22 +186,25 @@ sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
    collision line still stops them; the open gate is the only crossing. */
 const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
 const EAST_GATE_Z0=36,EAST_GATE_Z1=42;
+const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null;   // fence posts/spans for the Blender models (23-models.js), and the box version they replace
 {
-  const parts=[],steel=0x4d5a58,mesh=0x75817a,concrete=0x91846e,wire=0xb2a99a;
-  const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]);
-  const post=(x,z)=>{const y=baseH(x,z);add(0.24,3.5,0.24,steel,x,y+1.75,z);add(0.42,0.22,0.42,concrete,x,y+0.11,z);add(0.34,0.12,0.34,wire,x,y+3.57,z)};
+  const parts=[],fparts=[],steel=0x4d5a58,mesh=0x75817a,concrete=0x91846e,wire=0xb2a99a;
+  const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]),addP=(w,h,d,c,x,y,z)=>fparts.push([w,h,d,c,x,y,z]);
+  // outward = away from the yard: the Blender posts/spans lean their barbed-wire arms that way
+  const outRy=(x,z)=>z===FENCE_Z0?Math.PI:z===FENCE_Z1?0:x===FENCE_X0?-Math.PI/2:Math.PI/2,seenPost=new Set();
+  const post=(x,z)=>{const y=baseH(x,z),k=x+','+z;if(!seenPost.has(k)){seenPost.add(k);FENCE_POSTS.push({x,y,z,ry:outRy(x,z)})}addP(0.24,3.5,0.24,steel,x,y+1.75,z);addP(0.42,0.22,0.42,concrete,x,y+0.11,z);addP(0.34,0.12,0.34,wire,x,y+3.57,z)};
   const spanX=(x0,x1,z)=>{
-    const mid=(x0+x1)/2,y=baseH(mid,z),w=x1-x0;
-    add(w,2.45,0.055,mesh,mid,y+1.65,z);
-    for(const sy of[0.45,2.95,3.35])add(w,0.075,0.09,steel,mid,y+sy,z);
-    for(let x=x0+0.42;x<x1;x+=0.55)add(0.035,2.5,0.075,wire,x,y+1.65,z);
+    const mid=(x0+x1)/2,y=baseH(mid,z),w=x1-x0;FENCE_SPANS.push({x:mid,y,z,ry:outRy(null,z),len:w});
+    addP(w,2.45,0.055,mesh,mid,y+1.65,z);
+    for(const sy of[0.45,2.95,3.35])addP(w,0.075,0.09,steel,mid,y+sy,z);
+    for(let x=x0+0.42;x<x1;x+=0.55)addP(0.035,2.5,0.075,wire,x,y+1.65,z);
     solid(mid,z,w,0.22);
   };
   const spanZ=(z0,z1,x)=>{
-    const mid=(z0+z1)/2,y=baseH(x,mid),d=z1-z0;
-    add(0.055,2.45,d,mesh,x,y+1.65,mid);
-    for(const sy of[0.45,2.95,3.35])add(0.09,0.075,d,steel,x,y+sy,mid);
-    for(let z=z0+0.42;z<z1;z+=0.55)add(0.075,2.5,0.035,wire,x,y+1.65,z);
+    const mid=(z0+z1)/2,y=baseH(x,mid),d=z1-z0;FENCE_SPANS.push({x,y,z:mid,ry:outRy(x,null),len:d});
+    addP(0.055,2.45,d,mesh,x,y+1.65,mid);
+    for(const sy of[0.45,2.95,3.35])addP(0.09,0.075,d,steel,x,y+sy,mid);
+    for(let z=z0+0.42;z<z1;z+=0.55)addP(0.075,2.5,0.035,wire,x,y+1.65,z);
     solid(x,mid,0.22,d);
   };
   for(let x=FENCE_X0;x<FENCE_X1;x+=2.5){
@@ -221,15 +231,17 @@ const EAST_GATE_Z0=36,EAST_GATE_Z1=42;
     add(0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz);
   }
   const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
+  FENCE_PROC=new T.Mesh(mergeBoxes(fparts),mergedMat);FENCE_PROC.castShadow=true;FENCE_PROC.receiveShadow=true;scene.add(FENCE_PROC);
 }
 sign('MAIN GATE\nLAKE ACCESS',0,25.2,Math.PI,4.2,1.25);
 sign('SERVICE GATE',27.3,39,Math.PI/2,2.5,0.8);
 
+const WATER_TOWER_PROC=new T.Group();
 {
-  // water tower: four legs, a tank and a cone roof
-  const wx0=25,wz0=49,h0=baseH(wx0,wz0);
-  [[-1.3,-1.3],[1.3,-1.3],[-1.3,1.3],[1.3,1.3]].forEach(([dx,dz])=>{const l=cyl(0.12,0.14,5.4,6,0x5a4a3a);l.position.set(wx0+dx,h0+2.7,wz0+dz);scene.add(l)});
-  const tank=cyl(2.1,2.1,3.2,10,0xb9b4a6);tank.position.set(wx0,h0+5.4+1.6,wz0);scene.add(tank);
-  const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(wx0,h0+5.4+3.2+0.7,wz0);scene.add(roof);
+  // water tower: four legs, a tank and a cone roof (grouped so the Blender model can replace it)
+  const wx0=25,wz0=49,h0=baseH(wx0,wz0),wt=WATER_TOWER_PROC;wt.position.set(wx0,h0,wz0);scene.add(wt);
+  [[-1.3,-1.3],[1.3,-1.3],[-1.3,1.3],[1.3,1.3]].forEach(([dx,dz])=>{const l=cyl(0.12,0.14,5.4,6,0x5a4a3a);l.position.set(dx,2.7,dz);wt.add(l)});
+  const tank=cyl(2.1,2.1,3.2,10,0xb9b4a6);tank.position.set(0,5.4+1.6,0);wt.add(tank);
+  const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(0,5.4+3.2+0.7,0);wt.add(roof);
   solid(wx0,wz0,2.8,2.8);
 }
