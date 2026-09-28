@@ -1,6 +1,6 @@
 # Narrated audio reel: timestamp map
 
-[Narrated MP3](audio-showcase-narrated.mp3), 3:36, made from [the original reel](audio-showcase.mp3), which is unchanged. Each sound is named just before it plays: “Wind. A, original.” / “B, new.” for the four pairs, and a short name for the rest. Quiet clips were boosted so they can be heard; both sides of each pair get the same gain.
+[Narrated MP3](2026-09-28-full-reel-labeled.mp3), 3:36, made from [the original reel](../../../docs/audio-showcase.mp3), which is unchanged. Each sound is named just before it plays: “Wind. A, original.” / “B, new.” for the four pairs, and a short name for the rest. Quiet clips were boosted so they can be heard; both sides of each pair get the same gain.
 
 | Time | Label | Original cue(s) |
 | --- | --- | --- |
