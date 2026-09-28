@@ -52,7 +52,7 @@ const BUNKS=[];
 const TENT_COLLIDERS=TENTS.map(()=>[]);
 const ROOM_MESHES=[];
 const ROOM_LIGHTS=[];
-const ROOM_FURN=[],ROOM_FURN_SPOTS=[];   // per room: the procedural furniture mesh, and where each Blender furniture model goes
+const ROOM_FURN=[],ROOM_FURN_SPOTS=[],ROOM_SHELL=[];   // per room: the procedural furniture mesh, and where each Blender furniture model goes
 function tentSolid(list,x,z,w,d){list.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2})}
 TENTS.forEach((t,ti)=>{
   const parts=[],list=TENT_COLLIDERS[ti],Y=TENT_FLOOR_Y;
@@ -131,8 +131,10 @@ TENTS.forEach((t,ti)=>{
     add(1.45,0.8,0.9,0x766243,t.x+t.roomW-1.25,Y+0.4,t.z+t.roomD-1.5);
     tentSolid(list,t.x+t.roomW-1.25,t.z+t.roomD-1.5,1.5,1);
   }
-  const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;m.visible=false;scene.add(m);ROOM_MESHES.push(m);
-  if(furn.length){const fm=new T.Mesh(mergeBoxes(furn),mergedMat);fm.castShadow=true;fm.receiveShadow=true;m.add(fm);ROOM_FURN[ti]=fm}   // a child: shows/hides with the room
+  // the room is a group (shown only while you're inside): the box-built shell, its furniture, and later the Blender models
+  const room=new T.Group();room.visible=false;scene.add(room);ROOM_MESHES.push(room);
+  const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;room.add(m);ROOM_SHELL[ti]=m;
+  if(furn.length){const fm=new T.Mesh(mergeBoxes(furn),mergedMat);fm.castShadow=true;fm.receiveShadow=true;room.add(fm);ROOM_FURN[ti]=fm}
   const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,ROOM_LAMP,t.crew?27:22,1);   // 2.8 blew out anyone standing near the door and facing the lamp
   light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
 });
@@ -186,13 +188,14 @@ sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
    collision line still stops them; the open gate is the only crossing. */
 const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
 const EAST_GATE_Z0=36,EAST_GATE_Z1=42;
-const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null;   // fence posts/spans for the Blender models (23-models.js), and the box version they replace
+const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null,GATE_PROC=null;   // fence posts/spans for the Blender models (23-models.js), and the box version they replace
 {
   const parts=[],fparts=[],steel=0x4d5a58,mesh=0x75817a,concrete=0x91846e,wire=0xb2a99a;
   const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]),addP=(w,h,d,c,x,y,z)=>fparts.push([w,h,d,c,x,y,z]);
   // outward = away from the yard: the Blender posts/spans lean their barbed-wire arms that way
   const outRy=(x,z)=>z===FENCE_Z0?Math.PI:z===FENCE_Z1?0:x===FENCE_X0?-Math.PI/2:Math.PI/2,seenPost=new Set();
-  const post=(x,z)=>{const y=baseH(x,z),k=x+','+z;if(!seenPost.has(k)){seenPost.add(k);FENCE_POSTS.push({x,y,z,ry:outRy(x,z)})}addP(0.24,3.5,0.24,steel,x,y+1.75,z);addP(0.42,0.22,0.42,concrete,x,y+0.11,z);addP(0.34,0.12,0.34,wire,x,y+3.57,z)};
+  const inGate=(x,z)=>(z===FENCE_Z0&&x>GATE_X0&&x<GATE_X1)||(x===FENCE_X1&&z>EAST_GATE_Z0&&z<EAST_GATE_Z1);   // no posts standing in the gate openings
+  const post=(x,z)=>{if(inGate(x,z))return;const y=baseH(x,z),k=x+','+z;if(!seenPost.has(k)){seenPost.add(k);FENCE_POSTS.push({x,y,z,ry:outRy(x,z)})}addP(0.24,3.5,0.24,steel,x,y+1.75,z);addP(0.42,0.22,0.42,concrete,x,y+0.11,z);addP(0.34,0.12,0.34,wire,x,y+3.57,z)};
   const spanX=(x0,x1,z)=>{
     const mid=(x0+x1)/2,y=baseH(mid,z),w=x1-x0;FENCE_SPANS.push({x:mid,y,z,ry:outRy(null,z),len:w});
     addP(w,2.45,0.055,mesh,mid,y+1.65,z);
@@ -218,10 +221,12 @@ const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null;   // fence posts/spans 
     spanZ(z,z1,FENCE_X0);
     if(z1<=EAST_GATE_Z0||z>=EAST_GATE_Z1)spanZ(z,z1,FENCE_X1);
   }
-  for(const x of[GATE_X0,GATE_X1]){post(x,FENCE_Z0);add(0.3,4.2,0.3,steel,x,baseH(x,FENCE_Z0)+2.1,FENCE_Z0)}
-  add(GATE_X1-GATE_X0,0.42,0.36,steel,0,baseH(0,FENCE_Z0)+4.1,FENCE_Z0);
-  for(const z of[EAST_GATE_Z0,EAST_GATE_Z1])post(FENCE_X1,z);
-  add(0.35,0.34,EAST_GATE_Z1-EAST_GATE_Z0,steel,FENCE_X1,baseH(FENCE_X1,39)+4.0,39);
+  // gates: their box posts/beams go in their own mesh (GATE_PROC) so the Blender gates can replace them
+  const gparts=[],addG=(w,h,d,c,x,y,z)=>gparts.push([w,h,d,c,x,y,z]),gatePost=(x,z)=>{const y=baseH(x,z);addG(0.24,3.5,0.24,steel,x,y+1.75,z);addG(0.42,0.22,0.42,concrete,x,y+0.11,z)};
+  for(const x of[GATE_X0,GATE_X1]){gatePost(x,FENCE_Z0);addG(0.3,4.2,0.3,steel,x,baseH(x,FENCE_Z0)+2.1,FENCE_Z0)}
+  addG(GATE_X1-GATE_X0,0.42,0.36,steel,0,baseH(0,FENCE_Z0)+4.1,FENCE_Z0);
+  for(const z of[EAST_GATE_Z0,EAST_GATE_Z1])gatePost(FENCE_X1,z);
+  addG(0.35,0.34,EAST_GATE_Z1-EAST_GATE_Z0,steel,FENCE_X1,baseH(FENCE_X1,39)+4.0,39);
   // Camp paths visually lead to the two openings.
   add(8,0.025,7,0xb5a079,0,baseH(0,27)+0.02,27);
   add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
@@ -231,10 +236,11 @@ const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null;   // fence posts/spans 
     add(0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz);
   }
   const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
+  GATE_PROC=new T.Mesh(mergeBoxes(gparts),mergedMat);GATE_PROC.castShadow=true;scene.add(GATE_PROC);
   FENCE_PROC=new T.Mesh(mergeBoxes(fparts),mergedMat);FENCE_PROC.castShadow=true;FENCE_PROC.receiveShadow=true;scene.add(FENCE_PROC);
 }
-sign('MAIN GATE\nLAKE ACCESS',0,25.2,Math.PI,4.2,1.25);
-sign('SERVICE GATE',27.3,39,Math.PI/2,2.5,0.8);
+const mainGateSign=sign('MAIN GATE\nLAKE ACCESS',0,25.2,Math.PI,4.2,1.25);
+const serviceGateSign=sign('SERVICE GATE',27.3,39,Math.PI/2,2.5,0.8);
 
 const WATER_TOWER_PROC=new T.Group();
 {

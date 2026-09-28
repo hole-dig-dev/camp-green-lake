@@ -74,6 +74,12 @@ const hideProc=o=>{if(o)o.visible=false};   // swap: the box version goes once i
   // signs: the painted camp sign and the Wreck Room's blade sign on its front corner
   placeModel('SignCampEntrance',{x:-11,y:baseH(-11,30.5),z:30.5,ry:Math.PI}).then(()=>hideProc(campSign)).catch(()=>{});
   placeModel('SignWreckRoom',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(wreckSign)).catch(()=>{});
+  // gates: the arch gate at the lake side and the sliding service gate on the east fence (outside faces away from camp)
+  placeModel('MainGate',{x:0,y:baseH(0,FENCE_Z0),z:FENCE_Z0,ry:0}).then(()=>{hideProc(GATE_PROC);hideProc(mainGateSign)}).catch(()=>{});
+  placeModel('ServiceGate',{x:FENCE_X1,y:baseH(FENCE_X1,39),z:39,ry:-Math.PI/2}).then(()=>hideProc(serviceGateSign)).catch(()=>{});
+  // room shells: floor, walls, roof/ceiling, windows, door and wall dressing, one per room type
+  TENTS.forEach((t,ti)=>placeModel(t.house?'WardenRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
+    .then(()=>hideProc(ROOM_SHELL[ti])).catch(()=>{}));
   // furniture: models become children of each room mesh, so they show/hide with the room like the boxes did
   ROOM_FURN_SPOTS.forEach((spots,ti)=>{
     if(!spots||!spots.length)return;
@@ -104,3 +110,15 @@ const CAMP_PROPS=[
   }
   for(const n in byModel)instanceModel(n,byModel[n]).catch(()=>{});
 }
+
+/* ---- colliders for the new room dressing (added up front, like the props above; offsets from the room centre) ---- */
+TENTS.forEach((t,ti)=>{
+  const L=TENT_COLLIDERS[ti],at=(dx,dz,w,d)=>tentSolid(L,t.x+dx,t.z+dz,w,d);
+  if(t.house){
+    at(-2,t.roomD-0.5,2.8,1.0);                         // fireplace + hearth on the back wall
+    at(t.roomW-0.35,5.5,0.65,1.25);                     // filing cabinets
+    at(t.roomW-0.35,0.6,0.5,0.5);                       // water cooler
+    at(t.roomW-0.4,-4.5,0.65,0.5);                      // nail-polish table
+    at(-3,-(t.roomD-0.5),0.6,0.6);                      // coat rack by the door
+  }else at(-3.2,-(t.roomD-0.35),2.3,0.6);              // shovel rack by the door
+});
