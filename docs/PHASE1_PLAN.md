@@ -133,7 +133,7 @@ Code today:
    *Check: a full trip works solo and with 2 test players; left-behind players are lost; nobody aboard = mission failed.*
 2. ✅ **Done (checkpoint 2).** **Physical loot.** The physics step in `sim.js`; drop, throw, catch, fragile breaks, heavy objects knocking players down; the 5 object types.
    *Check: throw a jar to a friend, a missed catch smashes it, a dropped safe rolls into a hole.*
-3. **Bodies, rope and cart.** Downed players become carryable right away. Rope tie, pull and slip. The cart that tips over.
+3. ✅ **Done (checkpoint 3).** **Bodies, rope and cart.** Downed players become carryable right away. Rope tie, pull and slip. The cart that tips over.
    *Check: pull a safe and a downed friend out of a hole with rope; the cart spills on a bump.*
 4. **The cellar and the lizards.** The small buried cellar under the site with the safe; lizards in holes; the noisy bell.
    *Check: fall in, find the safe, get it and yourself out before the truck leaves.*

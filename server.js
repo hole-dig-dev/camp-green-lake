@@ -155,11 +155,11 @@ wss.on('connection', ws => {
     switch (m.t) {
       case 'pos':
         c.x = num(m.x, -620, 2100, c.x); c.y = num(m.y, -40, 80, c.y); c.z = num(m.z, -620, 620, c.z);
-        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0; c.sv = num(m.sv, 0, 1e5, 0) | 0;
+        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0; c.sv = num(m.sv, 0, 1e5, 0) | 0; c.rp = num(m.rp, -1, 1e7, -1) | 0;
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole
         c.vy = num(m.vy, -100, 100, 0); c.f = num(m.f, 0, 65535, 0) | 0; c.cy = num(m.cy, -2, 1e7, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, rp: c.rp }, c.id);
         break;
       case 'dig': {
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
@@ -219,7 +219,7 @@ wss.on('connection', ws => {
         // Picking up a downed friend, or pulling one out of a deep hole: you have to be standing next to them.
         const o = clients.get(num(m.id, 0, 1e9, -1) | 0);
         if (!o || !o.joined || o === c || !near(c, o, HELP_RANGE)) return;
-        if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; curse(-6); broadcast(runInfo()); }
+        if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; curse(-6); broadcast(runInfo()); const bid = 900000 + o.id; if (world.props[bid] && !(o.f & 64)) { delete world.props[bid]; broadcast({ t: 'propGone', id: bid }); } }
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
         break;
       }
@@ -347,11 +347,28 @@ wss.on('connection', ws => {
       case 'truckWater': { const T = world.truck; if (T.tank < 10 || !near(c, T, 6)) return; T.tank -= 10; send(c, { t: 'truckWaterOk' }); broadcast(truckInfo()); break; }
       case 'truckLoad': {
         const T = world.truck, id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id];
-        if (!p || p.type === 'body' || p.cargo || c.cy !== id || !near(c, T, 6) || T.mode === 'parked') return;
+        if (!p || (p.type === 'body' && !MISSIONS) || p.cargo || c.cy !== id || !near(c, T, 6) || T.mode === 'parked') return;
         p.cargo = true; dirty = true; broadcast({ t: 'cargo', id, on: true });
         break;
       }
       /* ---- physical loot (GAME_DESIGN.md section 19): whoever throws or drops something runs its flight ---- */
+      case 'downBody': {
+        // on a trip, a downed camper is immediately a body the others can carry, rope, cart or throw aboard
+        if (!MISSIONS) return;
+        const id = 900000 + c.id; if (world.props[id]) return;
+        world.props[id] = { type: 'body', owner: c.id, name: c.n, x: r2(num(m.x, -600, 2100, c.x)), z: r2(num(m.z, -600, 600, c.z)) }; dirty = true;
+        broadcast({ t: 'prop', id, ...world.props[id] });
+        break;
+      }
+      case 'cartPut': {
+        // put what you're carrying into the cart (loot, or a downed friend)
+        const id = num(m.id, 0, 1e7, -1) | 0, cid = num(m.cart, 0, 1e7, -1) | 0, p = world.props[id], cart = world.props[cid];
+        if (!p || !cart || cart.type !== 'cart' || id === cid || p.air || c.cy !== id || !near(c, cart, 3.5)) return;
+        if (Object.values(world.props).filter(q => q.inCart === cid).length >= 3) return;
+        p.inCart = cid; p.cargo = false; p.x = cart.x; p.z = cart.z; dirty = true;
+        broadcast({ t: 'cartPut', id, cart: cid });
+        break;
+      }
       case 'unearth': {
         // dug down to a buried object: it comes up out of the hole
         const MS = world.mission, L = MS.phase === 'site' && (MS.loot || []).find(l => l.id === (num(m.id, 0, 1e7, -1) | 0));
@@ -362,7 +379,8 @@ wss.on('connection', ws => {
       }
       case 'throw': {
         const id = num(m.id, 0, 1e7, -1) | 0, p = world.props[id];
-        if (!p || p.air || p.cargo || p.type === 'body' || (c.cy !== id && !near(c, p, 3))) return;
+        if (!p || p.air || (p.type === 'body' && !MISSIONS) || (c.cy !== id && c.rp !== id && !near(c, p, 3.5))) return;
+        p.inCart = null;
         p.air = true; p.owner = c.id; p.cargo = false;
         const v = [num(m.vx, -15, 15, 0), num(m.vy, -15, 15, 0), num(m.vz, -15, 15, 0)], y = num(m.y, -40, 80, 0);
         broadcast({ t: 'thrown', id, owner: c.id, x: p.x, y, z: p.z, vx: v[0], vy: v[1], vz: v[2] });
@@ -481,7 +499,7 @@ const curse = d => { world.run.curse = clamp((world.run.curse || 0) + d, 0, 100)
 // flags on pos: 1 hidden in a deep hole, 2 downed, 4 flashlight, 8 crouching, 16 stuck in a hole, 32 buried by a cave-in, 64 out until morning
 function simPlayers(now) {
   return joined().filter(c => !(c.f & 64)).map(c => ({
-    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, a: c.a, vy: c.vy,
+    id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, rp: c.rp, a: c.a, vy: c.vy,
     br: !!(c.f & 16384), hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), tn: !!(c.f & 128), sg: !!(c.f & 256), kt: !!(c.f & 512), on: !!(c.f & 1024),
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
@@ -572,6 +590,8 @@ function missionTick(now, dt) {
       // the truck parks in the middle of the site, nose pointing home; it's the only way back
       const h = Math.atan2(-(0 - MS.cx), -(20 - MS.cz));
       Object.assign(T, { x: MS.cx, z: MS.cz, h, sp: 0, mode: 'mission', driver: null, stuck: false, tank: SIM.TRUCK.TANK, out: false, until: 0 });
+      // a cart comes along on every trip, parked by the tailgate
+      const cid = 70000 + (MS.trip % 400); world.props[cid] = { type: 'cart', x: r2(MS.cx + Math.sin(h) * 4.5), z: r2(MS.cz + Math.cos(h) * 4.5) }; broadcast({ t: 'prop', id: cid, ...world.props[cid] });
       broadcast(truckInfo());
     }
     if (e.k === 'depart') missionDepart();
@@ -590,12 +610,14 @@ function missionTick(now, dt) {
 function missionDepart() {
   // campers riding in the truck bed make it home; everything else stays out there
   const MS = world.mission, T = world.truck, js = joined();
-  const aboard = js.filter(c => (c.f & 32768) && !(c.f & 66)), lost = js.filter(c => !aboard.includes(c));
+  // on the truck = riding in the bed, or loaded in it (directly or in a cart that's in it); that goes for a friend's body too
+  const onTruck = p => !!p && !p.air && (p.cargo || Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED || (p.inCart != null && onTruck(world.props[p.inCart])));
+  const aboard = js.filter(c => ((c.f & 32768) && !(c.f & 66)) || onTruck(world.props[900000 + c.id])), lost = js.filter(c => !aboard.includes(c));
   let payout = 0; const items = [];
   for (const c of aboard) if (c.sv) { payout += c.sv; items.push(`${c.n}'s sack: ${c.sv}`); }
   for (const id in world.props) {
-    const p = world.props[id]; if (p.type === 'body') continue;
-    if (!p.air && (p.cargo || Math.hypot(p.x - T.x, p.z - T.z) < SIM.MISSION.BED)) { const v = Math.round((SIM.HEAVY[p.type] || 0) * (p.broken ? 0.2 : 1)); payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
+    const p = world.props[id]; if (p.type === 'body' || p.type === 'cart') continue;
+    if (onTruck(p)) { const v = Math.round((SIM.HEAVY[p.type] || 0) * (p.broken ? 0.2 : 1)); payout += v; items.push(`${p.type}: ${v}`); delete world.props[id]; broadcast({ t: 'propGone', id: +id }); }
   }
   world.run.bank += payout;
   MS.results = { payout, aboard: aboard.map(c => c.n), lost: lost.map(c => c.n), items, failed: aboard.length === 0 };

@@ -46,6 +46,7 @@
     mirror: { w: 2, val: 110, fragile: 4.6, name: 'Antique mirror' },       // breaks if you even drop it from your hands
     fossil: { w: 3, val: 150, long: true, name: 'Giant fossil' },           // long and heavy: one camper can only drag it
     strongbox: { w: 3, val: 120, name: "Kate's strongbox" },
+    cart: { w: 2, val: 0, cart: true, name: 'Cart' },                        // push it with loot or a friend inside; it tips on bumps
     safe: { w: 4, val: 300, hits: true, name: 'Old iron safe' },            // most of a payout; flattens whoever it lands on
   };
   const HEAVY = Object.fromEntries(Object.entries(OBJ).map(([k, o]) => [k, o.val]));
@@ -55,6 +56,7 @@
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
   // how fast carriers can move an object: friends make it faster, never an arbitrary requirement (section 20)
   const SPEED = { 1: [0, 4.2, 4.3, 4.3, 4.3], 2: [0, 3.0, 4.0, 4.2, 4.3], 3: [0, 0.9, 2.8, 3.6, 4.0], 4: [0, 0.7, 2.2, 3.4, 4.0] };
+  const ROPE_SLACK = 4.5; // rope length before it goes taut and starts pulling
   function carrySpeed(n, type) { if (type === 'body') return n >= 2 ? 3.5 : 2.2; const w = (OBJ[type] && OBJ[type].w) || 3; return SPEED[w][clamp(Math.round(n), 1, 4)]; }
   // how far and high a throw goes, by weight class; heavy things need several carriers to heave at all
   function throwVel(type, n) { const w = (OBJ[type] && OBJ[type].w) || 3; if (w >= 3 && n < w - 1) return null; return [[0, 0], [9, 5], [6.5, 4.2], [4.5, 3.4], [3.8, 3.2]][w]; }
@@ -64,17 +66,26 @@
     for (const id in props) {
       const pr = props[id];
       if (pr.air) continue; // flying or rolling: the thrower's game simulates it
+      // riding in the cart: it goes where the cart goes
+      if (pr.inCart != null && props[pr.inCart] && !props[pr.inCart].air) continue; // riding in a cart: moved after the carts below
+      if (pr.inCart != null) pr.inCart = null;
       const cs = pr.cargo ? [] : players.filter(p => p.cy === +id && !p.dn && Math.hypot(p.x - pr.x, p.z - pr.z) < 3.4);
       pr.n = cs.length + cs.filter(p => p.br).length; // a wheelbarrow counts as a second pair of hands
       pr.who = cs.map(p => p.id);
-      if (cs.length) {
-        let ax = 0, az = 0; for (const p of cs) { ax += p.x; az += p.z; } ax /= cs.length; az /= cs.length;
+      // rope pullers (section 21) count like carriers, but from up to ~7.5 m away and only once the rope is taut
+      const rs = cs.length || pr.cargo ? [] : players.filter(p => p.rp === +id && !p.dn && Math.hypot(p.x - pr.x, p.z - pr.z) < 7.5);
+      if (rs.length) { pr.n = rs.length; pr.who = rs.map(p => p.id); pr.roped = true; } else pr.roped = false;
+      const hs = cs.length ? cs : rs, stop = cs.length ? 1.1 : ROPE_SLACK;
+      if (hs.length) {
+        let ax = 0, az = 0; for (const p of hs) { ax += p.x; az += p.z; } ax /= hs.length; az /= hs.length;
         const dx = ax - pr.x, dz = az - pr.z, d = Math.hypot(dx, dz);
-        if (d > 1.1) { const s = Math.min(d - 1.1, carrySpeed(pr.n, pr.type) * 1.4 * dt); pr.x += dx / d * s; pr.z += dz / d * s; pr.moved = true; }
+        if (d > stop) { const s = Math.min(d - stop, carrySpeed(pr.n, pr.type) * (cs.length ? 1.4 : 1.1) * dt); pr.x += dx / d * s; pr.z += dz / d * s; pr.moved = true; }
       }
       // heavy loot is sold at Mr. Sir's truck; a friend's body only has to make it back inside the fence
       if (pr.type === 'body' ? inCamp(pr.x, pr.z) : Math.hypot(pr.x - SELL.x, pr.z - SELL.z) < SELL.r) sold.push(id);
     }
+    // things in a cart go where the cart went this step
+    for (const id in props) { const pr = props[id], cart = pr.inCart != null ? props[pr.inCart] : null; if (!cart) continue; if (pr.x !== cart.x || pr.z !== cart.z) { pr.x = cart.x; pr.z = cart.z; pr.moved = true; } pr.n = 0; pr.who = []; }
     return sold;
   }
 

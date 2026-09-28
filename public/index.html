@@ -207,7 +207,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
   <div id="prompt" class="panel" hidden></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
-  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · R bonk · H sing · Z eat · B twerk</div>
+  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · R bonk · H sing · Z eat / onion · X throw · Q rope · B twerk</div>
 </div>
 
 <div id="title" class="overlay">
@@ -472,6 +472,7 @@ const LOOT={
   bell:{name:'Old school bell',val:70,color:0xb08a3a,heavy:true},
   mirror:{name:'Antique mirror',val:110,color:0xcfe4ee,heavy:true},
   fossil:{name:'Giant fossil',val:150,color:0xe8dcc0,heavy:true},
+  cart:{name:'Cart',val:0,color:0x6d5a44,heavy:true},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
@@ -953,6 +954,7 @@ function nearSpot(){
   {const up=remoteNear(R=>(R.f&4096)&&R.p.g.position.y>P.y+1,4.5);if(up&&!P.climb)return{id:'boost',...up};const dn2=(P.ledge>0||P.onTop)?remoteNear(R=>(R.f&4096)&&R.p.g.position.y<P.y-0.5&&R.p.g.position.y>P.y-5,4.5):null;if(dn2)return{id:'pullUp',...dn2}}
   if(!S.inTown&&Math.hypot(P.x-SPRING.x,P.z-SPRING.z)<3.6)return{id:'spring'};
   {const o=wildNear();if(o)return{id:'wild',o}}
+  if(S.carry!=null&&PROPS.has(S.carry)&&PROPS.get(S.carry).type!=='cart'){const c=cartNear(2.6);if(c)return{id:'cartPut',cart:c}}
   if(S.holdZer)return{id:'dropZer'};
   {const tsp=truckSpot();if(tsp)return tsp}
   if(MONV.zer&&Math.hypot(MONV.zer.x-P.x,MONV.zer.z-P.z)<2.4)return{id:'grabZer'};
@@ -967,6 +969,7 @@ function nearSpot(){
 function use(){
   const s=nearSpot();if(!s||S.ko||uiOpen())return;
   if(s.id==='board'){startTrip();return}
+  if(s.id==='cartPut'){putInCart(s.cart);return}
   if(truckAction(s))return;
   if(s.id==='revive'||s.id==='digout')return; // hold F: handled in updateCoop
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
@@ -1031,7 +1034,7 @@ $('#shopClose').onclick=closeShop;
 
 /* KO */
 function knockOut(title,text){
-  if(S.ko||S.out)return;if(S.carry!=null)dropCarried();if(S.driving)stopDriving(false);if(S.riding)hopOff(true);countUp('downs',5,'squid');S.ko=othersOnline()||helpersOn()?25:4;digHeld=false;S.carry=null;S.light=false;S.buried=false;
+  if(S.ko||S.out)return;if(S.carry!=null)dropCarried();if(S.driving)stopDriving(false);if(S.riding)hopOff(true);S.rope=null;countUp('downs',5,'squid');S.ko=othersOnline()?(MISSIONS?45:25):helpersOn()?25:4;downAsBody();digHeld=false;S.carry=null;S.light=false;S.buried=false;
   const lost=S.sack.length;
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack is still on you. If nobody gets you up, it\'s gone.':'');$('#ko').hidden=false;
 }
@@ -1083,11 +1086,12 @@ addEventListener('keydown',e=>{
   if(k===' '||k.startsWith('arrow'))e.preventDefault();
   if(k==='e')digHeld=true;
   if(k==='f')use();
-  if(k==='q')eatOnion();
+  if(k==='q'&&!MISSIONS)eatOnion();
   if(k==='g'&&!e.repeat)doPing();
   if(k==='z'&&!e.repeat)eatSomething();
   if(k==='r'&&!e.repeat)bonkSwing();
   if(k==='x'&&!e.repeat)throwCarried();
+  if(k==='q'&&!e.repeat&&MISSIONS)toggleRope();
   if(k===' '&&!e.repeat&&S.inTown&&townSpot())tryClimb();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='b'&&!e.repeat)twerk();
@@ -1170,7 +1174,7 @@ function sendPresence(now){
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(S.buried?32:0)|(S.out?64:0)|(S.inTown?128:0)|(S.singT>0?256:0)|(S.kate?512:0)|(S.onionT>0?1024:0)|(S.handT>0?2048:0)|(P.climb||P.ledge>0||P.onTop?4096:0)|(S.up.walkie?8192:0)|(S.up.barrow?16384:0)|(S.riding?32768:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.holdZer?-2:S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),+P.yaw.toFixed(2)];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds,sv:sackValue()});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],vy:pos[9],sc:S.seeds,sv:sackValue(),rp:S.rope==null?-1:S.rope});
 }
 function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
@@ -1220,7 +1224,7 @@ function onMsg(m){
     }
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,65535,0)|0;R.p.g.visible=!(R.f&64);setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,65535,0)|0;R.rp=num(m.rp,-1,1e7,-1)|0;R.p.g.visible=!(R.f&64)&&!PROPS.has(900000+m.id);setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;if((m.item|0)>=20000)removeTownLoot(m.item|0);break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
@@ -1238,6 +1242,7 @@ function onMsg(m){
     case 'pcaught':{const pr=PROPS.get(num(m.id,0,1e7,-1)|0);if(pr){pr.air=false;FLY.delete(pr.id);if(m.by!==net.id&&Math.hypot(pr.x-P.x,pr.z-P.z)<40)toast(`${cleanName(m.n)} caught the ${propName(pr)}!`,'good',1800)}break}
     case 'caught':{const pr=PROPS.get(num(m.id,0,1e7,-1)|0);if(pr){pr.air=false;S.carry=pr.id;sfx.find();toast(`You caught the ${propName(pr)}!`,'good',1800)}break}
     case 'unearthed':clearClue(num(m.id,0,1e7,-1)|0);break;
+    case 'cartPut':{const pr=PROPS.get(num(m.id,0,1e7,-1)|0);if(pr){pr.inCart=num(m.cart,0,1e7,-1)|0;pr.cargo=false;if(S.carry===pr.id)S.carry=null}break}
     case 'hitBy':knockOut('Flattened',`A flying ${SIM.OBJ[m.type]?SIM.OBJ[m.type].name:'something heavy'} hit you. ${cleanName(m.by)} was trying to help.`);break;
     case 'truck':setTruck(m);break;
     case 'mission':setMission(m);break;
@@ -1332,7 +1337,7 @@ function updatePlayer(dt){
   }else{
     P.digT=0.3;
     if(ml>0.1){
-      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null&&PROPS.has(S.carry))sp=Math.min(sp,SIM.carrySpeed(carryN(),PROPS.get(S.carry).type));if(S.zBack)sp*=0.75;if(nearThorn()){sp*=0.5;hurt('injury',0.8*dt)}
+      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null&&PROPS.has(S.carry))sp=Math.min(sp,SIM.carrySpeed(carryN(),PROPS.get(S.carry).type));if(S.zBack)sp*=0.75;if(ropeTaut()){const rp=PROPS.get(S.rope),away=mx*(P.x-rp.x)+mz*(P.z-rp.z)>0;if(away)sp=Math.min(sp,SIM.carrySpeed(Math.max(1,rp.n||1),rp.type)*1.1)}if(nearThorn()){sp*=0.5;hurt('injury',0.8*dt)}
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
       if(!S.inTown){nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3)}
       for(const c of (S.inTown?TOWNCOL:colliders)){if(c.crawl&&P.crouch&&S.carry==null)continue;if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
@@ -1411,6 +1416,7 @@ const COOP_TXT={
   digout:s=>`Hold to dig ${s.R.name} out`+(S.digOutT>0?`… ${Math.round(S.digOutT/3*100)}%`:''),
   drop:s=>`Put down ${s.pr.type==='body'?s.pr.name:'the '+propName(s.pr)}`+(s.pr.type!=='body'?' (X or right-click: throw)':'')+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>(s.pr.type==='body'?`Pick up ${s.pr.name} and carry them back inside the fence`:`Grab the ${propName(s.pr)} (${SIM.HEAVY[s.pr.type]} seeds)`)+(s.pr.n?` · ${s.pr.n} carrying`:''),
+  cartPut:()=>'Put it in the cart',
   board:()=>MIS.phase==='hub'?'Start a trip to Lake Flats (the whole crew rides out)':'A trip is under way',
   grabZer:()=>'Pick up Madame Zeroni (then everyone sing: hold H)',
   zback:()=>'Carry Madame Zeroni on your back',
@@ -1932,7 +1938,7 @@ function updateCurfew(dt){
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
 const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
-function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.holdZer?-2:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,a:P.anim,vy:P.yaw,sg:S.singT>0,kt:!!S.kate,on:S.onionT>0,tn:!!S.inTown,br:!!S.up.barrow}}
+function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.holdZer?-2:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,a:P.anim,vy:P.yaw,sg:S.singT>0,kt:!!S.kate,on:S.onionT>0,tn:!!S.inTown,br:!!S.up.barrow,rp:S.rope==null?-1:S.rope}}
 function stepSoloMonsters(dt){
   if(online())return;const ev=[];if(S.out){MONV.trucks=[];MONV.zer=null;return}SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{curfew:curfewT(),split:splitT(),run:RUN,wanted:truckWanted()?{x:WT.x,z:WT.z}:null,town:(M2,tps,dt2,ev2)=>SIM.stepTown(M2,tps,dt2,ev2,layNow(),RUN.day)});
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;syncMobs(SIM.packMobs(MONL),dt);
@@ -2121,11 +2127,15 @@ function eatSomething(){
   if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);S.onionT=Math.max(S.onionT,30);tone(330,0.3,'triangle',0.1,220);toast('You drink some of Sam\'s onion tonic. The sting fades, and lizards won\'t like your smell for 30 seconds.','good',4000);return}
   const i=S.sack.findIndex(t=>t==='sploosh'||t==='jar');
   if(i>=0&&AFF.hunger>4){const t=S.sack.splice(i,1)[0];countUp('eat',5,'sploosh');AFF.hunger=0;S.stam=Math.min(stamMax(),S.stam+40);sfx.splash();toast(t==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);return}
+  if(S.onions>0){eatOnion();return}
   toast(S.tonic>0||i>=0?'You don\'t need that right now.':'Nothing to eat or drink. Sploosh and peaches from the lake fill you up; the Wreck Room sells onion tonic.','',3000);
 }
 
 /* ---- getting caught hurts: not picked up in time = out cold until morning ---- */
 function goOut(){
+  if(MISSIONS&&MIS.phase==='site'){ // on a trip: you stay a body out on the site; only the truck can bring you home
+    S.ko=0;$('#ko').hidden=true;S.carry=null;S.rope=null;S.out=true;if(online())wsSend({t:'out',x:P.x,z:P.z});else downAsBody();
+    $('#outWho').textContent=othersOnline()?"You're out cold. Unless your friends get your body onto the truck, you're left behind. Click to watch someone else.":"You're out cold. Unless your body is on the truck when it leaves, you're left behind.";$('#outBanner').hidden=false;me.g.visible=false;return}
   S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0;S.carry=null;S.buried=false;S.out=true;
   if(othersOnline()){wsSend({t:'out',x:P.x,z:P.z});$('#outWho').textContent='Your body is where you fell. Friends can carry it back inside the fence to wake you up. Otherwise your sack is lost. Click to watch someone else.';toast('You\'re out cold until morning.','bad',5000)}
   else{addCurse(10);$('#outWho').textContent='Your sack is lost.';soloSkipNight()}
@@ -2231,6 +2241,7 @@ function releaseHelper(b){b.helping=false;b.carryId=null;b.L.n.textContent=b.d.n
 const PROPS=new Map();
 function propMesh(type){
   if(type==='pjar'||type==='bell'||type==='mirror'||type==='fossil')return physMesh(type);
+  if(type==='cart')return cartMesh();
   const g=new T.Group();
   if(type==='safe'){const b=box(1.1,1.1,1,0x3b3f45);b.position.y=0.55;const d=cyl(0.18,0.18,0.06,10,0xb8b8b8);d.rotation.x=Math.PI/2;d.position.set(0,0.62,0.52);const h=box(0.3,0.06,0.06,0xd4af37);h.position.set(0.3,0.35,0.52);g.add(b,d,h)}
   else if(type==='body'){const p=makePerson({skin:0xc68a5e,band:0x2f5f8a,shovel:false});p.g.rotation.x=-Math.PI/2;p.g.position.y=0.2;g.add(p.g)}
@@ -2269,10 +2280,11 @@ function popOut(){
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0;toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;$('#ko').hidden=true;me.g.rotation.x=0;me.g.visible=!FP;if(MISSIONS&&!online())removeProp(myBodyId());toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
+  if(MISSIONS&&followBody()){fine.textContent=othersOnline()?`Downed: ${Math.ceil(S.ko)}s. Friends can pick you up (hold F), or carry, cart, rope or throw you onto the truck. A body on the truck makes it home.`:'Waking up…';return}
   if(othersOnline()){fine.textContent=`Downed. ${Math.ceil(S.ko)}s left for a friend to pick you up (they hold F next to you). You can crawl.`;
     let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0),iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
     const dragged=MONV.zer&&MONV.zer.drag===myId();
@@ -2709,7 +2721,7 @@ function soloMission(dt){
     if(e.k==='depart'){
       const aboard=S.riding&&!S.ko&&!S.out;let payout=0;const items=[];
       if(aboard&&sackValue()){payout+=sackValue();items.push(`${S.name}'s sack: ${sackValue()}`)}
-      for(const pr of [...PROPS.values()]){if(pr.type==='body')continue;if(!pr.air&&(pr.cargo||Math.hypot(pr.x-WT.x,pr.z-WT.z)<MSN.BED)){const v=Math.round((SIM.HEAVY[pr.type]||0)*(pr.broken?0.2:1));payout+=v;items.push(`${pr.type}: ${v}`);removeProp(pr.id)}}
+      for(const pr of [...PROPS.values()]){if(pr.type==='body'||pr.type==='cart')continue;const onT=q=>!!q&&!q.air&&(q.cargo||Math.hypot(q.x-WT.x,q.z-WT.z)<MSN.BED||(q.inCart!=null&&onT(PROPS.get(q.inCart))));if(onT(pr)){const v=Math.round((SIM.HEAVY[pr.type]||0)*(pr.broken?0.2:1));payout+=v;items.push(`${pr.type}: ${v}`);removeProp(pr.id)}}
       RUN.bank+=payout;saveRun();MIS.results={payout,aboard:aboard?[S.name]:[],lost:aboard?[]:[S.name],items,failed:!aboard};
     }
     if(e.k==='home'){Object.assign(WT,{x:TK.HOME.x,z:TK.HOME.z,h:TK.HOME.h,tx:TK.HOME.x,tz:TK.HOME.z,th:TK.HOME.h,sp:0,mode:'parked',driver:null,stuck:false,tank:TK.TANK});for(const id of [...PROPS.keys()])removeProp(id)}
@@ -2745,7 +2757,7 @@ function hornFx(n){
 }
 function departFx(){
   const R=MIS.results||{payout:0,aboard:[],lost:[],items:[],failed:true};
-  const mine=S.riding&&!S.ko&&!S.out;
+  const mine=online()?!!(R.aboard&&R.aboard.includes(S.name)):S.riding&&!S.ko&&!S.out;
   if(mine){S.sack=[];S.sackBonus=0}else{if(S.sack.length)toast('The truck left without you. Your sack is lost.','bad',6000);else toast('The truck left without you.','bad',5000);S.sack=[];S.sackBonus=0}
   $('#resTitle').textContent=R.failed?'Nobody made it back':'Trip complete';
   const b=$('#resBody');b.textContent='';
@@ -2879,6 +2891,86 @@ function checkUnearth(h){
   }
 }
 
+/* ================= checkpoint 3: bodies, rope and the cart (GAME_DESIGN.md sections 8 and 21) ================= */
+/* downed on a trip: you're a body right away, and your friends' problem */
+const myBodyId=()=>900000+(online()?net.id:0);
+function downAsBody(){
+  if(!MISSIONS||MIS.phase!=='site')return;
+  if(online())wsSend({t:'downBody',x:+P.x.toFixed(2),z:+P.z.toFixed(2)});else if(!PROPS.has(myBodyId()))addProp(myBodyId(),'body',P.x,P.z,S.name);
+}
+function followBody(){
+  // while you're a body, you go wherever your friends drag, carry, cart or throw you
+  const pr=PROPS.get(myBodyId());if(!pr)return false;
+  P.x=pr.g.position.x;P.z=pr.g.position.z;P.y=pr.g.position.y;me.g.visible=false;return true;
+}
+/* rope (Q): tie it to loot or a downed friend and pull from a distance; too few hands on something heavy and it slips */
+function toggleRope(){
+  if(!S.started||S.ko||S.out||uiOpen())return;
+  if(S.rope!=null){S.rope=null;toast('You let go of the rope.','',1500);return}
+  let best=null,bd=2.6*2.6;
+  for(const pr of PROPS.values()){if(pr.air||pr.cargo||pr.inCart!=null||pr.id===myBodyId())continue;const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}
+  if(!best){toast('Stand next to something (or a downed friend) to tie your rope to it.','',2500);return}
+  S.rope=best.id;if(S.carry===best.id)S.carry=null;tone(500,0.15,'triangle',0.06);
+  toast(`Rope tied to ${best.type==='body'?best.name:'the '+propName(best)}. Walk away to pull it (it pulls once the rope is taut). Q to let go.`,'',4500);
+}
+function ropeTaut(){if(S.rope==null)return false;const pr=PROPS.get(S.rope);return !!pr&&Math.hypot(pr.x-P.x,pr.z-P.z)>4.3}
+let slipCheck=0;
+function updateRope(dt){
+  if(S.rope==null)return;const pr=PROPS.get(S.rope);
+  if(!pr||pr.cargo||pr.inCart!=null||S.ko||S.out){S.rope=null;return}
+  if(pr.air){return}
+  const d=Math.hypot(pr.x-P.x,pr.z-P.z);
+  if(d>11){S.rope=null;toast('The rope pulled out of your hands.','bad',2500);return}
+  if(d>4.3){
+    S.stam=Math.max(0,S.stam-5*dt);S.stamT=0;
+    // hauling something heavy up out of a hole with too few people pulling: the rope can slip
+    const o=objOf(pr),w=pr.type==='body'?3:o?o.w:3,inHole=baseH(pr.x,pr.z)-groundAt(pr.x,pr.z)>0.7;
+    if((slipCheck-=dt)<=0){slipCheck=1;
+      if(S.stam<=0||(inHole&&w>=3&&(pr.n||1)<w-1&&Math.random()<0.35)){S.rope=null;sfx.thud();noise(0.4,300,1,0.3);toast('THE ROPE SLIPPED! It\'s too heavy for that few hands.','bad',3500);launch(pr,pr.x,groundAt(pr.x,pr.z)+0.3,pr.z,0,0,0)}}
+  }
+}
+const ROPES=new Map(),ropeMat=new T.LineBasicMaterial({color:0x8a6a3a});
+function drawRopes(){
+  const want=new Map();
+  if(S.rope!=null&&PROPS.has(S.rope))want.set('me',{a:me.g.position,b:PROPS.get(S.rope)});
+  for(const[rid,R]of remotes)if(R.rp>=0&&PROPS.has(R.rp))want.set(rid,{a:R.p.g.position,b:PROPS.get(R.rp)});
+  for(const[k,L]of ROPES)if(!want.has(k)){scene.remove(L);ROPES.delete(k)}
+  for(const[k,v]of want){
+    let L=ROPES.get(k);if(!L){L=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3()]),ropeMat);L.frustumCulled=false;scene.add(L);ROPES.set(k,L)}
+    const p=L.geometry.attributes.position,b=v.b.g.position;p.setXYZ(0,v.a.x,v.a.y+1.2,v.a.z);p.setXYZ(1,b.x,b.y+0.4,b.z);p.needsUpdate=true;
+  }
+}
+/* the cart: push it (F), put loot or a friend in it, and try not to tip it over */
+function cartNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){if(pr.type!=='cart'||pr.air)continue;const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
+const cartLoad=cid=>[...PROPS.values()].filter(p=>p.inCart===cid);
+function putInCart(cart){
+  const id=S.carry,pr=PROPS.get(id);if(!pr||!cart)return;
+  if(cartLoad(cart.id).length>=3){toast('The cart is full.','',1800);return}
+  S.carry=null;sfx.thud();
+  if(online())wsSend({t:'cartPut',id,cart:cart.id});else{pr.inCart=cart.id;pr.cargo=false}
+  toast(`${pr.type==='body'?pr.name:'The '+propName(pr)} is in the cart. Push it (F on the cart), and go easy on the bumps.`,'',3500);
+}
+let cartLastY=null;
+function updateCart(dt){
+  const cart=S.carry!=null?PROPS.get(S.carry):null;
+  if(!cart||cart.type!=='cart'){cartLastY=null;return}
+  const y=groundAt(cart.x,cart.z);
+  // a bump at speed tips it over: everything inside goes flying
+  if(cartLastY!=null&&Math.abs(y-cartLastY)>0.26&&P.moving&&P.anim===4||cartLastY!=null&&Math.abs(y-cartLastY)>0.45&&P.moving){
+    const load=cartLoad(cart.id);if(load.length&&Math.random()<0.45){
+      sfx.thud();noise(0.5,500,0.8,0.4);toast('The cart tipped over! Everything spilled out.','bad',3500);
+      for(const pr of load){pr.inCart=null;const a=Math.random()*Math.PI*2;launch(pr,cart.x,y+0.8,cart.z,Math.cos(a)*2.5,2.5+Math.random()*1.5,Math.sin(a)*2.5)}
+    }
+  }
+  cartLastY=y;
+}
+function cartMesh(){
+  const g=new T.Group();const tray=box(1.3,0.35,1.9,0x6d5a44);tray.position.y=0.6;const lip=box(1.4,0.08,2.0,0x4a3a2a);lip.position.y=0.8;
+  const wl=cyl(0.28,0.28,0.12,10,0x1e1e1e);wl.rotation.z=Math.PI/2;wl.position.set(0,0.28,0.95);
+  for(const s of[-1,1]){const h=box(0.06,0.06,1.1,0x8a6a44);h.position.set(s*0.45,0.85,-1.4);g.add(h)}
+  g.add(tray,lip,wl);scene.add(g);return g;
+}
+
 /* ---- the day's critters and characters (moved by sim.js; drawn here) ---- */
 const MOBV=new Map();
 function ghostify(g,color){g.traverse(o=>{if(o.isMesh){o.material=new T.MeshBasicMaterial({color,transparent:true,opacity:0.55,depthWrite:false});o.castShadow=false}})}
@@ -3007,9 +3099,10 @@ function updateCoop(dt){
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
   if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim(),...helperSims()],dt)){const pr=PROPS.get(+id);if(pr.type==='body'){removeProp(+id);continue}const v=SIM.HEAVY[pr.type]*(RUN.mood==='digday'?2:1);propSold(+id,v,[myId()]);payTeam(v)}}
-  updatePhysLoot(dt);
+  updatePhysLoot(dt);updateRope(dt);updateCart(dt);drawRopes();
   for(const pr of PROPS.values()){
     const g=pr.g,k=Math.min(1,dt*8);
+    if(pr.inCart!=null){const c=PROPS.get(pr.inCart);if(c){g.position.set(c.g.position.x,c.g.position.y+0.65,c.g.position.z);continue}}
     if(pr.air){if(FLY.has(pr.id))g.position.set(pr.x,pr.y,pr.z);else{g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y+=((pr.y||0)-g.position.y)*k}g.rotation.x+=dt*3;continue}
     g.rotation.x*=0.8;
     // light things you carry alone sit in your hands; heavier ones hang between the carriers at waist height
@@ -3071,6 +3164,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
 if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot};
-if(location.hash.includes('expose'))window.__t={P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes};
+if(location.hash.includes('expose'))window.__t={P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes,toggleRope,putInCart,cartNear,KEYS};
 })();
 </script>
