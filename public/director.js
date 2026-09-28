@@ -48,7 +48,7 @@
     },
     landslide: {
       weight: 2, major: true, cooldownMs: 90000, minDay: 1, times: ['day', 'dusk'],
-      ringMin: 40, ringMax: 110, lifeMs: 32000, mode: 'env', enabled: true, supportsLateJoin: true,
+      ringMin: 40, ringMax: 110, lifeMs: 45000, mode: 'env', enabled: true, supportsLateJoin: true,   // lifeMs: the 9 s rock rain plus long rolls (74-landslide.js)
     },
     /* -- the other events. Each one's own natural schedule (tbPlan, sinkPlan, the haboob's hbPlan, the javelinas'
        random roll, the lion's pre-curfew window) steps aside while DIRECTOR_ON / the server's director is on, so

@@ -27,29 +27,30 @@
 const LS_DT=1/60;                    // physics step (s): fixed, so results don't depend on the render frame rate
 const LS_MAX_STEPS=600;              // most steps run in one real frame (10 sim-seconds) -- caps the catch-up burst for a late joiner
 const LS_LIVE_STEP_CAP=24;           // fewer than this many needed steps this frame = "live" play; more = a catch-up replay, so skip FX (dust/shake/thud/whistle) but keep the physics identical either way
-const LS_N_MIN=10, LS_N_MAX=26;      // a burst is 10-26 boulders -- a real rain, not a handful
-const LS_R_MIN=0.8, LS_R_MAX=2.5;    // boulder radius range (m)
+const LS_N_MIN=30, LS_N_MAX=48;      // a burst is 30-48 rocks: a real rain of rocks (JT: "more of a rain of rocks... rolling aggressively and bouncy")
+const LS_R_MIN=0.5, LS_R_MAX=2.4;    // rock radius range (m); sizes are skewed small (see LS_R_SKEW): lots of small/medium, a few big
+const LS_R_SKEW=1.8;                 // radius = min + range * u^LS_R_SKEW: >1 means mostly smaller rocks
 const LS_DROP_H=120;                 // boulders start this high above their landing spot (m); angled ones start lower (see LS_ANGLE_H_FRAC) since they travel in sideways instead
 const LS_ANGLE_H_FRAC=0.62;          // angled boulders start at this fraction of LS_DROP_H -- they're flung in from the mountain, not just dropped
-const LS_SPREAD=46;                  // how far apart the boulders in one burst scatter at spawn (m) -- a wide field, not one spot
+const LS_SPREAD=55;                  // how far apart the rocks in one burst scatter at spawn (m): a wide strip of rain
 const LS_GRAV=26;                    // gravity for boulders (m/s^2) -- heavier and faster than the player's 16
 const LS_VY0_MIN=-20, LS_VY0_MAX=-9; // initial downward speed range (m/s) at spawn -- they scream in fast and steep from the first frame instead of slowly picking up speed
-const LS_ANGLE_FRAC=0.4;             // fraction of a burst that comes in ANGLED -- flung sideways from Big Thumb's direction instead of nearly straight down
+const LS_ANGLE_FRAC=0.5;             // fraction of a burst that comes in ANGLED, flung sideways from Big Thumb's direction
 const LS_ANGLE_MULT=3.4;             // extra sideways-speed multiplier for angled boulders, so they visibly arc in from a direction rather than dropping in place
-const LS_BARRAGE_SPAN=4.5;           // seconds over which one burst's boulders are staggered into individual drops -- a rolling rain, not a simultaneous thud
-const LS_BARRAGE_JITTER=0.9;         // +/- random jitter (s) added to each boulder's stagger offset, seeded, so the rain isn't a metronome
+const LS_BARRAGE_SPAN=9;             // seconds over which one burst's rocks keep raining down: a sustained barrage you have to run from
+const LS_BARRAGE_JITTER=1.4;         // +/- seeded jitter (s) on each rock's drop time, so the rain isn't a metronome
 const LS_BOUNCE_MIN_VY=0.75;         // a downward speed below this (m/s) on contact is just gravity settling, not a real bounce -- must clear LS_GRAV*LS_DT (0.43 at LS_GRAV=26) with margin, or a resting boulder re-crosses it from gravity alone every tick and never actually settles
-const LS_REST=0.46;                  // bounce restitution: fraction of vertical speed kept through an ordinary bounce
-const LS_FIRST_BOUNCE_MULT=1.35;     // the very first bounce keeps this much extra restitution -- reads as a hard, lively first smack
-const LS_BOUNCE_MAX_UP=15;           // caps how fast a bounce can send a boulder back upward (m/s), so the big first bounce reads as violent, not comical
-const LS_BOUNCE_FRIC=0.74;           // fraction of horizontal speed kept through a bounce (rest lost to the impact)
-const LS_KICK_CHANCE=0.55;           // chance a bounce also gets a sideways ricochet kick instead of a clean one
-const LS_KICK_SPEED=5.5;             // ricochet kick speed (m/s), scaled 0.4-1x -- seeded per boulder+bounce (hash2), so it's identical for everyone regardless of framerate
-const LS_ROLL_FRIC=0.95;             // rolling friction: exponential decay rate (per second) on ground speed -- a bit lower than the original 1.1, so rolls stay fast a little longer, without dragging settling out for ages
-const LS_SLOPE_ACCEL=13;             // how strongly a grounded boulder speeds up rolling downhill along the terrain slope -- enough to visibly bend a roll's direction
-const LS_FLING=9;                    // sideways push (m/s) every boulder gets at spawn, away from Big Thumb, before angled/jitter multipliers
+const LS_REST=0.6;                   // bounce restitution: fraction of vertical speed kept (was 0.46): lively, hard bounces
+const LS_FIRST_BOUNCE_MULT=1.25;     // the very first bounce keeps this much extra restitution: a violent first smack
+const LS_BOUNCE_MAX_UP=16;           // caps how fast a bounce can send a rock back upward (m/s)
+const LS_BOUNCE_FRIC=0.9;            // fraction of horizontal speed kept through a bounce (was 0.74): they keep charging forward
+const LS_KICK_CHANCE=0.7;            // chance a bounce also gets a sideways ricochet kick (seeded, identical for everyone)
+const LS_KICK_SPEED=7;               // ricochet kick speed (m/s), scaled 0.4-1x: unpredictable, chaotic lines
+const LS_ROLL_FRIC=0.35;             // rolling friction decay rate (per s; was 0.95): rocks keep rolling a long way across the lake
+const LS_SLOPE_ACCEL=16;             // how strongly a grounded rock speeds up rolling downhill along the terrain slope
+const LS_FLING=13;                   // sideways push (m/s) every rock gets at spawn, away from Big Thumb (was 9)
 const LS_SETTLE_SPEED=0.4;           // ground speed (m/s) below which a boulder counts as "settled"
-const LS_SETTLE_TIME=1.7;            // seconds spent below LS_SETTLE_SPEED before it's fully at rest -- a bit longer, so rolling stays dangerous for a while before it calms down
+const LS_SETTLE_TIME=2;              // seconds below LS_SETTLE_SPEED before a rock is fully at rest
 const LS_FADE_TIME=6;                // seconds a settled boulder takes to shrink away once it's at rest
 const LS_HURT_SPEED=2.2;             // below this speed (m/s) a boulder is too gentle to hurt you -- still solid though
 const LS_DMG_K=7;                    // damage = (speed-LS_HURT_SPEED) * radius * LS_DMG_K -- big + fast easily clears 100 (a kill)
@@ -67,13 +68,13 @@ const LS_SHAKE_MAX=0.28;             // camera shake amplitude (m) for an impact
 const LS_SHAKE_DECAY=6;              // per-second decay rate of the current camera-shake amplitude
 const LS_DUST_N=16;                  // dust particles kicked up on a boulder's first impact (reuses the shared dirt-particle pool)
 const LS_DUST_N_BOUNCE=6;            // fewer particles on later bounces/skips -- it's already a dusty rock by then
-const LS_KNOCK_REST=0.2;             // restitution for a boulder-boulder knock -- soft, just enough to shove a neighbor off its line without endlessly re-energizing a tightly packed field
-const LS_POOL_CAP=56;                // max boulders rendered/simulated at once (about two full-size barrages)
+const LS_KNOCK_REST=0.35;            // restitution for rock-on-rock knocks: enough to send them ricocheting off each other
+const LS_POOL_CAP=100;               // max rocks rendered/simulated at once (about two full barrages)
 const LS_CELL=220;                   // natural landslides: grid square size (m) -- same idea as the twister's TW_CELL
 const LS_WIN=100000;                 // natural landslides: time window per square (ms)
 const LS_CHANCE=0.05;                // natural landslides: per-window chance for an ordinary square
 const LS_CHANCE_THUMB=0.28;          // per-window chance for a square on Big Thumb's side of the lake (z<0)
-const LS_LIFE=40;                    // seconds after t0 a landslide is considered over -- covers the longer staggered barrage plus rolling and fade
+const LS_LIFE=58;                    // seconds after t0 a landslide is considered over: the 9 s barrage plus long rolls and the fade
 
 let lsBoulders=[],lsBursts=[];         // active boulders, and the burst "events" they belong to (for the warning + minimap)
 const lsSeen=new Map();                // natural landslide plan-id -> the window k it belongs to, so each plan spawns once
@@ -101,7 +102,7 @@ function spawnLandslide(x,z,seed,t0){
   const away=Math.atan2(x-TH_X,z-TH_Z);    // which way the burst rolls off the mountain, in the xz plane
   const n=LS_N_MIN+Math.floor(r()*(LS_N_MAX-LS_N_MIN+1));
   for(let i=0;i<n&&lsBoulders.length<LS_POOL_CAP;i++){
-    const bx=x+(r()*2-1)*LS_SPREAD,bz=z+(r()*2-1)*LS_SPREAD,rad=LS_R_MIN+r()*(LS_R_MAX-LS_R_MIN);
+    const bx=x+(r()*2-1)*LS_SPREAD,bz=z+(r()*2-1)*LS_SPREAD,rad=LS_R_MIN+Math.pow(r(),LS_R_SKEW)*(LS_R_MAX-LS_R_MIN);
     const angled=r()<LS_ANGLE_FRAC;
     const sp=LS_FLING*(0.6+r()*0.8)*(angled?LS_ANGLE_MULT:1);
     const vy0=LS_VY0_MIN+r()*(LS_VY0_MAX-LS_VY0_MIN);
