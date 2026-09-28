@@ -26,7 +26,7 @@ const BIND_DEFS=[
   {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
   {id:'shout1',label:'Shout 1',def:'1'},{id:'shout2',label:'Shout 2',def:'2'},
   {id:'shout3',label:'Shout 3',def:'3'},{id:'shout4',label:'Shout 4',def:'4'},{id:'shout5',label:'Shout 5',def:'5'},
-  {id:'pushtalk',label:'Push to talk (voice)',def:'b'},
+  {id:'pushtalk',label:'Push to talk (voice)',def:'b'},{id:'inventory',label:'Inventory',def:'i'},
 ];
 const RESERVED_KEYS=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','`']);
 const KEY_NAMES={' ':'Space','arrowup':'Up','arrowdown':'Down','arrowleft':'Left','arrowright':'Right','enter':'Enter','shift':'Shift','`':'`'};

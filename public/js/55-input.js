@@ -53,6 +53,7 @@ addEventListener('keydown',e=>{
   if(!$('#fired').hidden)return;
   if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
   if(shopOpen){shopKeydown(e);return}
+  if(invOpen){invKeydown(e);return}
   if(DLG.open){if(e.key==='Escape'){e.preventDefault();closeDialog()}else if(/^[1-9]$/.test(e.key)){e.preventDefault();chooseOpt(+e.key-1)}return}
   if(BJ.open){const k2=e.key.toLowerCase();if(k2==='escape'){e.preventDefault();closeCards()}else if(k2==='h')bjHit();else if(k2==='s')bjStand();else if(k2==='d')bjDouble();else if(k2==='enter'&&e.target.tagName!=='BUTTON')bjDeal();return}
   /* full-screen field map: J (unused elsewhere) opens/closes it; Escape also closes it, ahead of
@@ -66,7 +67,9 @@ addEventListener('keydown',e=>{
   if(!S.started)return;
   if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
   if(pk==='j'&&!e.repeat&&!uiOpen()){e.preventDefault();openFieldMap();return}
+  if(pk==='tab'&&!e.repeat&&!uiOpen()){e.preventDefault();openInventory();return}   // Tab: fixed second key for the inventory (81-inventory.js)
   const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
+  if(k==='i'&&!e.repeat&&!uiOpen()){e.preventDefault();openInventory();return}   // I (rebindable): inventory
   KEYS[k]=true;
   if(k===' '||k.startsWith('arrow'))e.preventDefault();
   if(k==='e'){
@@ -103,7 +106,7 @@ if(isTouch){
   const hold=(id,on,off)=>{const b=$(id);b.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();off&&off()},{passive:false})};
   hold('#tDig',()=>{digHeld=true},()=>{digHeld=false});
   hold('#tJump',()=>{KEYS[' ']=true},()=>{KEYS[' ']=false});
-  hold('#tUse',()=>use());hold('#tOnion',()=>eatOnion());
+  hold('#tUse',()=>use());hold('#tInv',()=>{if(invOpen)closeInventory();else if(!uiOpen())openInventory()});hold('#tOnion',()=>eatOnion());
   let si=0;hold('#tShout',()=>{shout(si);si=(si+1)%SHOUTS.length});
 }
 
