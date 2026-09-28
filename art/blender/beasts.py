@@ -1,7 +1,9 @@
 exec(open('/tmp/claude-1001/bl/creatures.py').read().split("# ================== yellow-spotted lizard")[0])
 from mathutils import noise
+SKEL={};ARMS={}
 def skin(name,nodes,edges,parent,sub=2,dec=0.35,seed=0):
     """nodes: [(x,y,z,rx,rz)]; a Skin-modifier body, subdivided, then decimated back to crisp low-poly facets."""
+    SKEL[name]=([tuple(n) for n in nodes],list(edges))
     me=bpy.data.meshes.new(name);me.from_pydata([n[:3] for n in nodes],edges,[]);o=bpy.data.objects.new(name,me);bpy.context.window.scene.collection.objects.link(o)
     o.modifiers.new('skin','SKIN')
     for i,n in enumerate(nodes):me.skin_vertices[0].data[i].radius=(n[3],n[4])
@@ -174,6 +176,7 @@ def feather(name,base,dirv,L,W,m,parent,roll=0.0):
     return o
 for s in (-1,1):
     arm=[(s*0.1,-0.08,Z+0.07),(s*0.38,0.02,Z+0.14),(s*0.62,0.14,Z+0.13),(s*0.8,0.3,Z+0.1)]
+    ARMS[s]=arm
     for k,(a,b) in enumerate(zip(arm,arm[1:])):
         cone(f'arm{s}{k}',a,b,0.045-k*0.01,0.035-k*0.01,COVERT,r,verts=7)
     for k in range(10):   # secondaries along the forearm, pointing back
