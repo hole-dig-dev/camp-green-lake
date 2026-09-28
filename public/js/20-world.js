@@ -164,9 +164,11 @@ const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.
 }
 function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a3f28);tr.position.y=1.7*s;g.add(tr);
   [[0,4.2,0,2.4],[1.4,3.7,0.6,1.8],[-1.3,3.8,-0.4,1.9],[0.2,5.1,-0.8,1.6]].forEach(([a,b,c,r])=>{const l=new T.Mesh(new T.IcosahedronGeometry(r*s,0),M(0x5f7a3a));l.position.set(a*s,b*s,c*s);l.castShadow=true;g.add(l)});
-  g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,0.9*s,0.9*s)}
+  g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,0.9*s,0.9*s);OAKS.push({x,z,s,g})}
+const OAKS=[];   // the Warden's two oaks: 23-models.js swaps in the Blender tree
 oak(-36.5,38.5,1.1);oak(-24,38,1);
 /* water truck */
+let WATER_TRUCK_PROC=null;
 {
   const g=new T.Group();
   const cab=box(2.2,2,2,0xd8d2c2);cab.position.set(0,1.5,-2.4);g.add(cab);
@@ -175,11 +177,12 @@ oak(-36.5,38.5,1.1);oak(-24,38,1);
   const tank=cyl(1.05,1.05,4.2,10,0xb9b4a6);tank.rotation.x=Math.PI/2;tank.position.set(0,1.95,0.7);g.add(tank);
   for(const[wx,wz]of[[-1.1,-2.4],[1.1,-2.4],[-1.1,1.6],[1.1,1.6]]){const w=cyl(0.45,0.45,0.35,10,0x1e1e1e);w.rotation.z=Math.PI/2;w.position.set(wx,0.45,wz);g.add(w)}
   const tap=cyl(0.08,0.08,0.5,6,0x4f8fb8);tap.rotation.z=Math.PI/2;tap.position.set(-1.3,1.4,1.8);g.add(tap);
-  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,5.4,2.4);
+  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,5.4,2.4);WATER_TRUCK_PROC=g;
 }
 /* flagpole + camp sign */
+const FLAG_PROC=[];
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
- const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);}
+ const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);FLAG_PROC.push(p,f);}
 const campSign=sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
 sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
 
@@ -188,7 +191,7 @@ sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
    collision line still stops them; the open gate is the only crossing. */
 const FENCE_X0=-40,FENCE_X1=30,FENCE_Z0=27.2,FENCE_Z1=55.8,GATE_X0=-6,GATE_X1=6;
 const EAST_GATE_Z0=36,EAST_GATE_Z1=42;
-const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null,GATE_PROC=null;   // fence posts/spans for the Blender models (23-models.js), and the box version they replace
+const FENCE_POSTS=[],FENCE_SPANS=[],LAMP_POSTS=[];let FENCE_PROC=null,GATE_PROC=null,LAMP_PROC=null;   // fence posts/spans for the Blender models (23-models.js), and the box version they replace
 {
   const parts=[],fparts=[],steel=0x4d5a58,mesh=0x75817a,concrete=0x91846e,wire=0xb2a99a;
   const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]),addP=(w,h,d,c,x,y,z)=>fparts.push([w,h,d,c,x,y,z]);
@@ -231,10 +234,12 @@ const FENCE_POSTS=[],FENCE_SPANS=[];let FENCE_PROC=null,GATE_PROC=null;   // fen
   add(8,0.025,7,0xb5a079,0,baseH(0,27)+0.02,27);
   add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
   add(5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44);
+  const lparts=[];   // path lamps: own mesh, replaced by the Blender lamp posts
   for(const [lx,lz] of [[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
-    add(0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz);
-    add(0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz);
+    lparts.push([0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz],[0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz]);
+    LAMP_POSTS.push({x:lx,y:baseH(lx,lz),z:lz,ry:Math.atan2(-lx,40-lz)});   // lamp arm leans toward the middle of camp
   }
+  LAMP_PROC=new T.Mesh(mergeBoxes(lparts),mergedMat);LAMP_PROC.castShadow=true;scene.add(LAMP_PROC);
   const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
   GATE_PROC=new T.Mesh(mergeBoxes(gparts),mergedMat);GATE_PROC.castShadow=true;scene.add(GATE_PROC);
   FENCE_PROC=new T.Mesh(mergeBoxes(fparts),mergedMat);FENCE_PROC.castShadow=true;FENCE_PROC.receiveShadow=true;scene.add(FENCE_PROC);

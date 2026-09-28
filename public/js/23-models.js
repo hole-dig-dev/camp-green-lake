@@ -35,7 +35,7 @@ function loadModel(name){
   return MODEL_CACHE[name];
 }
 const _mq=new T.Quaternion(),_mUp=new T.Vector3(0,1,0),_mS=new T.Vector3(),_mP=new T.Vector3(),_mM=new T.Matrix4();
-function placeMatrix(p){_mq.setFromAxisAngle(_mUp,p.ry||0);_mS.set(p.sx||1,1,1);_mP.set(p.x,p.y,p.z);return new T.Matrix4().compose(_mP,_mq,_mS)}
+function placeMatrix(p){_mq.setFromAxisAngle(_mUp,p.ry||0);const k=p.s||1;_mS.set((p.sx||1)*k,k,k);_mP.set(p.x,p.y,p.z);return new T.Matrix4().compose(_mP,_mq,_mS)}
 /* Any number of copies of one model as ONE InstancedMesh per material: the whole fence is ~6 draw calls.
    (A single copy is a plain Mesh instead, so it can be culled.) */
 function instanceModel(name,places,parent){
@@ -77,6 +77,13 @@ const hideProc=o=>{if(o)o.visible=false};   // swap: the box version goes once i
   // gates: the arch gate at the lake side and the sliding service gate on the east fence (outside faces away from camp)
   placeModel('MainGate',{x:0,y:baseH(0,FENCE_Z0),z:FENCE_Z0,ry:0}).then(()=>{hideProc(GATE_PROC);hideProc(mainGateSign)}).catch(()=>{});
   placeModel('ServiceGate',{x:FENCE_X1,y:baseH(FENCE_X1,39),z:39,ry:-Math.PI/2}).then(()=>hideProc(serviceGateSign)).catch(()=>{});
+  // yard: the water truck (cab toward the gate, tap on the tents' side as before), flagpole, path lamps, the Warden's oaks,
+  // and the crate stacks + mess tables from 22-security.js
+  placeModel('WaterTruck',{x:5,y:baseH(5,36),z:36,ry:-Math.PI/2}).then(()=>hideProc(WATER_TRUCK_PROC)).catch(()=>{});
+  placeModel('FlagPole',{x:-4,y:baseH(-4,38),z:38,ry:0}).then(()=>FLAG_PROC.forEach(hideProc)).catch(()=>{});
+  instanceModel('LampPost',LAMP_POSTS).then(()=>hideProc(LAMP_PROC)).catch(()=>{});
+  instanceModel('OakTree',OAKS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:o.x*0.7,s:o.s}))).then(()=>OAKS.forEach(o=>hideProc(o.g))).catch(()=>{});
+  Promise.all([instanceModel('SupplyCrate',YARD_CRATES),instanceModel('MessTable',MESS_TABLES)]).then(()=>hideProc(YARD_PROC)).catch(()=>{});
   // room shells: floor, walls, roof/ceiling, windows, door and wall dressing, one per room type
   TENTS.forEach((t,ti)=>placeModel(t.house?'WardenRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
     .then(()=>hideProc(ROOM_SHELL[ti])).catch(()=>{}));
@@ -101,11 +108,14 @@ const CAMP_PROPS=[
   {m:'SupplyCrate',x:20.6,z:43.2,ry:0.2,w:0.95,d:0.95},        // by the Wreck Room door
   {m:'SupplyCrate',x:21.6,z:43.4,ry:-0.3,w:0.95,d:0.95},
   {m:'SupplyCrate',x:21.1,z:43.3,ry:0.9,w:0.1,d:0.1,y:0.9},    // stacked on the other two
+  {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
+  {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Wreck Room, doors facing the yard
+  {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
 ];
 {
   const byModel={};
   for(const p of CAMP_PROPS){
-    if(p.w>0.2)solid(p.x,p.z,p.w,p.d);
+    if(p.w>0.2){const q=Math.abs(Math.sin(p.ry||0))>0.7;solid(p.x,p.z,q?p.d:p.w,q?p.w:p.d)}   // footprint turns with the model
     (byModel[p.m]=byModel[p.m]||[]).push({x:p.x,y:baseH(p.x,p.z)+(p.y||0),z:p.z,ry:p.ry});
   }
   for(const n in byModel)instanceModel(n,byModel[n]).catch(()=>{});
