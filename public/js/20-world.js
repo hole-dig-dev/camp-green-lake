@@ -130,11 +130,32 @@ TENTS.forEach((t,ti)=>{
   light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
 });
 function cabin(x,z,w,d,h,wall,roof){
-  const g=new T.Group();const b=box(w,h,d,wall);b.position.y=h/2;g.add(b);
-  const R=(d+0.8)/1.732;const rg=new T.CylinderGeometry(R,R,w+0.5,3);rg.rotateX(-Math.PI/2);rg.rotateY(Math.PI/2);
-  const rf=new T.Mesh(rg,M(roof));rf.scale.y=0.6;rf.position.y=h+0.5*R*0.6;rf.castShadow=true;g.add(rf);
-  const door=box(1.1,2,0.08,0x4a3522);door.position.set(0,1,-d/2-0.03);g.add(door);
-  for(const s of[-1,1]){const win=box(1,0.8,0.08,0x2f3a44);win.position.set(s*w*0.3,1.6,-d/2-0.03);g.add(win)}
+  const g=new T.Group(),parts=[],trim=0x513d2d,shadow=0x29353a;
+  const add=(a,b,c,col,px,py,pz,r)=>parts.push([a,b,c,col,px,py,pz,r]);
+  add(w,h,d,wall,0,h/2,0);
+  // Broad two-plane roof and repeated wall battens give the cabins a readable profile at a distance.
+  const rise=1.15,half=w/2+0.38,slope=Math.atan2(rise,half),panel=Math.hypot(half,rise);
+  for(const s of[-1,1])add(panel,0.16,d+0.75,roof,s*half/2,h+rise/2,0,[0,0,-s*slope]);
+  add(0.12,0.16,d+0.8,0xbaa783,0,h+rise,0);
+  for(let px=-w/2+0.55;px<w/2;px+=0.78){
+    add(0.045,h,0.055,trim,px,h/2,-d/2-0.035);
+    add(0.045,h,0.055,trim,px,h/2,d/2+0.035);
+  }
+  add(1.3,2.18,0.12,trim,0,1.09,-d/2-0.09);
+  add(1.06,1.96,0.06,0x674a33,0,1.01,-d/2-0.16);
+  add(0.08,0.08,0.1,0xc3a86b,0.38,1.05,-d/2-0.25);
+  add(0.18,0.2,0.09,0x34271d,-0.32,1.58,-d/2-0.24);
+  for(const s of[-1,1]){
+    const wx=s*w*0.32,wz=-d/2-0.1;
+    add(1.28,1.05,0.13,trim,wx,1.72,wz);
+    add(1.04,0.8,0.07,shadow,wx,1.73,wz-0.08);
+    add(0.065,0.83,0.08,0xb7a481,wx,1.73,wz-0.13);
+    add(1.08,0.065,0.08,0xb7a481,wx,1.73,wz-0.13);
+    add(0.16,0.95,0.11,roof,wx+s*0.7,1.72,wz-0.07);
+    add(0.14,0.16,1.0,trim,s*(w/2+0.055),2.1,0);
+    add(0.08,0.65,0.8,shadow,s*(w/2+0.11),1.7,0);
+  }
+  const shell=new T.Mesh(mergeBoxes(parts),mergedMat);shell.castShadow=true;shell.receiveShadow=true;g.add(shell);
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,w,d);return g;
 }
 cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
@@ -159,14 +180,51 @@ function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a
 oak(-36.5,38.5,1.1);oak(-24,38,1);
 /* water truck */
 {
-  const g=new T.Group();
-  const cab=box(2.2,2,2,0xd8d2c2);cab.position.set(0,1.5,-2.4);g.add(cab);
-  const glass=box(1.9,0.8,0.05,0x33444f);glass.position.set(0,2,-3.42);g.add(glass);
-  const bed=box(2.2,0.4,4.4,0x3a3a3a);bed.position.set(0,0.75,0.6);g.add(bed);
-  const tank=cyl(1.05,1.05,4.2,10,0xb9b4a6);tank.rotation.x=Math.PI/2;tank.position.set(0,1.95,0.7);g.add(tank);
-  for(const[wx,wz]of[[-1.1,-2.4],[1.1,-2.4],[-1.1,1.6],[1.1,1.6]]){const w=cyl(0.45,0.45,0.35,10,0x1e1e1e);w.rotation.z=Math.PI/2;w.position.set(wx,0.45,wz);g.add(w)}
-  const tap=cyl(0.08,0.08,0.5,6,0x4f8fb8);tap.rotation.z=Math.PI/2;tap.position.set(-1.3,1.4,1.8);g.add(tap);
-  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,5.4,2.4);
+  const g=new T.Group(),parts=[],ivory=0xc9c3af,iron=0x474a46,glass=0x34484e,rust=0x87674b;
+  const add=(w,h,d,c,x,y,z,r)=>parts.push([w,h,d,c,x,y,z,r]);
+  // Short-nosed utility truck: a separate hood, cab, running boards and rear tank cradle.
+  add(2.15,0.38,6.25,iron,0,0.83,-0.05);
+  add(2.12,1.72,1.75,ivory,0,1.63,-2.25);
+  add(1.95,0.68,0.72,ivory,0,1.39,-3.47);
+  add(1.8,0.67,0.065,glass,0,2.05,-3.16);
+  add(1.46,0.09,0.09,0xb5aa93,0,2.47,-3.23);
+  for(const s of[-1,1]){
+    add(0.06,0.7,1.03,glass,s*1.09,2.04,-2.2);
+    add(0.13,0.1,0.72,0xeee2c6,s*1.14,2.39,-2.2);
+    add(0.08,0.74,0.09,ivory,s*1.13,2.03,-2.2);
+    add(0.08,0.08,1.09,ivory,s*1.13,1.67,-2.2);
+    add(0.12,0.52,0.18,iron,s*1.15,1.27,-2.14);
+    add(0.27,0.12,0.9,iron,s*1.21,0.82,-2.26);
+    add(0.22,0.12,0.28,iron,s*1.27,1.82,-3.33); // side mirrors
+    add(0.36,0.28,1.06,ivory,s*0.92,0.84,-2.99); // fenders
+    add(0.22,0.13,4.65,rust,s*1.02,0.92,0.6);   // tank cradle
+    add(0.38,0.36,0.16,0xe8d6a1,s*0.77,1.6,-3.87);
+    add(0.55,0.08,0.1,0x5d3428,s*0.73,1.15,2.96);
+  }
+  add(1.35,0.46,0.09,0x555e5b,0,1.25,-3.87); // grille
+  for(let i=-2;i<=2;i++)add(0.095,0.35,0.11,0xb6ae9b,i*0.23,1.25,-3.94);
+  add(2.43,0.15,0.29,iron,0,0.86,-4.02);
+  add(2.3,0.18,0.18,iron,0,0.87,3.0);
+  const body=new T.Mesh(mergeBoxes(parts),mergedMat);body.castShadow=true;body.receiveShadow=true;g.add(body);
+  const tank=cyl(0.96,0.96,4.0,12,0xa9ada5);tank.rotation.x=Math.PI/2;tank.position.set(0,2.08,0.65);g.add(tank);
+  for(const z of[-1.08,0.65,2.38]){
+    const band=new T.Mesh(new T.TorusGeometry(0.97,0.055,4,12),M(0x5b665f));band.position.set(0,2.08,z);band.castShadow=true;g.add(band);
+  }
+  const hatch=cyl(0.27,0.31,0.17,8,0x68746d);hatch.position.set(0,3.13,0.25);g.add(hatch);
+  for(const z of[-2.65,1.75])for(const s of[-1,1]){
+    const tyre=cyl(0.49,0.49,0.32,12,0x282b29);tyre.rotation.z=Math.PI/2;tyre.position.set(s*1.12,0.5,z);g.add(tyre);
+    const hub=cyl(0.21,0.21,0.34,10,0xaaa799);hub.rotation.z=Math.PI/2;hub.position.set(s*1.12,0.5,z);g.add(hub);
+  }
+  for(const s of[-1,1]){
+    const tap=cyl(0.08,0.08,0.5,6,0x657c81);tap.rotation.z=Math.PI/2;tap.position.set(s*1.24,1.42,2.17);g.add(tap);
+    const spigot=cyl(0.07,0.07,0.31,6,0xbeb7a2);spigot.position.set(s*1.42,1.27,2.17);g.add(spigot);
+  }
+  const labelMat=new T.MeshStandardMaterial({map:signTex('WATER',512,150,'#d9d3bd','#45564f',78),roughness:1});
+  for(const s of[-1,1]){
+    const label=new T.Mesh(new T.PlaneGeometry(1.95,0.57),labelMat);
+    label.rotation.y=s*Math.PI/2;label.position.set(s*0.985,2.06,0.43);g.add(label);
+  }
+  g.position.set(5,baseH(5,36),36);g.rotation.y=Math.PI/2;scene.add(g);solid(5,36,8.1,2.8);
 }
 /* flagpole + camp sign */
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
@@ -226,10 +284,31 @@ sign('MAIN GATE\nLAKE ACCESS',0,25.2,Math.PI,4.2,1.25);
 sign('SERVICE GATE',27.3,39,Math.PI/2,2.5,0.8);
 
 {
-  // water tower: four legs, a tank and a cone roof
+  // Water tower: braced legs, a service ladder and a banded tank.
   const wx0=25,wz0=49,h0=baseH(wx0,wz0);
-  [[-1.3,-1.3],[1.3,-1.3],[-1.3,1.3],[1.3,1.3]].forEach(([dx,dz])=>{const l=cyl(0.12,0.14,5.4,6,0x5a4a3a);l.position.set(wx0+dx,h0+2.7,wz0+dz);scene.add(l)});
-  const tank=cyl(2.1,2.1,3.2,10,0xb9b4a6);tank.position.set(wx0,h0+5.4+1.6,wz0);scene.add(tank);
-  const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(wx0,h0+5.4+3.2+0.7,wz0);scene.add(roof);
+  const parts=[],add=(w,h,d,c,x,y,z,r)=>parts.push([w,h,d,c,wx0+x,h0+y,wz0+z,r]);
+  for(const dx of[-1.3,1.3])for(const dz of[-1.3,1.3]){
+    add(0.2,5.45,0.2,0x594c3e,dx,2.72,dz);
+    add(0.37,0.2,0.37,0x8f8371,dx,0.1,dz);
+  }
+  for(const h of[1.7,3.65,5.2]){
+    add(2.8,0.12,0.14,0x685b47,0,h,-1.3);add(2.8,0.12,0.14,0x685b47,0,h,1.3);
+    add(0.14,0.12,2.8,0x685b47,-1.3,h,0);add(0.14,0.12,2.8,0x685b47,1.3,h,0);
+  }
+  const a=Math.atan2(1.95,2.6),l=Math.hypot(1.95,2.6);
+  for(const side of[-1,1]){
+    add(l,0.1,0.1,0x82735a,0,2.7,side*1.3,[0,0,a]);
+    add(l,0.1,0.1,0x82735a,0,2.7,side*1.3,[0,0,-a]);
+  }
+  add(3.4,0.23,3.4,0x665543,0,5.45,0);
+  for(let h=0.35;h<5.5;h+=0.42)add(0.76,0.06,0.08,0xb2a386,0,h,-1.55);
+  for(const dx of[-0.38,0.38])add(0.07,5.5,0.08,0x6c6452,dx,2.75,-1.55);
+  const frame=new T.Mesh(mergeBoxes(parts),mergedMat);frame.castShadow=true;frame.receiveShadow=true;scene.add(frame);
+  const tank=cyl(2.1,2.1,3.2,12,0xa9aaa0);tank.position.set(wx0,h0+7.12,wz0);scene.add(tank);
+  for(const h of[5.69,8.55]){
+    const band=cyl(2.14,2.14,0.11,12,0x626d66);band.position.set(wx0,h0+h,wz0);scene.add(band);
+  }
+  const roof=cyl(0.05,2.3,1.25,12,0x72634e);roof.position.set(wx0,h0+9.34,wz0);scene.add(roof);
+  const pipe=cyl(0.09,0.09,5.9,6,0x707e79);pipe.position.set(wx0+2.04,h0+3.0,wz0);scene.add(pipe);
   solid(wx0,wz0,2.8,2.8);
 }

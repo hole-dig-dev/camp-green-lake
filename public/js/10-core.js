@@ -58,12 +58,14 @@ function box(w,h,d,c){const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(c));m.castSh
 function cyl(rt,rb,h,seg,c){const m=new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg),M(c));m.castShadow=true;m.receiveShadow=true;return m}
 /* PERF: merge a set of coloured boxes into ONE mesh, so the GPU draws it in one call instead of one per box.
    Each box's colour is baked into a per-vertex colour attribute, which lets every merged mesh share one material.
-   parts: [[width, height, depth, colour, x, y, z], ...] (moved up here so the camp buildings below can use it too) */
+   parts: [[width, height, depth, colour, x, y, z, optional XYZ rotation], ...]. */
 const mergedMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.95,metalness:0});
 function mergeBoxes(parts){
   const pos=[],col=[],c=new T.Color();
-  for(const[w,h,d,hex,x,y,z]of parts){
-    const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(x,y,z);
+  for(const[w,h,d,hex,x,y,z,rotation]of parts){
+    const g=new T.BoxGeometry(w,h,d).toNonIndexed();
+    if(rotation)g.rotateX(rotation[0]||0).rotateY(rotation[1]||0).rotateZ(rotation[2]||0);
+    g.translate(x,y,z);
     const p=g.attributes.position.array;for(let i=0;i<p.length;i++)pos.push(p[i]);
     c.setHex(hex);for(let i=0;i<p.length/3;i++)col.push(c.r,c.g,c.b);g.dispose();
   }
@@ -80,4 +82,3 @@ function mergeBoxes(parts){
   var sunDisc=new T.Mesh(new T.SphereGeometry(24,16,8),new T.MeshBasicMaterial({color:0xfff7df,fog:false}));
   sunDisc.position.copy(SUN_DIR).multiplyScalar(800);scene.add(sunDisc);
 }
-

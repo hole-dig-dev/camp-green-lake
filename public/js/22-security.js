@@ -3,7 +3,7 @@
 const WATCHTOWERS=[];
 {
   const pieces=[],metal=0x485350,deck=0x77634c,rail=0x9a8e71,glass=0x263840;
-  const add=(w,h,d,c,x,y,z)=>pieces.push([w,h,d,c,x,y,z]);
+  const add=(w,h,d,c,x,y,z,r)=>pieces.push([w,h,d,c,x,y,z,r]);
   // Packed walkways tie the gate, barracks, office and mess building into one compound.
   for(const [x,z,w,d] of [[0,35,5,14],[-29,36.5,4,11],[-12,36,24,3],[17,37,4,11]]){
     add(w,0.045,d,0xb69b72,x,baseH(x,z)+0.018,z);
@@ -17,20 +17,42 @@ const WATCHTOWERS=[];
     for(const dx of[-1.3,1.3])add(0.12,0.73,0.12,0x493426,x+dx,baseH(x,32)+0.37,32);
   }
   for(let i=0;i<SIM.TOWERS.length;i++){
-    const o=SIM.TOWERS[i],x=o.x,z=o.z,y=baseH(x,z),H=8.4;
-    for(const dx of[-1.05,1.05])for(const dz of[-1.05,1.05])add(0.2,H,0.2,metal,x+dx,y+H/2,z+dz);
-    for(const h of[1.4,4.2,7]){
-      add(2.35,0.12,0.1,metal,x,y+h,z-1.05);add(2.35,0.12,0.1,metal,x,y+h,z+1.05);
-      add(0.1,0.12,2.35,metal,x-1.05,y+h,z);add(0.1,0.12,2.35,metal,x+1.05,y+h,z);
+    const o=SIM.TOWERS[i],x=o.x,z=o.z,y=baseH(x,z),H=7.35;
+    for(const dx of[-1.13,1.13])for(const dz of[-1.13,1.13]){
+      add(0.24,H,0.24,metal,x+dx,y+H/2,z+dz);
+      add(0.39,0.18,0.39,0x9d9278,x+dx,y+0.09,z+dz);
     }
-    add(3.2,0.28,3.2,deck,x,y+7.25,z);
-    add(2.8,1.45,2.8,rail,x,y+8.08,z);
+    for(const h of[1.8,4.5,6.8]){
+      add(2.5,0.14,0.12,metal,x,y+h,z-1.13);add(2.5,0.14,0.12,metal,x,y+h,z+1.13);
+      add(0.12,0.14,2.5,metal,x-1.13,y+h,z);add(0.12,0.14,2.5,metal,x+1.13,y+h,z);
+    }
+    // Cross braces keep the tall frame from reading as four floating posts.
+    const angle=Math.atan2(2.7,2.26),length=Math.hypot(2.7,2.26);
     for(const side of[-1,1]){
-      add(1.65,0.75,0.06,glass,x,y+8.15,z+side*1.43);
-      add(0.06,0.75,1.65,glass,x+side*1.43,y+8.15,z);
+      for(const h of[1.8,4.5]){
+        add(length,0.105,0.12,rail,x,y+h+1.35,z+side*1.13,[0,0,angle]);
+        add(length,0.105,0.12,rail,x,y+h+1.35,z+side*1.13,[0,0,-angle]);
+        add(0.12,0.105,length,rail,x+side*1.13,y+h+1.35,z,[angle,0,0]);
+        add(0.12,0.105,length,rail,x+side*1.13,y+h+1.35,z,[-angle,0,0]);
+      }
     }
-    add(3.45,0.24,3.45,metal,x,y+8.94,z);
-    add(0.75,0.2,0.75,0xe8d398,x,y+9.05,z);
+    add(3.35,0.23,3.35,deck,x,y+7.28,z);
+    for(const side of[-1,1]){
+      add(3.0,0.62,0.13,deck,x,y+7.7,z+side*1.48);
+      add(0.13,0.62,3.0,deck,x+side*1.48,y+7.7,z);
+      add(1.8,0.79,0.055,glass,x,y+8.42,z+side*1.49);
+      add(0.055,0.79,1.8,glass,x+side*1.49,y+8.42,z);
+      for(const a of[-1.45,1.45]){
+        add(0.13,1.3,0.14,metal,x+a,y+8.25,z+side*1.48);
+        add(0.14,1.3,0.13,metal,x+side*1.48,y+8.25,z+a);
+      }
+      add(3.3,0.13,0.16,rail,x,y+8.93,z+side*1.48);
+      add(0.16,0.13,3.3,rail,x+side*1.48,y+8.93,z);
+    }
+    add(3.85,0.2,3.85,metal,x,y+9.22,z);
+    add(0.8,0.16,0.8,0xe8d398,x,y+9.32,z);
+    const cap=new T.Mesh(new T.ConeGeometry(2.75,0.9,4),M(0x68614c));
+    cap.rotation.y=Math.PI/4;cap.position.set(x,y+9.75,z);cap.castShadow=true;scene.add(cap);
     // A slim ladder is a visual affordance; the tower itself stays inaccessible.
     for(let h=0.5;h<7;h+=0.48)add(0.85,0.07,0.08,rail,x-1.42,y+h,z);
     for(const sz of[-0.43,0.43])add(0.08,6.8,0.08,metal,x-1.42,y+3.4,z+sz);
