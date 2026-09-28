@@ -70,7 +70,7 @@ for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:it
    Chunks farther out, up to LOAD_R, are built at 1/COARSE_STEP of that (a point every 1.2 m): 9x fewer triangles,
    but holes and dirt piles still show. Before this, every chunk out to ~170 m was full detail (~660k triangles). */
 const CH=24, CN=Math.round(CH/RES), LOAD_R=100, NEAR_R=40, COARSE_STEP=3;
-const C_SAND=new T.Color(0xdcab6e),C_SAND2=new T.Color(0xc99558),C_CRACK=new T.Color(0xa87444),C_DEEP=new T.Color(0x6e3c20),C_DIRT=new T.Color(0xeec48c),C_CAMP=new T.Color(0xc4955f),tmpC=new T.Color();
+const C_SAND=new T.Color(0xdcab6e),C_SAND2=new T.Color(0xc99558),C_CRACK=new T.Color(0xa87444),C_DEEP=new T.Color(0x6e3c20),C_DIRT=new T.Color(0xc99a64),C_CAMP=new T.Color(0xc4955f),tmpC=new T.Color();
 function toneAt(x,z){const crack=Math.abs(vnoise(x*0.55+40,z*0.55)-0.5)<0.035?1:0;return clamp(vnoise(x*0.18,z*0.18)*0.9+crack*2,0,3)}
 function shade(col,i,x,z,b,h,tn){
   if(tn>1.5)tmpC.copy(C_SAND).lerp(C_CRACK,0.55);else tmpC.copy(C_SAND).lerp(C_SAND2,tn);

@@ -109,30 +109,57 @@ function updateHoleLiners(dt){
   }
 }
 
-/* ---- dirt clods: each scoop tosses a couple from the hole onto its spoil pile ---- */
-const CLOD_MAX=60,CLOD_T=0.55,CLOD_G=14,CLOD_LINGER=0.9;
+/* ---- dirt clods: each scoop tosses a few from where the blade is working onto the spoil pile. They thud onto the
+   pile, squash flat, shed a couple of crumbs that trickle down its slope, then settle and sink into it -- so the
+   pile visibly takes them in, instead of clods popping out of existence next to it. ---- */
+const CLOD_MAX=110,CLOD_T=0.5,CLOD_G=14;
+const CLOD_DELAY=0.18;            // s after the scoop: lines the throw up with the toss in the dig swing
+const CLOD_REST=1.1,CLOD_SINK=0.7; // s a landed clod sits squashed on the pile, then s it takes to sink into it
+const CLOD_COL=[0xb98552,0xa8743f,0xc99a64,0x9c6a3a];   // fresh, slightly damp dirt; the spoil pile is shaded to match
 const clodGeo=(()=>{const g=new T.IcosahedronGeometry(1,0),p=g.attributes.position,rnd=mulberry32(99),bump=new Map();   // shared corners move together, so the lump stays closed
   for(let i=0;i<p.count;i++){const key=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!bump.has(key))bump.set(key,0.75+rnd()*0.4);const k=bump.get(key);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k*0.8,p.getZ(i)*k)}g.computeVertexNormals();return g})();
-const clodMesh=new T.InstancedMesh(clodGeo,new T.MeshStandardMaterial({color:0x8a5a34,flatShading:true,roughness:1}),CLOD_MAX);
+const clodMesh=new T.InstancedMesh(clodGeo,new T.MeshStandardMaterial({color:0xffffff,flatShading:true,roughness:1}),CLOD_MAX);
 clodMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);clodMesh.frustumCulled=false;clodMesh.castShadow=true;scene.add(clodMesh);
-const clods=[];let clodNext=0;
-for(let i=0;i<CLOD_MAX;i++)clods.push({life:0});
+const clods=[];let clodNext=0;const _cc=new T.Color();
+for(let i=0;i<CLOD_MAX;i++){clods.push({life:0});clodMesh.setColorAt(i,_cc.setHex(CLOD_COL[i%4]))}
+function clodSlot(){const c=clods[clodNext],i=clodNext;clodNext=(clodNext+1)%CLOD_MAX;clodMesh.setColorAt(i,_cc.setHex(CLOD_COL[(Math.random()*4)|0]));clodMesh.instanceColor.needsUpdate=true;return c}
+function launch(c,sx,sy,sz,tx,tz,T_,s,delay,frag){
+  const ty=groundAt(tx,tz)+s*0.5;
+  Object.assign(c,{x:sx,y:sy,z:sz,vx:(tx-sx)/T_,vz:(tz-sz)/T_,vy:(ty-sy+0.5*CLOD_G*T_*T_)/T_,t:0,land:T_,delay,frag,s,rest:0,life:1,spin:Math.random()*6,landed:false});
+}
 function throwClods(h,n){
-  for(let k=0;k<n;k++){
-    const c=clods[clodNext];clodNext=(clodNext+1)%CLOD_MAX;
-    const sx=h.x+(Math.random()-0.5)*h.r*0.8,sz=h.z+(Math.random()-0.5)*h.r*0.8,sy=groundAt(sx,sz)+0.25;
-    const tx=h.mx+(Math.random()-0.5)*MR*0.9,tz=h.mz+(Math.random()-0.5)*MR*0.9,ty=groundAt(tx,tz)+0.04,T_=CLOD_T*(0.85+Math.random()*0.3);
-    Object.assign(c,{x:sx,y:sy,z:sz,vx:(tx-sx)/T_,vz:(tz-sz)/T_,vy:(ty-sy+0.5*CLOD_G*T_*T_)/T_,t:0,land:T_,life:T_+CLOD_LINGER,s:0.07+Math.random()*0.07,spin:Math.random()*6});
+  // from the side of the hole nearest the digger (you, or whoever's at this hole), at the bottom where the blade bites
+  const dx=P.x-h.x,dz=P.z-h.z,dl=Math.hypot(dx,dz)||1,ox=h.x+dx/dl*h.r*0.35,oz=h.z+dz/dl*h.r*0.35;
+  for(let k=0;k<n+1;k++){
+    const c=clodSlot(),sx=ox+(Math.random()-0.5)*0.3,sz=oz+(Math.random()-0.5)*0.3;
+    // aim at the upper half of the spoil pile, so clods land on its crest and read as joining it
+    const a=Math.random()*6.283,r=Math.sqrt(Math.random())*MR*0.45,tx=h.mx+Math.cos(a)*r,tz=h.mz+Math.sin(a)*r;
+    launch(c,sx,groundAt(sx,sz)+0.2,sz,tx,tz,CLOD_T*(0.85+Math.random()*0.3),0.07+Math.random()*0.07,CLOD_DELAY+k*0.05,false);
+    c.hx=h.mx;c.hz=h.mz;   // the pile's crest: crumbs roll away from it
   }
 }
 function updateClods(dt){
   for(let i=0;i<CLOD_MAX;i++){
     const c=clods[i];
-    if(c.life>0){
-      c.life-=dt;c.t+=dt;
-      if(c.t<c.land){c.x+=c.vx*dt;c.z+=c.vz*dt;c.vy-=CLOD_G*dt;c.y+=c.vy*dt;c.spin+=dt*9}
-      const k=c.life<0.3?Math.max(0,c.life/0.3):1;
-      dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(c.spin,c.spin*0.7,0);dummy.scale.setScalar(c.s*k);
+    if(c.life>0&&c.delay>0){c.delay-=dt;dummy.scale.setScalar(0)}
+    else if(c.life>0){
+      if(!c.landed){
+        c.t+=dt;c.x+=c.vx*dt;c.z+=c.vz*dt;c.vy-=CLOD_G*dt;c.y+=c.vy*dt;c.spin+=dt*9;
+        if(c.t>=c.land){
+          c.landed=true;c.y=groundAt(c.x,c.z)+c.s*0.3;
+          if(!c.frag)for(let k=0;k<2+(Math.random()*2|0);k++){   // it breaks up: crumbs trickle down the pile's slope, away from its crest
+            const f=clodSlot(),ang=Math.atan2(c.z-(c.hz||c.z),c.x-(c.hx||c.x))+Math.random()*2-1,d=0.25+Math.random()*0.35;
+            launch(f,c.x,c.y+0.02,c.z,c.x+Math.cos(ang)*d,c.z+Math.sin(ang)*d,0.28+Math.random()*0.12,c.s*0.4,0,true);
+          }
+        }
+        dummy.position.set(c.x,c.y,c.z);dummy.rotation.set(c.spin,c.spin*0.7,0);dummy.scale.setScalar(c.s);
+      }else{
+        c.rest+=dt;
+        const sq=Math.min(1,c.rest/0.08),sink=Math.max(0,(c.rest-CLOD_REST)/CLOD_SINK);   // squash on impact, then settle down into the pile
+        dummy.position.set(c.x,groundAt(c.x,c.z)+c.s*(0.3-0.55*sink),c.z);dummy.rotation.set(0,c.spin,0);
+        dummy.scale.set(c.s*(1+0.35*sq),c.s*(1-0.45*sq)*(1-sink*0.6),c.s*(1+0.35*sq));
+        if(sink>=1)c.life=0;
+      }
     }else dummy.scale.setScalar(0);
     dummy.updateMatrix();clodMesh.setMatrixAt(i,dummy.matrix);
   }
