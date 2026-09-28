@@ -191,7 +191,7 @@ function lsPlan(ci,cj,k){
 
 function lsSound(level){
   if(!AC)return;
-  if(!lsRumbleNode){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=130;lsRumbleNode=AC.createGain();lsRumbleNode.gain.value=0;src.connect(f).connect(lsRumbleNode).connect(master);src.start()}
+  if(!lsRumbleNode){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=130;lsRumbleNode=AC.createGain();lsRumbleNode.gain.value=0;src.connect(f).connect(lsRumbleNode).connect(fxBus);src.start()}
   lsRumbleNode.gain.setTargetAtTime(level*0.55,AC.currentTime,0.3);
 }
 /* the ground-danger whistle: a falling tone + a burst of high hiss timed to about LS_WARN_LEAD, so it finishes

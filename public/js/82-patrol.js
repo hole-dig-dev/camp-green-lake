@@ -119,11 +119,11 @@ const LOOP={};
 function loops(){if(!AC)return false;if(LOOP.ok)return true;LOOP.ok=true;
   const so=AC.createOscillator();so.type='sawtooth';so.frequency.value=760;
   LOOP.lfo=AC.createOscillator();LOOP.lfo.frequency.value=0.45;const lg=AC.createGain();lg.gain.value=320;LOOP.lfo.connect(lg).connect(so.frequency);
-  const sf=AC.createBiquadFilter();sf.type='lowpass';sf.frequency.value=2200;LOOP.siren=AC.createGain();LOOP.siren.gain.value=0;so.connect(sf).connect(LOOP.siren).connect(master);so.start();LOOP.lfo.start();
-  const eo=AC.createOscillator();eo.type='sawtooth';eo.frequency.value=48;const ef=AC.createBiquadFilter();ef.type='lowpass';ef.frequency.value=180;LOOP.engine=AC.createGain();LOOP.engine.gain.value=0;eo.connect(ef).connect(LOOP.engine).connect(master);eo.start();
-  const df=AC.createBiquadFilter();df.type='lowpass';df.frequency.value=260;LOOP.drone=AC.createGain();LOOP.drone.gain.value=0;df.connect(LOOP.drone).connect(master);
+  const sf=AC.createBiquadFilter();sf.type='lowpass';sf.frequency.value=2200;LOOP.siren=AC.createGain();LOOP.siren.gain.value=0;so.connect(sf).connect(LOOP.siren).connect(fxBus);so.start();LOOP.lfo.start();
+  const eo=AC.createOscillator();eo.type='sawtooth';eo.frequency.value=48;const ef=AC.createBiquadFilter();ef.type='lowpass';ef.frequency.value=180;LOOP.engine=AC.createGain();LOOP.engine.gain.value=0;eo.connect(ef).connect(LOOP.engine).connect(fxBus);eo.start();
+  const df=AC.createBiquadFilter();df.type='lowpass';df.frequency.value=260;LOOP.drone=AC.createGain();LOOP.drone.gain.value=0;df.connect(LOOP.drone).connect(fxBus);
   for(const f of[55,58.3,82.4]){const o=AC.createOscillator();o.type='sawtooth';o.frequency.value=f;o.connect(df);o.start()}
-  const wn=AC.createBufferSource();wn.buffer=noiseBuf;wn.loop=true;const wf=AC.createBiquadFilter();wf.type='bandpass';wf.frequency.value=1700;wf.Q.value=4;LOOP.whisper=AC.createGain();LOOP.whisper.gain.value=0;wn.connect(wf).connect(LOOP.whisper).connect(master);wn.start();
+  const wn=AC.createBufferSource();wn.buffer=noiseBuf;wn.loop=true;const wf=AC.createBiquadFilter();wf.type='bandpass';wf.frequency.value=1700;wf.Q.value=4;LOOP.whisper=AC.createGain();LOOP.whisper.gain.value=0;wn.connect(wf).connect(LOOP.whisper).connect(fxBus);wn.start();
   return true}
 function updateNightSound(){
   if(!loops())return;const at=AC.currentTime;

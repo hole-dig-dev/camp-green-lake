@@ -152,12 +152,11 @@ function sendFile(res, file, type, headOnly) {
   });
 }
 
-// Static assets for the split client: public/js/*.js and public/css/*.css (produced by
-// scripts/split-client.mjs). Whitelisted extensions only; the resolved path must land inside
+// Static assets for the split client and its CC0 recordings. Whitelisted extensions only; the resolved path must land inside
 // public/<subdir> so '..', absolute paths, encoded traversal (%2e%2e) and symlinks that point
 // outside public/ all 404 instead of serving anything. no-cache: the game relies on a plain
 // reload picking up new client code (see /admin/update above).
-const STATIC_DIRS = { js: { ext: '.js', type: 'text/javascript; charset=utf-8' }, css: { ext: '.css', type: 'text/css; charset=utf-8' } };
+const STATIC_DIRS = { js: { ext: '.js', type: 'text/javascript; charset=utf-8' }, css: { ext: '.css', type: 'text/css; charset=utf-8' }, audio: { ext: '.mp3', type: 'audio/mpeg' } };
 function sendStatic(res, subdir, rawName) {
   const dir = STATIC_DIRS[subdir];
   let name;
@@ -187,7 +186,7 @@ const server = http.createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
     const url0 = (req.url || '/').split('?')[0];
-    const isStatic = /^\/(js|css)\/[\w.-]+\.(js|css)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
+    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
@@ -214,6 +213,7 @@ const server = http.createServer((req, res) => {
     // split client files (see scripts/split-client.mjs): whitelisted, resolved strictly inside public/
     if (url.startsWith('/js/')) return sendStatic(res, 'js', url.slice('/js/'.length));
     if (url.startsWith('/css/')) return sendStatic(res, 'css', url.slice('/css/'.length));
+    if (url.startsWith('/audio/')) return sendStatic(res, 'audio', url.slice('/audio/'.length));
     securityHeaders(res, false);
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');

@@ -39,23 +39,74 @@ const rain=new T.LineSegments(rainGeo,new T.LineBasicMaterial({color:0xcfe0ee,tr
 const rainSeed=[];for(let i=0;i<RAIN;i++)rainSeed.push({x:(Math.random()-0.5)*60,y:Math.random()*30,z:(Math.random()-0.5)*60,v:18+Math.random()*8});
 function updateRain(dt){if(!rain.visible)return;const cx=camera.position.x,cz=camera.position.z;for(let i=0;i<RAIN;i++){const d=rainSeed[i];d.y-=d.v*dt;if(d.y<-2){d.y=28;d.x=(Math.random()-0.5)*60;d.z=(Math.random()-0.5)*60}const x=cx+d.x,z=cz+d.z,y=d.y+P.y;rainPos.set([x,y,z,x-0.05,y+0.7,z],i*6)}rainGeo.attributes.position.needsUpdate=true}
 
-/* ---------- audio (made in the browser, starts on your first click) ---------- */
-let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null;
+/* ---------- audio: CC0 foley and ambience, with synthesized fallbacks ---------- */
+let AC=null,master=null,noiseBuf=null,muted=false,rainGain=null,windNoiseGain=null;
+const AUDIO_FILES={
+  shovel:'shovel.mp3',wind:'wind.mp3',birds:'birds.mp3',crickets:'crickets.mp3',rain:'rain.mp3',
+  'step-sand-1':'step-sand-1.mp3','step-sand-2':'step-sand-2.mp3','step-sand-3':'step-sand-3.mp3',
+  'step-stone-1':'step-stone-1.mp3','step-stone-2':'step-stone-2.mp3','step-stone-3':'step-stone-3.mp3',
+  cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',doorClose:'doorClose_1.mp3',metalClick:'metalClick.mp3'
+};
+const audioBuffers=new Map(),audioLoads=new Map(),ambientLoops=new Map();
+function loadAudioClip(name){
+  if(!AC||!AUDIO_FILES[name])return Promise.resolve(null);
+  if(audioBuffers.has(name))return Promise.resolve(audioBuffers.get(name));
+  if(audioLoads.has(name))return audioLoads.get(name);
+  const p=fetch('/audio/'+AUDIO_FILES[name]).then(r=>{if(!r.ok)throw Error('audio unavailable');return r.arrayBuffer()})
+    .then(bytes=>AC.decodeAudioData(bytes)).then(buffer=>{audioBuffers.set(name,buffer);return buffer}).catch(()=>null);
+  audioLoads.set(name,p);return p;
+}
+function playAudioClip(name,volume=1,rate=1){
+  if(!AC)return false;
+  const buffer=audioBuffers.get(name);if(!buffer){loadAudioClip(name);return false}
+  const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.playbackRate.value=rate;
+  gain.gain.value=volume;src.connect(gain).connect(fxBus);src.onended=()=>{src.disconnect();gain.disconnect()};src.start();return true;
+}
+function setAmbientClip(name,volume){
+  if(!AC)return;
+  let loop=ambientLoops.get(name);
+  if(!loop){const buffer=audioBuffers.get(name);if(!buffer){loadAudioClip(name);return}
+    const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.loop=true;gain.gain.value=0;
+    src.connect(gain).connect(fxBus);src.start();loop={src,gain};ambientLoops.set(name,loop);
+  }
+  loop.gain.gain.setTargetAtTime(volume,AC.currentTime,0.9);
+}
+let footstepT=0,footstepN=0;
+function updateFootsteps(dt){
+  if(!AC||!S.started)return;
+  if(!P.moving||!P.grounded||S.ko||S.inBed!=null||digHeld){footstepT=0;return}
+  footstepT-=dt;if(footstepT>0)return;
+  const running=P.anim===4,kind=inTent()?'stone':'sand';
+  footstepT=running?0.29:P.crouch?0.58:0.43;
+  footstepN=(footstepN+1)%3;
+  if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.4:0.32,0.92+Math.random()*0.16))noise(0.07,280,0.6,0.05,'lowpass');
+}
+function updateAudioScene(){
+  if(!AC||!S.started)return;
+  const outside=inTent()?0.14:1,night=nightF(),dust=haboobF();
+  setAmbientClip('wind',outside*(0.36+dust*0.14));
+  setAmbientClip('birds',outside*(1-night)*(1-dust)*0.24);
+  setAmbientClip('crickets',outside*night*(1-dust)*0.43);
+  setAmbientClip('rain',S.won?0.33:0);
+  const at=AC.currentTime;
+  if(windNoiseGain)windNoiseGain.gain.setTargetAtTime(outside*(audioBuffers.has('wind')?0.013:0.06),at,1);
+  if(rainGain)rainGain.gain.setTargetAtTime(S.won?(audioBuffers.has('rain')?0.02:0.18):0,at,1);
+}
 function initAudio(){
   if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=SETTINGS.volMaster;master.connect(AC.destination);
   fxBus=AC.createGain();fxBus.gain.value=SETTINGS.volFx;fxBus.connect(master);   // pause menu: ambient + one-shot sfx share this bus, so Effects volume is independent of Music
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-  const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;const wg=AC.createGain();wg.gain.value=0.07;
-  const lfo=AC.createOscillator();lfo.frequency.value=0.08;const lg=AC.createGain();lg.gain.value=0.04;lfo.connect(lg).connect(wg.gain);lfo.start();
-  wind.connect(wf).connect(wg).connect(fxBus);wind.start();
+  const wind=AC.createBufferSource();wind.buffer=noiseBuf;wind.loop=true;const wf=AC.createBiquadFilter();wf.type='lowpass';wf.frequency.value=320;windNoiseGain=AC.createGain();windNoiseGain.gain.value=0.06;
+  wind.connect(wf).connect(windNoiseGain).connect(fxBus);wind.start();
   const rn=AC.createBufferSource();rn.buffer=noiseBuf;rn.loop=true;const rf=AC.createBiquadFilter();rf.type='bandpass';rf.frequency.value=2600;rf.Q.value=0.5;rainGain=AC.createGain();rainGain.gain.value=0;rn.connect(rf).connect(rainGain).connect(fxBus);rn.start();
+  for(const name of Object.keys(AUDIO_FILES))loadAudioClip(name);
   }catch(e){AC=null}
 }
 function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
 function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
 const sfx={
-  scoop(){noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)},
-  clank(){tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)},
+  scoop(){if(!playAudioClip('shovel',0.48,0.94+Math.random()*0.12)){noise(0.22,420+Math.random()*260,0.7,0.55,'lowpass');tone(110,0.12,'sine',0.25,55)}},
+  clank(){if(!playAudioClip('metalClick',1.15)){tone(1400,0.25,'triangle',0.12,900);noise(0.08,3000,3,0.15)}},
   find(){[660,880,1320].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.16),i*85))},
   gold(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,0.3,'triangle',0.16),i*110))},
   coin(){tone(988,0.08,'square',0.07);setTimeout(()=>tone(1319,0.18,'square',0.07),70)},
@@ -66,4 +117,3 @@ const sfx={
   splash(){noise(0.4,1200,0.7,0.3)},
   thud(){tone(80,0.2,'sine',0.35,40)}
 };
-

@@ -94,7 +94,7 @@ function twVisual(tw,dt){
 }
 function twSound(level){
   if(!AC)return;
-  if(!twWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=380;twWind=AC.createGain();twWind.gain.value=0;src.connect(f).connect(twWind).connect(master);src.start()}
+  if(!twWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=380;twWind=AC.createGain();twWind.gain.value=0;src.connect(f).connect(twWind).connect(fxBus);src.start()}
   twWind.gain.setTargetAtTime(level*0.6,AC.currentTime,0.3);
 }
 
@@ -192,4 +192,3 @@ function twStep(dt){
     if(u>=1){twSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }
 }
-

@@ -183,7 +183,7 @@ function updateSoloRescues(dt){
 
 function sinkSound(level){
   if(!AC)return;
-  if(!sinkRumbleNode){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=90;sinkRumbleNode=AC.createGain();sinkRumbleNode.gain.value=0;src.connect(f).connect(sinkRumbleNode).connect(master);src.start()}
+  if(!sinkRumbleNode){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=90;sinkRumbleNode=AC.createGain();sinkRumbleNode.gain.value=0;src.connect(f).connect(sinkRumbleNode).connect(fxBus);src.start()}
   sinkRumbleNode.gain.setTargetAtTime(level*0.6,AC.currentTime,0.25);
 }
 
