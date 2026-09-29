@@ -50,12 +50,18 @@ function towerRy(o){
     for(let h=0.5;h<7;h+=0.48)addT(alongX?0.08:0.85,0.07,alongX?0.85:0.08,rail,ax,y+h,az);
     for(const s of[-0.43,0.43])addT(0.08,6.8,0.08,metal,ax+(alongX?0:s),y+3.4,az+(alongX?s:0));
     solid(x,z,TOWER_FOOT,TOWER_FOOT);
+    // The searchlight sits on a post above the roof peak so it can swivel all the way round. head turns with the beam
+    // (updateWatchtowers); it starts with a stand-in lamp (ph), swapped for the Blender tower's own lamp in 23-models.js.
     const by=y+SIM.TOWER_LAMP_Y;
+    add(0.14,SIM.TOWER_LAMP_Y-8.9,0.14,metal,x,y+(SIM.TOWER_LAMP_Y+8.9)/2-0.12,z);   // the post, from inside the roof up to the lamp
+    const head=new T.Group();head.position.set(x,by,z);head.rotation.order='YXZ';scene.add(head);
+    const ph=new T.Group();head.add(ph);
+    const phBody=new T.Mesh(new T.CylinderGeometry(0.24,0.27,0.5,10).rotateX(Math.PI/2).translate(0,0,0.2),M(metal));phBody.castShadow=true;ph.add(phBody);
+    const lamp=new T.Mesh(new T.CircleGeometry(0.22,12).translate(0,0,0.46),new T.MeshBasicMaterial({color:0xffe5a6}));lamp.visible=false;ph.add(lamp);
     const beam=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0xffe7aa,vertexColors:true,transparent:true,opacity:0.11,
       blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));
     beam.position.set(x,by,z);beam.visible=false;scene.add(beam);
-    const lamp=new T.Mesh(new T.SphereGeometry(0.3,6,4),new T.MeshBasicMaterial({color:0xffe5a6}));lamp.position.set(x,by,z);lamp.visible=false;scene.add(lamp);
-    WATCHTOWERS.push({beam,lamp,x,z,by});
+    WATCHTOWERS.push({beam,lamp,head,ph,x,z,by});
   }
   const staticMesh=new T.Mesh(mergeBoxes(pieces),mergedMat);staticMesh.castShadow=true;staticMesh.receiveShadow=true;scene.add(staticMesh);
   TOWERS_PROC=new T.Mesh(mergeBoxes(towerPieces),mergedMat);TOWERS_PROC.castShadow=true;TOWERS_PROC.receiveShadow=true;scene.add(TOWERS_PROC);
@@ -66,6 +72,8 @@ function towerRy(o){
 const TOWER_AXIS=new T.Vector3(0,-1,0),TOWER_DIR=new T.Vector3();
 const TOWER_BEAM_FADE=0.3;   // how bright the far end of the visible beam is, compared with the lamp end
 const TOWER_POOL=0.55;       // brightness of the lit patch on the ground, at full night
+const TOWER_LENS=0.45;       // m from the lamp's pivot out to its lens, where the beam starts
+let TOWER_LENS_MAT=null;     // the Blender lamp's lens (23-models.js): glows at night
 const SL_U={uSLPos:{value:[0,1,2,3].map(()=>new T.Vector3())},uSLDir:{value:[0,1,2,3].map(()=>new T.Vector3())},
   uSLCos:{value:Math.cos(SIM.CURFEW.towerHalf)},uSLGain:{value:0}};
 let towerBeamKey='';
@@ -79,14 +87,16 @@ function towerBeamGeometry(){   // rebuilt only when the Curfew tab's reach/widt
 function updateWatchtowers(){
   const n=nightF(),t=clockT(),C=SIM.CURFEW,on=n>0.04,key=C.towerReach+','+C.towerHalf,tl=SIM.towerTilt(),glow=tuneOr('curfew.towerGlow',1);
   if(on&&key!==towerBeamKey){towerBeamKey=key;for(const o of WATCHTOWERS){o.beam.geometry.dispose();o.beam.geometry=towerBeamGeometry()}}
-  SL_U.uSLGain.value=on?TOWER_POOL*n*glow:0;SL_U.uSLCos.value=Math.cos(C.towerHalf);
+  SL_U.uSLGain.value=on?TOWER_POOL*n*glow:0;if(TOWER_LENS_MAT)TOWER_LENS_MAT.emissiveIntensity=on?1.3*n*Math.min(glow,1.5):0;SL_U.uSLCos.value=Math.cos(C.towerHalf);
   for(let i=0;i<WATCHTOWERS.length;i++){
     const o=WATCHTOWERS[i];o.beam.visible=on&&glow>0;o.lamp.visible=on;
-    if(!on)continue;
+    if(!on)continue;   // by day the lamps stay parked where the night left them
     const a=SIM.towerHeading(i,t);
+    o.head.rotation.set(tl,a,0);   // YXZ: swing to the heading, then tip down to the beam's tilt: the lens looks down the beam
     TOWER_DIR.set(Math.sin(a)*Math.cos(tl),-Math.sin(tl),Math.cos(a)*Math.cos(tl));
     o.beam.quaternion.setFromUnitVectors(TOWER_AXIS,TOWER_DIR);
+    o.beam.position.copy(o.head.position).addScaledVector(TOWER_DIR,TOWER_LENS);
     o.beam.material.opacity=0.11*n*glow;
-    SL_U.uSLPos.value[i].set(o.x,o.by,o.z);SL_U.uSLDir.value[i].copy(TOWER_DIR);
+    SL_U.uSLPos.value[i].copy(o.beam.position);SL_U.uSLDir.value[i].copy(TOWER_DIR);
   }
 }

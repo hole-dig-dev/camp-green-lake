@@ -69,6 +69,39 @@ function instanceModel(name,places,parent){
 const placeModel=(name,p,parent)=>instanceModel(name,[p],parent);
 const hideProc=o=>{if(o)o.visible=false};   // swap: the box version goes once its model is in
 
+/* ---- the watchtower's searchlight, cut out of the tower model ----
+   In Watchtower.glb the lamp, its yoke and lens sit on the front rail (model space: |x|<0.34, y 8..9, z 1.1..1.9, with
+   nothing else of the tower in that box), tipped 0.35 rad down. Those triangles become the lamp, re-centred on the
+   yoke and levelled so it looks straight down +z like the head that carries it. */
+const TOWER_LAMP_BOX={x:0.34,y0:8,y1:9,z0:1.1,z1:1.9},TOWER_LAMP_PIVOT=[0,8.55,1.25],TOWER_LAMP_TIP=0.35;
+function splitGeometry(geo,keep){   // -> [triangles where keep(a,b,c) is true, the rest]; geo is non-indexed
+  const pos=geo.attributes.position,n=pos.count/3,sel=[],rest=[],a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
+  for(let t=0;t<n;t++){a.fromBufferAttribute(pos,t*3);b.fromBufferAttribute(pos,t*3+1);c.fromBufferAttribute(pos,t*3+2);(keep(a,b,c)?sel:rest).push(t)}
+  const build=tris=>{if(!tris.length)return null;const g=new T.BufferGeometry();
+    for(const name in geo.attributes){const at=geo.attributes[name],sz=at.itemSize,arr=new at.array.constructor(tris.length*3*sz);
+      tris.forEach((t,i)=>arr.set(at.array.subarray(t*3*sz,(t+1)*3*sz),i*3*sz));g.setAttribute(name,new T.BufferAttribute(arr,sz,at.normalized))}
+    return g};
+  return[build(sel),build(rest)];
+}
+function towerLampSplit(meshes){
+  const B=TOWER_LAMP_BOX,inBox=v=>Math.abs(v.x)<B.x&&v.y>B.y0&&v.y<B.y1&&v.z>B.z0&&v.z<B.z1,body=[],lamp=[];
+  for(const part of meshes){
+    let g=part.geometry.clone().applyMatrix4(part.matrix);if(g.index)g=g.toNonIndexed();
+    const [l,rest]=splitGeometry(g,(a,b,c)=>inBox(a)&&inBox(b)&&inBox(c));
+    if(rest)body.push({geometry:rest,material:part.material,matrix:new T.Matrix4()});
+    if(l){l.translate(-TOWER_LAMP_PIVOT[0],-TOWER_LAMP_PIVOT[1],-TOWER_LAMP_PIVOT[2]).rotateX(-TOWER_LAMP_TIP);lamp.push({geometry:l,material:part.material,lens:!rest})}
+  }
+  return{body,lamp};
+}
+function towerLampMount(parts){
+  for(const p of parts)if(p.lens){   // the lens (a part that was all lamp): its own material, so it can glow at night
+    p.material=p.material.clone();p.material.emissive=p.material.color.clone();p.material.emissiveIntensity=0;TOWER_LENS_MAT=p.material}
+  for(const o of WATCHTOWERS){
+    for(const p of parts){const m=new T.Mesh(p.geometry,p.material);m.castShadow=true;o.head.add(m)}
+    o.ph.visible=false;
+  }
+}
+
 /* ---- the swaps ---- */
 {
   const TENT_MODEL=t=>t.crew?'TentCrew':'TentSmall';
@@ -77,7 +110,10 @@ const hideProc=o=>{if(o)o.visible=false};   // swap: the box version goes once i
   placeModel('WreckRoom',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(wreckCabin)).catch(()=>{});
   placeModel('WardenHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(wardenCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
-  instanceModel('Watchtower',SIM.TOWERS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:towerRy(o)})))   // square to the fence, ladder + searchlight facing the yard
+  // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
+  // model and mounted on each tower's swivelling head (22-security.js), so it points where its beam goes
+  MODEL_CACHE.WatchtowerBody=loadModel('Watchtower').then(({meshes})=>{const k=towerLampSplit(meshes);towerLampMount(k.lamp);return{meshes:k.body}});
+  instanceModel('WatchtowerBody',SIM.TOWERS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:towerRy(o)})))
     .then(()=>hideProc(TOWERS_PROC)).catch(()=>{});
   // fence: posts where 20-world.js put them; spans stretched to each gap (the model is 2.5 m long)
   Promise.all([instanceModel('FencePost',FENCE_POSTS),instanceModel('FenceSpan',FENCE_SPANS.map(s=>Object.assign({sx:s.len/2.5},s)))])
