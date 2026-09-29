@@ -25,9 +25,10 @@ const VULTURE_WARN_TIME=5;          // seconds of tightening circling before the
 const VULTURE_DIVE_TIME=1.3;        // swoop-in duration, timed to be readable (and shoo-able)
 const VULTURE_GRAB_TIME=0.35;       // the snatch, before it starts hauling you
 const VULTURE_CARRY_TIME=2.6;       // how long it carries you before letting go
-const VULTURE_CARRY_DIST_MIN=14,VULTURE_CARRY_DIST_MAX=22;   // "a short way across" (m)
+// carry distance: "a short way across", 14-22 m by default; F2 > Creatures > vulture.dist sets the middle
 const VULTURE_APEX_MIN=6,VULTURE_APEX_MAX=8.5;   // carry height (m) above the grab point's ground - varies the fall, and the damage with it
-const VULTURE_Y_MAX=9.4,VULTURE_Y_MIN=-4.5;   // stays inside the network's -5..10 P.y clamp (see docs/HANDOFF.md #5) with a small margin
+const VULTURE_Y_MAX=60,VULTURE_Y_MIN=-4.5;   // inside the server's -5..ZONE_MAX_Y (200) P.y clamp; the height slider tops out ~29 m over the ground
+const VULTURE_MAX_BRAKE=8;   // m/s²: the climb eases out no harder than this (under 1 g), or the camper hanging from its foot swings up over it
 const VULTURE_HOLD_UP=1.3;          // how far above the victim the bird's body sits while it's got them
 const VULTURE_DOWN_TIME=1.3,VULTURE_GETUP_TIME=0.4;   // lie-still then stand, same shape as the twister's landing
 const VULTURE_LEAVE_TIME=0.5;       // how long the bird lingers flying off after letting go (cosmetic only)
@@ -46,7 +47,7 @@ const FALL_DMG_MAX=25;      // cap keeps a single drop from being a guaranteed k
 function fallDamage(impactSpeed){
   if(impactSpeed<=FALL_SAFE_SPEED)return 0;
   const u=clamp((impactSpeed-FALL_SAFE_SPEED)/(FALL_MAX_SPEED-FALL_SAFE_SPEED),0,1);
-  return Math.round(FALL_DMG_MAX*u*u);   // ease-in: a near-safe drop barely stings, a full one hurts a lot (tuned to ~12-25)
+  return Math.round(tuneOr('vulture.fallDmg',FALL_DMG_MAX)*u*u);   // ease-in: a near-safe drop barely stings, a full one hurts a lot (tuned to ~12-25)
 }
 
 /* ---- local per-client state machine (see file banner) ----
@@ -54,7 +55,7 @@ function fallDamage(impactSpeed){
    3 grab, 4 carry, 5 drop/tumble, 6 down, 7 getting up (3-7 take over movement, like twSt). */
 let vSt=0,vStT=0,vGraceT=0,vCool=0;
 let vGrabX=0,vGrabZ=0,vGrabY0=0;
-let vCarryX0=0,vCarryZ0=0,vCarryX1=0,vCarryZ1=0,vCarryGround=0,vCarryApex=0;
+let vCarryX0=0,vCarryZ0=0,vCarryX1=0,vCarryZ1=0,vCarryGround=0,vCarryApex=0,vRiseT=1.56,vCarryT=2.6;
 let vRagX=0,vRagY=0,vRagZ=0;
 let vDiveX0=0,vDiveY0=0,vDiveZ0=0,vLastBirdX=0,vLastBirdZ=0;
 function vStateName(){return['free','warn','dive','grab','carry','drop','down','getup'][vSt]}
@@ -193,9 +194,13 @@ function startGrab(){
 }
 function startCarry(){
   vSt=4;vStT=0;vCarryX0=P.x;vCarryZ0=P.z;vCarryGround=groundAt(P.x,P.z);
-  const dir=Math.random()*Math.PI*2,dist=VULTURE_CARRY_DIST_MIN+Math.random()*(VULTURE_CARRY_DIST_MAX-VULTURE_CARRY_DIST_MIN);
+  // height and distance: the F2 sliders set the middle, the old ranges' spread is kept (6-8.5 m, 14-22 m at the defaults)
+  const dir=Math.random()*Math.PI*2,dist=tuneOr('vulture.dist',18)*(0.78+Math.random()*0.44);
   vCarryX1=clamp(vCarryX0+Math.sin(dir)*dist,-HALF+3,HALF-3);vCarryZ1=clamp(vCarryZ0+Math.cos(dir)*dist,-HALF+3,HALF-3);
-  vCarryApex=VULTURE_APEX_MIN+Math.random()*(VULTURE_APEX_MAX-VULTURE_APEX_MIN);
+  vCarryApex=tuneOr('vulture.height',(VULTURE_APEX_MIN+VULTURE_APEX_MAX)/2)*(0.83+Math.random()*0.34);
+  // the climb takes 60% of the carry, or longer when it's high enough that it would have to brake harder than
+  // VULTURE_MAX_BRAKE (ease-out: braking = 2*height/time²); the carry stretches to keep a beat at the top
+  const T=tuneOr('vulture.carry',VULTURE_CARRY_TIME);vRiseT=Math.max(T*0.6,Math.sqrt(2*vCarryApex/VULTURE_MAX_BRAKE));vCarryT=Math.max(T,vRiseT+T*0.4);
 }
 function startDrop(){
   vSt=5;vStT=0;P.vy=1.2;   // a small final upward toss as it lets go, then gravity takes over
@@ -206,7 +211,7 @@ function startDrop(){
 function vLand(impactSpeed){
   const dmg=fallDamage(impactSpeed);
   logEv('vDrop',{dmg,speed:+impactSpeed.toFixed(1),x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
-  vCool=VULTURE_COOLDOWN;vPoolFree('me');   // a breather before it can single you out again
+  vCool=tuneOr('vulture.cool',VULTURE_COOLDOWN);vPoolFree('me');   // a breather before it can single you out again
   if(dmg>0)hurt(dmg,'Vulture','A vulture carried you up and dropped you.');
   if(S.ko)return;   // hurt() knocked you out - knockOut() already reset vSt; the ordinary KO/downed flow takes it from here
   vSt=6;vStT=0;P.kx=P.kz=0;
@@ -235,15 +240,15 @@ function vStep(dt){
     vDrawCarrier('me',P.x,P.y+VULTURE_HOLD_UP*0.6,P.z,me.g.rotation.y,'grab',dt);
     if(vStT>=VULTURE_GRAB_TIME)startCarry();
   }else if(vSt===4){                                            // carried up and a short way across
-    const u=clamp(vStT/VULTURE_CARRY_TIME,0,1);
+    const u=clamp(vStT/vCarryT,0,1);
     P.x=lerp(vCarryX0,vCarryX1,sm(u));P.z=lerp(vCarryZ0,vCarryZ1,sm(u));
     // climbing: fast off the ground, easing to the top at under 1 g (a smoothstep here braked at ~4 g, and the camper
     // hanging from its foot swung up over it)
-    const riseU=clamp(u/0.6,0,1);P.y=clamp(vCarryGround+vCarryApex*(1-(1-riseU)*(1-riseU)),VULTURE_Y_MIN,VULTURE_Y_MAX);
+    const riseU=clamp(vStT/vRiseT,0,1);P.y=clamp(vCarryGround+vCarryApex*(1-(1-riseU)*(1-riseU)),VULTURE_Y_MIN,VULTURE_Y_MAX);
     let dr=Math.atan2(vCarryX1-vCarryX0,vCarryZ1-vCarryZ0)-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*4);
     me.g.position.set(P.x,P.y,P.z);vPersonPose(dt,1);
     vDrawCarrier('me',P.x,P.y+VULTURE_HOLD_UP,P.z,me.g.rotation.y,'carry',dt);
-    if(vStT>=VULTURE_CARRY_TIME)startDrop();
+    if(vStT>=vCarryT)startDrop();
   }else if(vSt===5){                                            // dropped - falling ragdoll, same idea as the twister's tumble
     P.vy-=16*dt;P.y+=P.vy*dt;
     if(!me.model){me.g.rotation.x+=dt*vRagX;me.g.rotation.y+=dt*vRagY;me.g.rotation.z+=dt*vRagZ}   // the Blender camper ragdolls instead (26-ragdoll.js)
@@ -252,7 +257,7 @@ function vStep(dt){
     me.g.position.set(P.x,P.y,P.z);
   }else if(vSt===6){                                            // down - lie still, same pose as any other knockout
     animPerson(me,3,dt);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*6));me.g.position.set(P.x,P.y,P.z);
-    if(vStT>=VULTURE_DOWN_TIME){vSt=7;vStT=0}
+    if(vStT>=tuneOr('vulture.down',VULTURE_DOWN_TIME)){vSt=7;vStT=0}
   }else if(vSt===7){                                            // getting up
     const u=clamp(vStT/VULTURE_GETUP_TIME,0,1);
     if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}
@@ -269,20 +274,20 @@ function updateVultures(dt){
   if(vSt<2)vPoolFree('me');   // states 3+ are drawn from vStep(); this is just a safety net (KO/respawn/reload mid-sequence)
   if(vSt===0){
     if(underThreatNow())vGraceT+=dt;else vGraceT=0;
-    if(vGraceT>=VULTURE_GRACE)startWarn();
+    if(vGraceT>=tuneOr('vulture.grace',VULTURE_GRACE))startWarn();
   }else if(vSt===1){
     if(vCancelCheck()){vCancelToIdle();return vRenderRemoteCarries(dt)}
-    vStT+=dt;if(vStT>=VULTURE_WARN_TIME)startDive();
+    vStT+=dt;if(vStT>=tuneOr('vulture.warn',VULTURE_WARN_TIME))startDive();
   }else if(vSt===2){
     if(vCancelCheck()){vCancelToIdle();return vRenderRemoteCarries(dt)}
     vStT+=dt;
-    const u=sm(clamp(vStT/VULTURE_DIVE_TIME,0,1)),tx=P.x,tz=P.z,gy=groundAt(tx,tz);
+    const u=sm(clamp(vStT/tuneOr('vulture.dive',VULTURE_DIVE_TIME),0,1)),tx=P.x,tz=P.z,gy=groundAt(tx,tz);
     const bx=lerp(vDiveX0,tx,u),by=lerp(vDiveY0,gy+VULTURE_HOLD_UP,u),bz=lerp(vDiveZ0,tz,u);
     vLastBirdX=bx;vLastBirdZ=bz;
     vDrawCarrier('me',bx,by,bz,Math.atan2(tx-bx,tz-bz),'dive',dt);
     const h=Math.max(0,by-gy);vShadow.position.set(tx,gy+0.05,tz);
     vShadow.material.opacity=clamp(1-h/22,0,0.5);vShadow.scale.setScalar(clamp(1.7-h*0.06,0.35,1.7));
-    if(vStT>=VULTURE_DIVE_TIME){vShadow.material.opacity=0;startGrab()}
+    if(vStT>=tuneOr('vulture.dive',VULTURE_DIVE_TIME)){vShadow.material.opacity=0;startGrab()}
   }
   vRenderRemoteCarries(dt);
 }
