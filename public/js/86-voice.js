@@ -14,7 +14,13 @@
 let ICE_SERVERS=[{urls:'stun:stun.l.google.com:19302'}]; // replaced by the server's hello.iceServers (adds TURN if configured there)
 const VOICE_CONNECT=60, VOICE_DROP=80; // meters: open a connection / tear one down (gap avoids flapping at the edge)
 const VOICE_REF_DIST=4, VOICE_MAX_DIST=36; // panner falloff, tuned close to the text CHAT_RANGE (30m) on the server
-const VOICE_STALE_MS=6000; // an offer nobody answered (the other side's voice is off): drop it and retry later
+const VOICE_STALE_MS=6000;
+/* walkie-talkies (86-walkie.js): two campers who both own one keep a voice link at any distance, and past plain
+   earshot the voice comes through a radio filter instead of from where they stand */
+const RADIO_NEAR=18,RADIO_FAR=30,RADIO_VOL=0.6;   // RADIO_VOL: about as loud as someone a few metres away (F2 > Audio > Walkie-talkie scales it)   // m: the radio fades in between these (positional voice fades out by VOICE_MAX_DIST)
+const RADIO_CURVE=(()=>{const c=new Float32Array(256);for(let i=0;i<256;i++){const x=i/127.5-1;c[i]=Math.tanh(x*1.6)/1.6}return c})();   // unity gain for quiet speech, loud peaks rounded off like a little speaker
+function radioPair(R){return!!(S.up&&S.up.walkie&&R&&(R.f&4096))}
+const VOICE_STALE_MS_=VOICE_STALE_MS; // an offer nobody answered (the other side's voice is off): drop it and retry later
 const SPEAK_LVL=0.045; // RMS level above which we consider someone "speaking" for the glow indicator
 const VOX={enabled:false,mode:'ptt',muted:false,localStream:null,peers:new Map(),selfSrc:null,selfAnalyser:null,selfBuf:null};
 let voiceMaster=null; // a sub-bus under the game's master gain, so pressing M mutes voice along with everything else
@@ -88,7 +94,7 @@ function setupRemoteVoiceAudio(peer,stream){
   const audioEl=document.createElement('audio');audioEl.autoplay=true;audioEl.muted=true;audioEl.srcObject=stream;audioEl.style.display='none';
   document.body.appendChild(audioEl);audioEl.play().catch(()=>{});peer.audioEl=audioEl;
   const src=AC.createMediaStreamSource(stream);
-  Object.assign(peer,voicePanner());src.connect(peer.panner);
+  Object.assign(peer,voicePanner());src.connect(peer.panner);src.connect(peer.radioIn);
 }
 /* where a remote voice comes out: a positional panner (moved every frame in updateVoice) into the voice bus, plus a
    level tap for the green "speaking" glow. Used by direct WebRTC voice and by relayed voice alike. */
@@ -98,7 +104,14 @@ function voicePanner(){
   const gain=AC.createGain();gain.gain.value=1;
   const analyser=AC.createAnalyser();analyser.fftSize=512;
   panner.connect(gain).connect(voiceMaster);panner.connect(analyser);
-  return{panner,gain,analyser,levelBuf:new Uint8Array(analyser.frequencyBinCount),level:0};
+  // the walkie-talkie: the same voice, not positional, squeezed through a small radio speaker (telephone band + a
+  // little grit). Silent unless you both have walkies and they're out of plain earshot (updateVoice sets radioGain).
+  const radioIn=AC.createBiquadFilter();radioIn.type='highpass';radioIn.frequency.value=420;
+  const lo=AC.createBiquadFilter();lo.type='lowpass';lo.frequency.value=2900;
+  const grit=AC.createWaveShaper();grit.curve=RADIO_CURVE;
+  const radioGain=AC.createGain();radioGain.gain.value=0;
+  radioIn.connect(lo).connect(grit).connect(radioGain).connect(voiceMaster);radioGain.connect(analyser);
+  return{panner,gain,analyser,levelBuf:new Uint8Array(analyser.frequencyBinCount),level:0,radioIn,radioGain};
 }
 function dropVoicePeer(id){
   const peer=VOX.peers.get(id);if(!peer)return;VOX.peers.delete(id);
@@ -106,6 +119,7 @@ function dropVoicePeer(id){
   if(peer.audioEl){peer.audioEl.srcObject=null;peer.audioEl.remove()}
   if(peer.panner)try{peer.panner.disconnect()}catch(e){}
   if(peer.gain)try{peer.gain.disconnect()}catch(e){}
+  if(peer.radioGain)try{peer.radioIn.disconnect();peer.radioGain.disconnect()}catch(e){}
   const R=remotes.get(id);if(R)R.L.el.classList.remove('speaking');
 }
 function voiceProximityTick(){
@@ -114,14 +128,15 @@ function voiceProximityTick(){
   for(const[id,R]of remotes){
     const dist=Math.hypot(R.p.g.position.x-P.x,R.p.g.position.z-P.z);
     let peer=VOX.peers.get(id);
-    if(R.room!==S.tent){if(peer)dropVoicePeer(id);VOX.relayTo.delete(id);R.voiceSince=0;continue}
-    if(!peer){if(dist<VOICE_CONNECT&&net.id<id&&!(R.p2pRetryAt>now))try{peer=makeVoicePeer(id,true)}catch(e){R.p2pFailed=true;R.p2pRetryAt=now+RELAY_RETRY_P2P_MS}} // lower id offers, so both sides never offer at once; no WebRTC at all = relay
-    else if(dist>VOICE_DROP)dropVoicePeer(id);
+    const radio=radioPair(R);   // both have walkie-talkies: stay connected at any distance, tent or not
+    if(R.room!==S.tent&&!radio){if(peer)dropVoicePeer(id);VOX.relayTo.delete(id);R.voiceSince=0;continue}
+    if(!peer){if((dist<VOICE_CONNECT||radio)&&net.id<id&&!(R.p2pRetryAt>now))try{peer=makeVoicePeer(id,true)}catch(e){R.p2pFailed=true;R.p2pRetryAt=now+RELAY_RETRY_P2P_MS}} // lower id offers, so both sides never offer at once; no WebRTC at all = relay
+    else if(dist>VOICE_DROP&&!radio)dropVoicePeer(id);
     else if(!peer.pc.remoteDescription&&now-peer.createdAt>VOICE_STALE_MS)dropVoicePeer(id); // unanswered offer: retry next tick
     // relay fallback: send them our voice through the server while there's no direct connection (after a grace
     // period for the direct one to come up, or at once if it failed); stop as soon as the direct link works
-    if(dist>VOICE_DROP){R.voiceSince=0;VOX.relayTo.delete(id);continue}
-    if(dist<VOICE_CONNECT&&!R.voiceSince)R.voiceSince=now;
+    if(dist>VOICE_DROP&&!radio){R.voiceSince=0;VOX.relayTo.delete(id);continue}
+    if((dist<VOICE_CONNECT||radio)&&!R.voiceSince)R.voiceSince=now;
     const direct=VOX.peers.get(id)&&VOX.peers.get(id).pc.connectionState==='connected';
     if(direct)VOX.relayTo.delete(id);
     else if(R.voiceSince&&(R.p2pFailed||now-R.voiceSince>RELAY_AFTER_MS))VOX.relayTo.add(id);
@@ -176,9 +191,9 @@ function handleRelayVoice(from,a){
   const t=AC.currentTime;
   if(e.next<t+0.03)e.next=t+0.12;   // starting (or ran dry): leave ~120 ms of slack for network jitter
   else if(e.next>t+0.6)return;       // backed up: drop a frame to catch up
-  const s=AC.createBufferSource();s.buffer=buf;s.connect(e.panner);s.onended=()=>s.disconnect();s.start(e.next);e.next+=n/RELAY_RATE;e.last=performance.now();
+  const s=AC.createBufferSource();s.buffer=buf;s.connect(e.panner);s.connect(e.radioIn);s.onended=()=>s.disconnect();s.start(e.next);e.next+=n/RELAY_RATE;e.last=performance.now();
 }
-function dropRelayIn(id){const e=VOX.relayIn.get(id);if(!e)return;VOX.relayIn.delete(id);try{e.panner.disconnect();e.gain.disconnect()}catch(_){}const R=remotes.get(id);if(R)R.L.el.classList.remove('speaking')}
+function dropRelayIn(id){const e=VOX.relayIn.get(id);if(!e)return;VOX.relayIn.delete(id);try{e.panner.disconnect();e.gain.disconnect();e.radioIn.disconnect();e.radioGain.disconnect()}catch(_){}const R=remotes.get(id);if(R)R.L.el.classList.remove('speaking')}
 const voxFwd=new T.Vector3();
 function updateVoice(now){
   if(!AC)return;
@@ -192,6 +207,10 @@ function updateVoice(now){
     for(const[id,peer]of[...VOX.peers,...VOX.relayIn]){
       const R=remotes.get(id);if(!R)continue;
       const pos=R.p.g.position;
+      if(peer.radioGain){   // over the radio once they're out of plain earshot (fades in from RADIO_NEAR to RADIO_FAR)
+        const d=Math.hypot(pos.x-P.x,pos.z-P.z),far=R.room!==S.tent?1:clamp((d-RADIO_NEAR)/(RADIO_FAR-RADIO_NEAR),0,1);
+        peer.radioGain.gain.setTargetAtTime(radioPair(R)?far*RADIO_VOL*tune('vol.radio'):0,AC.currentTime,0.08);
+      }
       if(peer.panner){
         if(peer.panner.positionX){peer.panner.positionX.value=pos.x;peer.panner.positionY.value=pos.y+1.4;peer.panner.positionZ.value=pos.z}
         else peer.panner.setPosition(pos.x,pos.y+1.4,pos.z);

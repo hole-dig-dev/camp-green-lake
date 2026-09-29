@@ -53,7 +53,8 @@ function relayVoice(c, raw) {
   let out = null;
   for (const id of m.to.slice(0, 8)) {
     const t = clients.get(id | 0);
-    const why = !t ? 'gone' : t === c ? 'self' : !t.joined ? 'notjoined' : t.room !== c.room ? 'room' : Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE ? 'far' : '';
+    const radio = c.wk && t && t.wk; // both have walkie-talkies: voice carries any distance, tent to lake (86-walkie.js)
+    const why = !t ? 'gone' : t === c ? 'self' : !t.joined ? 'notjoined' : radio ? '' : t.room !== c.room ? 'room' : Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE ? 'far' : '';
     if (why) { st.drop[why] = (st.drop[why] || 0) + 1; continue; }
     send(t, out || (out = JSON.stringify({ t: 'vo', f: c.id, a: m.a }))); st.fwd[t.n] = (st.fwd[t.n] || 0) + 1;
   }
@@ -486,8 +487,8 @@ wss.on('connection', (ws, req) => {
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
-        // 128 a vulture has you (83-vultures.js)
-        c.f = num(m.f, 0, 4095, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
+        // 128 a vulture has you (83-vultures.js), ... 2048 talking on the walkie, 4096 owns a walkie (86-walkie.js)
+        c.f = num(m.f, 0, 8191, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
         if (!(c.f & 2) && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
           if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }
           c.body = null; c.cartId = null; broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });

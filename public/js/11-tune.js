@@ -116,6 +116,7 @@ const TUNE_DEFS=[
   // ---- audio: each multiplies that sound's own mix level (the pause menu's Master/Effects still apply on top)
   {key:'vol.wind',tab:'Audio',label:'Wind',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.crickets',tab:'Audio',label:'Crickets (night)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'vol.radio',tab:'Audio',label:'Walkie-talkie voices (friends out of earshot)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.calls',tab:'Audio',label:'Desert calls (hawk, dove, coyotes, owl)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.rain',tab:'Audio',label:'Rain',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.steps',tab:'Audio',label:'Footsteps',def:1,kind:'mul',range:4,zero:true,unit:'×'},

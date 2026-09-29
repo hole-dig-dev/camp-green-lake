@@ -6,7 +6,9 @@
    laid over whatever the body is doing, so you can walk and talk. The first-aid kit just hangs from the hand by its
    handle.
    Talking = holding P (push-to-talk), speaking (open mic), or just sent a chat message, with a walkie-talkie bought.
-   Friends see it: pos flag 2048 = talking on the walkie (65-net.js); a tonic or kit is an emote ('tonic'/'medkit'). */
+   Friends see it: pos flag 2048 = talking on the walkie (65-net.js); a tonic or kit is an emote ('tonic'/'medkit').
+   Voice: two campers who both own a walkie (flag 4096) hear each other at any distance; out of earshot it comes over
+   the radio, filtered, with a squelch as they key up and let go (86-voice.js radioPair / RADIO_*). */
 const HELD_MODEL={walkie:'SupplyWalkie',tonic:'SupplyTonic',medkit:'SupplyMedkit'};
 const HELD_GRIP={walkie:0.059,tonic:0.055,medkit:0.155};   // grip height above each model's origin (supplies.py GRIP)
 const HELD_SIZE={walkie:1.7,tonic:1.6,medkit:1.3};        // × real size: the camper's chunky hands (~10 cm across) would swallow a life-size radio
@@ -92,8 +94,22 @@ function updateWalkie(dt){
   if(me&&me.model){const talk=walkieTalking();
     if(talk&&!(me.held&&me.held.k==='walkie'&&me.held.t>0)&&!(me.held&&me.held.k!=='walkie'&&me.held.t>0))holdProp(me,'walkie');
     else if(!talk)releaseProp(me,'walkie')}
-  for(const R of remotes.values()){const p=R.p;if(!p.model)continue;const talk=!!(R.f&2048)&&!(R.f&(2|512));
+  const mine=walkieTalking();if(mine!==walkieWasTalking){walkieWasTalking=mine;if(VOX.enabled&&!walkieChatT)squelch(mine,0.5)}   // your own radio clicks as you key up
+  for(const R of remotes.values()){const p=R.p,talk=!!(R.f&2048)&&!(R.f&(2|512));
+    // a friend keying up out of earshot: their voice arrives over your radio (86-voice.js), with the squelch around it
+    if(talk!==!!R.wkTalk){R.wkTalk=talk;if(VOX.enabled&&radioPair(R)&&(R.room!==S.tent||Math.hypot(p.g.position.x-P.x,p.g.position.z-P.z)>RADIO_NEAR))squelch(talk,1)}
+    if(!p.model)continue;
     if(talk&&!(p.held&&p.held.t>0))holdProp(p,'walkie');else if(!talk)releaseProp(p,'walkie')}
+}
+/* radio squelch: a short burst of band-limited static when a transmission opens, a longer softer one when it closes */
+let walkieWasTalking=false;
+function squelch(open,vol){
+  if(!AC||!noiseBuf||muted)return;
+  const t=AC.currentTime,src=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(),len=open?0.07:0.16;
+  src.buffer=noiseBuf;src.loop=true;f.type='bandpass';f.frequency.value=open?2200:1700;f.Q.value=0.7;
+  const v=0.16*vol*(SETTINGS.volVoice??1);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.001,t+len);
+  src.connect(f).connect(g).connect(fxBus);src.start(t,Math.random());src.stop(t+len+0.02);src.onended=()=>{try{g.disconnect()}catch(e){}};
+  if(open)tone(1450,0.05,'square',0.025*vol);
 }
 /* a tonic or first-aid kit: in your hand for a moment, and friends see it too */
 function showSupply(k){holdProp(me,k,HOLD_SECS[k]);wsSend({t:'emote',k})}

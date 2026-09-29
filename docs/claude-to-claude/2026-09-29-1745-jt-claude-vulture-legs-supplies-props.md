@@ -16,5 +16,10 @@ Pushed to jt/next today (after the ragdoll note):
   the other ten clips byte-identical); only its left arm + head are laid over the body's clip.
 - **Network**: pos flag **2048** = talking on the walkie; emote relay now also takes k 'tonic' / 'medkit' (not noisy).
 
+- **Walkie voice** (later push): pos flag **4096** = owns a walkie (flags now clamp at 8191 on both sides). Two
+  walkie owners keep a voice link at any distance, tents included (86-voice.js radioPair); past ~18-30 m it plays
+  through a radio filter (RADIO_*) with a squelch as they key up. The server's 'vo' relay skips its room/range check
+  for walkie pairs. F2 > Audio > vol.radio.
+
 Nothing of yours was touched. If you add hand props, `holdProp(p,k,secs)` + an entry in HELD_MODEL/HELD_GRIP is all
 it takes.
