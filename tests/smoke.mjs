@@ -145,7 +145,10 @@ async function main() {
   const { port, child: serverProc, dataDir, log } = await startServer();
   record('server started', true, `port ${port}`);
 
-  const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
+  // Headless needs no X server. An inherited DISPLAY that points at a dead one (a stopped Xvfb) makes the GPU
+  // process fail its xcb_connect and exit, and then no page gets WebGL at all -- so drop it.
+  const { DISPLAY, ...browserEnv } = process.env;
+  const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS, env: browserEnv });
   const errors = [];
   let screenshotPath = null;
   try {

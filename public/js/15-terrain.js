@@ -11,12 +11,14 @@ function addHole(h){
   holes.push(h);const k=gkey(cellOf(h.x),cellOf(h.z));let L=grid.get(k);if(!L){L=[];grid.set(k,L)}L.push(h);return h;
 }
 function forNearHoles(x,z,fn){const cx=cellOf(x),cz=cellOf(z);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=grid.get(gkey(cx+i,cz+j));if(L)for(const h of L)fn(h)}}
-function surfaceAt(x,z,b){
+/* skip (optional): holes whose dug-out bowl to leave out -- their spoil mound still counts. The hole liners use
+   it to draw one hole's own bowl and let a shader decide where a deeper neighbour takes over (46-holes.js). */
+function surfaceAt(x,z,b,skip){
   let dep=0,mound=0;
   forNearHoles(x,z,h=>{
     if(h.d<=0)return;
     const dx=x-h.x,dz=z-h.z,d2=dx*dx+dz*dz;
-    if(d2<h.r*h.r){const t=Math.sqrt(d2)/h.r;const p=t<0.72?1:1-sm((t-0.72)/0.28);const v=h.d*p;if(v>dep)dep=v}
+    if(d2<h.r*h.r&&!(skip&&skip(h))){const t=Math.sqrt(d2)/h.r;const p=t<0.72?1:1-sm((t-0.72)/0.28);const v=h.d*p;if(v>dep)dep=v}
     if(!h.noMound){const ex=x-h.mx,ez=z-h.mz,e2=ex*ex+ez*ez;if(e2<MR*MR){const t=Math.sqrt(e2)/MR;mound+=Math.min(h.d,FIVE_FT)*0.3*(0.5+0.5*Math.cos(Math.PI*t))}}
   });
   return dep>0.001?b-dep:b+mound;

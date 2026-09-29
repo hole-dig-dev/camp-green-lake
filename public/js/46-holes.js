@@ -8,10 +8,13 @@
      - each scoop throws dirt clods in an arc from the hole onto its spoil pile
      - a clink and a glint in the bottom of the hole a scoop or two before a find comes up
    Purely visual: collisions/standing still use the terrain heights (groundAt), and the liner samples the same
-   surfaceAt() shape, so what you see matches where you stand to within a few centimetres. */
+   surfaceAt() shape, so what you see matches where you stand to within a few centimetres.
+   Neighbouring holes merge the way the ground does (the deeper hole wins at every spot), so a row of holes reads
+   as one trench: each liner draws only its own bowl, and its shader drops any pixel where another lined hole is
+   deeper. Overlapping liners never stack, and a neighbour's later digging can't leave a stale rim across it. */
 
 const HL_N=40;               // holes that get a liner (the nearest ones); farther holes keep the plain terrain dip
-const HL_SEG=28;             // segments around each hole
+const HL_SEG=40;             // segments around each hole (fine enough that where two holes meet, their walls line up)
 const HL_LIP=0.6;            // m past the rim the liner still covers: the terrain triangles that straddle the rim dip down this far
 const HL_CUT=0.55;           // m past the rim the terrain is discarded (a little less than the lip, so the seam sits under terrain)
 const HL_SCAN_R=45;          // look for holes this far around you
@@ -19,12 +22,13 @@ const HL_RESCAN=0.25;        // seconds between re-picking which holes get liner
 const FOOT=0.3048;
 
 /* ---- the terrain cut: chunk fragments inside a lined hole's (rim + HL_CUT) are discarded ---- */
+// one entry per liner slot: (x, z, radius, depth); radius 0 = slot unused
 const hlHoleU={value:Array.from({length:HL_N},()=>new T.Vector4(0,0,0,0))};
 chunkMat.onBeforeCompile=sh=>{
   sh.uniforms.uHoles=hlHoleU;
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vHW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvHW=(modelMatrix*vec4(transformed,1.0)).xz;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>\nvarying vec2 vHW;uniform vec4 uHoles[${HL_N}];`)
-    .replace('void main() {',`void main() {\nfor(int i=0;i<${HL_N};i++){vec4 h=uHoles[i];if(h.z>0.0&&distance(vHW,h.xy)<h.z)discard;}`);
+    .replace('void main() {',`void main() {\nfor(int i=0;i<${HL_N};i++){vec4 h=uHoles[i];if(h.z>0.0&&distance(vHW,h.xy)<h.z+${HL_CUT.toFixed(3)})discard;}`);
 };
 
 /* ---- liner geometry: fixed topology, rings from the lip in to the centre ---- */
@@ -45,13 +49,29 @@ function hlGeometry(){
   for(let r=0;r<nr-1;r++)for(let s=0;s<HL_SEG;s++){const a=r*HL_VPR+s,b=a+1,c=a+HL_VPR,d=c+1;idx.push(a,c,b,b,c,d)}
   g.setIndex(idx);return g;
 }
-const hlMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
-hlMat.onBeforeCompile=sh=>{
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aDepth;attribute float aWall;varying float vDepth;varying float vWall;')
-    .replace('#include <begin_vertex>','#include <begin_vertex>\nvDepth=aDepth;vWall=aWall;');
+/* A liner draws its own hole's bowl, so where holes overlap it keeps only the pixels where its hole is the deepest
+   (the same rule surfaceAt() uses). hlDep() is surfaceAt()'s per-hole depth profile. On an exact tie (a shared
+   flat floor, or overlapping lips) the lower slot draws it, so two liners never z-fight. One material per slot,
+   so each shader knows which hole it is (uSelf); they all compile to the same program. */
+const HL_GLSL_DEP=`float hlDep(vec4 h,vec2 p){if(h.z<=0.0)return -1.0;float t=distance(p,h.xy)/h.z;return t>=1.0?0.0:h.w*(t<0.72?1.0:1.0-smoothstep(0.0,1.0,(t-0.72)/0.28));}`;
+function hlMakeMat(slot){
+  const m=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0}),self={value:slot};
+  m.onBeforeCompile=sh=>{
+  sh.uniforms.uHoles=hlHoleU;sh.uniforms.uSelf=self;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aDepth;attribute float aWall;varying float vDepth;varying float vWall;varying vec2 vHW;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\nvDepth=aDepth;vWall=aWall;vHW=(modelMatrix*vec4(transformed,1.0)).xz;');
   // walls: soil strata by depth (a wobbly sine so the bands aren't ruler-straight), darker the deeper you go,
   // and a thin dark line at every foot
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vDepth;varying float vWall;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>\nvarying float vDepth;varying float vWall;varying vec2 vHW;uniform vec4 uHoles[${HL_N}];uniform int uSelf;\n${HL_GLSL_DEP}`)
+    .replace('void main() {',`void main() {
+      float own=hlDep(uHoles[uSelf],vHW);
+      for(int i=0;i<${HL_N};i++){
+        if(i==uSelf)continue;
+        vec4 h=uHoles[i];if(h.z<=0.0)continue;
+        float o=hlDep(h,vHW);
+        if(o>own+0.0001)discard;
+        if(i<uSelf&&o>=own-0.0001&&distance(vHW,h.xy)<h.z+${(HL_LIP-0.02).toFixed(3)})discard;
+      }`)
     .replace('#include <color_fragment>',`#include <color_fragment>
       if(vWall>0.5){
         float d=max(vDepth,0.0);
@@ -62,20 +82,25 @@ hlMat.onBeforeCompile=sh=>{
         float mark=d>0.12?1.0-smoothstep(0.0,0.03,min(f,1.0-f)):0.0;
         diffuseColor.rgb=mix(strata,strata*0.42,mark*0.85);
       }`);
-};
+  };
+  return m;
+}
 const hlPool=[];
-for(let i=0;i<HL_N;i++){const m=new T.Mesh(hlGeometry(),hlMat);m.receiveShadow=true;m.castShadow=false;m.visible=false;m.frustumCulled=false;scene.add(m);hlPool.push({m,h:null,d:-1})}
+for(let i=0;i<HL_N;i++){const m=new T.Mesh(hlGeometry(),hlMakeMat(i));m.receiveShadow=true;m.castShadow=false;m.visible=false;m.frustumCulled=false;scene.add(m);hlPool.push({m,h:null,seen:-1,dirty:false})}
+let hlLined=new Set();   // holes that currently have a liner; their bowls are left out of every other liner's shape
 const _hlC=new T.Color();
 
-/* sample the true (smooth) ground shape around one hole into its liner */
+/* sample one hole's own bowl into its liner: the true ground shape (spoil mounds, and any hole without a liner)
+   minus the other lined holes, which draw themselves */
 function hlBuild(slot,h){
+  const skip=o=>o!==h&&hlLined.has(o);
   const g=slot.m.geometry,pos=g.attributes.position.array,col=g.attributes.color.array,dep=g.attributes.aDepth.array,wall=g.attributes.aWall.array;
   let v=0;
   for(const ring of HL_RINGS){
     const rad=ring[0]==='lip'?h.r+ring[1]:h.r*ring[1],isWall=ring[0]==='t'&&ring[2]===1;
     for(let s=0;s<HL_VPR;s++){
       const a=s/HL_SEG*Math.PI*2,x=h.x+Math.cos(a)*rad,z=h.z+Math.sin(a)*rad,b=baseH(x,z);
-      let y=surfaceAt(x,z,b);if(ring[0]==='lip'&&ring[1]>=HL_LIP-0.01)y-=0.012;   // tuck the outer edge just under the terrain
+      let y=surfaceAt(x,z,b,skip);if(ring[0]==='lip'&&ring[1]>=HL_LIP-0.01)y-=0.012;   // tuck the outer edge just under the terrain
       pos[v*3]=x;pos[v*3+1]=y;pos[v*3+2]=z;dep[v]=b-y;wall[v]=isWall?1:0;
       // floor and lip use the terrain's own colouring; the floor a bit darker and damper
       const tmp=[0,0,0];shade(tmp,0,x,z,b,y,toneAt(x,z));_hlC.setRGB(tmp[0],tmp[1],tmp[2]);
@@ -85,12 +110,21 @@ function hlBuild(slot,h){
   }
   g.attributes.position.needsUpdate=true;g.attributes.color.needsUpdate=true;g.attributes.aDepth.needsUpdate=true;g.attributes.aWall.needsUpdate=true;
   g.computeVertexNormals();g.computeBoundingSphere();
-  slot.h=h;slot.d=h.d;slot.m.visible=true;
+  slot.h=h;slot.seen=h.d;slot.dirty=false;slot.m.visible=true;
 }
+/* a hole changed (dug, gained or lost its liner): rebuild the liners its bowl or spoil pile can reach */
+function hlDirtyNear(h){
+  for(const s of hlPool)if(s.h&&s.h!==h&&Math.hypot(s.h.x-h.x,s.h.z-h.z)<s.h.r+HL_LIP+h.r+1.0+MR)s.dirty=true;
+}
+/* backstop: dark soil well below the deepest hole. Where two liners meet, rounding can leave a hairline between
+   them; through it you see this, a dark crease, instead of the sky (the terrain under a lined hole is cut away). */
+const hlUnder=new T.Mesh(new T.PlaneGeometry(260,260).rotateX(-Math.PI/2),new T.MeshStandardMaterial({color:0x3a2616,roughness:1,metalness:0}));
+hlUnder.position.y=-EIGHT_FT-0.8;hlUnder.frustumCulled=false;scene.add(hlUnder);
 let hlScanT=0;
 function updateHoleLiners(dt){
   hlScanT-=dt;
   const fx=S.started?P.x:0,fz=S.started?P.z:12;
+  hlUnder.position.x=fx;hlUnder.position.z=fz;
   if(hlScanT<=0){
     hlScanT=HL_RESCAN;
     // the nearest real holes (not sinkhole craters, which draw themselves) get a liner
@@ -98,14 +132,18 @@ function updateHoleLiners(dt){
     for(let i=-cr;i<=cr;i++)for(let j=-cr;j<=cr;j++){const L=grid.get(gkey(cx+i,cz+j));if(!L)continue;
       for(const h of L){if(h.d<0.04||h.r>HOLE_R*1.5)continue;const d2=(h.x-fx)**2+(h.z-fz)**2;if(d2<R2)near.push([d2,h])}}
     near.sort((a,b)=>a[0]-b[0]);
-    const want=new Set(near.slice(0,HL_N).map(e=>e[1]));
-    for(const s of hlPool)if(s.h&&!want.has(s.h)){s.h=null;s.m.visible=false}
-    const held=new Set(hlPool.filter(s=>s.h).map(s=>s.h));
-    for(const h of want)if(!held.has(h)){const s=hlPool.find(q=>!q.h);if(s)hlBuild(s,h)}
+    const want=new Set(near.slice(0,HL_N).map(e=>e[1])),dropped=[];
+    for(const s of hlPool)if(s.h&&!want.has(s.h)){dropped.push(s.h);s.h=null;s.m.visible=false}
+    const held=new Set(hlPool.filter(s=>s.h).map(s=>s.h)),added=[];
+    for(const h of want)if(!held.has(h)){const s=hlPool.find(q=>!q.h);if(s){s.h=h;s.dirty=true;added.push(h)}}
+    hlLined=new Set(hlPool.filter(s=>s.h).map(s=>s.h));
+    for(const h of dropped)hlDirtyNear(h);   // its bowl is now part of its neighbours' liners
+    for(const h of added)hlDirtyNear(h);     // and a new liner's bowl comes out of theirs
   }
+  for(const s of hlPool)if(s.h&&Math.abs(s.h.d-s.seen)>0.001){s.seen=s.h.d;s.dirty=true;hlDirtyNear(s.h)}
   for(let i=0;i<HL_N;i++){
     const s=hlPool[i],u=hlHoleU.value[i];
-    if(s.h){if(Math.abs(s.h.d-s.d)>0.001)hlBuild(s,s.h);u.set(s.h.x,s.h.z,s.h.r+HL_CUT,0)}else u.set(0,0,0,0);
+    if(s.h){if(s.dirty)hlBuild(s,s.h);u.set(s.h.x,s.h.z,s.h.r,s.h.d)}else u.set(0,0,0,0);
   }
 }
 
