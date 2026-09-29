@@ -14,13 +14,13 @@ try{
   HOST=localStorage.getItem('cgl-host')||'';PASS=localStorage.getItem('cgl-camp')||'';
 }catch(e){}
 if(PASS)campIn.value=PASS;
-function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
+function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water)});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
 }
 
 /* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
@@ -36,7 +36,7 @@ function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
-  const p=makePerson(playerLook(name,ci));scene.add(p.g);
+  const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
@@ -71,7 +71,7 @@ function onMsg(m){
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null}}
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
@@ -83,6 +83,7 @@ function onMsg(m){
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
       if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
       javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
+      rosterSnapshot(m.rost||[],m.rostToday); // and the day's roster (83-roster.js)
       lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
@@ -109,6 +110,12 @@ function onMsg(m){
     case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
+    case 'pown':case 'pst':case 'phand':case 'pyeet':case 'pcart':case 'pslip':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)
+    case 'suit':{const R=remotes.get(m.id);if(R)paintSuit(R.p,num(m.u,0,JUMPSUITS.length-1,0)|0);break}
+    case 'carried':if(Array.isArray(m.who)&&m.who.includes(myId())){badge('pallbearer');countUp('helps',10,'ladder');addXP(40)}break;
+    case 'chatw':{const R=remotes.get(m.id);if(typeof m.s==='string'){const name=R?R.name:cleanName(m.n)||'Someone';toast(`📻 ${name}: ${m.s.slice(0,80)}`,'',6000);tone(900,0.05,'square',0.04)}break}
+    case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
+    case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
@@ -136,6 +143,7 @@ function onMsg(m){
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
     case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;
+    case 'vo':if(typeof handleRelayVoice==='function')handleRelayVoice(num(m.f,0,1e9,-1)|0,m.a);break;   // relayed voice (86-voice.js)
     case 'host':
       net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);
       // 'host' is only ever sent after a join clears the password gate, so seeing it after our probe join

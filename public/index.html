@@ -53,7 +53,7 @@
     <div id="stats" class="hud-strip hud-strip--camper ui-panel">
       <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
       <div class="meter"><span class="k" id="lvK">LV 1</span><div class="ui-meter bar xp"><i id="xpBar" style="width:0"></i></div></div>
-      <div class="meter"><span class="k">Health</span><div class="ui-meter bar hp" id="hpWrap"><i id="hpBar"></i></div></div>
+      <div class="meter"><span class="k">Stamina</span><div class="ui-meter bar hp stam" id="hpWrap" title="Stamina (yellow) and room to recover (pale). Coloured blocks from the right are afflictions: injury, heatstroke, sunburn, poison, hunger. Health is whatever they leave."><i id="stamFill"></i><i id="stamRoom"></i><i class="a-hunger" id="affHunger"></i><i class="a-poison" id="affPoison"></i><i class="a-burn" id="affBurn"></i><i class="a-heat" id="affHeat"></i><i class="a-injury" id="affInjury"></i></div></div>
       <p id="hpWarn" class="hud-warn" hidden>Low health</p>
       <div class="meter"><span class="k">Water</span><div class="ui-meter bar" id="waterWrap"><i id="waterBar"></i></div></div>
       <p id="waterWarn" class="hud-warn" hidden>Low water</p>
@@ -99,10 +99,10 @@
   <div id="depthChip" class="hud-depth-chip" hidden><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
-  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · I inventory · B push-to-talk</div>
+  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · I inventory · P push-to-talk · R grab (hold) · X rope · B twerk · H sing</div>
   <div id="voiceBox">
     <button id="voiceBtn" type="button" aria-pressed="false" title="Turn on proximity voice chat (asks for mic access)">Voice off</button>
-    <button id="voiceModeBtn" type="button" hidden title="Switch between push-to-talk and always-on mic">Push-to-talk (hold B)</button>
+    <button id="voiceModeBtn" type="button" hidden title="Switch between push-to-talk and always-on mic">Push-to-talk (hold P)</button>
     <button id="voiceMuteBtn" type="button" hidden title="Mute everyone else's voice without muting game sound">Mute voices</button>
   </div>
 </div>
@@ -328,6 +328,7 @@
       <button id="pResume" type="button">Resume</button>
       <button id="pOptions" type="button">Options</button>
       <button id="pControlsBtn" type="button">Controls</button>
+      <button id="pBadgesBtn" type="button">Badges &amp; jumpsuits</button>
       <button id="pRestart" type="button">Restart</button>
       <button id="pQuit" type="button">Quit to title</button>
     </div>
@@ -377,6 +378,14 @@
     <button id="pCtrlBack" type="button">Back</button>
   </div>
 
+  <div class="card" id="pBadgesCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Badges<small id="badgeCount"></small></h2>
+    <div id="badgeList" class="badge-list"></div>
+    <h3>Jumpsuit</h3>
+    <div id="suitList" class="suit-list"></div>
+    <button id="pBadgesBack" type="button">Back</button>
+  </div>
+
   <div class="card" id="pConfirmCard" hidden>
     <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)" id="pConfirmTitle"></h2>
     <p id="pConfirmText"></p>
@@ -422,6 +431,7 @@
 <script src="js/70-player.js"></script>
 <script src="js/71-bonk.js"></script>
 <script src="js/72-twisters.js"></script>
+<script src="js/73-emotes.js"></script>
 <script src="js/74-landslide.js"></script>
 <script src="js/75-tumbleweed.js"></script>
 <script src="js/75-haboob.js"></script>
@@ -430,10 +440,13 @@
 <script src="js/78-hud.js"></script>
 <script src="js/80-ui.js"></script>
 <script src="js/81-inventory.js"></script>
+<script src="js/81-badges.js"></script>
 <script src="js/82-patrol.js"></script>
 <script src="js/83-vultures.js"></script>
 <script src="js/83-javelinas.js"></script>
+<script src="js/83-roster.js"></script>
 <script src="js/84-coop.js"></script>
+<script src="js/84-grab.js"></script>
 <script src="js/85-lion.js"></script>
 <script src="js/86-voice.js"></script>
 <script src="js/87-sinkhole.js"></script>

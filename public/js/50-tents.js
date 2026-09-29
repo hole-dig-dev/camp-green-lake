@@ -49,6 +49,9 @@ const SHOP=[
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
   {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60,cat:'supplies',icon:'sack'},
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
+  {id:'tonic',name:'Sam\'s onion tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and lizards stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'onion'},
+  {id:'medkit',name:'First-aid kit',desc:'Q: patches your injuries. Or pick up a downed friend in 1 second instead of 3 (uses one).',cost:30,stack:'medkit',cat:'survival',icon:'heart'},
+  {id:'walkie',name:'Walkie-talkie',desc:'Your chat (Enter) reaches anyone else with a walkie-talkie, anywhere on the lake.',cost:60,cat:'survival',icon:'ping'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
 // painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
@@ -135,7 +138,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);
@@ -189,7 +192,7 @@ function hideShopConfirm(){
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   S.seeds-=it.cost;
-  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
+  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
   sfx.coin();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
   $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} seeds left.`;
@@ -264,10 +267,11 @@ function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
   logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
+  countUp('kos',5,'squid');
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){if(inTent())exitTent();S.ko=0;S.hp=HP_MAX;S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
+function respawn(){if(inTent())exitTent();S.ko=0;clearAff();S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){

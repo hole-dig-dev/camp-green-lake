@@ -10,6 +10,15 @@
   const nearCampZone = (x, z) => x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   const HEAVY = { safe: 120, strongbox: 80 };
+  // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
+  // One camper pulls at most GRAB.FMAX newtons, so ~71 kg is the most one of you can lift: the safe takes two.
+  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 }, cart: { m: 25, frag: 0 }, body: { m: 70, frag: 0 } };
+  // the rope (84-grab.js, X): slack up to L m, then it pulls like a pair of hands from wherever you are, up to MAX m away
+  const ROPE = { L: 4.5, MAX: 7.5, K: 900 };
+  // the crew's wheelbarrow: holds CAP things (loot or a downed friend), parks by the main gate, tips if you hit a bump fast
+  const CART = { CAP: 3, HOME: { x: -8, z: 31 }, TIP_SPEED: 3.2, TIP_STEP: 0.32 };
+  const GRAB = { K: 1400, DAMP: 70, FMAX: 700, SNAP: 4.2, THROW: 7.5, REACH: 4.5 };
+  const DMG = { MIN: 2.4, RATE: 0.06, COOL: 0.25 };   // landings faster than MIN m/s chip value off
   // Tower optics are shared with the renderer, so the light a player sees is the light that can spot them.
   const TOWERS = [
     { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },
@@ -430,8 +439,134 @@
   // Returns true if it counted, so the caller knows to log/broadcast it.
   function lionSwat(L) { if (!L.active) return false; L.hp = Math.max(0, L.hp - LION_SWAT_DMG); return true; }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters,
+  /* ---- the day's monster roster (ported from Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
+     Which kinds show up is picked each day (same pick on every client: seeded by the day), and it grows as the days go by:
+       small  (from day 1)  hatch: lizard hatchlings in swarms, snake: rattlesnakes that rattle then strike,
+                            scorp: scorpions that come up where you dig
+       medium (from day 2)  sir: Mr. Sir walks the lake and takes your sack if you stand around,
+                            sheriff: the Sheriff's ghost, near curfew, hunts whoever carries Kate Barlow's loot
+       big    (from day 3)  warden: the Warden knocks out whoever she catches idle, kate: Kate Barlow's ghost at night,
+                            who only moves while nobody is looking at her
+     Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
+     players: simPlayers() on the server / meSim() solo, plus kt (holding Kate's loot), on (onion active), vy (camera yaw). */
+  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
+  const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
+  function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function rosterFor(day) {
+    const r = roRnd(day * 131 + 7), take = (list, n) => { const a = list.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
+    const ns = Math.min(3, 1 + Math.floor(day / 2)), nm = day >= 2 ? (day >= 4 ? 2 : 1) : 0, nb = day >= 3 ? (day >= 5 ? 2 : 1) : 0;
+    return [...take(RO_SMALL, ns), ...take(RO_MEDIUM, nm), ...take(RO_BIG, nb)];
+  }
+  const roSmall = k => k === 'hatch' || k === 'snake' || k === 'scorp';
+  function roSpawn(R, k, p, dmin, dmax, extra) {
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, d = dmin + Math.random() * (dmax - dmin), x = clamp(p.x + Math.cos(a) * d, -EDGE + 3, EDGE - 3), z = clamp(p.z + Math.sin(a) * d, -EDGE + 3, EDGE - 3);
+      if (!nearCampZone(x, z)) { const m = Object.assign({ id: R.nid++, k, x, z, h: 0, y: 0, st: 0, t: 0, cd: 0 }, extra || {}); R.mobs.push(m); return m; }
+    }
+    return null;
+  }
+  function roChase(m, p, sp, dt, stop) {
+    const dx = p.x - m.x, dz = p.z - m.z, d = Math.hypot(dx, dz) || 0.01;
+    if (d > (stop || 0)) { const s = Math.min(d - (stop || 0), sp * dt), nx = m.x + dx / d * s, nz = m.z + dz / d * s; if (!inCamp(nx, nz)) { m.x = nx; m.z = nz; } }
+    m.h = Math.atan2(dx, dz); return d;
+  }
+  function stepRoster(R, players, t, dt, ev, o) {
+    o = o || {}; R.mobs = R.mobs || []; R.pm = R.pm || {}; R.nid = R.nid || 1; R.sp = R.sp || {}; R.force = R.force || [];
+    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS;
+    if (R.rkey !== day) { R.rkey = day; R.roster = rosterFor(day); }
+    const has = k => (R.all || R.roster.includes(k) || R.force.includes(k)) && !(R.off || []).includes(k);
+    const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
+    const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
+    const pickP = () => live[Math.floor(Math.random() * live.length)];
+    // who's been standing around out on the lake (for Mr. Sir and the Warden)
+    for (const p of players) { const m = R.pm[p.id] || (R.pm[p.id] = { idle: 0, warned: 0 }); if (p.an === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } }
+    if (live.length) {
+      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
+      if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
+      if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
+      if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
+      if (has('warden') && !night && !count('warden')) roSpawn(R, 'warden', pickP(), 50, 70, {});
+      const kt = live.filter(p => p.kt);
+      if (has('sheriff') && (t > cur - 90000 || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
+      if (has('kate') && (night || R.force.includes('kate')) && !count('kate')) { if (roSpawn(R, 'kate', pickP(), 35, 45, {})) ev.push({ k: 'kate' }); }
+    }
+    for (const m of R.mobs) {
+      m.t += dt; m.cd = Math.max(0, m.cd - dt);
+      const pool = roSmall(m.k) ? live.filter(p => !p.on) : live;   // an onion keeps the small ones off you
+      const tg = nearest(pool, m.x, m.z), d = tg ? Math.hypot(tg.x - m.x, tg.z - m.z) : 1e9;
+      if (m.life != null && (m.life -= dt) <= 0) m.dead = true;
+      switch (m.k) {
+        case 'hatch':
+          if (tg && d < 14) { roChase(m, tg, 5.1, dt); if (d < 0.8 && !m.cd) { m.cd = 1.2; ev.push({ k: 'rbite', id: tg.id }); } } else { m.h += dt; m.x += Math.sin(m.h) * dt; m.z += Math.cos(m.h) * dt; }
+          break;
+        case 'snake':
+          if (tg && d < 6 && !m.cd) { m.cd = 2.5; ev.push({ k: 'rattle', x: m.x, z: m.z }); }
+          if (tg && d < 1.6 && m.st !== 1) { m.st = 1; m.cd = 4; ev.push({ k: 'strike', id: tg.id }); }
+          if (m.st === 1 && m.cd <= 0) m.st = 0;
+          if (tg) m.h = Math.atan2(tg.x - m.x, tg.z - m.z);
+          break;
+        case 'scorp':
+          if (tg && d < 7) { roChase(m, tg, 2.6, dt); if (d < 0.7 && !m.cd) { m.cd = 3; ev.push({ k: 'sting', id: tg.id }); } }
+          break;
+        case 'sir': case 'warden': {
+          if ((night && !R.force.includes(m.k)) || !live.length) { m.dead = true; break; }
+          // they go after whoever is standing around; otherwise they wander between campers
+          let lazy = null, li = 0; for (const p of live) { const im = R.pm[p.id]; if (im && im.idle > li && Math.hypot(p.x - m.x, p.z - m.z) < 70) { li = im.idle; lazy = p; } }
+          const warnAt = m.k === 'sir' ? 6 : 5, near = m.k === 'sir' ? 18 : 25;
+          m.st = 0;
+          if (lazy && li > warnAt) {
+            m.st = 1;
+            const dd = roChase(m, lazy, m.k === 'sir' ? 3.4 : 2.8, dt, m.k === 'sir' ? 2 : 1.1), im = R.pm[lazy.id];
+            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'sir' ? 'sirWarn' : 'wardenWarn', id: lazy.id }); }
+            if (m.k === 'sir' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
+            if (m.k === 'warden' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'warden' }); im.idle = 0; im.warned = 0; }
+          } else { if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 3) { const p = pickP(); m.goal = { x: p.x + (Math.random() - 0.5) * 30, z: p.z + (Math.random() - 0.5) * 30 }; } roChase(m, m.goal, 2.4, dt); }
+          break;
+        }
+        case 'sheriff': {
+          const p = nearest(live.filter(q => q.kt), m.x, m.z);
+          if (!p) { if (m.life == null) m.life = 4; m.st = 1; break; }
+          m.st = 0; m.life = null;
+          if (roChase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'sheriff' }); m.dead = true; }
+          break;
+        }
+        case 'kate': {
+          if ((!night && !R.force.includes('kate')) || !live.length) { m.dead = true; break; }
+          // she only moves while nobody is looking at her (vy: where each camper's camera points)
+          const watched = players.some(p => { if (p.dn || inCamp(p.x, p.z)) return false; const dx = m.x - p.x, dz = m.z - p.z, dd = Math.hypot(dx, dz); if (dd > 45) return false; const vx = -Math.sin(p.vy || 0), vz = -Math.cos(p.vy || 0); return (dx * vx + dz * vz) / (dd || 1) > 0.72; });
+          m.st = watched ? 1 : 0;
+          if (!watched && tg && roChase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'kate' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
+          break;
+        }
+      }
+      if (roSmall(m.k) && (!tg || d > 160)) m.dead = true;
+    }
+    R.mobs = R.mobs.filter(m => !m.dead);
+  }
+  // a shovel swing (the dig key, see rosterSwing() on the client): squashes the small ones in front of you
+  function rosterSwat(R, p, ev) {
+    const fx = Math.sin(p.fa || 0), fz = Math.cos(p.fa || 0); let hit = false;
+    for (const m of R.mobs || []) {
+      const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz);
+      if (roSmall(m.k) && d < 2.4 && (dx * fx + dz * fz) / (d || 1) > 0.2) { m.dead = true; hit = true; ev.push({ k: 'squash', kind: m.k, x: m.x, z: m.z, id: p.id }); }
+    }
+    if (R.mobs) R.mobs = R.mobs.filter(m => !m.dead);
+    return hit;
+  }
+  // console/testing: put one of kind k near camper p right now (the natural spawn distances, a bit closer)
+  function rosterSpawnNow(R, k, p) {
+    R.mobs = R.mobs || []; R.nid = R.nid || 1;
+    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], sir: [20, 30, {}], sheriff: [25, 30, {}], warden: [20, 30, {}], kate: [25, 30, {}] }[k];
+    if (!D) return null;
+    const m = roSpawn(R, k, p, D[0], D[1], Object.assign({}, D[2]));
+    if (m && k === 'hatch') for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: m.x + (Math.random() - 0.5) * 2, z: m.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 });
+    return m;
+  }
+  const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
+
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
-    LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat };
+    LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
+    RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

@@ -26,7 +26,7 @@ const BIND_DEFS=[
   {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
   {id:'shout1',label:'Shout 1',def:'1'},{id:'shout2',label:'Shout 2',def:'2'},
   {id:'shout3',label:'Shout 3',def:'3'},{id:'shout4',label:'Shout 4',def:'4'},{id:'shout5',label:'Shout 5',def:'5'},
-  {id:'pushtalk',label:'Push to talk (voice)',def:'b'},{id:'inventory',label:'Inventory',def:'i'},
+  {id:'pushtalk',label:'Push to talk (voice)',def:'p'},{id:'grab',label:'Grab (hold)',def:'r'},{id:'rope',label:'Tie / untie your rope',def:'x'},{id:'twerk',label:'Twerk',def:'b'},{id:'sing',label:'Sing the lullaby (hold)',def:'h'},{id:'inventory',label:'Inventory',def:'i'},
 ];
 const RESERVED_KEYS=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','`']);
 const KEY_NAMES={' ':'Space','arrowup':'Up','arrowdown':'Down','arrowleft':'Left','arrowright':'Right','enter':'Enter','shift':'Shift','`':'`'};
@@ -49,6 +49,7 @@ function loadSettings(){
     if(Number.isFinite(o.mapScale))SETTINGS.mapScale=clamp(o.mapScale,0.6,1.6);
     if(Number.isFinite(o.mapOpacity))SETTINGS.mapOpacity=clamp(o.mapOpacity,0.2,1);
     if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
+    if(SETTINGS.binds.pushtalk==='b')SETTINGS.binds.pushtalk='p';   // push-to-talk moved B -> P (B is Greg's twerk emote); saved settings from before still said b
   }catch(e){}
 }
 function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS))}catch(e){}}
@@ -94,7 +95,7 @@ function overlayBlocking(){return uiOpen()||!$('#admin').hidden||!$('#win').hidd
 function tryLock(){lockMouse()}
 function showPauseScreen(name){
   stopListening();
-  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';
+  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';$('#pBadgesCard').hidden=name!=='badges';
 }
 function openPause(){
   if(PAUSE.open||!S.started)return;
@@ -112,6 +113,8 @@ $('#pOptions').onclick=()=>{renderOptions();showPauseScreen('options')};
 $('#pOptBack').onclick=()=>showPauseScreen('main');
 $('#pControlsBtn').onclick=()=>{renderControlsList();showPauseScreen('controls')};
 $('#pCtrlBack').onclick=()=>showPauseScreen('main');
+$('#pBadgesBtn').onclick=()=>{renderBadges();showPauseScreen('badges')};
+$('#pBadgesBack').onclick=()=>showPauseScreen('main');
 function askConfirm(title,text,yesLabel,onYes){
   $('#pConfirmTitle').textContent=title;$('#pConfirmText').textContent=text;
   const yes=$('#pConfirmYes');yes.textContent=yesLabel;yes.onclick=onYes;

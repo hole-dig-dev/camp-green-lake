@@ -27,10 +27,13 @@ function invEntries(){
   // special items: the KB tube, and heavy loot you're dragging
   if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Warden will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
-  if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's pickup by the main gate: worth ${LOOT[pr.type].val} seeds to the team.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
+  if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Mr. Sir's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
+  else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's pickup by the main gate: worth ${LOOT[pr.type].val} seeds to the team.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
   // supplies
   out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
+  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
+  if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
   out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
   out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
@@ -107,11 +110,17 @@ function renderInvDetail(e){
     row('Sack',`${S.sack.length} / ${sackMax()} finds · worth ${sum} seeds`);
     if(S.sack.length)acts.append(invButton('Drop the whole sack',()=>{dropBag();toast('You set your sack down. Anyone can pick it up with F.','',2200);sfx.thud();renderInventory(true)},false));
   }
+  if(e.type==='jar'||e.type==='sploosh'){   // food: cures hunger (70-player.js eatFood), but then you can't sell it
+    const b=invButton(AFF.hunger>4?'Eat it':'Eat it (not hungry)',()=>{eatFood(e.type);renderInventory(true)},AFF.hunger>4);acts.append(b);
+    if(AFF.hunger>0)row('Hunger',`${Math.round(AFF.hunger)} of your health bar`);
+  }
   if(e.id==='haul')acts.append(invButton('Let go of it',()=>{S.carry=null;toast('You let go.','',1200);renderInventory(true)},false));
   if(e.id==='onion'){
     row('On hand',`${S.onions} onion${S.onions===1?'':'s'}`);
     const b=invButton(S.onions>0?'Eat one now':'No onions left',()=>{eatOnion();renderInventory(true)},true);b.disabled=S.onions<=0;acts.append(b);
   }
+  if(e.id==='tonic'||e.id==='medkit'){const need=e.id==='tonic'?(AFF.poison>3||AFF.burn>5||AFF.heat>5):AFF.injury>10;
+    const b=invButton(need?'Use one now':'Not needed right now',()=>{useSupply();renderInventory(true)},true);b.disabled=!need;acts.append(b)}
   if(e.id==='light'){
     row('Battery',`${Math.round(S.batt)}%`);
     const b=invButton(S.light?'Turn it off':'Turn it on',()=>{toggleLight();renderInventory(true)},true);b.disabled=!S.light&&S.batt<=0;acts.append(b);

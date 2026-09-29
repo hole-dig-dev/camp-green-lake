@@ -13,15 +13,16 @@ const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
   sinkRescue:s=>`Hold to link hands and pull ${s.R.name} out`+(sinkPulling?' (holding on, keep it up)':''),
-  drop:s=>`Let go of the ${LOOT[s.pr.type].name}`+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
-  prop:s=>`Grab the ${LOOT[s.pr.type].name} (${SIM.HEAVY[s.pr.type]} seeds)`+(s.pr.n?` · ${s.pr.n} carrying`:''),
+  cartLoad:s=>`Put it in the wheelbarrow (${(s.cart.load||[]).length}/${SIM.CART.CAP})`,
+  drop:s=>`Let go of the ${propName(s.pr)}`+(s.pr.grab&&s.pr.grab.length>=2?` (${s.pr.grab.length} of you on it)`:' (just you)')+' · click to throw · scroll: closer / farther',
+  prop:s=>s.pr.type==='cart'?`Push the wheelbarrow${s.pr.tip?' (set it back up)':''}, or aim and hold R`:`Grab the ${LOOT[s.pr.type].name} (${s.pr.val!=null?s.pr.val:SIM.HEAVY[s.pr.type]} seeds, ${SIM.PHYS[s.pr.type].m} kg), or aim and hold R`+(s.pr.grab&&s.pr.grab.length?` · ${s.pr.grab.length} holding`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
   tentdoor:s=>`Go inside ${TENTS[s.ti].name}`,
   exit:()=>'Step back outside',
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
   office:()=>"Read the Warden's ledger",
 };
-const hq={hp:$('#hpBar'),hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
+const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
   else sleepEl.style.display='none';
@@ -35,7 +36,12 @@ function updateHUD(){
    else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';curWarn=!!CUR.hunter}
    hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
-  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';const low=hp<0.3;hq.hpWrap.classList.toggle('low',low);hw.hpWarn.hidden=!low}
+  {const pc=v=>(v/HP_MAX*100).toFixed(1)+'%',st=Math.min(S.stam,S.hp);hq.stam.style.width=pc(st);hq.room.style.width=pc(S.hp-st);
+    for(const k in AFF)hq.aff[k].style.width=pc(AFF[k]);
+    const low=S.hp/HP_MAX<0.3,worst=Object.keys(AFF).filter(k=>AFF[k]>=8).sort((a,b)=>AFF[b]-AFF[a]).slice(0,2);
+    hq.hpWrap.classList.toggle('low',low);hq.hpWrap.classList.toggle('tired',S.stam<15&&!low);
+    const txt=worst.length?worst.map(k=>AFF_INFO[k]).join(' · '):low?'Low health':'';
+    hw.hpWarn.hidden=!txt;if(txt&&hw.hpWarn.textContent!==txt)hw.hpWarn.textContent=txt}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
   {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
    hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}

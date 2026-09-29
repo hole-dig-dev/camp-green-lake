@@ -35,6 +35,29 @@ const CHAT_RANGE = 30, HELP_RANGE = 3.5, SINK_HELP_RANGE = 5;   // sinkhole rims
 // SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
 // (checked in the message handler) instead of loosening the limit for everyone. maxPayload below must cover it.
 const RTC_MAX = 8192, GEN_MAX = 1024, LOG_MAX = 8192;
+/* ---- proximity voice: relay fallback ----
+   When two campers can't reach each other directly (strict home/mobile NATs, and no TURN server), their voice comes
+   through here instead: 'vo' = one 60 ms frame of 16 kHz mu-law audio (base64, ~1.3 KB), sent ~17 times a second while
+   the mic is transmitting. It has its own size cap and token bucket so it never eats the budget position updates
+   use, and it's only forwarded to joined campers in the same room within VO_RANGE m (no listening in from afar). */
+const VO_MAX = 2048, VO_A_MAX = 1400, VO_BURST = 30, VO_REFILL = 0.025, VO_RANGE = 90;   // refill: tokens per ms (25/s)
+function relayVoice(c, raw) {
+  const now = Date.now();
+  c.voTok = Math.min(VO_BURST, (c.voTok == null ? VO_BURST : c.voTok) + (now - (c.voLast || now)) * VO_REFILL); c.voLast = now;
+  const st = c.voStat || (c.voStat = { in: 0, fwd: {}, drop: {} });   // diagnostics: GET /admin/voice
+  st.in++;
+  if (!c.joined || c.voTok < 1) { st.drop.rate = (st.drop.rate || 0) + 1; return; }
+  c.voTok -= 1;
+  let m; try { m = JSON.parse(raw); } catch (e) { return; }
+  if (!m || typeof m.a !== 'string' || m.a.length > VO_A_MAX || !Array.isArray(m.to)) return;
+  let out = null;
+  for (const id of m.to.slice(0, 8)) {
+    const t = clients.get(id | 0);
+    const why = !t ? 'gone' : t === c ? 'self' : !t.joined ? 'notjoined' : t.room !== c.room ? 'room' : Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE ? 'far' : '';
+    if (why) { st.drop[why] = (st.drop[why] || 0) + 1; continue; }
+    send(t, out || (out = JSON.stringify({ t: 'vo', f: c.id, a: m.a }))); st.fwd[t.n] = (st.fwd[t.n] || 0) + 1;
+  }
+}
 const LOG_BURST = 60, LOG_RATE = 0.012; // per-client play-test log budget: 60 events at once, refilling 12/s
 // STUN only by default (no TURN server exists yet). Set ICE_SERVERS to a JSON array of RTCIceServer objects,
 // e.g. '[{"urls":"turn:host:3478","username":"u","credential":"p"}]', to add a TURN server later.
@@ -281,6 +304,7 @@ const server = http.createServer((req, res) => {
       const q = new URL(req.url, 'http://x').searchParams;
       securityHeaders(res, false);
       res.writeHead(200, { 'content-type': 'application/json' });
+      if (url === '/admin/voice') return res.end(JSON.stringify([...clients.values()].filter(c => c.joined).map(c => ({ id: c.id, n: c.n, x: c.x, z: c.z, room: c.room, vo: c.voStat || null }))));
       if (url === '/admin/who') return res.end(JSON.stringify([...clients.values()].map(c => ({ id: c.id, n: c.n, joined: c.joined, host: c.host, v: c.v || 0 }))));
       if (url === '/admin/sethost') { const n = cleanName(q.get('name')).toLowerCase(); if (!world.hostNames.includes(n)) world.hostNames.push(n); dirty = true; for (const c of clients.values()) if (c.n.toLowerCase() === n) { c.host = true; send(c, { t: 'host', on: true }); } return res.end(JSON.stringify(world.hostNames)); }
       if (url === '/admin/refresh') { broadcast({ t: 'reset' }); return res.end('{"ok":true}'); }
@@ -310,7 +334,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: Math.max(8192, RTC_MAX) }); // batched play-test log messages and WebRTC offers both need more than the old 2048
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: Math.max(8192, RTC_MAX, VO_MAX) }); // batched play-test log messages and WebRTC offers both need more than the old 2048
 const LOG_TYPE_RE = /^[a-zA-Z]{1,16}$/, LOG_FIELD_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,15}$/;
 // Client-reported log events (case 'log' below) come from our own client code but are still untrusted input:
 // keep only plain, small fields so a modified client can't stuff arbitrary data or huge blobs into the log files.
@@ -352,7 +376,7 @@ function maybeSkipNight() {
   for (const c of js) c.sleeping = false;
   broadcastSleep();
 }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -379,12 +403,13 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
+      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day), // and the day's roster
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -397,6 +422,7 @@ wss.on('connection', (ws, req) => {
   ws.on('error', e => console.error('ws error from', ip, ':', e && e.message));
   ws.on('message', raw => {
    try {
+    if (raw.length <= VO_MAX && String(raw).startsWith('{"t":"vo"')) return relayVoice(c, raw);   // voice frames: own budget (above)
     const now = Date.now();
     c.tokens = Math.min(80, c.tokens + (now - c.last) * 0.04); c.last = now;
     if (c.tokens < 1) return;
@@ -421,7 +447,7 @@ wss.on('connection', (ws, req) => {
         }
         c.authed = true; sendHello(); // now, and only now, does this socket learn about the world
       }
-      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
+      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0; c.u = num(m.u, 0, 9, 0) | 0; // u: jumpsuit (public/js/81-badges.js)
       c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       send(c, { t: 'curfew', v: SIM.CURFEW });
@@ -441,10 +467,16 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
+        c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
+        c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js)
         c.f = num(m.f, 0, 255, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
+        if (!(c.f & 2) && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
+          if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }
+          c.body = null; c.cartId = null; broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });
+        }
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
@@ -490,9 +522,107 @@ wss.on('connection', (ws, req) => {
         // Someone dug up something too heavy for the sack. It sits on the ground until campers carry it to the truck.
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
-        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
+        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)), val: SIM.HEAVY[type] }; dirty = true;
         LOG.log('propSpawn', { id: c.id, n: c.n, item: id, type, x: world.props[id].x, z: world.props[id].z });
         broadcast({ t: 'prop', id, ...world.props[id] });
+        break;
+      }
+      /* ---- grab physics (public/js/84-grab.js): heavy loot, the wheelbarrow and downed campers' bodies.
+         A target id >= 0 is a prop in world.props; a negative id is the body of camper -id (downed).
+         A moving prop has one "owner" whose page runs its physics and reports it ('pst'); a body's owner is always the
+         downed camper themself (their own position). Everyone else holding on (hands, or a rope) sends 'phand', and the
+         server passes it to the owner. The cart carries up to 3 things (loot or bodies); they ride along with it. ---- */
+      case 'pgrab': {
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        const reach = SIM.GRAB.REACH + (m.rope ? SIM.ROPE.L + 2 : 1);
+        if (Math.hypot(T.x - c.x, T.z - c.z) > reach) return;
+        const key = m.rope ? 'ropes' : 'grab';
+        T.o.grab = (T.o.grab || []).filter(g => g !== c.id && clients.has(g)); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id && clients.has(g));
+        T.o[key] = [...T.o[key], c.id].slice(0, 8);
+        if (id >= 0) {
+          if (T.o.cartId != null) unloadFromCart(id); // taking it out of the wheelbarrow
+          if (T.o.owner == null || !clients.has(T.o.owner)) T.o.owner = c.id;
+        } else send(T.c, { t: 'pown', id, owner: T.c.id, grab: T.o.grab, ropes: T.o.ropes });
+        broadcast({ t: 'pown', id, owner: id >= 0 ? T.o.owner : T.c.id, grab: T.o.grab, ropes: T.o.ropes });
+        break;
+      }
+      case 'prel': case 'pyeet': {
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        T.o.grab = (T.o.grab || []).filter(g => g !== c.id); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id);
+        const owner = id >= 0 ? T.o.owner : T.c.id;
+        if (m.t === 'pyeet' && owner !== c.id && clients.has(owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(owner), { t: 'pyeet', id, pid: c.id, d }); }
+        broadcast({ t: 'pown', id, owner, grab: T.o.grab, ropes: T.o.ropes });
+        break;
+      }
+      case 'phand': {
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        const rope = m.rope === true; if (!(rope ? T.o.ropes || [] : T.o.grab || []).includes(c.id)) return;
+        const owner = id >= 0 ? T.o.owner : T.c.id; if (owner === c.id) return;
+        const h = Array.isArray(m.h) ? m.h.slice(0, 3).map((v, i) => num(v, i === 1 ? -10 : -620, i === 1 ? 210 : 620, 0)) : null; if (!h) return;
+        const o = clients.get(owner); if (o) send(o, { t: 'phand', id, pid: c.id, h, rope, st: num(m.st, 0, 200, 100) });
+        break;
+      }
+      case 'pst': {
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p || p.owner !== c.id) return;
+        const x = num(m.x, -595, 595, p.x), z = num(m.z, -595, 595, p.z);
+        if (Math.hypot(x - c.x, z - c.z) > 40) return; // the owner is somewhere near their prop
+        p.x = r2(x); p.z = r2(z); p.y = r2(num(m.y, -10, 60, p.y || 0));
+        const v0 = SIM.HEAVY[p.type] || 0; if (v0) p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
+        if (p.type === 'cart') p.tip = m.tip === true;
+        if (m.rest === true && !(p.grab || []).includes(c.id) && !(p.ropes || []).includes(c.id)) p.owner = null; // settled and let go: the next grabber takes over
+        for (const lid of p.load || []) if (lid >= 0 && world.props[lid]) { world.props[lid].x = p.x; world.props[lid].z = p.z; } // loot riding in the cart
+        dirty = true;
+        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, tip: p.tip, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [] }, c.id);
+        if (Math.hypot(p.x - SIM.SELL.x, p.z - SIM.SELL.z) < SIM.SELL.r) {
+          const sell = p.type === 'cart' ? (p.load || []).filter(l => l >= 0 && world.props[l]) : [id];
+          for (const sid of sell) {
+            const q = world.props[sid], v = q.val == null ? SIM.HEAVY[q.type] : q.val, who = [...new Set([c.id, ...(p.grab || []), ...(p.ropes || [])])];
+            delete world.props[sid]; if (p.load) p.load = p.load.filter(l => l !== sid);
+            world.run.bank += v; dirty = true;
+            LOG.log('propSold', { item: sid, type: q.type, v, who, cart: p.type === 'cart' });
+            broadcast({ t: 'psold', id: sid, v, who });
+          }
+          if (sell.length) { broadcast(runInfo()); if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
+        }
+        break;
+      }
+      case 'pslip': { // the rope slipped (the owner's physics says so): everyone's rope on it comes loose
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        if ((id >= 0 ? T.o.owner : T.c.id) !== c.id) return;
+        T.o.ropes = []; LOG.log('ropeSlip', { id, by: c.n });
+        broadcast({ t: 'pslip', id }); broadcast({ t: 'pown', id, owner: id >= 0 ? T.o.owner : T.c.id, grab: T.o.grab || [], ropes: [] });
+        break;
+      }
+      case 'pcall': { // host/play-test console: bring the wheelbarrow to just in front of you
+        if (!c.host) return; ensureCart(); const k = world.props[CART_ID];
+        for (const l of k.load || []) if (l >= 0 && world.props[l]) world.props[l].cartId = null;
+        k.x = r2(num(m.x, -595, 595, c.x)); k.z = r2(num(m.z, -595, 595, c.z)); k.tip = false; k.load = []; k.owner = null; k.grab = []; k.ropes = []; dirty = true;
+        broadcast({ t: 'pcart', id: CART_ID, load: [], tip: false }); broadcast({ t: 'pst', id: CART_ID, x: k.x, y: 0, z: k.z, vx: 0, vy: 0, vz: 0, rest: true, tip: false, owner: null, grab: [], ropes: [] });
+        break;
+      }
+      case 'pload': { // put what you're holding (loot, or a downed friend: negative id) in the wheelbarrow
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, cartId = num(m.cart, 0, MAX_ITEM, -1) | 0, cart = world.props[cartId], T = grabTarget(id);
+        if (!cart || cart.type !== 'cart' || !T || id === cartId || cart.tip) return;
+        if (!near(c, cart, 4) || Math.hypot(T.x - cart.x, T.z - cart.z) > 5) return;
+        cart.load = (cart.load || []).filter(l => l >= 0 ? !!world.props[l] : clients.has(-l));
+        if (cart.load.length >= SIM.CART.CAP || cart.load.includes(id)) return;
+        cart.load.push(id); T.o.grab = []; T.o.ropes = [];
+        if (id >= 0) { T.o.cartId = cartId; T.o.owner = null; T.o.x = cart.x; T.o.z = cart.z; broadcast({ t: 'pown', id, owner: null, grab: [], ropes: [] }); }
+        else { T.c.cartId = cartId; send(T.c, { t: 'pown', id, owner: T.c.id, grab: [], ropes: [] }); }
+        dirty = true; LOG.log('cartLoad', { id, cart: cartId, by: c.n });
+        broadcast({ t: 'pcart', id: cartId, load: cart.load });
+        break;
+      }
+      case 'ptip': { // the wheelbarrow went over: everything in it spills out around it (only its owner can say so)
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, cart = world.props[id]; if (!cart || cart.type !== 'cart' || cart.owner !== c.id) return;
+        cart.tip = true; const spill = [];
+        for (const l of cart.load || []) {
+          const a = Math.random() * Math.PI * 2, x = r2(cart.x + Math.cos(a) * 1.6), z = r2(cart.z + Math.sin(a) * 1.6);
+          if (l >= 0 && world.props[l]) { const q = world.props[l]; q.cartId = null; q.x = x; q.z = z; spill.push([l, x, z]); }
+          else if (l < 0 && clients.has(-l)) { clients.get(-l).cartId = null; spill.push([l, x, z]); }
+        }
+        cart.load = []; dirty = true; LOG.log('cartTip', { cart: id, by: c.n, n: spill.length });
+        broadcast({ t: 'pcart', id, load: [], tip: true, spill });
         break;
       }
       case 'bag': {
@@ -569,7 +699,11 @@ wss.on('connection', (ws, req) => {
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
         LOG.log('chat', { id: c.id, n: c.n, s });
-        for (const o of clients.values()) if (o.joined && o !== c && o.room === c.room && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+        for (const o of clients.values()) {
+          if (!o.joined || o === c) continue;
+          if (o.room === c.room && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+          else if (c.wk && o.wk) send(o, { t: 'chatw', id: c.id, n: c.n, s }); // walkie-talkies reach each other anywhere
+        }
         break;
       }
       case 'admin':
@@ -696,6 +830,38 @@ wss.on('connection', (ws, req) => {
         if (SIM.lionSwat(LION)) { LOG.log('lionSwat', { id: c.id, n: c.n, hp: Math.round(LION.hp) }); lionEvQ.push({ k: 'swat', id: c.id }); }
         break;
       }
+      case 'rswat': { // a shovel swing at the small roster critters (public/js/83-roster.js rosterSwing)
+        const now = Date.now(); if (now - (c.rswatAt || 0) < 300) return; c.rswatAt = now;
+        const sx = num(m.x, -620, 620, c.x), sz = num(m.z, -620, 620, c.z), sfa = num(m.fa, -10, 10, c.r);
+        if (Math.hypot(sx - c.x, sz - c.z) > 3) return; // must be (about) where the server last saw you
+        const rev = []; if (SIM.rosterSwat(ROSTER, { id: c.id, x: sx, z: sz, fa: sfa }, rev)) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
+        break;
+      }
+      case 'roster': { // host/play-test console: roster all | off | today | <kind>  (see 83-roster.js)
+        if (!c.host) return;
+        const op = String(m.op || '');
+        if (op === 'all') { ROSTER.all = true; ROSTER.off = []; }
+        else if (op === 'today') { ROSTER.all = false; ROSTER.force = []; ROSTER.off = []; }
+        else if (op === 'off') { ROSTER.all = false; ROSTER.force = []; ROSTER.off = SIM.RO_KINDS.slice(); ROSTER.mobs = []; }
+        else if (SIM.RO_KINDS.includes(op)) { ROSTER.off = (ROSTER.off || []).filter(k => k !== op); ROSTER.force = [...new Set([...(ROSTER.force || []), op])]; SIM.rosterSpawnNow(ROSTER, op, { x: c.x, z: c.z }); }
+        else return;
+        LOG.log('roster', { op, by: c.n });
+        break;
+      }
+      case 'suit': { c.u = num(m.u, 0, 9, 0) | 0; broadcast({ t: 'suit', id: c.id, u: c.u }, c.id); break; }
+      case 'carried': { // a downed camper got carried back inside the fence: tell the people who carried them (badges)
+        const who = (Array.isArray(m.who) ? m.who : []).map(v => num(v, 0, 1e9, -1) | 0).filter(v => v > 0).slice(0, 8);
+        LOG.log('carriedHome', { id: c.id, n: c.n, by: who });
+        for (const id of who) { const o = clients.get(id); if (o) send(o, { t: 'carried', who }); }
+        break;
+      }
+      case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s
+        const k = m.k === 'twerk' || m.k === 'sing' ? m.k : null; if (!k) return;
+        const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
+        c.nz = 1; // noisy: draws Madame Zeroni like a shout
+        broadcast({ t: 'emote', id: c.id, k }, c.id);
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
@@ -788,6 +954,36 @@ function dirStartMonster(d, tx, tz) {
     broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
   } else if (d.kind === 'lion') LION.pendingSpawn = { x: d.x, z: d.z };
 }
+// Grab targets (see 'pgrab'): a prop, or the body of a downed camper (negative id). o holds its grab/ropes lists.
+function grabTarget(id) {
+  if (id >= 0) { const p = world.props[id]; return p ? { o: p, x: p.x, z: p.z } : null; }
+  const b = clients.get(-id); if (!b || !b.joined || !((b.f & 2) || Date.now() - b.dnAt < 2000)) return null;
+  b.body = b.body || { grab: [], ropes: [] }; return { o: b.body, c: b, x: b.x, z: b.z };
+}
+function unloadFromCart(id) {
+  const p = world.props[id]; if (!p || p.cartId == null) return;
+  const cart = world.props[p.cartId]; p.cartId = null;
+  if (cart) { cart.load = (cart.load || []).filter(l => l !== id); broadcast({ t: 'pcart', id: +Object.keys(world.props).find(k => world.props[k] === cart), load: cart.load }); }
+}
+// the crew's wheelbarrow: always one, parked by the Wreck Room (id CART_ID, never sold)
+const CART_ID = 9999;
+function ensureCart() { if (!world.props[CART_ID]) { world.props[CART_ID] = { type: 'cart', x: SIM.CART.HOME.x, z: SIM.CART.HOME.z, load: [] }; dirty = true; } }
+ensureCart();
+// The day's monster roster (sim.js stepRoster): hatchlings, rattlesnakes, scorpions, Mr. Sir, the Warden, the Sheriff's
+// ghost and Kate Barlow's ghost. Same pattern as the herd: server-authoritative, one 'rost' message per tick while any are out.
+const ROSTER = { mobs: [] };
+let rostOn = false;
+function tickRoster(t, dt, players) {
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day });
+  const now = Date.now();
+  for (const e of rev) {
+    if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
+    if (e.k !== 'rattle') LOG.log('roster', { ev: e.k, id: e.id, by: e.by });
+  }
+  const on = ROSTER.mobs.length > 0;
+  if (on || rostOn || rev.length) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
+  rostOn = on;
+}
 function tickJavelinas(t, dt, players) {
   JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
   const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
@@ -807,6 +1003,7 @@ function simPlayers(now) {
     hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
+    kt: !!c.kt, on: !!c.on, vy: c.vy || 0, // for the roster (sim.js stepRoster): Kate's loot, an onion on, where the camera looks
   }));
 }
 function endOfDay() {
@@ -823,7 +1020,7 @@ function endOfDay() {
     const got = q.bank;
     LOG.log('fired', { bank: got, quota: q.quota });
     const wasZone = world.zone || 'lake';
-    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() });
+    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() }); ensureCart();
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
     if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
@@ -837,15 +1034,8 @@ setInterval(() => {
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
   // heavy loot
-  const sold = SIM.stepProps(world.props, players, dt);
-  const moved = [];
-  for (const id in world.props) { const p = world.props[id]; if (p.moved) { p.moved = false; p.x = r2(p.x); p.z = r2(p.z); moved.push([+id, p.x, p.z, p.n]); } }
-  if (moved.length) broadcast({ t: 'props', list: moved });
-  for (const id of sold) {
-    const p = world.props[id], v = SIM.HEAVY[p.type]; delete world.props[id];
-    world.run.bank += v; dirty = true;
-    broadcast({ t: 'psold', id: +id, v, who: p.who || [] }); broadcast(runInfo());
-  }
+  // heavy loot is grab physics now (public/js/84-grab.js): the holder's page simulates it and reports 'pst'; see there.
+  for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);
@@ -888,6 +1078,7 @@ setInterval(() => {
     broadcast({ t: 'dirinfo', ...DIRECTOR.describe(dirState, now, world.run.day, Math.max(1, joined().length)) });
   }
   tickJavelinas(t, dt, players);
+  tickRoster(t, dt, players);
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
 
@@ -897,7 +1088,7 @@ setInterval(() => {
     c.alive = false; try { c.ws.ping(); } catch (e) { /* closing */ }
   }
   if (world.won && Date.now() - world.wonAt > NEW_DAY_AFTER_WIN_MS) {
-    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); gotSet = new Set(); kbHolder = null; dirty = true; save();
+    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); ensureCart(); gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'reset' });
   }
 }, 30000);

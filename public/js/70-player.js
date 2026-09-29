@@ -30,13 +30,14 @@ function updatePlayerTent(dt){
     animPerson(me,P.anim,dt,P.digPh);
   }
   // shelter: water drains slowly just standing around inside, and resting in a bunk restores health and water
-  if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);S.hp=Math.min(HP_MAX,S.hp+8*dt)}
+  if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);setHp(S.hp+8*dt)}
   else S.water=Math.max(0,S.water-0.15*dt/tune('water.last'));
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
 function updatePlayer(dt){
-  if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
+  if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
+    animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
@@ -47,7 +48,7 @@ function updatePlayer(dt){
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
   if(touch.id!==null){ix=touch.ix;iz=touch.iz}
   if(uiOpen()){ix=0;iz=0}
-  const sprint=KEYS['shift']&&S.water>0&&S.carry==null;
+  const sprint=KEYS['shift']&&S.water>0&&S.carry==null&&(S.stam>2||GOD);   // stamina (updateHealth below): no sprinting on empty
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
   const digging=digHeld&&!uiOpen()&&S.carry==null;
@@ -59,19 +60,21 @@ function updatePlayer(dt){
   }else{
     P.digT=0.3;
     if(ml>0.1){
-      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null)sp=Math.min(sp,SIM.carrySpeed(carryN()));
+      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
       if(trap&&groundAt(nx,nz)-P.y>0.6){nx=P.x;nz=P.z}
       if(ZONE_STEP){const q=zoneStep(P.x,P.z,nx,nz,P.y);nx=q[0];nz=q[1]}   // other maps: ledges too tall to walk up (88-zones.js)
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
+      if(sprint)drainStam(tune('stam.sprint')*dt);
+      if(S.carry!=null){drainStam(tune('stam.carry')*dt);if(S.stam<=0&&!GOD){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500);logEv('carryDrop',{why:'stamina'})}}
     }else P.anim=0;
   }
   // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever
   // non-zero while that state machine owns the frame, so there's nothing left to integrate here.
   const g=groundAt(P.x,P.z);
-  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():5.6;P.grounded=false}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
+  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():5.6;P.grounded=false;drainStam(tune('stam.jump'))}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
   P.vy-=16*dt;P.y+=P.vy*dt;
   if(P.y<=g){P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;
   if(P.y<g+0.02)P.grounded=true;
@@ -129,36 +132,80 @@ function updateLizards(dt,t){
   }
 }
 
-/* ---------- health ---------- */
-/* Health runs 0-100. Damage takes it down, and at 0 you're downed like any other knockout (your sack drops, and
-   friends can pick you up). It heals on its own: once you've gone hp.healDelay seconds without getting hurt, it comes
-   back at hp.healRate per second (about a minute from nearly empty to full). Running out of water drains it instead
-   of healing it. Lizard bites, the police and Madame Zeroni still knock you out outright. */
-const HP_MAX=100,REVIVE_HP=40;   // heal delay/rate and thirst drain are tester sliders: tune('hp.healDelay'|'hp.healRate'|'hp.thirst') in 11-tune.js
+/* ---------- health, stamina and afflictions (Peak-style, ported from Greg's branch) ---------- */
+/* One bar. Afflictions eat into it from the right: injury (every hit, and the damage sliders), heat (out of water),
+   sunburn (midday sun out in the open), poison (bites and stings) and hunger. Health is simply what they leave:
+   S.hp = 100 - all afflictions. At 0 you collapse (downed, like any knockout).
+   Stamina lives inside that: sprinting, jumping and hauling spend it, standing still gets it back, and it can never
+   be more than your health. So a sunburnt, hungry camper tires fast, and friends notice.
+   Recovery: injury heals by itself after hp.healDelay s at hp.healRate/s; heat goes once you've got water again;
+   sunburn fades in shade (camp, a tent, 4+ ft down a hole); poison wears off; hunger needs food (Q eats an onion,
+   and the inventory lets you eat a jar of peaches or Sploosh from your sack). Every rate is a slider in F2.
+   Lizard bites, the police and Madame Zeroni still knock you out outright. */
+const HP_MAX=100,REVIVE_HP=40;
+const AFF={injury:0,heat:0,burn:0,poison:0,hunger:0};
+const AFF_INFO={injury:'Injured',heat:'Heatstroke',burn:'Sunburn',poison:'Poisoned',hunger:'Hungry'};
+const AFF_HEAL_ORDER=['injury','poison','heat','burn','hunger'];   // what a heal (bunk, revive, `heal`) takes off first
+function affTotal(){let t=0;for(const k in AFF)t+=AFF[k];return t}
+function syncHp(){S.hp=Math.max(0,HP_MAX-affTotal());if(S.stam>S.hp)S.stam=S.hp}
+function clearAff(){for(const k in AFF)AFF[k]=0;syncHp();S.stam=S.hp}
+function afflict(kind,n){AFF[kind]=clamp(AFF[kind]+n,0,HP_MAX);syncHp()}
+/* set health directly: injures up to it, or heals afflictions (injury first) down to it */
+function setHp(v){
+  let need=(HP_MAX-clamp(v,0,HP_MAX))-affTotal();
+  if(need>0)AFF.injury+=need;
+  else{need=-need;for(const k of AFF_HEAL_ORDER){const d=Math.min(AFF[k],need);AFF[k]-=d;need-=d;if(need<=0)break}}
+  syncHp();
+}
 let hurtFx=0,hurtHoldT=0;
 /* #hurtFx timing (docs/ui-redesign-spec.md section 4): a short hold at peak brightness (<=180ms),
    then a decay to nothing over ~500ms -- a flash, not a lingering full-screen tint. */
 const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
-function hurt(n,title,text){
+function hurt(n,title,text,kind){
   if(GOD)return;
   n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
-  S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
-  logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
+  afflict(kind||'injury',n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
+  logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,kind:kind||'injury',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(S.hp<=0)knockOut(title,text);
 }
+/* stamina: spend() returns false (and spends nothing) when there isn't enough */
+function spendStam(n){if(GOD)return true;if(S.stam<n)return false;S.stam-=n;S.stamT=0;return true}
+function drainStam(n){if(GOD)return;S.stam=Math.max(0,S.stam-n);S.stamT=0}
+function inShade(){return inTent()||inCamp(P.x,P.z)||(baseH(P.x,P.z)-P.y)>1.2}
+const COLLAPSE_TXT={injury:['Collapsed','You took one hit too many.'],heat:['Heatstroke','You ran out of water in the sun.'],
+  burn:['Sunstroke','Hours in the midday sun without shade. Dig in, or rest in camp.'],poison:['Poisoned','The venom got the better of you.'],
+  hunger:['Collapsed','You haven\'t eaten all day. Peaches, Sploosh or an onion would have helped.']};
 function updateHealth(dt){
   if(hurtHoldT>0)hurtHoldT=Math.max(0,hurtHoldT-dt);else hurtFx=Math.max(0,hurtFx-dt*HURT_DECAY);
   $('#hurtFx').style.opacity=hurtFx.toFixed(2);
   if(S.ko)return;
   S.hurtT+=dt;
-  if(GOD)S.water=waterMax();
-  if(S.water<=0&&!uiOpen()&&!PARTY.on){
-    if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and losing health. Get to Mr. Sir for a refill.','bad',5000)}
-    S.hurtT=0;S.hp=Math.max(0,S.hp-tune('hp.thirst')*dt);hurtFx=Math.max(hurtFx,0.25);
-    if(S.hp<=0)knockOut('Heatstroke','You ran out of water in the sun.');
-  }else{
-    if(S.water>0)S.thirsty=false;
-    if(S.hurtT>=tune('hp.healDelay'))S.hp=Math.min(HP_MAX,S.hp+tune('hp.healRate')*dt);
+  if(GOD){S.water=waterMax();clearAff();return}
+  const paused=uiOpen()||PARTY.on,t=clockT(),h=hourOf(t),day=t<DAYMS;
+  if(!paused){
+    // heat: out of water, it builds; with water it goes away
+    if(S.water<=0){
+      if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and your health is going. Get to Mr. Sir for a refill.','bad',5000)}
+      AFF.heat+=tune('hp.thirst')*dt;S.hurtT=0;hurtFx=Math.max(hurtFx,0.25);
+    }else{S.thirsty=false;if(S.water>30)AFF.heat=Math.max(0,AFF.heat-tune('aff.heatRecover')*dt)}
+    // sunburn: 10:00-17:00, out in the open
+    if(day&&h>=10&&h<17&&!inShade())AFF.burn=Math.min(tune('aff.burnMax'),AFF.burn+tune('aff.burn')*dt);
+    else AFF.burn=Math.max(0,AFF.burn-(inCamp(P.x,P.z)||inTent()?0.25:0.06)*dt);
+    AFF.poison=Math.max(0,AFF.poison-tune('aff.poisonFade')*dt);
+    if(day)AFF.hunger=Math.min(tune('aff.hungerMax'),AFF.hunger+tune('aff.hunger')*dt);
+    if(S.hurtT>=tune('hp.healDelay'))AFF.injury=Math.max(0,AFF.injury-tune('hp.healRate')*dt);
   }
+  syncHp();
+  if(S.hp<=0){let worst='injury';for(const k in AFF)if(AFF[k]>AFF[worst])worst=k;knockOut(...COLLAPSE_TXT[worst]);return}
+  // stamina comes back after a short breather, faster standing still
+  S.stamT=(S.stamT||0)+dt;
+  if(S.stamT>0.9)S.stam=Math.min(S.hp,S.stam+(P.moving?tune('stam.regenMove'):tune('stam.regen'))*dt);
+}
+/* food from your sack (the inventory's Eat button): peaches and Sploosh cure hunger and give some stamina back */
+function eatFood(type){
+  const i=S.sack.indexOf(type);if(i<0||S.ko)return false;
+  countUp('eat',5,'sploosh');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
+  toast(type==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);
+  logEv('eat',{type});return true;
 }

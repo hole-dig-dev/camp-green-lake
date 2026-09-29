@@ -28,7 +28,7 @@ function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'nu
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank}))}catch(e){}}
 function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
 function setRun(m){
-  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
+  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
   if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
@@ -43,26 +43,32 @@ $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
+  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
   else if(played<180)graceDay();
   else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;saveRun();fired(b,q)}
 }
 
-/* ---- heavy loot: too big for the sack. Grab it (F) and haul it to Mr. Sir's truck; two campers carry it much faster ---- */
+/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to Mr. Sir's truck; the safe takes two to lift ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
-  if(ITEM_MODELS[type]){g.add(itemMesh(type));scene.add(g);return g}   // the Blender safe / strongbox (23-models.js), once loaded
+  if(ITEM_MODELS[type]){g.add(itemMesh(type));scene.add(g);return g}
+  if(type==='cart'){   // the crew's wheelbarrow (84-grab.js): tray, wheel up front, two handles
+    const tray=box(0.75,0.28,1.0,0x6f7f6a);tray.position.set(0,0.55,0.05);g.add(tray);
+    const lip=box(0.8,0.06,1.05,0x4d5a4a);lip.position.set(0,0.7,0.05);g.add(lip);
+    const wheel=cyl(0.24,0.24,0.1,12,0x2a2a2a);wheel.rotation.z=Math.PI/2;wheel.position.set(0,0.24,0.62);g.add(wheel);
+    for(const s of[-1,1]){const h=box(0.05,0.05,1.3,0x8a6440);h.position.set(s*0.3,0.55,-0.45);h.rotation.x=0.18;g.add(h);const l=box(0.05,0.4,0.05,0x5a4a3a);l.position.set(s*0.28,0.2,-0.35);g.add(l)}
+    scene.add(g);return g}   // the Blender safe / strongbox (23-models.js), once loaded
   if(type==='safe'){const b=box(1.1,1.1,1,0x3b3f45);b.position.y=0.55;const d=cyl(0.18,0.18,0.06,10,0xb8b8b8);d.rotation.x=Math.PI/2;d.position.set(0,0.62,0.52);const h=box(0.3,0.06,0.06,0xd4af37);h.position.set(0.3,0.35,0.52);g.add(b,d,h)}
   else{const b=box(1.2,0.7,0.8,0x5b3a1e);b.position.y=0.35;g.add(b);for(const x of[-0.4,0.4]){const s=box(0.1,0.72,0.82,0xd4af37);s.position.set(x,0.36,0);g.add(s)}}
   scene.add(g);return g;
 }
-function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',1.7)})}
+function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='cart'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',type==='cart'?1.2:1.7)})}
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
-  const pr=PROPS.get(id),name=pr?LOOT[pr.type].name:'heavy find';removeProp(id);
+  const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin()}
+  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}
@@ -76,7 +82,7 @@ function addBag(id,x,z,items,n){
 function removeBag(id){const b=BAGS.get(id);if(!b)return;scene.remove(b.g);dropLabel(b.L);BAGS.delete(id)}
 function bagNear(r){let best=null,bd=r*r;for(const b of BAGS.values()){const d2=(b.x-P.x)**2+(b.z-P.z)**2;if(d2<bd){bd=d2;best=b}}return best}
 function dropBag(){if(!S.sack.length)return;const items=S.sack.slice(0,12);S.sack=[];if(online())wsSend({t:'bag',x:P.x,z:P.z,items});else addBag(bagSeq++,P.x,P.z,items,S.name)}
-function takeBag(items,n){const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
+function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
 
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
@@ -87,10 +93,11 @@ function popOut(){
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;setHp(REVIVE_HP);S.stam=S.hp;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
+  if(othersOnline()&&stepMyBody(dt)){fine.textContent=S.inCart!=null?'You\'re in the wheelbarrow. Hang on.':'Your crew has hold of you. Get carried inside the fence and you\'re back up.';me.g.position.set(P.x,P.y,P.z);return}
   if(othersOnline()){fine.textContent=`Downed. ${Math.ceil(S.ko)}s left for a friend to pick you up (they hold F next to you). You can crawl.`;
     let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0),iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
     const dragged=MONV.zer&&MONV.zer.drag===myId();
@@ -140,12 +147,10 @@ function updateCoop(dt){
   if(clockT()<DAYMS)S.dayPlay=(S.dayPlay||0)+dt;
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
-  if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim()],dt)){const v=SIM.HEAVY[PROPS.get(+id).type];propSold(+id,v,[myId()]);payTeam(v)}}
-  for(const pr of PROPS.values()){const g=pr.g,k=Math.min(1,dt*8);g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y=groundAt(g.position.x,g.position.z)}
-  if(S.carry!=null){const pr=PROPS.get(S.carry);if(!pr||S.ko||Math.hypot(pr.x-P.x,pr.z-P.z)>3.6){S.carry=null;if(pr&&!S.ko)toast('You let go.','',1500)}}
+  // heavy loot moves by grab physics now: 84-grab.js (updateGrab)
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
-  if(dn){S.revT+=dt;if(S.revT>=3){S.revT=0;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
+  if(dn){S.revT+=dt;const need=S.medkit>0?1:3;if(S.revT>=need){S.revT=0;if(need===1){S.medkit--;toast('You used a first-aid kit.','',1800)}wsSend({t:'revive',id:dn.rid});addXP(50);countUp('helps',10,'ladder');toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
   if(isTrapped()&&KEYS[' ']&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
   updatePings(dt);updateLights(dt);
