@@ -19,6 +19,7 @@ const BADGES={
   knots:['Knots','Tie your rope to something 10 times'],
   butter:['Butterfingers','Knock 50 seeds off heavy loot by dropping it'],
   stanley:['Stanley','Dig up the suitcase'],
+  clyde:['Sweet Feet','Get hit by falling sneakers'],
 };
 const JUMPSUITS=[
   {n:'Orange (standard issue)',c:0xe8742a,ok:()=>true},

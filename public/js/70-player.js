@@ -86,7 +86,7 @@ function updatePlayer(dt){
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water: drains per second by activity, divided by the 'Water lasts' slider (11-tune.js, 3x by default) */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
-  S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
+  S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(RUN.mood==='heatwave'?1.6:1)*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
@@ -191,7 +191,7 @@ function updateHealth(dt){
       AFF.heat+=tune('hp.thirst')*dt;S.hurtT=0;hurtFx=Math.max(hurtFx,0.25);
     }else{S.thirsty=false;if(S.water>30)AFF.heat=Math.max(0,AFF.heat-tune('aff.heatRecover')*dt)}
     // sunburn: 10:00-17:00, out in the open
-    if(day&&h>=10&&h<17&&!inShade())AFF.burn=Math.min(tune('aff.burnMax'),AFF.burn+tune('aff.burn')*dt);
+    if(day&&h>=10&&h<17&&!inShade())AFF.burn=Math.min(tune('aff.burnMax'),AFF.burn+tune('aff.burn')*(RUN.mood==='heatwave'?2:1)*dt);
     else AFF.burn=Math.max(0,AFF.burn-(inCamp(P.x,P.z)||inTent()?0.25:0.06)*dt);
     AFF.poison=Math.max(0,AFF.poison-tune('aff.poisonFade')*dt);
     if(day)AFF.hunger=Math.min(tune('aff.hungerMax'),AFF.hunger+tune('aff.hunger')*dt);

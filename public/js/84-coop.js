@@ -23,12 +23,12 @@ function setHat(p,l){
 }
 
 /* ---- the team quota: sell enough to Mr. Sir by curfew, or the Warden fires the whole crew ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1)};
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e7,0)|0}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
-function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank}))}catch(e){}}
-function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
+const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // curse/mood: 81-mood.js
+function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e7,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);$('#dayTag').textContent='Day '+RUN.day}
+function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
+function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{v*=RUN.mood==='digday'?2:1;setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
 function setRun(m){
-  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
+  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
   if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
@@ -43,9 +43,9 @@ $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
+  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.curse=Math.max(0,(RUN.curse||0)+SIM.CURSE.QUOTA);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
   else if(played<180)graceDay();
-  else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;saveRun();fired(b,q)}
+  else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;RUN.curse=0;RUN.mood='normal';saveRun();fired(b,q)}
 }
 
 /* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to Mr. Sir's truck; the safe takes two to lift ---- */

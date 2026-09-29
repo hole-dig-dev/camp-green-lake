@@ -26,7 +26,7 @@ function updateSinging(dt){
   const on=KEYS['h']&&S.started&&!S.ko&&!uiOpen();
   if(!on){singT=0;return}
   S.noise=Math.max(S.noise,0.7);
-  if((singT-=dt)<=0){singT=SING_EVERY;countUp('sing',40,'lullaby');startEmote(me,'sing',meL);wsSend({t:'emote',k:'sing'})}
+  if((singT-=dt)<=0){singT=SING_EVERY;countUp('sing',40,'lullaby');moodSing();startEmote(me,'sing',meL);wsSend({t:'emote',k:'sing'})}
 }
 
 /* ---- the pose, layered over whatever clip is playing ---- */

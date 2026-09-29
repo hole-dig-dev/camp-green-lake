@@ -553,3 +553,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 
 /* another map (88-zones.js): the lake's curfew clock and walk-to-camp don't apply */
 #hud.zone-away #backRow,#hud.zone-away #curK,#hud.zone-away #curK+.v-wrap{display:none}
+
+/* the curse (81-mood.js) and a sandstorm blanking the minimap */
+#curseRow .v{color:#8a3a8a}
+#curseRow.hot .v{color:var(--danger);font-weight:700}
+#mapbox.sand canvas{filter:blur(6px) sepia(1) brightness(.8)}

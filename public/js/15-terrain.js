@@ -51,7 +51,8 @@ const LOOT={
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
   suitcase:{name:'Suitcase marked "STANLEY YELNATS"',val:500,color:0x6b3e1f,key:true},
-  goldbar:{name:'Gold bar',val:90,color:0xd4af37}   // only in the buried town's vault (89-town.js)
+  goldbar:{name:'Gold bar',val:90,color:0xd4af37},   // only in the buried town's vault (89-town.js)
+  sneakers:{name:'Clyde Livingston\'s sneakers',val:30,color:0xf0f0f0}   // they fall out of the sky when the curse is high (81-mood.js)   // only in the buried town's vault (89-town.js)
 };
 const WEIGHTS=[['cap',30],['can',24],['spoon',14],['shoe',12],['arrow',9],['jar',6],['fossil',5],['lipstick',2],['sploosh',1.6],['locket',1.2],['pistol',0.8]];
 const WSUM=WEIGHTS.reduce((s,w)=>s+w[1],0);

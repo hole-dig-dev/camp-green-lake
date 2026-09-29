@@ -129,7 +129,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Camper';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
-const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'goldbar'];
+const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'goldbar', 'sneakers'];
 
 /* Peak-style maps (public/js/88-zones.js). The whole crew is always in ONE map (world.zone, 'lake' when unset), so
    everything else here runs unchanged on whichever map is loaded. Each map keeps its own holes, finds, heavy loot,
@@ -167,7 +167,7 @@ function checkCampfire() {
   if (js.length && at === js.length && next) zoneSwitch(next, 'campfire');
 }
 
-function freshRun() { return { day: 1, bank: 0, peak: 1 }; }
+function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
@@ -378,7 +378,14 @@ function maybeSkipNight() {
   broadcastSleep();
 }
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
-function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
+function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) * (world.run.mood === 'digday' ? 2 : 1), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
+// the curse (sim.js CURSE): the crew's, 0-100. why: shown to everyone
+function addCurse(d, why) {
+  const was = world.run.curse || 0; world.run.curse = Math.max(0, Math.min(100, was + d)); dirty = true;
+  if (Math.round(world.run.curse) === Math.round(was)) return;
+  LOG.log('curse', { d, curse: Math.round(world.run.curse), why }); broadcast({ t: 'curse', d, curse: Math.round(world.run.curse), why }); broadcast(runInfo());
+}
+const payMult = () => (world.run.mood === 'digday' ? 2 : 1); // dig day: Mr. Sir pays double
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', (ws, req) => {
@@ -411,7 +418,7 @@ wss.on('connection', (ws, req) => {
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
-      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day), // and the day's roster
+      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.curse || 0), // and the day's roster
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -516,7 +523,7 @@ wss.on('connection', (ws, req) => {
         // client can do per message and per second, they don't verify the sack was honestly earned.
         if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
         const v = num(m.v, 0, MAX_SELL_V, 0) | 0; if (!v) return;
-        world.run.bank += v; dirty = true;
+        world.run.bank += v * payMult(); dirty = true;
         LOG.log('sell', { id: c.id, n: c.n, v });
         broadcast(runInfo());
         break;
@@ -581,7 +588,7 @@ wss.on('connection', (ws, req) => {
           for (const sid of sell) {
             const q = world.props[sid], v = q.val == null ? SIM.HEAVY[q.type] : q.val, who = [...new Set([c.id, ...(p.grab || []), ...(p.ropes || [])])];
             delete world.props[sid]; if (p.load) p.load = p.load.filter(l => l !== sid);
-            world.run.bank += v; dirty = true;
+            world.run.bank += v * payMult(); dirty = true;
             LOG.log('propSold', { item: sid, type: q.type, v, who, cart: p.type === 'cart' });
             broadcast({ t: 'psold', id: sid, v, who });
           }
@@ -880,10 +887,30 @@ wss.on('connection', (ws, req) => {
         for (const id of who) { const o = clients.get(id); if (o) send(o, { t: 'carried', who }); }
         break;
       }
+      case 'koCurse': { // a camper got knocked out (any cause): the curse grows a little. At most once a minute each.
+        const now = Date.now(); if (now - (c.koCurseAt || 0) < 60000) return; c.koCurseAt = now;
+        addCurse(SIM.CURSE.KO, `${c.n} knocked out`);
+        break;
+      }
+      case 'runset': { // host/play-test console: curse <n> | mood <name>
+        if (!c.host) return;
+        if (m.curse != null) { world.run.curse = Math.max(0, Math.min(100, num(m.curse, 0, 100, 0))); }
+        if (typeof m.mood === 'string' && SIM.MOODS[m.mood]) world.run.mood = m.mood;
+        dirty = true; LOG.log('runset', { by: c.n, curse: world.run.curse, mood: world.run.mood }); broadcast(runInfo());
+        break;
+      }
       case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s
         const k = m.k === 'twerk' || m.k === 'sing' ? m.k : null; if (!k) return;
         const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
         c.nz = 1; // noisy: draws Madame Zeroni like a shout
+        if (k === 'sing' && MON.zer && Math.hypot(MON.zer.x - c.x, MON.zer.z - c.z) < 14) { // the lullaby, close to her: she fades away for the night
+          MON.zer.song = (MON.zer.song || 0) + 1;
+          if (MON.zer.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
+            const zx = MON.zer.x, zz = MON.zer.z; MON.appeased = true; MON.zer = null;
+            LOG.log('appeased', { by: c.n }); broadcast({ t: 'mon', ...monSnapshot(), ev: [{ k: 'appeased', x: r1(zx), z: r1(zz), by: c.n }] });
+            addCurse(SIM.CURSE.LULLABY, `${c.n} sang Madame Zeroni away`);
+          }
+        }
         broadcast({ t: 'emote', id: c.id, k }, c.id);
         break;
       }
@@ -999,7 +1026,7 @@ ensureCart();
 const ROSTER = { mobs: [] };
 let rostOn = false;
 function tickRoster(t, dt, players) {
-  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day });
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood });
   const now = Date.now();
   for (const e of rev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -1039,6 +1066,7 @@ function endOfDay() {
   if (world.run.bank >= q.quota) {
     LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
     world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
+    world.run.curse = Math.max(0, (world.run.curse || 0) + SIM.CURSE.QUOTA); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
     broadcast({ ...runInfo(), t: 'quota', met: true });
   } else {
     // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
@@ -1054,7 +1082,13 @@ function endOfDay() {
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
   const t = SIM.clockT(world.clock, now);
-  if (lastT < SIM.DAYMS && t >= SIM.DAYMS) endOfDay();
+  if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
+    // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)
+    const out = (world.zone || 'lake') === 'lake' ? joined().filter(c => !c.town && !SIM.inCamp(c.x, c.z)).length : 0;
+    if (out) addCurse(SIM.CURSE.CURFEW_OUT * out, `${out} camper${out > 1 ? 's' : ''} outside the fence at curfew`);
+    endOfDay();
+  }
+  if (lastT > t + SIM.CYCLE / 2 && (world.run.curse || 0) > 0) addCurse(SIM.CURSE.DAWN, 'dawn');   // the clock wrapped: a new morning
   lastT = t;
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
@@ -1063,7 +1097,7 @@ setInterval(() => {
   for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
-  if ((world.zone || 'lake') === 'lake') SIM.stepMonsters(MON, players, t, dt, ev); else { MON.trucks = []; MON.zer = null; } // police and Zeroni are the lake's (88-zones.js)
+  if ((world.zone || 'lake') === 'lake') SIM.stepMonsters(MON, players, t, dt, ev, { mood: world.run.mood }); else { MON.trucks = []; MON.zer = null; } // police and Zeroni are the lake's (88-zones.js)
   if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
   LION.noNatural = dirState.enabled; // ditto for the lion's own pre-curfew window
   SIM.stepLion(LION, players, t, dt, ev);
@@ -1093,7 +1127,7 @@ setInterval(() => {
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake' })) {
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0 })) {
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
     else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }

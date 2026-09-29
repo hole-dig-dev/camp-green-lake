@@ -111,10 +111,12 @@
     return { x: COP_GATE.x + ((i % 4) - 1.5) * 1.2, z: COP_GATE.z, h: 0, mode: 'out', th, dir: i % 2 ? -1 : 1, delay: k * COP_STAGGER, lost: 0, tgt: null, tx: 0, tz: 0, wob: i * 1.7 };
   }
   function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
-  function stepMonsters(M, players, t, dt, ev) {
-    const night = t >= DAYMS, half = t < NIGHT_SPLIT ? 'police' : 'zeroni';
+  function stepMonsters(M, players, t, dt, ev, opt) {
+    const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: Zeroni all night, no police
+    const night = t >= DAYMS, half = fm ? 'zeroni' : t < NIGHT_SPLIT ? 'police' : 'zeroni';
+    if (!night) M.appeased = false;   // sung away: gone until the next night
     const outs = players.filter(p => !inCamp(p.x, p.z));
-    if (night) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
+    if (night && !fm) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
       const on = M.trucks.filter(c => c.mode !== 'home'), n = CURFEW.copN;
       for (let k = 0; on.length + k < n; k++) M.trucks.push(spawnCop(on.length + k, n, k));
       for (const c of on.slice(n)) { c.mode = 'home'; c.tgt = null; c.delay = 0; }
@@ -123,7 +125,7 @@
     for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
     M.trucks = M.trucks.filter(c => !c.gone);
     // Madame Zeroni: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
-    if (!(night && half === 'zeroni' && outs.length)) M.zer = null;
+    if (!(night && half === 'zeroni' && outs.length) || M.appeased) M.zer = null;
     else {
       if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
       stepZeroni(M.zer, outs, t, dt, ev);
@@ -455,9 +457,10 @@
   const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
   const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  function rosterFor(day) {
+  function rosterFor(day, curse) {
+    const c = clamp(curse || 0, 0, 100);
     const r = roRnd(day * 131 + 7), take = (list, n) => { const a = list.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
-    const ns = Math.min(3, 1 + Math.floor(day / 2)), nm = day >= 2 ? (day >= 4 ? 2 : 1) : 0, nb = day >= 3 ? (day >= 5 ? 2 : 1) : 0;
+    const ns = Math.min(3, 1 + Math.floor(day / 2) + Math.floor(c / 40)), nm = day >= 2 || c >= 40 ? (day >= 4 || c >= 70 ? 2 : 1) : 0, nb = day >= 3 || c >= 60 ? (day >= 5 || c >= 80 ? 2 : 1) : 0;
     return [...take(RO_SMALL, ns), ...take(RO_MEDIUM, nm), ...take(RO_BIG, nb)];
   }
   const roSmall = k => k === 'hatch' || k === 'snake' || k === 'scorp';
@@ -475,18 +478,20 @@
   }
   function stepRoster(R, players, t, dt, ev, o) {
     o = o || {}; R.mobs = R.mobs || []; R.pm = R.pm || {}; R.nid = R.nid || 1; R.sp = R.sp || {}; R.force = R.force || [];
-    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS;
-    if (R.rkey !== day) { R.rkey = day; R.roster = rosterFor(day); }
-    const has = k => (R.all || R.roster.includes(k) || R.force.includes(k)) && !(R.off || []).includes(k);
+    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.curse || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
+    if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
+    const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
+    const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k);
+    const cmul = 1 + cz / 100;   // the curse: everything spawns faster
     const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];
     // who's been standing around out on the lake (for Mr. Sir and the Warden)
     for (const p of players) { const m = R.pm[p.id] || (R.pm[p.id] = { idle: 0, warned: 0 }); if (p.an === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } }
     if (live.length) {
-      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
-      if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
-      if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
+      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
+      if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22 / cmul)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
+      if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * cmul * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
       if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
       if (has('warden') && !night && !count('warden')) roSpawn(R, 'warden', pickP(), 50, 70, {});
       const kt = live.filter(p => p.kt);
@@ -611,9 +616,32 @@
   // does an 8 ft hole at (x,z) break through? Always in the old town; now and then anywhere else (seeded by spot + day)
   const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < OLD_TOWN.r || roRnd(Math.floor(x * 10) * 7919 + Math.floor(z * 10) * 104729 + day * 31)() < 0.1;
 
+  /* ---- the Warden's mood and the curse (after Greg's branch; public/js/82-mood.js shows and applies them) ----
+     One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the curse rises). Day 1 is normal.
+     The curse (0-100) is the crew's: it rises when campers are out past curfew or get knocked out, eases each dawn, when
+     the quota's met, and when someone sings Madame Zeroni away. It spawns more monsters and hazards. */
+  const MOODS = {
+    normal: { name: 'A regular day', desc: 'Nothing special. Dig.' },
+    heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
+    sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
+    breeding: { name: 'Lizard breeding season', desc: 'Lizard hatchlings everywhere, twice as many.' },
+    stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' },
+    fullmoon: { name: 'Full moon', desc: 'Madame Zeroni is out all night. No police.' },
+    digday: { name: 'Dig day', desc: 'Double quota, but Mr. Sir pays double.' },
+    inspection: { name: 'Inspection day', desc: 'The Warden walks the lake all day. Look busy.' },
+  };
+  function rollMood(day, curse) {
+    if (day <= 1) return 'normal';
+    const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
+    const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 1 + c, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
+    let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return 'normal';
+  }
+  const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
+
   const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
+    MOODS, rollMood, CURSE,
     TOWN, OLD_TOWN, townLayout, townCellAt, townCellCenter, inTownXZ, townBreachCell, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;

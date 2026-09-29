@@ -116,7 +116,7 @@ function kateLoot(){return S.sack.some(t=>t==='lipstick'||t==='pistol'||t==='loc
 let roLocalT=0;
 function updateRoster(dt){
   if(!online()&&S.started){
-    const ev=[];SIM.stepRoster(RO_LOCAL,[meSim()],clockT(),dt,ev,{day:RUN.day||1});
+    const ev=[];SIM.stepRoster(RO_LOCAL,[meSim()],clockT(),dt,ev,{day:RUN.day||1,curse:RUN.curse||0,mood:RUN.mood});
     if((roLocalT-=dt)<=0||ev.length){roLocalT=0.1;rosterSnapshot(SIM.packRoster(RO_LOCAL),RO_LOCAL.roster)}
     for(const e of ev)rosterEvent(e);
   }
