@@ -6,3 +6,4 @@ tests/_debug_*
 tests/_vendor_three.min.js
 tests/smoke-failure.png
 *.blend1
+tests/out/

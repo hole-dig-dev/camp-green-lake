@@ -135,6 +135,7 @@ function use(){
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
   if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's pickup by the main gate. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
+  if(s.use){s.use();return}   // a spot that brings its own action (another map's rope anchor: 88-zones.js)
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');
   else if(s.id==='store')openShop();

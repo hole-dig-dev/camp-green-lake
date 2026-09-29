@@ -77,6 +77,7 @@ function walkTo(b,x,z,dt,speed,y){   // true once there
 function goIndoor(b,path,then){b.state='indoor';b.path=path;b.then=then}
 function updateBots(dt,now){
   if(PARTY.on)return;
+  if(ZONE_H)return;   // the crew stays behind at camp while you're in another map (88-zones.js)
   const siren=curfewSoon();
   for(const b of bots){
     if(b.sinkOverride)continue;   // off pulling someone out of a sinkhole right now (87-sinkhole.js drives him instead)

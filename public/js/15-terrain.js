@@ -76,7 +76,8 @@ const C_SAND=new T.Color(0xdcab6e),C_SAND2=new T.Color(0xc99558),C_CRACK=new T.C
 function toneAt(x,z){const crack=Math.abs(vnoise(x*0.55+40,z*0.55)-0.5)<0.035?1:0;return clamp(vnoise(x*0.18,z*0.18)*0.9+crack*2,0,3)}
 function shade(col,i,x,z,b,h,tn){
   if(tn>1.5)tmpC.copy(C_SAND).lerp(C_CRACK,0.55);else tmpC.copy(C_SAND).lerp(C_SAND2,tn);
-  if(inCamp(x,z))tmpC.lerp(C_CAMP,0.5);
+  if(ZONE_TINT)ZONE_TINT(tmpC,x,z,b,tn);   // another map's own ground colours (88-zones.js)
+  else if(inCamp(x,z))tmpC.lerp(C_CAMP,0.5);
   if(h<b-0.02)tmpC.lerp(C_DEEP,0.25+0.7*clamp((b-h)/1.8,0,1));
   else if(h>b+0.02)tmpC.lerp(C_DIRT,clamp((h-b)/0.35,0,1)*0.85);
   col[i*3]=tmpC.r;col[i*3+1]=tmpC.g;col[i*3+2]=tmpC.b;
@@ -130,6 +131,7 @@ function groundAt(x,z){
   return lerp(lerp(C.hts[i],C.hts[i+1],tx),lerp(C.hts[i+n],C.hts[i+n+1],tx),tz);
 }
 /* coarse far terrain, cut away (discarded) wherever the detailed chunks are loaded */
+let FAR_TERRAIN=null;   // the lake's coarse far mesh; 88-zones.js hides it while the crew is in another map
 const farU={uFocus:{value:new T.Vector2(0,12)},uR:{value:LOAD_R-3}};
 {
   const FR=8,FN=Math.round(HALF*2/FR),g=new T.PlaneGeometry(HALF*2,HALF*2,FN,FN);g.rotateX(-Math.PI/2);
@@ -140,7 +142,7 @@ const farU={uFocus:{value:new T.Vector2(0,12)},uR:{value:LOAD_R-3}};
   mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,farU);
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvFarW=(modelMatrix*vec4(transformed,1.0)).xyz;');
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;uniform vec2 uFocus;uniform float uR;').replace('void main() {','void main() {\nif(distance(vFarW.xz,uFocus)<uR)discard;')};
-  const far=new T.Mesh(g,mat);far.receiveShadow=true;scene.add(far);
+  const far=new T.Mesh(g,mat);far.receiveShadow=true;scene.add(far);FAR_TERRAIN=far;
 }
 streamChunks(0,12,999);
 
