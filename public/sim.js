@@ -20,7 +20,7 @@
   const CURFEW_DEF = {
     towerReach: 78,      // m along the ground to where a searchlight's far (top) edge lands (JT: 50% past the old 52 m)
     towerHalf: 0.26,     // rad: half the width of a searchlight beam
-    towerSweep: 0.86,    // rad: how far each searchlight swings either side of its aim
+    towerSweep: 1.38,    // rad: how far each searchlight swings either side of its aim (±79°: JT asked for 30° more than ±49°)
     towerSpeed: 1,       // x: how fast the searchlights sweep
     copN: 4,             // officers on patrol
     copRing: 1,          // x: size of their patrol loop around camp
@@ -42,7 +42,7 @@
   const TOWER_RANGE = CURFEW_DEF.towerReach, TOWER_HALF_ANGLE = CURFEW_DEF.towerHalf, COP_RANGE = CURFEW_DEF.copRange, COP_HALF_ANGLE = CURFEW_DEF.copHalf;   // defaults, for tests
   /* A searchlight is a real cone from the lamp (TOWER_LAMP_Y up) tilted down onto the flat lakebed: its top edge lands
      towerReach away, its bottom edge much nearer, so the lit patch on the ground is a long oval, not a flat wedge. */
-  const TOWER_LAMP_Y = 8.55, TOWER_SPOT_Y = 0.2;   // lamp height; the height on a camper the light has to touch (feet in the lit patch count)
+  const TOWER_LAMP_Y = 10.3, TOWER_SPOT_Y = 0.2;   // lamp height (on a post above the roof peak); the height on a camper the light has to touch (feet in the lit patch count)
   function towerTilt() { return Math.atan2(TOWER_LAMP_Y, CURFEW.towerReach) + CURFEW.towerHalf; }   // how far the beam's axis points below level
   function towerHeading(i, t) { return TOWERS[i].a + Math.sin(t / 2900 * CURFEW.towerSpeed + i * 1.7) * CURFEW.towerSweep; }
   function towerLit(x, y, z, o, h) {
