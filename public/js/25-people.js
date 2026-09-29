@@ -44,6 +44,7 @@ function sleepPose(p,bk){
 }
 function animPerson(p,mode,dt,digPhase,speed){
   if(p.model){animModel(p,mode,dt,digPhase,speed);return}
+  if(p.emote)emotePose(p,dt||0.016);   // box people: no pose, but the emote still times out (and a twerk still ends in a fart)
   if(p.shovel)p.shovel.visible=!p.stowed;   // back in hand when you're up (sleepPose hides it), unless it's on a rack (p.stowed)
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));
@@ -149,6 +150,7 @@ function modelHat(p,t){
   }
 }
 function stepMixer(p,dt){
+  if(p.poseRest)for(const[b,q,pos]of p.poseRest){b.quaternion.copy(q);b.position.copy(pos)}   // emote offsets (73-emotes.js) from last frame
   for(const[b,,rest]of p.adj)b.position.copy(rest);
   p.mixer.update(dt);
   for(const[b,dx]of p.adj)b.position.x+=dx;
@@ -171,6 +173,7 @@ function animModel(p,mode,dt,digPhase,speed){
   if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
+  if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;

@@ -663,6 +663,13 @@ wss.on('connection', (ws, req) => {
         if (SIM.lionSwat(LION)) { LOG.log('lionSwat', { id: c.id, n: c.n, hp: Math.round(LION.hp) }); lionEvQ.push({ k: 'swat', id: c.id }); }
         break;
       }
+      case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s
+        const k = m.k === 'twerk' || m.k === 'sing' ? m.k : null; if (!k) return;
+        const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
+        c.nz = 1; // noisy: draws Madame Zeroni like a shout
+        broadcast({ t: 'emote', id: c.id, k }, c.id);
+        break;
+      }
       case 'say':
         if (!withinRate(c.chatTimes, CHAT_RATE, CHAT_WINDOW_MS)) return; // shouts share the chat spam budget
         c.nz = 1; c.chatAt = Date.now();
