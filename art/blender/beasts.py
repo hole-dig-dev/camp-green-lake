@@ -178,44 +178,5 @@ for s in (-1,1):
 for k,p in []:claws(f'claw{k}',(p[0],p[1]-0.05,0.02),(0,-1,-0.4),r,n=4,spread=0.024,L=0.025,r=0.007,m=M_('c_claw_l',(0xe0,0xd8,0xc8),0.5))
 shot('Lion',elev=16,azim=-52,margin=1.12)
 
-# ======================= VULTURE (theme #5: dark, red head, wings half-tucked) =======================
-scene('Vulture');r=root('Vulture');Z=1.2
-N=[(0,0.46,Z,0.09,0.02),(0,0.28,Z+0.01,0.12,0.08),(0,0.05,Z+0.02,0.16,0.12),(0,-0.17,Z+0.04,0.15,0.12),(0,-0.29,Z+0.07,0.05,0.05),(0,-0.35,Z+0.085,0.026,0.026),(0,-0.41,Z+0.095,0.047,0.044),(0,-0.46,Z+0.09,0.026,0.024),(0,-0.495,Z+0.08,0.015,0.017),(0,-0.51,Z+0.062,0.007,0.008)]
-E=[(i,i+1) for i in range(len(N)-1)]
-body=skin('vul',N,E,r,vox=0.008)
-BLK=lin((0x24,0x20,0x1e));BRN=lin((0x3a,0x30,0x28));RED=lin((0x9a,0x26,0x22));IVORY=lin((0xe8,0xdc,0xb8));PINK=lin((0xc0,0x50,0x48))
-def vulpaint(c,n):
-    if c.y<-0.455:return IVORY
-    if c.y<-0.33:return mix(RED,PINK,max(0,noise.noise(c*60)))
-    return mix(BLK,BRN,max(0,noise.noise(c*14))*0.8)
-paintfn(body,vulpaint)
-blob('ruff',(0,-0.26,Z+0.06),(0.095,0.07,0.085),M_('c_vruff',(0x2e,0x28,0x24),0.95),r,seg=10,rings=6,jit=0.15,seed=3)
-for s in (-1,1):
-    eye2(f'eye{s}',body,(s*0.025,-0.42,Z+0.1),(s,-0.3,0.25),0.009,r,(0x4a,0x18,0x12),sink=0.5)
-    nostril(f'nost{s}',body,(s*0.008,-0.47,Z+0.095),(s,-0.2,0.4),0.004,r)
-# a feathered wing: arm bones (shoulder-elbow-wrist-hand) swept back for the half-tucked dive, feathers along it
-FEAT=M_('c_vfeat',(0x1e,0x1c,0x1a),0.85);UNDER=M_('c_vfeat_u',(0x8a,0x86,0x80),0.7);COVERT=M_('c_vcov',(0x30,0x28,0x22),0.9)
-def feather(name,base,dirv,L,W,m,parent,roll=0.0):
-    d=Vector(dirv).normalized();o=box(name,(W,L,0.008),Vector(base)+d*(L/2),m,bevel=0.003,parent=parent)
-    o.rotation_euler=d.to_track_quat('Y','Z').to_euler();o.rotation_euler.rotate_axis('Y',roll)
-    for v in o.data.vertices:v.co.x*=0.55+0.45*(0.5-v.co.y/L)   # taper toward the tip
-    return o
-for s in (-1,1):
-    arm=[(s*0.1,-0.08,Z+0.07),(s*0.38,0.02,Z+0.14),(s*0.62,0.14,Z+0.13),(s*0.8,0.3,Z+0.1)]
-    ARMS[s]=arm
-    for k,(a,b) in enumerate(zip(arm,arm[1:])):
-        cone(f'arm{s}{k}',a,b,0.045-k*0.01,0.035-k*0.01,COVERT,r,verts=7)
-    for k in range(10):   # secondaries along the forearm, pointing back
-        t=k/9;base=Vector(arm[0]).lerp(Vector(arm[2]),t)
-        feather(f'sec{s}{k}',base+Vector((0,0.02,0.0)),(s*0.08,1,-0.05),0.3-0.04*t,0.11,FEAT,r,roll=s*0.1)
-        feather(f'secu{s}{k}',base+Vector((0,0.03,-0.012)),(s*0.08,1,-0.05),0.27-0.04*t,0.1,UNDER,r,roll=s*0.1)
-    for k in range(7):    # primaries fan from the hand, splayed "fingers"
-        a=0.25+k*0.13;base=Vector(arm[2]).lerp(Vector(arm[3]),min(1,k/5))
-        feather(f'pri{s}{k}',base,(s*math.cos(a)*0.8,math.sin(a)+0.5,-0.08),0.36+0.02*k,0.075,FEAT,r,roll=s*0.15)
-        feather(f'priu{s}{k}',base+Vector((0,0.01,-0.012)),(s*math.cos(a)*0.8,math.sin(a)+0.5,-0.08),0.32+0.02*k,0.065,UNDER,r,roll=s*0.15)
-    for k in range(6):    # covert feathers over the joints, so the wing reads as one surface
-        t=k/5;base=Vector(arm[0]).lerp(Vector(arm[3]),t);feather(f'cov{s}{k}',base+Vector((0,0,0.015)),(s*0.1,1,0),0.17,0.14,COVERT,r)
-for k in range(9):feather(f'tail{k}',(0,0.36,Z-0.01),((k-4)*0.09,1,0),0.26,0.07,FEAT,r)
-for s in (-1,1):limb(f'leg{s}',[(s*0.05,0.12,Z-0.06),(s*0.06,0.26,Z-0.1),(s*0.06,0.36,Z-0.1)],0.018,M_('c_vfoot',(0xc8,0xb8,0xa8),0.7),r)
-shot('Vulture',elev=48,azim=-25,margin=1.1)
+# ======================= VULTURE: now in vulture.py (model, legs, rig, clips and export in one script) =======================
 bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()

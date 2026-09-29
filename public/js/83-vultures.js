@@ -121,31 +121,31 @@ function makeVultureModel(){
   g.visible=false;scene.add(g);
   return{g,wingL,wingR,legL,legR,tail,ph:Math.random()*6.28,used:null};
 }
-const VULTURE_RIG_BELLY=1.72;   // the Blender vulture's belly above its origin (model 1.086 m up, x1.6 scale): where its talons hang from
-const VULTURE_TALON=0.5;        // talon leg length before scaling: the camper's hand is pinned to the tip (26-ragdoll.js)
+const VULTURE_TALON=0.5;   // box-model leg length: its tip stands in for the grip until the Blender vulture loads
 const VPOOL_N=4;   // 1 for whoever has YOU, a few spares so several carried friends can be seen at once
 const vPool=Array.from({length:VPOOL_N},makeVultureModel);
 creatureUpgrade('vulture',()=>{vFlockRigs=vFlock.map(()=>{const r=spawnCreature('vulture');scene.add(r.obj);return r});vMesh.visible=false;
   for(const v of vPool){const r=spawnCreature('vulture');for(const c of v.g.children)c.visible=false;v.g.add(r.obj);v.rig=r;
-    // the Blender vulture has no legs: keep the box model's legs, moved up under its belly and scaled to match, as the talons
-    for(const L of[v.legL,v.legR]){L.visible=true;L.position.y=VULTURE_RIG_BELLY;L.scale.setScalar(1.6)}}});   // (registered after vPool exists)
+    v.grip=r.obj.getObjectByName('gripR')}});   // the bone inside its clenched right foot (art/blender/vulture.py); registered after vPool exists
 function vPoolGet(key){
   let v=vPool.find(p=>p.used===key);if(v)return v;
   v=vPool.find(p=>!p.used);if(v){v.used=key;v.g.visible=true}return v;
 }
 function vPoolFree(key){const v=vPool.find(p=>p.used===key);if(v){v.used=null;v.g.visible=false}}
-function vFlap(v,dt,rate,amp){if(v.rig){creatureAnim(v.rig,'Flap',dt,rate/7);return}v.ph+=dt*rate;const s=Math.sin(v.ph)*amp;v.wingL.rotation.z=s;v.wingR.rotation.z=-s;v.tail.rotation.x=Math.sin(v.ph*0.5)*0.08}
+// the Blender vulture's clips (art/blender/vulture.py): Flap (legs tucked), Reach (the dive: feet thrown forward, toes
+// spread), Carry (feet down, toes clenched around what it's got)
+function vFlap(v,dt,rate,amp,clip){if(v.rig){creatureAnim(v.rig,clip||'Flap',dt,rate/7);return}v.ph+=dt*rate;const s=Math.sin(v.ph)*amp;v.wingL.rotation.z=s;v.wingR.rotation.z=-s;v.tail.rotation.x=Math.sin(v.ph*0.5)*0.08}
 function vDrawCarrier(key,x,y,z,yaw,mode,dt){
   const v=vPoolGet(key);if(!v)return;
   v.g.position.set(x,y,z);v.g.rotation.y=yaw;
-  vFlap(v,dt,mode==='carry'?9:mode==='dive'?5:7,mode==='carry'?0.55:0.4);
-  const legOut=mode==='carry'||mode==='grab';   // swinging legs while it's actually holding someone
+  const legOut=mode==='carry'||mode==='grab';   // it's actually holding someone
+  vFlap(v,dt,mode==='carry'?9:mode==='dive'?5:7,mode==='carry'?0.55:0.4,legOut?'Carry':mode==='dive'?'Reach':'Flap');
   v.legL.rotation.x=legOut?Math.sin(v.ph*1.6)*0.5-0.6:0;
-  v.legR.rotation.x=legOut?Math.sin(v.ph*1.6+3.1)*0.15-0.35:0;   // the right foot has you: it barely swings
-  v.legL.visible=v.legR.visible=legOut||!v.rig;
-  v.g.updateMatrixWorld(true);v.talon=legOut?v.legR.localToWorld((v.talon||new T.Vector3()).set(0,-VULTURE_TALON,0)):null;
+  v.legR.rotation.x=legOut?Math.sin(v.ph*1.6+3.1)*0.15-0.35:0;   // (box model) the right foot has you: it barely swings
+  v.g.updateMatrixWorld(true);
+  v.talon=!legOut?null:v.grip?v.grip.getWorldPosition(v.talon||new T.Vector3()):v.legR.localToWorld((v.talon||new T.Vector3()).set(0,-VULTURE_TALON,0));
 }
-/* where the vulture that has camper `key` ('me' or 'r'+id) is gripping: the right foot's tip, or null */
+/* where the vulture that has camper `key` ('me' or 'r'+id) is gripping (inside its clenched right foot), or null */
 function vTalonOf(key){const v=vPool.find(p=>p.used===key);return v&&v.talon||null}
 /* other clients' carried campers: driven purely off the flag bit + ordinary pos sync, no local state needed */
 function vRenderRemoteCarries(dt){
@@ -237,7 +237,9 @@ function vStep(dt){
   }else if(vSt===4){                                            // carried up and a short way across
     const u=clamp(vStT/VULTURE_CARRY_TIME,0,1);
     P.x=lerp(vCarryX0,vCarryX1,sm(u));P.z=lerp(vCarryZ0,vCarryZ1,sm(u));
-    const riseU=clamp(u/0.4,0,1);P.y=clamp(vCarryGround+vCarryApex*sm(riseU),VULTURE_Y_MIN,VULTURE_Y_MAX);
+    // climbing: fast off the ground, easing to the top at under 1 g (a smoothstep here braked at ~4 g, and the camper
+    // hanging from its foot swung up over it)
+    const riseU=clamp(u/0.6,0,1);P.y=clamp(vCarryGround+vCarryApex*(1-(1-riseU)*(1-riseU)),VULTURE_Y_MIN,VULTURE_Y_MAX);
     let dr=Math.atan2(vCarryX1-vCarryX0,vCarryZ1-vCarryZ0)-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*4);
     me.g.position.set(P.x,P.y,P.z);vPersonPose(dt,1);
     vDrawCarrier('me',P.x,P.y+VULTURE_HOLD_UP,P.z,me.g.rotation.y,'carry',dt);

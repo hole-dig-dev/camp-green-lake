@@ -144,9 +144,17 @@ function ragPelvis(p){return p&&p.rag?p.rag.pts[RP.pelvis]:null}
 function ragHead(p){return p&&p.rag?p.rag.pts[RP.head]:null}
 
 /* ---------- who's ragdolled, every frame (90-loop.js, after the player and the remotes have moved) ---------- */
+/* the snatch: over u 0..1 the hand is drawn up from where it was into the vulture's foot (pinning it straight to the
+   foot would yank it a metre in one frame and flip the body over). p.gripFrom is cleared once nothing has hold of p. */
+function ragGripEase(p,t,u){
+  if(!ragActive(p))return null;
+  if(!p.gripFrom){const h=p.rag.pts[RP.hdR];p.gripFrom={x:h.x,y:h.y,z:h.z}}
+  const k=sm(clamp(u,0,1)),f=p.gripFrom;return k>=1?t:{x:lerp(f.x,t.x,k),y:lerp(f.y,t.y,k),z:lerp(f.z,t.z,k)};
+}
 /* Me: the state machines that throw you around (twisters, tumbleweeds, vultures), bonks, hard falls and knockouts decide
    WHERE you are (P); the ragdoll decides how your body looks getting there. S.ragT: a short knock (bonk, hard fall). */
 function myRagState(){
+  if(vSt!==3&&vSt!==4)me.gripFrom=null;   // nothing has hold of you: the next snatch starts from where your hand is then
   if(S.ko){const held=typeof bodyHeld==='function'&&bodyHeld();return{on:true,pin:held?0.35:0.03,lift:held?0.55:0,flail:0}}
   if(twSt===1)return{on:true,pin:0.5,lift:0.85,flail:1.4};              // sucked up the funnel: flailing in the wind
   if(twSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};                // thrown: tumbling through the air
@@ -154,7 +162,8 @@ function myRagState(){
   if(tbSt===1)return{on:true,pin:0.45,lift:0.8,flail:1.3};               // stuck in a rolling tumbleweed: tumbled round with it
   if(tbSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(tbSt===3)return{on:true,pin:0.03,lift:0,flail:0};
-  if(vSt===3||vSt===4){const t=vTalonOf('me');if(t)return{on:true,pin:1,lift:0,flail:0.5,at:'hdR',grip:t,damp:0.93};   // dangling by one hand from its talons
+  if(vSt===3||vSt===4){const t=vTalonOf('me'),g=t&&ragGripEase(me,t,vSt===3?vStT/VULTURE_GRAB_TIME:1);   // dangling by one hand from its talons
+    if(g)return{on:true,pin:1,lift:0,flail:0.5,at:'hdR',grip:g,damp:0.93};
     return{on:true,pin:0.6,lift:0.9,flail:1.2,at:'chest'}}
   if(vSt===5)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(vSt===6)return{on:true,pin:0.03,lift:0,flail:0};
@@ -199,7 +208,7 @@ function updateRagdolls(dt){
       const r=p.rag,gp=p.g.position,sp=Math.hypot(gp.x-(R.rgx??gp.x),gp.z-(R.rgz??gp.z))/Math.max(dt,0.016);
       r.flail=(R.f&1024)?1:0;r.lift=0;
       const t=(R.f&128)&&vTalonOf('r'+rid);   // a vulture has them: hanging by one hand from its talons, like on their screen
-      r.damp=t?0.93:0;if(t){r.lift=0;r.flail=0.5;ragdollPin(p,t.x,t.y,t.z,1,'hdR')}else ragdollPin(p,gp.x,gp.y+r.hipH,gp.z,(R.f&1024)?0.15:sp>0.6?0.3:0.03);
+      r.damp=t?0.93:0;if(t){R.gripT=(R.gripT||0)+dt;const g=ragGripEase(p,t,R.gripT/0.35);r.lift=0;r.flail=0.5;ragdollPin(p,g.x,g.y,g.z,1,'hdR')}else{R.gripT=0;p.gripFrom=null;ragdollPin(p,gp.x,gp.y+r.hipH,gp.z,(R.f&1024)?0.15:sp>0.6?0.3:0.03)}
       p.g.rotation.set(0,p.g.rotation.y,0);
       const under=gp.y<groundAt(gp.x,gp.z)-1.5;
       ragAfterMixer(p,dt,under?(()=>gp.y):groundAt);

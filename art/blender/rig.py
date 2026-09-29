@@ -157,26 +157,5 @@ clip(arm,'Run',14,lion_run,loc_fn=lambda ph:(0,0,0.06*S2(ph*TAU)))
 clip(arm,'Idle',60,lambda ph:{'b6':[(Zax,10*S2(ph*TAU))],**{f'b{i}':[(Zax,(4+k*4)*S2(ph*TAU*2-0.8*k))] for k,i in enumerate(range(10,15))}},loc_fn=lambda ph:(0,0,0.008*S2(ph*TAU*2)))
 print('lion exported',export_rig('Lion','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureLion.glb'))
 
-# ---------------- VULTURE ----------------
-b=bake_and_join('Vulture','vul');N,E=SKEL['vul']
-extra=[]
-for s,sd in ((-1,'L'),(1,'R')):
-    a=ARMS[s];extra+=[(f'w{sd}0',a[0],a[1],'b3'),(f'w{sd}1',a[1],a[2],f'w{sd}0'),(f'w{sd}2',a[2],a[3],f'w{sd}1')]
-arm=build_armature('Vulture',N,E,2,extra)
-def vallow(n,p):
-    if abs(p.x)>0.13:return n.startswith('wR' if p.x>0 else 'wL')
-    return not n.startswith('w')
-weight(b,arm,allow=vallow,power=3)
-def vpose(ph,flap):
-    p=ph*TAU;R={}
-    for s,sd in ((-1,'L'),(1,'R')):
-        up=flap*S2(p) if flap else 3*S2(p)
-        R[f'w{sd}0']=[(Zax,-s*12),(Y,-s*up)]
-        R[f'w{sd}1']=[(Zax,-s*30),(Y,-s*up*0.5*(1 if not flap else math.cos(p-0.6)))]
-        R[f'w{sd}2']=[(Zax,-s*28),(Y,-s*up*0.4)]
-    R['b0']=[(X,4*S2(p))]
-    return R
-clip(arm,'Glide',48,lambda ph:vpose(ph,0),loc_fn=lambda ph:(0,0,0.02*S2(ph*TAU)))
-clip(arm,'Flap',16,lambda ph:vpose(ph,38),loc_fn=lambda ph:(0,0,-0.05*S2(ph*TAU)))
-print('vulture exported',export_rig('Vulture','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureVulture.glb'))
+# ---------------- VULTURE: now in vulture.py ----------------
 bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
