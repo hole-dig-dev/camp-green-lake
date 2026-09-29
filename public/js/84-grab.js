@@ -90,7 +90,7 @@ function tieRope(){
   if(t.id===GRAB_ST.id)releaseGrab(false);
   ROPE_ST.id=t.id;ROPE_ST.taut=false;
   if(online())wsSend({t:'pgrab',id:t.id,rope:true});else{t.owner=myId();t.ropes=[myId()]}
-  sfx.clank();toast(`Rope tied to the ${tName(t)}. Walk away and it pulls once it's taut. X to untie.`,'',3500);logEv('ropeTie',{item:t.id});
+  countUp('ropes',10,'knots');sfx.clank();toast(`Rope tied to the ${tName(t)}. Walk away and it pulls once it's taut. X to untie.`,'',3500);logEv('ropeTie',{item:t.id});
 }
 function untieRope(say){
   const id=ROPE_ST.id;if(id==null)return;ROPE_ST.id=null;ROPE_ST.taut=false;
@@ -160,7 +160,7 @@ function stepThing(t,dt){
 }
 function propHit(pr,loss){
   sfx.thud();noise(0.25,260,0.8,0.3,'lowpass');
-  if(pr.L)say(pr.L,`-${loss}`,1400);
+  if(pr.L)say(pr.L,`-${loss}`,1400);countUp('butter',50,'butter',loss);
   if(online())wsSend({t:'pst',id:pr.id,x:+pr.x.toFixed(2),y:+pr.y.toFixed(2),z:+pr.z.toFixed(2),vx:0,vy:0,vz:0,val:pr.val,rest:false});
   logEv('propDmg',{item:pr.id,loss,val:pr.val});
 }
@@ -243,6 +243,7 @@ function stepMyBody(dt){
 function carriedHome(){
   if(!S.ko)return;
   const by=[...new Set([...MYBODY.grab,...MYBODY.ropes])].map(pid=>{const R=remotes.get(pid);return R?R.name:null}).filter(Boolean)[0]||'Your crew';
+  const carriers=[...new Set([...MYBODY.grab,...MYBODY.ropes])];wsSend({t:'carried',who:carriers});
   MYBODY.hands.clear();S.inCart=null;revived(by);S.justUp=true;logEv('carriedHome',{by});toast(`${by} got you back inside the fence. You're up.`,'good',3500);
 }
 

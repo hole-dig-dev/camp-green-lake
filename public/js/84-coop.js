@@ -28,7 +28,7 @@ function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'nu
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank}))}catch(e){}}
 function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
 function setRun(m){
-  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
+  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;$('#dayTag').textContent='Day '+RUN.day;
   if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
@@ -43,7 +43,7 @@ $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
+  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.quota=SIM.quotaFor(RUN.day,1);saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
   else if(played<180)graceDay();
   else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;saveRun();fired(b,q)}
 }
@@ -68,7 +68,7 @@ function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin()}
+  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}
@@ -82,7 +82,7 @@ function addBag(id,x,z,items,n){
 function removeBag(id){const b=BAGS.get(id);if(!b)return;scene.remove(b.g);dropLabel(b.L);BAGS.delete(id)}
 function bagNear(r){let best=null,bd=r*r;for(const b of BAGS.values()){const d2=(b.x-P.x)**2+(b.z-P.z)**2;if(d2<bd){bd=d2;best=b}}return best}
 function dropBag(){if(!S.sack.length)return;const items=S.sack.slice(0,12);S.sack=[];if(online())wsSend({t:'bag',x:P.x,z:P.z,items});else addBag(bagSeq++,P.x,P.z,items,S.name)}
-function takeBag(items,n){const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
+function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
 
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
@@ -150,7 +150,7 @@ function updateCoop(dt){
   // heavy loot moves by grab physics now: 84-grab.js (updateGrab)
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
-  if(dn){S.revT+=dt;if(S.revT>=3){S.revT=0;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
+  if(dn){S.revT+=dt;const need=S.medkit>0?1:3;if(S.revT>=need){S.revT=0;if(need===1){S.medkit--;toast('You used a first-aid kit.','',1800)}wsSend({t:'revive',id:dn.rid});addXP(50);countUp('helps',10,'ladder');toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
   if(isTrapped()&&KEYS[' ']&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
   updatePings(dt);updateLights(dt);

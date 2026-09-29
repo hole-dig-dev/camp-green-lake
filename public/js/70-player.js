@@ -204,7 +204,7 @@ function updateHealth(dt){
 /* food from your sack (the inventory's Eat button): peaches and Sploosh cure hunger and give some stamina back */
 function eatFood(type){
   const i=S.sack.indexOf(type);if(i<0||S.ko)return false;
-  S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
+  countUp('eat',5,'sploosh');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
   toast(type==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);
   logEv('eat',{type});return true;
 }

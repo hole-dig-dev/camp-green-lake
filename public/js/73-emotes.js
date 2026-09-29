@@ -19,14 +19,14 @@ function startEmote(p,k,L){
 function emoteVol(p){const d=Math.hypot(p.g.position.x-P.x,p.g.position.z-P.z);return clamp(1-d/45,0,1)}
 function twerk(){
   if(!S.started||S.ko||uiOpen()||S.carry!=null||(me&&me.emote&&me.emote.k==='twerk'))return;
-  digHeld=false;S.noise=1;startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
+  digHeld=false;S.noise=1;countUp('twerks',20,'barfbag');startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
 }
 let singT=0;
 function updateSinging(dt){
   const on=KEYS['h']&&S.started&&!S.ko&&!uiOpen();
   if(!on){singT=0;return}
   S.noise=Math.max(S.noise,0.7);
-  if((singT-=dt)<=0){singT=SING_EVERY;startEmote(me,'sing',meL);wsSend({t:'emote',k:'sing'})}
+  if((singT-=dt)<=0){singT=SING_EVERY;countUp('sing',40,'lullaby');startEmote(me,'sing',meL);wsSend({t:'emote',k:'sing'})}
 }
 
 /* ---- the pose, layered over whatever clip is playing ---- */

@@ -86,7 +86,7 @@ addEventListener('keydown',e=>{
     else digHeld=true;
   }
   if(k==='f')use();
-  if(k==='q')eatOnion();
+  if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise an onion (81-badges.js)
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();
@@ -102,7 +102,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false;if(k==='p'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i});if(me)me.waveT=1.4}   // the camper waves while shouting
-function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
+function eatOnion(){if(S.onions<=0){toast('No onions. The Wreck Room sells them for 8 seeds.','bad',2200);return}S.onions--;S.onionT=45;countUp('onions',10,'onion');AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
 /* touch */
 const touch={id:null,ox:0,oy:0,ix:0,iz:0,lookId:null,lx:0,ly:0};

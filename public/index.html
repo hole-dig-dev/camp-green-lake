@@ -328,6 +328,7 @@
       <button id="pResume" type="button">Resume</button>
       <button id="pOptions" type="button">Options</button>
       <button id="pControlsBtn" type="button">Controls</button>
+      <button id="pBadgesBtn" type="button">Badges &amp; jumpsuits</button>
       <button id="pRestart" type="button">Restart</button>
       <button id="pQuit" type="button">Quit to title</button>
     </div>
@@ -375,6 +376,14 @@
     <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Controls</h2>
     <div class="controls" id="pControlsList"></div>
     <button id="pCtrlBack" type="button">Back</button>
+  </div>
+
+  <div class="card" id="pBadgesCard" hidden>
+    <h2 class="stencil" style="font-size:clamp(28px,6vw,40px)">Badges<small id="badgeCount"></small></h2>
+    <div id="badgeList" class="badge-list"></div>
+    <h3>Jumpsuit</h3>
+    <div id="suitList" class="suit-list"></div>
+    <button id="pBadgesBack" type="button">Back</button>
   </div>
 
   <div class="card" id="pConfirmCard" hidden>
@@ -431,6 +440,7 @@
 <script src="js/78-hud.js"></script>
 <script src="js/80-ui.js"></script>
 <script src="js/81-inventory.js"></script>
+<script src="js/81-badges.js"></script>
 <script src="js/82-patrol.js"></script>
 <script src="js/83-vultures.js"></script>
 <script src="js/83-javelinas.js"></script>

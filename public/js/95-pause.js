@@ -95,7 +95,7 @@ function overlayBlocking(){return uiOpen()||!$('#admin').hidden||!$('#win').hidd
 function tryLock(){lockMouse()}
 function showPauseScreen(name){
   stopListening();
-  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';
+  pMain.hidden=name!=='main';pOptionsCard.hidden=name!=='options';pControlsCard.hidden=name!=='controls';pConfirmCard.hidden=name!=='confirm';$('#pBadgesCard').hidden=name!=='badges';
 }
 function openPause(){
   if(PAUSE.open||!S.started)return;
@@ -113,6 +113,8 @@ $('#pOptions').onclick=()=>{renderOptions();showPauseScreen('options')};
 $('#pOptBack').onclick=()=>showPauseScreen('main');
 $('#pControlsBtn').onclick=()=>{renderControlsList();showPauseScreen('controls')};
 $('#pCtrlBack').onclick=()=>showPauseScreen('main');
+$('#pBadgesBtn').onclick=()=>{renderBadges();showPauseScreen('badges')};
+$('#pBadgesBack').onclick=()=>showPauseScreen('main');
 function askConfirm(title,text,yesLabel,onYes){
   $('#pConfirmTitle').textContent=title;$('#pConfirmText').textContent=text;
   const yes=$('#pConfirmYes');yes.textContent=yesLabel;yes.onclick=onYes;

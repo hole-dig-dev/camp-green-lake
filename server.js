@@ -340,7 +340,7 @@ function maybeSkipNight() {
   for (const c of js) c.sleeping = false;
   broadcastSleep();
 }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) }; }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -410,7 +410,7 @@ wss.on('connection', (ws, req) => {
         }
         c.authed = true; sendHello(); // now, and only now, does this socket learn about the world
       }
-      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
+      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0; c.u = num(m.u, 0, 9, 0) | 0; // u: jumpsuit (public/js/81-badges.js)
       c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       send(c, { t: 'curfew', v: SIM.CURFEW });
@@ -430,6 +430,7 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
+        c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
@@ -661,7 +662,11 @@ wss.on('connection', (ws, req) => {
         const s = cleanChat(m.s); if (!s) return;
         c.nz = 1; c.chatAt = Date.now();
         LOG.log('chat', { id: c.id, n: c.n, s });
-        for (const o of clients.values()) if (o.joined && o !== c && o.room === c.room && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+        for (const o of clients.values()) {
+          if (!o.joined || o === c) continue;
+          if (o.room === c.room && near(c, o, CHAT_RANGE)) send(o, { t: 'chat', id: c.id, s });
+          else if (c.wk && o.wk) send(o, { t: 'chatw', id: c.id, n: c.n, s }); // walkie-talkies reach each other anywhere
+        }
         break;
       }
       case 'admin':
@@ -783,6 +788,13 @@ wss.on('connection', (ws, req) => {
         else if (SIM.RO_KINDS.includes(op)) { ROSTER.off = (ROSTER.off || []).filter(k => k !== op); ROSTER.force = [...new Set([...(ROSTER.force || []), op])]; SIM.rosterSpawnNow(ROSTER, op, { x: c.x, z: c.z }); }
         else return;
         LOG.log('roster', { op, by: c.n });
+        break;
+      }
+      case 'suit': { c.u = num(m.u, 0, 9, 0) | 0; broadcast({ t: 'suit', id: c.id, u: c.u }, c.id); break; }
+      case 'carried': { // a downed camper got carried back inside the fence: tell the people who carried them (badges)
+        const who = (Array.isArray(m.who) ? m.who : []).map(v => num(v, 0, 1e9, -1) | 0).filter(v => v > 0).slice(0, 8);
+        LOG.log('carriedHome', { id: c.id, n: c.n, by: who });
+        for (const id of who) { const o = clients.get(id); if (o) send(o, { t: 'carried', who }); }
         break;
       }
       case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s

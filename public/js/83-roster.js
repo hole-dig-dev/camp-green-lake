@@ -90,7 +90,7 @@ function rosterEvent(e){
     case 'rattle':if(dist<22){noise(0.5,5200,6,0.2*clamp(1-dist/22,0.1,1));if(dist<8&&!roRattleTold){roRattleTold=true;toast('You hear a rattle nearby. Rattlesnake.','',2500)}}break;
     case 'strike':if(mine){hurt(20,'Rattlesnake','A rattlesnake got you. The poison eats your stamina until it wears off.','poison');sfx.bite()}break;
     case 'sting':if(mine){hurt(12,'Scorpion','Scorpion sting! Swing your shovel (E) at it.','poison');tone(1400,0.2,'square',0.06,600)}break;
-    case 'squash':if(dist<25)sfx.thud();if(mine)addXP(3);break;
+    case 'squash':if(dist<25)sfx.thud();if(mine){addXP(3);countUp('squash',15,'squasher')}break;
     case 'sirWarn':if(mine){const sv=[...ROV.values()].find(v=>v.k==='sir');if(sv&&sv.L)say(sv.L,'You taking a nap out here?',3000);toast('Mr. Sir: "You taking a nap out here, camper?" Get digging, or he takes your sack.','bad',4500);tone(300,0.2,'square',0.05)}break;
     case 'confiscate':if(mine&&S.sack.length){toast(`Mr. Sir took your whole sack (${S.sack.length} finds) for slacking off.`,'bad',5000);logEv('confiscated',{n:S.sack.length});S.sack=[];sfx.clank()}break;
     case 'wardenWarn':if(mine){toast('The Warden is watching you stand around. Get digging, or keep moving!','bad',5000)}break;

@@ -14,13 +14,13 @@ try{
   HOST=localStorage.getItem('cgl-host')||'';PASS=localStorage.getItem('cgl-camp')||'';
 }catch(e){}
 if(PASS)campIn.value=PASS;
-function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
+function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
 }
 
 /* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
@@ -36,7 +36,7 @@ function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
-  const p=makePerson(playerLook(name,ci));scene.add(p.g);
+  const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
@@ -107,6 +107,9 @@ function onMsg(m){
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
     case 'pown':case 'pst':case 'phand':case 'pyeet':case 'pcart':case 'pslip':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)
+    case 'suit':{const R=remotes.get(m.id);if(R)paintSuit(R.p,num(m.u,0,JUMPSUITS.length-1,0)|0);break}
+    case 'carried':if(Array.isArray(m.who)&&m.who.includes(myId())){badge('pallbearer');countUp('helps',10,'ladder');addXP(40)}break;
+    case 'chatw':{const R=remotes.get(m.id);if(typeof m.s==='string'){const name=R?R.name:cleanName(m.n)||'Someone';toast(`📻 ${name}: ${m.s.slice(0,80)}`,'',6000);tone(900,0.05,'square',0.04)}break}
     case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
     case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}

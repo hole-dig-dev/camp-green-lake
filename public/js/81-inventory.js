@@ -32,6 +32,8 @@ function invEntries(){
   // supplies
   out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
+  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
+  if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
   out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
   out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
@@ -117,6 +119,8 @@ function renderInvDetail(e){
     row('On hand',`${S.onions} onion${S.onions===1?'':'s'}`);
     const b=invButton(S.onions>0?'Eat one now':'No onions left',()=>{eatOnion();renderInventory(true)},true);b.disabled=S.onions<=0;acts.append(b);
   }
+  if(e.id==='tonic'||e.id==='medkit'){const need=e.id==='tonic'?(AFF.poison>3||AFF.burn>5||AFF.heat>5):AFF.injury>10;
+    const b=invButton(need?'Use one now':'Not needed right now',()=>{useSupply();renderInventory(true)},true);b.disabled=!need;acts.append(b)}
   if(e.id==='light'){
     row('Battery',`${Math.round(S.batt)}%`);
     const b=invButton(S.light?'Turn it off':'Turn it on',()=>{toggleLight();renderInventory(true)},true);b.disabled=!S.light&&S.batt<=0;acts.append(b);

@@ -5,7 +5,7 @@ const NICKS=['Caveman','Sploosh','Big Thumb','Onion Boy','Lizard Bait','Seeds','
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['seeds','water','sack','onions','up','hasKB','reported','holesDone','name','color','detOn','batt'];
+const SAVE_KEYS=['seeds','water','sack','onions','tonic','medkit','up','hasKB','reported','holesDone','name','color','detOn','batt'];
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch,room:S.tent}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
@@ -17,7 +17,7 @@ function startGame(resume){
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
-    S.seeds=num(r.seeds,0,1e6,20)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
+    S.seeds=num(r.seeds,0,1e6,20)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
     S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
@@ -30,7 +30,7 @@ function startGame(resume){
   }
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
-  me=makePerson(playerLook(S.name,S.color));scene.add(me.g);
+  me=makePerson(Object.assign(playerLook(S.name,S.color),{suit:JUMPSUITS[mySuit()].c}));scene.add(me.g);me.suitIdx=mySuit();   // jumpsuit colour: 81-badges.js
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
