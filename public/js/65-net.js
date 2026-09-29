@@ -132,6 +132,7 @@ function onMsg(m){
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
     case 'chat':{const R=remotes.get(m.id);if(R&&typeof m.s==='string'){say(R.L,m.s.slice(0,80),7000);tone(700,0.06,'triangle',0.05)}break}
     case 'rtc':handleRtc(num(m.from,0,1e9,-1)|0,m.d);break;
+    case 'vo':if(typeof handleRelayVoice==='function')handleRelayVoice(num(m.f,0,1e9,-1)|0,m.a);break;   // relayed voice (86-voice.js)
     case 'host':
       net.host=m.on===true;if(!net.host)$('#admin').hidden=true;$('#conBtn').hidden=!(net.host&&isTouch);
       // 'host' is only ever sent after a join clears the password gate, so seeing it after our probe join

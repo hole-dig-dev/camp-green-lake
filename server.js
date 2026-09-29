@@ -35,6 +35,26 @@ const CHAT_RANGE = 30, HELP_RANGE = 3.5, SINK_HELP_RANGE = 5;   // sinkhole rims
 // SDP offers/answers run a few KB, well past what every other message needs, so 'rtc' gets its own ceiling
 // (checked in the message handler) instead of loosening the limit for everyone. maxPayload below must cover it.
 const RTC_MAX = 8192, GEN_MAX = 1024, LOG_MAX = 8192;
+/* ---- proximity voice: relay fallback ----
+   When two campers can't reach each other directly (strict home/mobile NATs, and no TURN server), their voice comes
+   through here instead: 'vo' = one 60 ms frame of 16 kHz mu-law audio (base64, ~1.3 KB), sent ~17 times a second while
+   the mic is transmitting. It has its own size cap and token bucket so it never eats the budget position updates
+   use, and it's only forwarded to joined campers in the same room within VO_RANGE m (no listening in from afar). */
+const VO_MAX = 2048, VO_A_MAX = 1400, VO_BURST = 30, VO_REFILL = 0.025, VO_RANGE = 90;   // refill: tokens per ms (25/s)
+function relayVoice(c, raw) {
+  const now = Date.now();
+  c.voTok = Math.min(VO_BURST, (c.voTok == null ? VO_BURST : c.voTok) + (now - (c.voLast || now)) * VO_REFILL); c.voLast = now;
+  if (!c.joined || c.voTok < 1) return;
+  c.voTok -= 1;
+  let m; try { m = JSON.parse(raw); } catch (e) { return; }
+  if (!m || typeof m.a !== 'string' || m.a.length > VO_A_MAX || !Array.isArray(m.to)) return;
+  let out = null;
+  for (const id of m.to.slice(0, 8)) {
+    const t = clients.get(id | 0);
+    if (!t || t === c || !t.joined || t.room !== c.room || Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE) continue;
+    send(t, out || (out = JSON.stringify({ t: 'vo', f: c.id, a: m.a })));
+  }
+}
 const LOG_BURST = 60, LOG_RATE = 0.012; // per-client play-test log budget: 60 events at once, refilling 12/s
 // STUN only by default (no TURN server exists yet). Set ICE_SERVERS to a JSON array of RTCIceServer objects,
 // e.g. '[{"urls":"turn:host:3478","username":"u","credential":"p"}]', to add a TURN server later.
@@ -274,7 +294,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: Math.max(8192, RTC_MAX) }); // batched play-test log messages and WebRTC offers both need more than the old 2048
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: Math.max(8192, RTC_MAX, VO_MAX) }); // batched play-test log messages and WebRTC offers both need more than the old 2048
 const LOG_TYPE_RE = /^[a-zA-Z]{1,16}$/, LOG_FIELD_RE = /^[a-zA-Z_][a-zA-Z0-9_]{0,15}$/;
 // Client-reported log events (case 'log' below) come from our own client code but are still untrusted input:
 // keep only plain, small fields so a modified client can't stuff arbitrary data or huge blobs into the log files.
@@ -360,6 +380,7 @@ wss.on('connection', (ws, req) => {
   ws.on('error', e => console.error('ws error from', ip, ':', e && e.message));
   ws.on('message', raw => {
    try {
+    if (raw.length <= VO_MAX && String(raw).startsWith('{"t":"vo"')) return relayVoice(c, raw);   // voice frames: own budget (above)
     const now = Date.now();
     c.tokens = Math.min(80, c.tokens + (now - c.last) * 0.04); c.last = now;
     if (c.tokens < 1) return;

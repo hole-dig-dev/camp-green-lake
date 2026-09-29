@@ -25,7 +25,7 @@ function updateVoiceHud(){
   $('#voiceModeBtn').hidden=!VOX.enabled;$('#voiceModeBtn').textContent=VOX.mode==='ptt'?'Push-to-talk (hold B)':'Open mic (always on)';
   $('#voiceMuteBtn').hidden=!VOX.enabled;$('#voiceMuteBtn').textContent=VOX.muted?'Unmute voices':'Mute voices';
 }
-function setMicTransmitting(on){if(VOX.localStream)for(const t of VOX.localStream.getAudioTracks())t.enabled=on}
+function setMicTransmitting(on){VOX.tx=on;if(VOX.localStream)for(const t of VOX.localStream.getAudioTracks())t.enabled=on}
 function setupSelfAnalyser(){
   try{ensureVoiceBus();VOX.selfSrc=AC.createMediaStreamSource(VOX.localStream);VOX.selfAnalyser=AC.createAnalyser();VOX.selfAnalyser.fftSize=512;
     VOX.selfSrc.connect(VOX.selfAnalyser);VOX.selfBuf=new Uint8Array(VOX.selfAnalyser.frequencyBinCount); // analysis tap only -- never connected onward, or you'd hear yourself
@@ -37,9 +37,9 @@ async function setVoiceEnabled(on){
     ensureVoiceBus();
     try{VOX.localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
     catch(e){toast('Microphone access was denied, so proximity voice stays off. Check your browser\'s site permissions to turn it on.','bad',5000);return}
-    VOX.enabled=true;setMicTransmitting(VOX.mode==='open');setupSelfAnalyser();voiceProximityTick();
+    VOX.enabled=true;setMicTransmitting(VOX.mode==='open');setupSelfAnalyser();startRelayCapture();voiceProximityTick();
   }else{
-    VOX.enabled=false;for(const id of[...VOX.peers.keys()])dropVoicePeer(id);
+    VOX.enabled=false;for(const id of[...VOX.peers.keys()])dropVoicePeer(id);stopRelayCapture();VOX.relayTo.clear();for(const id of[...VOX.relayIn.keys()])dropRelayIn(id);
     if(VOX.localStream){for(const t of VOX.localStream.getTracks())t.stop();VOX.localStream=null}
     if(VOX.selfSrc){try{VOX.selfSrc.disconnect()}catch(e){}VOX.selfSrc=null;VOX.selfAnalyser=null}
     $('#voiceBtn').classList.remove('speaking');
@@ -52,7 +52,12 @@ function makeVoicePeer(id,initiator){
   if(VOX.localStream)for(const t of VOX.localStream.getTracks())pc.addTrack(t,VOX.localStream);
   pc.onicecandidate=e=>{if(e.candidate)sendRtc(id,{k:'ice',c:e.candidate.toJSON()})};
   pc.ontrack=e=>setupRemoteVoiceAudio(peer,e.streams[0]);
-  pc.onconnectionstatechange=()=>{peer.state=pc.connectionState;if(pc.connectionState==='failed'||pc.connectionState==='closed')dropVoicePeer(id)};
+  pc.onconnectionstatechange=()=>{
+    peer.state=pc.connectionState;const R=remotes.get(id);
+    if(pc.connectionState==='connected'&&R)R.p2pFailed=false;
+    if(pc.connectionState==='failed'&&R){R.p2pFailed=true;R.p2pRetryAt=performance.now()+RELAY_RETRY_P2P_MS}   // relay now, try direct again later
+    if(pc.connectionState==='failed'||pc.connectionState==='closed')dropVoicePeer(id);
+  };
   VOX.peers.set(id,peer);
   if(initiator)negotiateVoice(peer,id);
   return peer;
@@ -82,13 +87,18 @@ function setupRemoteVoiceAudio(peer,stream){
   // to a live <audio> element. We mute that element (WebAudio, via the panner, is what the player hears).
   const audioEl=document.createElement('audio');audioEl.autoplay=true;audioEl.muted=true;audioEl.srcObject=stream;audioEl.style.display='none';
   document.body.appendChild(audioEl);audioEl.play().catch(()=>{});peer.audioEl=audioEl;
-  ensureVoiceBus();
   const src=AC.createMediaStreamSource(stream);
+  Object.assign(peer,voicePanner());src.connect(peer.panner);
+}
+/* where a remote voice comes out: a positional panner (moved every frame in updateVoice) into the voice bus, plus a
+   level tap for the green "speaking" glow. Used by direct WebRTC voice and by relayed voice alike. */
+function voicePanner(){
+  ensureVoiceBus();
   const panner=AC.createPanner();panner.panningModel='HRTF';panner.distanceModel='linear';panner.refDistance=VOICE_REF_DIST;panner.maxDistance=VOICE_MAX_DIST;panner.rolloffFactor=1;
   const gain=AC.createGain();gain.gain.value=1;
   const analyser=AC.createAnalyser();analyser.fftSize=512;
-  src.connect(panner).connect(gain).connect(voiceMaster);panner.connect(analyser);
-  peer.panner=panner;peer.gain=gain;peer.analyser=analyser;peer.levelBuf=new Uint8Array(analyser.frequencyBinCount);
+  panner.connect(gain).connect(voiceMaster);panner.connect(analyser);
+  return{panner,gain,analyser,levelBuf:new Uint8Array(analyser.frequencyBinCount),level:0};
 }
 function dropVoicePeer(id){
   const peer=VOX.peers.get(id);if(!peer)return;VOX.peers.delete(id);
@@ -100,27 +110,80 @@ function dropVoicePeer(id){
 }
 function voiceProximityTick(){
   if(!VOX.enabled)return;
+  const now=performance.now();
   for(const[id,R]of remotes){
     const dist=Math.hypot(R.p.g.position.x-P.x,R.p.g.position.z-P.z);
-    const peer=VOX.peers.get(id);
-    if(R.room!==S.tent){if(peer)dropVoicePeer(id);continue}
-    if(!peer){if(dist<VOICE_CONNECT&&net.id<id)makeVoicePeer(id,true)} // lower id offers, so both sides never offer at once
+    let peer=VOX.peers.get(id);
+    if(R.room!==S.tent){if(peer)dropVoicePeer(id);VOX.relayTo.delete(id);R.voiceSince=0;continue}
+    if(!peer){if(dist<VOICE_CONNECT&&net.id<id&&!(R.p2pRetryAt>now))try{peer=makeVoicePeer(id,true)}catch(e){R.p2pFailed=true;R.p2pRetryAt=now+RELAY_RETRY_P2P_MS}} // lower id offers, so both sides never offer at once; no WebRTC at all = relay
     else if(dist>VOICE_DROP)dropVoicePeer(id);
-    else if(!peer.pc.remoteDescription&&performance.now()-peer.createdAt>VOICE_STALE_MS)dropVoicePeer(id); // unanswered offer: retry next tick
+    else if(!peer.pc.remoteDescription&&now-peer.createdAt>VOICE_STALE_MS)dropVoicePeer(id); // unanswered offer: retry next tick
+    // relay fallback: send them our voice through the server while there's no direct connection (after a grace
+    // period for the direct one to come up, or at once if it failed); stop as soon as the direct link works
+    if(dist>VOICE_DROP){R.voiceSince=0;VOX.relayTo.delete(id);continue}
+    if(dist<VOICE_CONNECT&&!R.voiceSince)R.voiceSince=now;
+    const direct=VOX.peers.get(id)&&VOX.peers.get(id).pc.connectionState==='connected';
+    if(direct)VOX.relayTo.delete(id);
+    else if(R.voiceSince&&(R.p2pFailed||now-R.voiceSince>RELAY_AFTER_MS))VOX.relayTo.add(id);
   }
   for(const id of[...VOX.peers.keys()])if(!remotes.has(id))dropVoicePeer(id); // they left/reloaded
+  for(const id of[...VOX.relayTo])if(!remotes.has(id))VOX.relayTo.delete(id);
+  for(const[id,e]of VOX.relayIn)if(!remotes.has(id)||now-e.last>10000)dropRelayIn(id);   // gone, or quiet for a while
 }
 setInterval(voiceProximityTick,500);
+
+/* ---- relay fallback (server side: relayVoice in server.js) ----
+   Direct WebRTC needs the two browsers to reach each other, which strict home/mobile NATs block, and there's no TURN
+   server. So when a camper nearby has no direct link, our mic also goes to them through the game socket: filtered,
+   resampled to 16 kHz, mu-law coded (8 bits a sample), in 60 ms frames ('vo', ~16 KB/s, only while transmitting).
+   Incoming frames are queued back-to-back behind a small jitter buffer and played through the same positional panner. */
+const RELAY_RATE=16000,RELAY_FRAME=960,RELAY_AFTER_MS=6000,RELAY_RETRY_P2P_MS=30000;
+VOX.relayTo=new Set();VOX.relayIn=new Map();VOX.tx=false;
+const MU_DEC=new Float32Array(256);for(let u=0;u<256;u++){const v=~u&0xff,e=(v>>4)&7;let x=(((v&0x0f)<<3)+132<<e)-132;MU_DEC[u]=((v&0x80)?-x:x)/32768}
+function muEnc(f){let x=Math.max(-32635,Math.min(32635,Math.round(f*32767)));const sign=x<0?0x80:0;if(x<0)x=-x;x+=132;let e=7;for(let m=0x4000;(x&m)===0&&e>0;m>>=1)e--;return~(sign|(e<<4)|((x>>(e+3))&0x0f))&0xff}
+let relayNodes=null;const relayAcc=new Uint8Array(RELAY_FRAME);let relayN=0,relayPos=0;
+function startRelayCapture(){
+  if(relayNodes||!VOX.localStream)return;
+  try{
+    const src=AC.createMediaStreamSource(VOX.localStream),lp=AC.createBiquadFilter(),proc=AC.createScriptProcessor(2048,1,1);
+    lp.type='lowpass';lp.frequency.value=7000;   // no aliasing when we drop to 16 kHz
+    proc.onaudioprocess=e=>{
+      if(!VOX.tx||!VOX.relayTo.size){relayN=0;return}
+      const inp=e.inputBuffer.getChannelData(0),step=AC.sampleRate/RELAY_RATE;
+      for(;relayPos<inp.length;relayPos+=step){
+        relayAcc[relayN++]=muEnc(inp[relayPos|0]);
+        if(relayN===RELAY_FRAME){relayN=0;wsSend({t:'vo',to:[...VOX.relayTo].slice(0,8),a:btoa(String.fromCharCode.apply(null,relayAcc))})}
+      }
+      relayPos-=inp.length;
+    };
+    src.connect(lp).connect(proc).connect(AC.destination);   // the processor only runs while connected; its output is silence
+    relayNodes={src,lp,proc};
+  }catch(e){relayNodes=null}
+}
+function stopRelayCapture(){if(!relayNodes)return;for(const n of Object.values(relayNodes))try{n.disconnect()}catch(e){}relayNodes.proc.onaudioprocess=null;relayNodes=null;relayN=0}
+function handleRelayVoice(from,a){
+  if(!VOX.enabled||!AC||typeof a!=='string'||!remotes.has(from))return;
+  let e=VOX.relayIn.get(from);if(!e){e=Object.assign(voicePanner(),{next:0,last:0});VOX.relayIn.set(from,e)}
+  let bin;try{bin=atob(a)}catch(_){return}
+  const n=Math.min(bin.length,RELAY_FRAME*2);if(!n)return;
+  const buf=AC.createBuffer(1,n,RELAY_RATE),ch=buf.getChannelData(0);for(let i=0;i<n;i++)ch[i]=MU_DEC[bin.charCodeAt(i)&255];
+  const t=AC.currentTime;
+  if(e.next<t+0.03)e.next=t+0.12;   // starting (or ran dry): leave ~120 ms of slack for network jitter
+  else if(e.next>t+0.6)return;       // backed up: drop a frame to catch up
+  const s=AC.createBufferSource();s.buffer=buf;s.connect(e.panner);s.onended=()=>s.disconnect();s.start(e.next);e.next+=n/RELAY_RATE;e.last=performance.now();
+}
+function dropRelayIn(id){const e=VOX.relayIn.get(id);if(!e)return;VOX.relayIn.delete(id);try{e.panner.disconnect();e.gain.disconnect()}catch(_){}const R=remotes.get(id);if(R)R.L.el.classList.remove('speaking')}
 const voxFwd=new T.Vector3();
 function updateVoice(now){
   if(!AC)return;
-  if(VOX.peers.size){
+  if(VOX.peers.size||VOX.relayIn.size){
     const lp=AC.listener,cp=camera.position;
     if(lp.positionX){lp.positionX.value=cp.x;lp.positionY.value=cp.y;lp.positionZ.value=cp.z}else lp.setPosition(cp.x,cp.y,cp.z);
     camera.getWorldDirection(voxFwd);
     if(lp.forwardX){lp.forwardX.value=voxFwd.x;lp.forwardY.value=voxFwd.y;lp.forwardZ.value=voxFwd.z;lp.upX.value=0;lp.upY.value=1;lp.upZ.value=0}
     else lp.setOrientation(voxFwd.x,voxFwd.y,voxFwd.z,0,1,0);
-    for(const[id,peer]of VOX.peers){
+    const lv=new Map();
+    for(const[id,peer]of[...VOX.peers,...VOX.relayIn]){
       const R=remotes.get(id);if(!R)continue;
       const pos=R.p.g.position;
       if(peer.panner){
@@ -132,8 +195,9 @@ function updateVoice(now){
         let sum=0;for(const v of peer.levelBuf){const d=v-128;sum+=d*d}
         peer.level=Math.sqrt(sum/peer.levelBuf.length)/128;
       }
-      R.L.el.classList.toggle('speaking',peer.level>SPEAK_LVL);
+      lv.set(id,Math.max(lv.get(id)||0,peer.level));
     }
+    for(const[id,l]of lv){const R=remotes.get(id);if(R)R.L.el.classList.toggle('speaking',l>SPEAK_LVL)}
   }
   if(VOX.selfAnalyser){
     const track=VOX.localStream&&VOX.localStream.getAudioTracks()[0];
