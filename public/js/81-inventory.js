@@ -107,6 +107,10 @@ function renderInvDetail(e){
     row('Sack',`${S.sack.length} / ${sackMax()} finds · worth ${sum} seeds`);
     if(S.sack.length)acts.append(invButton('Drop the whole sack',()=>{dropBag();toast('You set your sack down. Anyone can pick it up with F.','',2200);sfx.thud();renderInventory(true)},false));
   }
+  if(e.type==='jar'||e.type==='sploosh'){   // food: cures hunger (70-player.js eatFood), but then you can't sell it
+    const b=invButton(AFF.hunger>4?'Eat it':'Eat it (not hungry)',()=>{eatFood(e.type);renderInventory(true)},AFF.hunger>4);acts.append(b);
+    if(AFF.hunger>0)row('Hunger',`${Math.round(AFF.hunger)} of your health bar`);
+  }
   if(e.id==='haul')acts.append(invButton('Let go of it',()=>{S.carry=null;toast('You let go.','',1200);renderInventory(true)},false));
   if(e.id==='onion'){
     row('On hand',`${S.onions} onion${S.onions===1?'':'s'}`);

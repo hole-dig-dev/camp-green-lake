@@ -21,7 +21,7 @@ const COOP_TXT={
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
   office:()=>"Read the Warden's ledger",
 };
-const hq={hp:$('#hpBar'),hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
+const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
   else sleepEl.style.display='none';
@@ -35,7 +35,12 @@ function updateHUD(){
    else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'ZERONI!':'Lights out';curWarn=!!CUR.hunter}
    hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
-  {const hp=S.hp/HP_MAX;hq.hp.style.width=(hp*100).toFixed(1)+'%';const low=hp<0.3;hq.hpWrap.classList.toggle('low',low);hw.hpWarn.hidden=!low}
+  {const pc=v=>(v/HP_MAX*100).toFixed(1)+'%',st=Math.min(S.stam,S.hp);hq.stam.style.width=pc(st);hq.room.style.width=pc(S.hp-st);
+    for(const k in AFF)hq.aff[k].style.width=pc(AFF[k]);
+    const low=S.hp/HP_MAX<0.3,worst=Object.keys(AFF).filter(k=>AFF[k]>=8).sort((a,b)=>AFF[b]-AFF[a]).slice(0,2);
+    hq.hpWrap.classList.toggle('low',low);hq.hpWrap.classList.toggle('tired',S.stam<15&&!low);
+    const txt=worst.length?worst.map(k=>AFF_INFO[k]).join(' · '):low?'Low health':'';
+    hw.hpWarn.hidden=!txt;if(txt&&hw.hpWarn.textContent!==txt)hw.hpWarn.textContent=txt}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
   {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
    hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}

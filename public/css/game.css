@@ -156,6 +156,17 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .bar.low i{background:#c98a1f}
 .bar.critical i{background:var(--danger)}
 .bar.hp i{background:var(--leaf)}
+/* the Peak-style stamina bar (70-player.js): stamina, room to recover, then afflictions stacked from the right */
+.bar.stam{display:flex}
+.bar.stam i{width:0;flex:none;transition:width .15s}
+.bar.stam #stamFill{background:#e2b93b}
+.bar.stam #stamRoom{background:#f3e3b3;flex:1 1 auto}
+.bar.stam .a-injury{background:var(--danger)}
+.bar.stam .a-heat{background:#e0702e}
+.bar.stam .a-burn{background:#f08a6c}
+.bar.stam .a-poison{background:#7a9c3a}
+.bar.stam .a-hunger{background:#8a6a45}
+.bar.stam.tired #stamFill{background:#c98a1f}
 /* below 30% health: pulse the OUTLINE every 2s, not the whole bar -- a steady color change (via
    .hp.low below) already carries the state, the pulse is just a periodic nudge to notice it */
 .bar.hp.low{border-color:var(--danger);animation:hpPulse 2s ease-in-out infinite}

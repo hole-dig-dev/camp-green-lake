@@ -87,7 +87,7 @@ function popOut(){
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
   P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();
 }
-function revived(by){if(!S.ko)return;S.ko=0;S.hp=REVIVE_HP;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
+function revived(by){if(!S.ko)return;S.ko=0;setHp(REVIVE_HP);S.stam=S.hp;S.hurtT=0;$('#ko').hidden=true;twSt=0;twStT=0;P.kx=P.kz=0;me.g.rotation.set(0,me.g.rotation.y,0);toast(`${by} picked you up!`,'good',3000);sfx.find()}
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
