@@ -142,7 +142,7 @@ function vDrawCarrier(key,x,y,z,yaw,mode,dt){
 /* other clients' carried campers: driven purely off the flag bit + ordinary pos sync, no local state needed */
 function vRenderRemoteCarries(dt){
   for(const[id,R]of remotes){
-    if(R.f&128){const g=R.p.g.position;vDrawCarrier('r'+id,g.x,g.y+VULTURE_HOLD_UP,g.z,g.rotation.y,'carry',dt)}
+    if(R.f&128){const g=R.p.g.position;vDrawCarrier('r'+id,g.x,g.y+VULTURE_HOLD_UP,g.z,R.p.g.rotation.y,'carry',dt)}   // (was g.rotation: g is the position vector)
     else vPoolFree('r'+id);
   }
 }

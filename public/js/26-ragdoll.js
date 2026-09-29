@@ -54,10 +54,16 @@ function ragBuild(p){
 function ragdollOn(p,o){
   if(!p||!p.model||!ragRest())return;
   o=o||{};
-  if(!p.rag){p.rag=ragBuild(p);p.rag.t=0;p.model.traverse(n=>{if(n.isMesh)n.frustumCulled=false})}
+  if(!p.rag){p.rag=ragBuild(p);p.rag.t=0;p.model.traverse(n=>{if(n.isMesh)n.frustumCulled=false});ragRestPose(p)}
   const r=p.rag;r.on=true;r.flail=o.flail||0;
   if(o.vx||o.vy||o.vz){const dt=1/60;for(const q of r.pts){q.px-=(o.vx||0)*dt;q.py-=(o.vy||0)*dt;q.pz-=(o.vz||0)*dt}}
   if(o.spin){const c=r.pts[RP.chest],dt=1/60;for(const q of r.pts){q.px+=(q.z-c.z)*o.spin*dt;q.pz-=(q.x-c.x)*o.spin*dt}}   // a twist about the vertical
+}
+/* the clips don't animate every bone (hips rotation, for one), so a bone the ragdoll bent would stay bent after it lets
+   go: add the ragdoll's bones to stepMixer's reset-to-rest list (p.poseRest, 25-people.js), once */
+function ragRestPose(p){
+  const B=ragBones(p);p.poseRest=p.poseRest||[];const have=new Set(p.poseRest.map(e=>e[0]));
+  for(const n of RAG_BONES){const b=B[n],r=MODEL.scene.getObjectByName(n);if(b&&r&&!have.has(b))p.poseRest.push([b,r.quaternion.clone(),r.position.clone()])}
 }
 function ragdollPin(p,x,y,z,k,at){if(p&&p.rag&&p.rag.on)p.rag.pin={x,y,z,k:k==null?1:k,at}}
 function ragdollOff(p){if(!p||!p.rag)return;if(p.rag.on){p.rag.on=false;p.ragBlend=1}}
@@ -135,6 +141,7 @@ function myRagState(){
   if(twSt===1)return{on:true,pin:0.5,lift:1.15,flail:1.4};              // sucked up the funnel: flailing in the wind
   if(twSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};                // thrown: tumbling through the air
   if(twSt===3)return{on:true,pin:0.03,lift:0,flail:0};                  // down: a heap on the ground
+  if(tbSt===1)return{on:true,pin:0.45,lift:1,flail:1.3};               // stuck in a rolling tumbleweed: tumbled round with it
   if(tbSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(tbSt===3)return{on:true,pin:0.03,lift:0,flail:0};
   if(vSt===3||vSt===4)return{on:true,pin:0.6,lift:0.9,flail:1.2,at:'chest'};   // carried off by the shoulders
