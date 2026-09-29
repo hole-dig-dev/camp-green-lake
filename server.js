@@ -75,6 +75,7 @@ const HTTP_RATE = 120, HTTP_WINDOW_MS = 60000; // page/other HTTP requests per a
 // "setClock is not defined" -> dead page). Static files get their own, much bigger budget instead.
 const STATIC_RATE = 1500; // static file requests per address per minute (~40 full page loads)
 const MAX_DIG_DIST = 6;                      // can't report a dig farther than this from your last known position
+const CAMP_NODIG = 4;                       // no digging within this many m of the camp fence (matches CAMP_NODIG in public/js/10-core.js)
 const MAX_PLACE_DIST = 14;                   // ditto for dropped bags (props are placed at the dig site)
 const DIG_RATE = 8, DIG_WINDOW_MS = 1000;    // digs per connection per window
 const PING_RATE = 6, PING_WINDOW_MS = 2000;  // pings per connection per window
@@ -410,6 +411,7 @@ wss.on('connection', (ws, req) => {
         if (!withinRate(c.digTimes, DIG_RATE, DIG_WINDOW_MS)) return; // digging faster than a shovel can move
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), d = Math.round(num(m.d, 0, 2.6, 0) * 100) / 100;
         if (Math.hypot(x - c.x, z - c.z) > MAX_DIG_DIST) return; // no teleport-digging across the map
+        if (Math.hypot(Math.max(-40 - x, 0, x - 30), Math.max(27 - z, 0, z - 56)) < CAMP_NODIG) return; // the no-dig strip round the camp fence (public/js/10-core.js)
         const k = x + '|' + z;
         if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) return;
         if ((world.holes[k] || 0) >= d) return;

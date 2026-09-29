@@ -263,3 +263,32 @@ const WATER_TOWER_PROC=new T.Group();
   const roof=cyl(0.05,2.3,1.4,10,0x6d5a44);roof.position.set(0,5.4+3.2+0.7,0);wt.add(roof);
   solid(wx0,wz0,2.8,2.8);
 }
+
+/* ---------- the no-dig line: lime on the ground CAMP_NODIG m out from the fence, stakes every ~10 m (10-core.js) ---------- */
+{
+  const pts=[],X0=FENCE_X0,X1=FENCE_X1,Z0=FENCE_Z0-0.2,Z1=FENCE_Z1+0.2,R=CAMP_NODIG,STEP=0.4;
+  // the fence rectangle grown by R, with round corners (the same shape nearCampNoDig() measures)
+  const corners=[[X1,Z1,0],[X0,Z1,Math.PI/2],[X0,Z0,Math.PI],[X1,Z0,Math.PI*1.5]];
+  for(let c=0;c<4;c++){
+    const [cx,cz,a0]=corners[c],[nx,nz]=corners[(c+1)%4];
+    for(let a=a0;a<a0+Math.PI/2;a+=STEP/R)pts.push([cx+Math.cos(a)*R,cz+Math.sin(a)*R]);
+    const a1=a0+Math.PI/2,sx=cx+Math.cos(a1)*R,sz=cz+Math.sin(a1)*R,ex=nx+Math.cos(a1)*R,ez=nz+Math.sin(a1)*R,L=Math.hypot(ex-sx,ez-sz);
+    for(let d=0;d<L;d+=STEP)pts.push([sx+(ex-sx)*d/L,sz+(ez-sz)*d/L]);
+  }
+  const W=0.13,pos=[],idx=[];
+  for(let i=0;i<pts.length;i++){
+    const [x,z]=pts[i],[px,pz]=pts[(i-1+pts.length)%pts.length],[qx,qz]=pts[(i+1)%pts.length];
+    let tx=qx-px,tz=qz-pz;const tl=Math.hypot(tx,tz)||1;tx/=tl;tz/=tl;
+    for(const s of[-1,1]){const vx=x-tz*W*s,vz=z+tx*W*s;pos.push(vx,baseH(vx,vz)+0.035,vz)}
+    const a=i*2,b=((i+1)%pts.length)*2;idx.push(a,b,a+1,a+1,b,b+1);
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  const line=new T.Mesh(g,new T.MeshStandardMaterial({color:0xf4f1e8,roughness:1,metalness:0,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  line.receiveShadow=true;scene.add(line);
+  const stakes=new T.Group();scene.add(stakes);
+  for(let i=0,acc=0;i<pts.length;i++){acc+=STEP;if(acc<10)continue;acc=0;
+    const [x,z]=pts[i];if(Math.abs(x-(GATE_X0+GATE_X1)/2)<8&&z<Z0)continue;   // keep the main gate approach clear
+    const st=box(0.05,0.55,0.05,0x9a7a52);st.position.set(x,baseH(x,z)+0.27,z);stakes.add(st);
+    const tip=box(0.06,0.12,0.06,0xd0442c);tip.position.set(x,baseH(x,z)+0.5,z);stakes.add(tip);
+  }
+}

@@ -75,6 +75,7 @@ function scoop(){
   const now=performance.now();
   const cx=h?h.x:tx,cz=h?h.z:tz;
   if(inCamp(cx,cz)){if(now-lastWarn>2500){say(sirL,'Not in camp! Go dig on the lake.');toast('No digging inside camp. Head out onto the lake bed.','bad');lastWarn=now}return}
+  if(nearCampNoDig(cx,cz)){if(now-lastWarn>2500){toast('Too close to the camp fence. Dig past the white line.','bad');lastWarn=now}return}
   if(Math.max(Math.abs(cx),Math.abs(cz))>EDGE-2){if(now-lastWarn>2500){toast('That\'s the edge of the lake. Dig closer in.','bad');lastWarn=now}return}
   const maxD=digDepthMax();
   if(!h){h=addHole({x:r1(tx),z:r1(tz),d:0,mine:true,own:true})}
