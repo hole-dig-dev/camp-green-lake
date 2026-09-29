@@ -77,7 +77,7 @@ const hideProc=o=>{if(o)o.visible=false};   // swap: the box version goes once i
   placeModel('WreckRoom',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(wreckCabin)).catch(()=>{});
   placeModel('WardenHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(wardenCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
-  instanceModel('Watchtower',SIM.TOWERS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:Math.atan2(-o.x,-(o.z-41))})))   // searchlight side toward the camp centre
+  instanceModel('Watchtower',SIM.TOWERS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:towerRy(o)})))   // square to the fence, ladder + searchlight facing the yard
     .then(()=>hideProc(TOWERS_PROC)).catch(()=>{});
   // fence: posts where 20-world.js put them; spans stretched to each gap (the model is 2.5 m long)
   Promise.all([instanceModel('FencePost',FENCE_POSTS),instanceModel('FenceSpan',FENCE_SPANS.map(s=>Object.assign({sx:s.len/2.5},s)))])
@@ -146,14 +146,16 @@ TENTS.forEach((t,ti)=>{
 });
 
 /* ---- lakebed rocks: the 30 pebbles from 15-terrain.js become three Blender rock shapes, plus a wider scatter
-   across the lakebed (purely visual, no collisions; fixed seed so everyone sees the same rocks) ---- */
+   across the lakebed (fixed seed so everyone sees the same rocks). Pebbles you can step over; bigger rocks are solid. ---- */
 {
+  const ROCK_SOLID_MIN=0.4;   // rock size (m) from which it blocks you: ~0.45 m tall once modelled
   const ROCK_SCATTER_N=260,ROCK_SCATTER_R=420,rnd=mulberry32(90210),byV=[[],[],[]];
-  TERRAIN_ROCKS.forEach((r,i)=>byV[i%3].push({x:r.x,y:r.y,z:r.z,ry:r.ry,s:r.size/0.3}));
+  const rockSolid=(x,z,sz)=>{if(sz>=ROCK_SOLID_MIN)solid(x,z,sz*2.4,sz*2.4)};   // knee-high and up; a model rock is ~3.3x its size across
+  TERRAIN_ROCKS.forEach((r,i)=>{byV[i%3].push({x:r.x,y:r.y,z:r.z,ry:r.ry,s:r.size/0.3});rockSolid(r.x,r.z,r.size)});
   for(let i=0;i<ROCK_SCATTER_N;i++){
     const a=rnd()*Math.PI*2,d=30+Math.sqrt(rnd())*ROCK_SCATTER_R,x=Math.cos(a)*d,z=20+Math.sin(a)*d,sz=0.2+rnd()*rnd()*1.1;
     if(Math.max(Math.abs(x),Math.abs(z))>EDGE-8||nearCampZone(x,z))continue;
-    byV[i%3].push({x,y:baseH(x,z),z,ry:rnd()*6.28,s:sz/0.3});
+    byV[i%3].push({x,y:baseH(x,z),z,ry:rnd()*6.28,s:sz/0.3});rockSolid(x,z,sz);
   }
   Promise.all(['RockA','RockB','RockC'].map((n,i)=>instanceModel(n,byV[i]))).then(()=>TERRAIN_ROCKS.forEach(r=>hideProc(r.m))).catch(()=>{});
 }
