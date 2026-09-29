@@ -366,7 +366,7 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, owner: p.owner, grab: p.grab || [] })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
@@ -480,9 +480,49 @@ wss.on('connection', (ws, req) => {
         // Someone dug up something too heavy for the sack. It sits on the ground until campers carry it to the truck.
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
-        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)) }; dirty = true;
+        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)), val: SIM.HEAVY[type] }; dirty = true;
         LOG.log('propSpawn', { id: c.id, n: c.n, item: id, type, x: world.props[id].x, z: world.props[id].z });
         broadcast({ t: 'prop', id, ...world.props[id] });
+        break;
+      }
+      /* ---- grab physics for heavy loot (public/js/84-grab.js). One camper "owns" a moving prop: their page runs its
+         physics and reports it ('pst'); other grabbers send their hand position ('phand'), which goes to the owner. ---- */
+      case 'pgrab': {
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p) return;
+        if (Math.hypot(p.x - c.x, p.z - c.z) > SIM.GRAB.REACH + 1) return;
+        p.grab = [...new Set([...(p.grab || []).filter(g => clients.has(g)), c.id])].slice(0, 8);
+        if (p.owner == null || !clients.has(p.owner)) p.owner = c.id;
+        broadcast({ t: 'pown', id, owner: p.owner, grab: p.grab });
+        break;
+      }
+      case 'prel': case 'pyeet': {
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p) return;
+        p.grab = (p.grab || []).filter(g => g !== c.id);
+        if (m.t === 'pyeet' && p.owner !== c.id && clients.has(p.owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(p.owner), { t: 'pyeet', id, pid: c.id, d }); }
+        broadcast({ t: 'pown', id, owner: p.owner, grab: p.grab });
+        break;
+      }
+      case 'phand': {
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p || !(p.grab || []).includes(c.id) || p.owner === c.id) return;
+        const h = Array.isArray(m.h) ? m.h.slice(0, 3).map((v, i) => num(v, i === 1 ? -10 : -620, i === 1 ? 210 : 620, 0)) : null; if (!h) return;
+        const o = clients.get(p.owner); if (o) send(o, { t: 'phand', id, pid: c.id, h });
+        break;
+      }
+      case 'pst': {
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p || p.owner !== c.id) return;
+        const x = num(m.x, -595, 595, p.x), z = num(m.z, -595, 595, p.z);
+        if (Math.hypot(x - c.x, z - c.z) > 40) return; // the owner is somewhere near their prop
+        p.x = r2(x); p.z = r2(z); p.y = r2(num(m.y, -10, 60, p.y || 0));
+        const v0 = SIM.HEAVY[p.type]; p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
+        if (m.rest === true && !(p.grab || []).includes(c.id)) p.owner = null; // settled and let go: the next grabber takes over
+        dirty = true;
+        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, owner: p.owner, grab: p.grab || [] }, c.id);
+        if (Math.hypot(p.x - SIM.SELL.x, p.z - SIM.SELL.z) < SIM.SELL.r) {
+          const v = p.val == null ? v0 : p.val, who = [...new Set([c.id, ...(p.grab || [])])]; delete world.props[id];
+          world.run.bank += v; dirty = true;
+          LOG.log('propSold', { item: id, type: p.type, v, who });
+          broadcast({ t: 'psold', id, v, who }); broadcast(runInfo());
+        }
         break;
       }
       case 'bag': {
@@ -845,15 +885,8 @@ setInterval(() => {
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
   // heavy loot
-  const sold = SIM.stepProps(world.props, players, dt);
-  const moved = [];
-  for (const id in world.props) { const p = world.props[id]; if (p.moved) { p.moved = false; p.x = r2(p.x); p.z = r2(p.z); moved.push([+id, p.x, p.z, p.n]); } }
-  if (moved.length) broadcast({ t: 'props', list: moved });
-  for (const id of sold) {
-    const p = world.props[id], v = SIM.HEAVY[p.type]; delete world.props[id];
-    world.run.bank += v; dirty = true;
-    broadcast({ t: 'psold', id: +id, v, who: p.who || [] }); broadcast(runInfo());
-  }
+  // heavy loot is grab physics now (public/js/84-grab.js): the holder's page simulates it and reports 'pst'; see there.
+  for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
   SIM.stepMonsters(MON, players, t, dt, ev);

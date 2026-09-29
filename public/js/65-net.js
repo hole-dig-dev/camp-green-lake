@@ -68,7 +68,7 @@ function onMsg(m){
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[]}}
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
@@ -106,6 +106,7 @@ function onMsg(m){
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
+    case 'pown':case 'pst':case 'phand':case 'pyeet':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)
     case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
     case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}

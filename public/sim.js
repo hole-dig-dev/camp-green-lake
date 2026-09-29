@@ -10,6 +10,11 @@
   const nearCampZone = (x, z) => x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   const HEAVY = { safe: 120, strongbox: 80 };
+  // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
+  // One camper pulls at most GRAB.FMAX newtons, so ~71 kg is the most one of you can lift: the safe takes two.
+  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 } };
+  const GRAB = { K: 1400, DAMP: 70, FMAX: 700, SNAP: 4.2, THROW: 7.5, REACH: 4.5 };
+  const DMG = { MIN: 2.4, RATE: 0.06, COOL: 0.25 };   // landings faster than MIN m/s chip value off
   // Tower optics are shared with the renderer, so the light a player sees is the light that can spot them.
   const TOWERS = [
     { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },
@@ -555,7 +560,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters,
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };

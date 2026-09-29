@@ -134,7 +134,7 @@ function use(){
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='sinkRescue')return; // hold F to link hands: handled every frame in updateSinkholes (87-sinkhole.js)
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
-  if(s.id==='prop'){S.carry=s.pr.id;digHeld=false;logEv('propGrab',{item:s.pr.id,type:s.pr.type,x:+s.pr.x.toFixed(1),z:+s.pr.z.toFixed(1)});toast(`Hauling the ${LOOT[s.pr.type].name}. Get it to Mr. Sir's pickup by the main gate. A friend grabbing it too makes it way faster. F to let go.`,'',4000);sfx.thud();return}
+  if(s.id==='prop'){useProp(s.pr);return}   // grab it / let go (84-grab.js)
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');

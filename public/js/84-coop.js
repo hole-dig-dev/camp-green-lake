@@ -48,7 +48,7 @@ function soloEndOfDay(){
   else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;saveRun();fired(b,q)}
 }
 
-/* ---- heavy loot: too big for the sack. Grab it (F) and haul it to Mr. Sir's truck; two campers carry it much faster ---- */
+/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to Mr. Sir's truck; the safe takes two to lift ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
@@ -140,9 +140,7 @@ function updateCoop(dt){
   if(clockT()<DAYMS)S.dayPlay=(S.dayPlay||0)+dt;
   S.noise=Math.max(0,S.noise-dt*0.35);if(P.anim===4)S.noise=Math.max(S.noise,0.6);
   // heavy loot (the server moves it when online)
-  if(!online()&&PROPS.size){const o={};for(const[id,pr]of PROPS)o[id]=pr;for(const id of SIM.stepProps(o,[meSim()],dt)){const v=SIM.HEAVY[PROPS.get(+id).type];propSold(+id,v,[myId()]);payTeam(v)}}
-  for(const pr of PROPS.values()){const g=pr.g,k=Math.min(1,dt*8);g.position.x+=(pr.x-g.position.x)*k;g.position.z+=(pr.z-g.position.z)*k;g.position.y=groundAt(g.position.x,g.position.z)}
-  if(S.carry!=null){const pr=PROPS.get(S.carry);if(!pr||S.ko||Math.hypot(pr.x-P.x,pr.z-P.z)>3.6){S.carry=null;if(pr&&!S.ko)toast('You let go.','',1500)}}
+  // heavy loot moves by grab physics now: 84-grab.js (updateGrab)
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
   if(dn){S.revT+=dt;if(S.revT>=3){S.revT=0;wsSend({t:'revive',id:dn.rid});addXP(50);toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
