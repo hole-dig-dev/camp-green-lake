@@ -266,7 +266,7 @@ function updateGrab(dt){
   if(!S.ko&&(S.inCart!=null||MYBODY.hands.size)){S.inCart=null;MYBODY.hands.clear()}   // back on my feet
   // input: hold R / right mouse to grab what you're aiming at; let go to drop
   const want=(KEYS['r']||grabMouse)&&!S.ko&&!uiOpen()&&!inTent();
-  if(want&&GRAB_ST.id==null&&!grabHeldBefore){const t=aimTarget(SIM.GRAB.REACH);if(t)grabTarget(t)}
+  if(want&&GRAB_ST.id==null&&!grabHeldBefore){const t=aimTarget(tuneOr('env.grabReach',SIM.GRAB.REACH));if(t)grabTarget(t)}
   grabHeldBefore=want;
   if(!want&&GRAB_ST.id!=null&&!grabByUse)releaseGrab(false);
   const gt=targetOf(GRAB_ST.id);

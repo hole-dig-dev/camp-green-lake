@@ -77,11 +77,11 @@ function spawnTumbleweedGust(x,z,a,n,seed,t0){
   for(let i=0;i<n&&tbWeeds.length<TB_POOL_CAP;i++){
     // the first weed of a gust starts dead on the gust's line (a gust aimed at you always has one coming straight at
     // you); the rest fan out around it. Still the same seeded numbers for everyone.
-    const ox=(r()*2-1)*TB_SPREAD,oz=(r()*2-1)*TB_SPREAD,bx=x+(i?ox:0),bz=z+(i?oz:0),rad=TB_R_MIN+r()*(TB_R_MAX-TB_R_MIN);
-    const spd=TB_SPEED_MIN+r()*(TB_SPEED_MAX-TB_SPEED_MIN);
+    const ox=(r()*2-1)*TB_SPREAD,oz=(r()*2-1)*TB_SPREAD,bx=x+(i?ox:0),bz=z+(i?oz:0),rad=(TB_R_MIN+r()*(TB_R_MAX-TB_R_MIN))*tune('env.tbSize');   // random size (seeded), times the tester's size slider
+    const spd=(TB_SPEED_MIN+r()*(TB_SPEED_MAX-TB_SPEED_MIN))*tune('env.tbSpeed');
     tbWeeds.push({id:t0+'_'+i,r:rad,t0,simT:0,dead:false,deadT:0,rot:0,big:false,
       x:bx,y:baseH(bx,bz)+rad,z:bz,
-      head:a+(i?(r()*2-1)*TB_AIM_JITTER:(r(),0)),speed:spd,speedMin:spd*TB_SPEED_FLOOR_FRAC,vy:TB_BOUNCE_MIN,
+      head:a+(i?(r()*2-1)*TB_AIM_JITTER:(r(),0)),speed:spd,speedMin:spd*TB_SPEED_FLOOR_FRAC,vy:tuneOr('env.tbBounce',TB_BOUNCE_MIN),
       wobPh:r()*6.2832,wobFq:TB_WOBBLE_FQ_MIN+r()*(TB_WOBBLE_FQ_MAX-TB_WOBBLE_FQ_MIN),wobAmp:TB_WOBBLE_AMP*(0.6+r()*0.6)});
   }
   tbGusts.push({x,z,t0,warned:false,n});
@@ -102,7 +102,7 @@ function tbPhysStep(w){
   if(w.y<=gy){
     const impactVy=w.vy;
     w.y=gy;bounced=true;
-    w.vy=Math.abs(impactVy)*TB_BOUNCE_REST+TB_BOUNCE_MIN;   // a floor on the kick keeps it springy for its whole life
+    w.vy=Math.abs(impactVy)*TB_BOUNCE_REST+tuneOr('env.tbBounce',TB_BOUNCE_MIN);   // a floor on the kick keeps it springy for its whole life
     w.speed=Math.max(w.speed*TB_BOUNCE_FRIC,w.speedMin);    // a floor on ground speed too -- it's the wind, not rolling to a stop
     w.big=impactVy<-TB_BIG_BOUNCE_VY;               // hit hard enough to buck a rider loose
   }else w.big=false;
@@ -260,8 +260,8 @@ function tbStep(dt){
     if(w.big){w.big=false;tbRelease('bigbounce');return}
     if(KEYS[' ']&&!tbSpaceWas){tbMashN++;tbMashT=TB_STICK_MASH_WINDOW}
     tbSpaceWas=!!KEYS[' '];tbMashT-=dt;if(tbMashT<=0)tbMashN=0;
-    if(tbMashN>=TB_STICK_MASH_N){tbRelease('wriggle');return}
-    if(tbStT>=TB_STICK_TIME_MAX){tbRelease('timeout');return}
+    if(tbMashN>=tuneOr('env.tbMash',TB_STICK_MASH_N)){tbRelease('wriggle');return}
+    if(tbStT>=tuneOr('env.tbRide',TB_STICK_TIME_MAX)){tbRelease('timeout');return}
     const theta=tbThetaOff+(w.rot-tbTheta0),dirx=Math.cos(w.head),dirz=Math.sin(w.head);
     P.x=w.x+dirx*Math.sin(theta)*tbRideR;P.z=w.z+dirz*Math.sin(theta)*tbRideR;P.y=w.y-Math.cos(theta)*tbRideR;
     me.g.position.set(P.x,P.y,P.z);me.g.rotation.x=theta;                    // tumbles around with the ball -- upside down at the top
@@ -280,7 +280,7 @@ function tbStep(dt){
     const f=Math.exp(-dt*5);P.kx*=f;P.kz*=f;
     if(Math.hypot(P.kx,P.kz)>0.05){P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);P.y=groundAt(P.x,P.z)}
     animPerson(me,3,dt);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*6));me.g.position.set(P.x,P.y,P.z);
-    if(tbStT>=TB_DOWN_TIME){tbSt=4;tbStT=0}
+    if(tbStT>=tuneOr('env.tbDown',TB_DOWN_TIME)){tbSt=4;tbStT=0}
   }else if(tbSt===4){                                                        // getting up
     const u=clamp(tbStT/TB_GETUP_TIME,0,1);
     if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}

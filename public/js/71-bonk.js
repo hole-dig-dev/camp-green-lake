@@ -21,7 +21,7 @@ let bonkT=0;                  // time (performance.now ms) of your last bonk swi
 function bonkSwing(){
   const now=performance.now();if(now-bonkT<BONK_CD*1000||inTent())return false;
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa);
-  const inFront=(x,z)=>{const dx=x-P.x,dz=z-P.z,d=Math.hypot(dx,dz);return d<BONK_REACH&&d>0.05&&(dx*fx+dz*fz)/d>BONK_CONE?d:0};
+  const inFront=(x,z)=>{const dx=x-P.x,dz=z-P.z,d=Math.hypot(dx,dz);return d<tuneOr('env.bonkReach',BONK_REACH)&&d>0.05&&(dx*fx+dz*fz)/d>BONK_CONE?d:0};
   // friends first (skip anyone knocked out or inside a tent: their y is down at TENT_FLOOR_Y)
   let best=null,bd=1e9;
   for(const[id,R]of remotes){if(R.f&2||R.ty<TENT_FLOOR_Y+2)continue;const g=R.p.g.position,d=inFront(g.x,g.z);if(d&&d<bd){bd=d;best={id,R}}}

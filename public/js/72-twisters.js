@@ -46,7 +46,7 @@ function twPlan(ci,cj,k){
 /* where a planned twister is at time T, and how strong it is (0 = not there) */
 function twAt(pl,T){
   const e=(T-pl.t0)/1000;if(e<0||e>pl.life)return null;
-  const x=pl.x0+Math.cos(pl.a)*TW_SPEED*e+Math.sin(e*0.11+pl.ph)*14,z=pl.z0+Math.sin(pl.a)*TW_SPEED*e+Math.cos(e*0.09+pl.ph)*14;
+  const x=pl.x0+Math.cos(pl.a)*tuneOr('env.twSpeed',TW_SPEED)*e+Math.sin(e*0.11+pl.ph)*14,z=pl.z0+Math.sin(pl.a)*tuneOr('env.twSpeed',TW_SPEED)*e+Math.cos(e*0.09+pl.ph)*14;
   let s=sm(e/10)*sm((pl.life-e)/10);                           // grows for 10 s, dies down over the last 10 s
   s*=clamp((campDist(x,z)-15)/35,0,1);                         // falls apart as it nears camp
   if(!pl.forced)s*=1-nightF();                                 // only during the day (console-made ones ignore this)
@@ -129,12 +129,13 @@ function twPush(tw,d,dt){
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
   if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
   if(tbSt)return;                            // already stuck to a tumbleweed - one hazard at a time
-  const pr=TW_PULL_R*tw.s;if(d>pr||d<0.01)return;
-  const sr=Math.max(TW_SUCK_R*tw.s,0.4);
+  const ts=tw.s*tune('env.twStrength');   // each twister's (random, shared) strength, times the tester's wind slider
+  const pr=tuneOr('env.twReach',TW_PULL_R)*ts;if(d>pr||d<0.01)return;
+  const sr=Math.max(tuneOr('env.twGrab',TW_SUCK_R)*ts,0.4);
   if(d<sr){if(twCool<=0)twStart(tw,d);return}
   const norm=clamp(1-(d-sr)/(pr-sr),0,1),f=Math.pow(norm,TW_PULL_POW);
   const dx=(tw.x-P.x)/d,dz=(tw.z-P.z)/d;
-  const pull=TW_PULL_MAX*tw.s*f,spin=TW_SPIN_MAX*tw.s*f;      // walking (4.3) beats it near the rim, sprint (7.2) near mid-range
+  const pull=tuneOr('env.twPull',TW_PULL_MAX)*ts*f,spin=tuneOr('env.twSpin',TW_SPIN_MAX)*ts*f;      // walking (4.3) beats it near the rim, sprint (7.2) near mid-range
   twDbgPull=pull;
   P.x=clamp(P.x+(dx*pull-dz*spin)*dt,-HALF+3,HALF-3);P.z=clamp(P.z+(dz*pull+dx*spin)*dt,-HALF+3,HALF-3);
 }
@@ -168,12 +169,12 @@ function twStep(dt){
   twStT+=dt;
   if(twSt===1){                                                 // spiralling up the funnel
     const tw=TW_LIVE.get(twGrab),cx=tw?tw.x:twCenter.x,cz=tw?tw.z:twCenter.z;
-    const u=clamp(twStT/TW_SUCK_TIME,0,1);
+    const u=clamp(twStT/tuneOr('env.twSuckTime',TW_SUCK_TIME),0,1);
     twSpiralA+=dt*(4+10*u);const r=lerp(twSuckR0,0.6,u);
     P.x=clamp(cx+Math.cos(twSpiralA)*r,-HALF+3,HALF-3);P.z=clamp(cz+Math.sin(twSpiralA)*r,-HALF+3,HALF-3);
-    P.y=groundAt(P.x,P.z)+TW_SUCK_RISE*sm(u);P.grounded=false;
+    P.y=groundAt(P.x,P.z)+tuneOr('env.twRise',TW_SUCK_RISE)*sm(u);P.grounded=false;
     me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=twSpiralA+Math.PI/2;me.g.rotation.x=lerp(me.g.rotation.x,0,dt*4);me.g.rotation.z+=dt*10;
-    if(twStT>=TW_SUCK_TIME)twThrow(tw||{s:twStrength});
+    if(twStT>=tuneOr('env.twSuckTime',TW_SUCK_TIME))twThrow(tw||{s:twStrength});
   }else if(twSt===2){                                           // thrown - tumbling flight
     P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
     P.vy-=16*dt;P.y+=P.vy*dt;
@@ -184,7 +185,7 @@ function twStep(dt){
     const f=Math.exp(-dt*5);P.kx*=f;P.kz*=f;
     if(Math.hypot(P.kx,P.kz)>0.05){P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);P.y=groundAt(P.x,P.z)}
     animPerson(me,3,dt);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*6));me.g.position.set(P.x,P.y,P.z);
-    if(twStT>=TW_DOWN_TIME){twSt=4;twStT=0}
+    if(twStT>=tuneOr('env.twDown',TW_DOWN_TIME)){twSt=4;twStT=0}
   }else if(twSt===4){                                           // getting up
     const u=clamp(twStT/TW_GETUP_TIME,0,1);
     if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}

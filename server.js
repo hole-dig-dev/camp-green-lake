@@ -549,7 +549,7 @@ wss.on('connection', (ws, req) => {
          server passes it to the owner. The cart carries up to 3 things (loot or bodies); they ride along with it. ---- */
       case 'pgrab': {
         const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
-        const reach = SIM.GRAB.REACH + (m.rope ? SIM.ROPE.L + 2 : 1);
+        const reach = tuneS('env.grabReach', SIM.GRAB.REACH) + (m.rope ? SIM.ROPE.L + 2 : 1);
         if (Math.hypot(T.x - c.x, T.z - c.z) > reach) return;
         const key = m.rope ? 'ropes' : 'grab';
         T.o.grab = (T.o.grab || []).filter(g => g !== c.id && clients.has(g)); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id && clients.has(g));
