@@ -88,7 +88,13 @@ function onMsg(m){
     // A reconnect (including the join-timeout closing an idle title screen) re-sends 'needpass'; only prefill
     // from the remembered/invite-link password when the field is still empty, so it never clobbers what
     // someone's mid-typing or a value we already know was rejected.
-    case 'needpass':net.needPass=true;campWrap.hidden=false;startBtn.disabled=false;if(PASS&&!campIn.value)campIn.value=PASS;break;
+    // Already playing and the socket dropped (a network blip, a server restart): rejoin with the password we joined
+    // with, straight away. Waiting for 'hello' here stranded players: the server never sends it before a valid join,
+    // so the socket timed out every 15 s and the camper kept playing a solo copy nobody else could see.
+    case 'needpass':
+      net.needPass=true;
+      if(S.started&&PASS){sendJoin();break}
+      campWrap.hidden=false;startBtn.disabled=false;if(PASS&&!campIn.value)campIn.value=PASS;break;
     case 'joinrejected':
       net.awaitingJoin=false;
       if(!S.started){showCampErr(m.reason||'Wrong camp password');PASS='';}else toast(m.reason||'Wrong camp password','bad',4000);
