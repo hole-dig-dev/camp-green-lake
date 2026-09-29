@@ -99,12 +99,13 @@ function updateFootsteps(dt){
   footstepN=(footstepN+1)%3;
   if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.4:0.32,0.92+Math.random()*0.16))noise(0.07,280,0.6,0.05,'lowpass');
 }
+const BIRDS_LEVEL=0;   // the always-on day bird loop is off (JT: too much); it was 0.24. birds.mp3 stays for an occasional-call idea
 function updateAudioScene(){
   if(!AC||!S.started)return;
   const outside=inTent()?0.14:1,night=nightF(),dust=haboobF();
   const recordedWind=AUDIO_MODE.wind==='recorded',recordedRain=AUDIO_MODE.rain==='recorded';
   setAmbientClip('wind',recordedWind?outside*(0.16+dust*0.06):0);
-  setAmbientClip('birds',AUDIO_MODE.ambience==='recorded'?outside*(1-night)*(1-dust)*0.24:0);
+  setAmbientClip('birds',AUDIO_MODE.ambience==='recorded'?outside*(1-night)*(1-dust)*BIRDS_LEVEL:0);
   setAmbientClip('crickets',AUDIO_MODE.ambience==='recorded'?outside*night*(1-dust)*0.43:0);
   setAmbientClip('rain',S.won&&recordedRain?0.33:0);
   const at=AC.currentTime;

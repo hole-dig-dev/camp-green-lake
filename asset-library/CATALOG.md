@@ -16,7 +16,7 @@ Status meanings and rules are in the [README](README.md). Verdicts come from JT'
 | House door open | In game: approved | `public/audio/doorOpen_1.mp3` | Also plays, slightly lower, when leaving the house |
 | Tumbleweed gust (synthesized) | In game: approved | code in `public/js/40-fx.js` | |
 | Shovel (bare) | In game: not reviewed | `public/audio/shovel.mp3` | Now only the loading fallback for the dig rotation, and a layer inside it |
-| Birds (day) | In game: not reviewed | `public/audio/birds.mp3` | |
+| Birds (day) | Off (level 0) | `public/audio/birds.mp3` | JT: the always-on day loop was too much. The file stays; `BIRDS_LEVEL` in `public/js/40-fx.js` is 0. An occasional call might return later |
 | Bunk cloth | In game: not reviewed | `public/audio/cloth2.mp3` | |
 | Recorded wind | In game: not reviewed | `public/audio/wind.mp3` | A/B option only (`audio wind new`) |
 | Hazards, wildlife, patrol, Zeroni, game cues, disco | In game: not reviewed | code in `public/js/` | JT: most still sound code-generated; not a priority yet |

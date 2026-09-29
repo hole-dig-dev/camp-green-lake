@@ -36,7 +36,6 @@ const TUNE_DEFS=[
   {key:'vulture.clear',tab:'Creatures',label:'Vultures give up above',def:0.40,kind:'lin',span:0.40,min:0,max:1,unit:'% hp',pct:true},
   // ---- audio: each multiplies that sound's own mix level (the pause menu's Master/Effects still apply on top)
   {key:'vol.wind',tab:'Audio',label:'Wind',def:1,kind:'mul',range:4,zero:true,unit:'×'},
-  {key:'vol.birds',tab:'Audio',label:'Birds (day)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.crickets',tab:'Audio',label:'Crickets (night)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.rain',tab:'Audio',label:'Rain',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.steps',tab:'Audio',label:'Footsteps',def:1,kind:'mul',range:4,zero:true,unit:'×'},

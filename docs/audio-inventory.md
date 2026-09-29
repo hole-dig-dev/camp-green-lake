@@ -20,6 +20,7 @@ JT listened to the [labeled reel](../asset-library/audio/review-reels/2026-09-28
 | House door open | Good | Kept |
 | House door close | Not good | Removed; leaving the house replays the door-open recording, slightly lower |
 | Tumbleweed | Good | Kept |
+| Birds (day loop) | Too much when always on | Off: `BIRDS_LEVEL` is 0; `birds.mp3` kept |
 
 Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
 
