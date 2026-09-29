@@ -135,7 +135,7 @@ Code today:
    *Check: throw a jar to a friend, a missed catch smashes it, a dropped safe rolls into a hole.*
 3. ✅ **Done (checkpoint 3).** **Bodies, rope and cart.** Downed players become carryable right away. Rope tie, pull and slip. The cart that tips over.
    *Check: pull a safe and a downed friend out of a hole with rope; the cart spills on a bump.*
-4. **The cellar and the lizards.** The small buried cellar under the site with the safe; lizards in holes; the noisy bell.
+4. ✅ **Done (checkpoint 4, at Walker Ranch).** **The cellar and the lizards.** The small buried cellar under the site with the safe; lizards in holes; the noisy bell.
    *Check: fall in, find the safe, get it and yourself out before the truck leaves.*
 5. **Tune and playtest.** Timer length, object weights, rope strength, cart tipping, lizard numbers. Run the section 32 success test with real players.
 
@@ -170,3 +170,29 @@ The open lake is no longer part of the game. Camp is a small fenced hub (x -40..
 - **Barn** (12 x 14 m, west of the house): wide door facing the house, packed hay under a hayloft (2.7 m up), a railed ramp up the north wall. `PHYS.floorAt` gives the walkable height; ranch colliders carry a `top` so you can walk over the hay once you are up there. Dogs cannot climb the ramp (the loft is a refuge, but loot up there has to come down).
 - **Loot:** 23 pieces (was 12). House: china, painting. Barn: saddle, lantern, anvil (95 kg, 2 campers), 2 milk cans. Loft: eggs (very fragile), jackalope trophy, gramophone, hope chest (40 kg).
 - **Guard dogs** (`stepDogs` in phys.js; 1 solo, 2 for a crew): asleep at first (snoring). Noise wakes them (bumps and breakage, the bell, digging, sprinting). They route through doors (yard, house rooms, barn), chase at 5.8 m/s (sprint is faster, carrying is slower), bite (drop your grab, stun, knockback; 3 bites in 40 s = knocked out), then back off. **Fetch:** throw something near a dog and it chases it; light things (6 kg or less) get carried back to its bed. Crouching shrinks what they notice. Messages: `pbite`, `pbark`, dogs in `pw.d`.
+
+## Checkpoint 4: the storm cellar and the lizards (2026-09-28) ✅
+The Lake Flats cellar from section 3, rebuilt for Walker Ranch.
+- **Storm cellar** (`PHYS.CELLAR`: 6 x 6.5 m, 3 m down, in the yard east of the house at ranch x 13..19, z -15.5..-9). The yard ground is now 4 slabs around a 2.4 x 3.6 m opening; the old infinite ground plane sits at the cellar floor.
+  - **The clue:** boards half-buried under the dirt, with cracks around them.
+  - **Opening it:** 6 shovelfuls through the boards and they give way (`pcel {a:'open'}`). Anyone standing on them drops in; loot sitting on them falls and takes damage.
+- **Down there:** Kate Barlow's safe (100 kg, 450 seeds, needs 2 campers to lift), 2 jars of spiced peaches on a shelf, a lantern, and a lizard nest (2 lizards, asleep).
+- **Getting out:**
+  - **Pulled up:** a friend at the edge presses F (`pull`). You have to be standing under the opening.
+  - **Dirt ramp:** dig 14 shovelfuls under the opening (`pcel {a:'ramp'}`, all diggers' shovelfuls add up). When it's done there's a walkable, physical 40° ramp.
+  - No climbing out with Space here. After falling in you have to let go of dig before you can start the ramp, so you don't start digging by accident.
+- **Getting loot out:** 2 campers below heave the safe up through the opening (1 can't), and the ones up top grab it. Or finish the ramp and drag it up (2 campers; 3 is easy).
+- **Yellow-spotted lizards** (`stepLiz` in phys.js):
+  - **Where:** the cellar nest, plus one of the 7 dirt mounds, which is a nest (little burrow holes are the clue). Digging that mound releases 2 lizards instead of treasure.
+  - **Waking and hunting:** asleep until noise wakes them, then they go and find it. Sleeping cellar lizards only wake for noise down there, or for the bell through the opening.
+  - **Chasing and biting:** they chase what they see at 4.9 m/s (faster than walking, slower than sprinting). One bite knocks you out, then the lizard goes back to its nest.
+  - **Climbing:** they climb in and out through the opening.
+  - **Stunning:** hit one with something thrown or dropped (over 2.2 m/s) and it's stunned for 6 s.
+  - **Messages:** `plbite`, `phiss`, `pstun`, `pnest`; lizards in `pw.l`.
+- **Noise rules:**
+  - **Digging:** crouched digging is quiet (radius 5 instead of 13). That's the solo way out of the cellar: crouch and dig the ramp without waking the nest.
+  - **The bell:** it rings while it's being carried around (radius 40), not only when it bumps into things.
+- **Dogs:** they don't go into the cellar, don't see or bite through the ground, and walk around the open hole.
+- **Known gaps:**
+  - A body carried under the cellar ceiling looks like it's on the ground above to people up top.
+  - The ramp can be stepped onto from its side under the ceiling.

@@ -542,8 +542,8 @@ function streamChunks(fx,fz,budget){
   if(want.length){want.sort((a,b)=>a[0]-b[0]);const nb=budget||(want[0][0]<LOAD_R*0.8?10:2);for(let k=0;k<Math.min(nb,want.length);k++)buildChunk(want[k][1],want[k][2])}
   for(const[key,C]of chunks)if(Math.hypot(C.x0+CH/2-fx,C.z0+CH/2-fz)>LOAD_R+CH*3){scene.remove(C.m);C.g.dispose();chunks.delete(key)}
 }
-function groundAt(x,z){
-  if(x>2500)return PHYS.floorAt(x,z); // the ranch: flat, apart from the hayloft and its ramp
+function groundAt(x,z,y){
+  if(x>2500)return PHYS.floorAt(x,z,y===undefined?P.y:y,CEL); // the ranch: flat, apart from the hayloft, its ramp and the storm cellar (down there if you are)
   if(x>1500)return townFloorAt(x,z);
   if(Math.max(Math.abs(x),Math.abs(z))>=HALF)return OUTER_Y;
   const C=chunks.get(ckey(Math.floor(x/CH),Math.floor(z/CH)));
@@ -956,7 +956,7 @@ function foundItem(it,h){
 function nearSpot(){
   if(S.driving||S.riding)return truckSpot();
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
-  const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
+  const tr=atRanch()&&P.y<-0.5?null:remoteNear(R=>R.f&16,atRanch()?3.4:3);if(tr)return{id:"pull",...tr};
   const bu=remoteNear(R=>R.f&32,2.4);if(bu)return{id:'digout',...bu};
   if(S.inTown){const sp=townSpot();if(sp&&sp.kind==='shaft'&&S.up.rope&&!sp.b.ladder)return{id:'stake',k:sp.k};if(sp&&sp.kind==='stair')return{id:'stair'};let best=null,bd=1.7*1.7;for(const e of TLOOTM.values()){const d2=(e.L.x-P.x)**2+(e.L.z-P.z)**2;if(d2<bd){bd=d2;best=e}}if(best)return{id:'tloot',e:best}}
   else{const bn=breachNear(3.4);if(bn){if(Math.hypot(P.x-bn.b.x,P.z-bn.b.z)<1.8)return{id:'descend',k:bn.k};if([...remotes.values()].some(R=>R.f&128))return{id:'hand',k:bn.k}}}
@@ -1215,7 +1215,7 @@ function onMsg(m){
   if(!m||typeof m!=='object')return;
   switch(m.t){
     case 'hello':{
-      net.id=m.id;poClear();buildMounds(m.pwd);if(Array.isArray(m.pwdog))for(const a of m.pwdog)if(Array.isArray(a))dogSet(a);if(Array.isArray(m.pw))for(const a of m.pw)if(Array.isArray(a))poSet(a,true);net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
+      net.id=m.id;poClear();buildMounds(m.pwd);if(Array.isArray(m.pwdog))for(const a of m.pwdog)if(Array.isArray(a))dogSet(a);if(Array.isArray(m.pwl))for(const a of m.pwl)if(Array.isArray(a))lizSet(a);celSet(m.pwcel);if(Array.isArray(m.pw))for(const a of m.pw)if(Array.isArray(a))poSet(a,true);net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       for(const id of [...remotes.keys()])removeRemote(id);
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
@@ -1258,8 +1258,12 @@ function onMsg(m){
     case 'truck':setTruck(m);break;
     case 'mission':setMission(m);break;
     case 'propGone':removeProp(num(m.id,0,1e7,-1)|0);break;
-    case 'pwinit':poClear();buildMounds(m.digs);if(Array.isArray(m.d))for(const a of m.d)if(Array.isArray(a))dogSet(a);if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,true);break;
-    case 'pw':if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,false);if(Array.isArray(m.d))for(const a of m.d)if(Array.isArray(a))dogSet(a);break;
+    case 'pwinit':poClear();buildMounds(m.digs);if(Array.isArray(m.d))for(const a of m.d)if(Array.isArray(a))dogSet(a);if(Array.isArray(m.l))for(const a of m.l)if(Array.isArray(a))lizSet(a);if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,true);celSet(m.cel);break;
+    case 'pw':if(Array.isArray(m.s))for(const a of m.s)if(Array.isArray(a))poSet(a,false);if(Array.isArray(m.d))for(const a of m.d)if(Array.isArray(a))dogSet(a);if(Array.isArray(m.l))for(const a of m.l)if(Array.isArray(a))lizSet(a);break;
+    case 'pcel':celSet(m);break;
+    case 'plbite':if(m.pid===net.id)lizBit();else lizFx('bite',num(m.x,2500,3400,0),num(m.z,-600,600,0));break;
+    case 'phiss':case 'pstun':lizFx(m.t.slice(1),num(m.x,2500,3400,0),num(m.z,-600,600,0));break;
+    case 'pnest':lizFx('nest',num(m.x,2500,3400,0),num(m.z,-600,600,0));break;
     case 'pbite':if(m.pid===net.id&&!S.ko)bitten(num(m.x,2500,3400,P.x),num(m.z,-600,600,P.z));else{const dd=Math.hypot(num(m.x,2500,3400,0)-P.x,num(m.z,-600,600,0)-P.z);if(dd<30)noise(0.09,2200,1,0.3*(1-dd/30),'highpass')}break;
     case 'pbark':barkFx(m.id|0);break;
     case 'pwend':poClear();break;
@@ -1347,7 +1351,7 @@ function updatePlayer(dt){
   const sprint=KEYS['shift']&&S.water>0&&S.carry==null&&S.stam>2;
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
-  const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0)&&GR.id==null&&(atRanch()?!!moundNear():!(MISSIONS&&inCamp(P.x,P.z)));
+  const digging=digHeld&&!uiOpen()&&S.carry==null&&!(S.twerkT>0)&&GR.id==null&&(atRanch()?!!(moundNear()||celDigSpot()):!(MISSIONS&&inCamp(P.x,P.z)));
   if(digHeld&&MISSIONS&&!atRanch()&&inCamp(P.x,P.z)&&!uiOpen()&&(S.noDigT=(S.noDigT||0)-dt)<=0){S.noDigT=5;toast('No digging in camp. The digging is out on the trips: TRIP BOARD, press F.','',3500)}
   P.moving=false;
   if(digging){
@@ -1432,7 +1436,7 @@ let hudT=0,lastTools='';
 const hc={clock:$('#clock'),curK:$('#curK'),cur:$('#curfew'),backRow:$('#backRow'),back:$('#back')};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
-  pull:s=>`Pull ${s.R.name} out of the hole`,
+  pull:s=>atRanch()?`Pull ${s.R.name} up out of the cellar`:`Pull ${s.R.name} out of the hole`,
   digout:s=>`Hold to dig ${s.R.name} out`+(S.digOutT>0?`… ${Math.round(S.digOutT/3*100)}%`:''),
   drop:s=>`Put down ${s.pr.type==='body'?s.pr.name:'the '+propName(s.pr)}`+(s.pr.type!=='body'?' (X or right-click: throw)':'')+(s.pr.n>=2?' (carrying together: fast)':' (alone: slow)'),
   prop:s=>(s.pr.type==='body'?`Pick up ${s.pr.name} and carry them back inside the fence`:`Grab the ${propName(s.pr)} (${SIM.HEAVY[s.pr.type]} seeds)`)+(s.pr.n?` · ${s.pr.n} carrying`:''),
@@ -1478,7 +1482,7 @@ function updateHUD(){
   const s=nearSpot();
   const fp=!uiOpen()&&!S.ko?feelPrompt():null;
   if(fp){hud.prompt.textContent=fp;hud.prompt.hidden=false}
-  else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
+  else if(isTrapped()&&!atRanch()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent (with the crew\'s seeds!)':s.id==='lookout'?'Sit at the Warden\'s lookout (whole-lake map)':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
@@ -2239,6 +2243,7 @@ function updateHelper(b,dt){
   if(S.inTown){const b=[...BREACH.values()].filter(q=>!q.closed).pop();tx=b?b.x+(ix?2:-2):g.position.x;tz=b?b.z:g.position.z;near=1}
   else if(S.ko){tx=P.x;tz=P.z;act='revive';near=1.3}
   else if(S.buried){tx=P.x+(ix?1:-1);tz=P.z;act='dig';near=1.4}
+  else if(isTrapped()&&atRanch()){tx=celC.x+(ix?1:-1);tz=RN.Z+CK.oz1+0.9;near=0.6;if(Math.hypot(P.x-tx,P.z-tz)<3.4)act='pull'} // the storm cellar: they wait at the edge, and can only reach you under the opening
   else if(isTrapped()){tx=P.x+(ix?1.9:-1.9);tz=P.z;act='pull';near=2.4}
   else if(WT.stuck&&Math.hypot(WT.x-P.x,WT.z-P.z)<14){tx=WT.x+Math.sin(WT.h)*3.2+(ix?1:-1);tz=WT.z+Math.cos(WT.h)*3.2;near=1}
   else if(S.carry!=null&&PROPS.has(S.carry)){const pr=PROPS.get(S.carry);tx=pr.x+(ix?1:-1);tz=pr.z+0.6;act='carry';near=1.2}
@@ -2296,8 +2301,9 @@ function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LO
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
 function holeDepthHere(){return Math.max(0,baseH(P.x,P.z)-P.y)}
-function isTrapped(){if(S.inTown)return S.started&&!S.ko&&P.grounded&&P.y<SIM.TOWN.Y-2;return S.started&&!S.ko&&P.grounded&&holeDepthHere()>1.8}
+function isTrapped(){if(atRanch())return S.started&&!S.ko&&P.grounded&&downInCellar()&&!CEL.ramp;if(S.inTown)return S.started&&!S.ko&&P.grounded&&P.y<SIM.TOWN.Y-2;return S.started&&!S.ko&&P.grounded&&holeDepthHere()>1.8}
 function popOut(){
+  if(atRanch()){P.x=clamp(P.x,RN.X+CK.ox0+0.3,RN.X+CK.ox1-0.3);P.z=RN.Z+CK.oz1+0.8;P.y=0;P.vy=0;S.climbT=0;sfx.thud();return} // out of the storm cellar, onto the edge
   if(S.inTown){const i=SIM.cellAt(P.x,P.z),cc=i>=0?SIM.cellCenter(i):{x:P.x,z:P.z};let dx=P.x-cc.x,dz=P.z-cc.z,dl=Math.hypot(dx,dz)||1;P.x=cc.x+dx/dl*3.4;P.z=cc.z+dz/dl*3.4;P.y=groundAt(P.x,P.z);P.vy=0;S.climbT=0;sfx.thud();return}
   const h=holeNear(P.x,P.z,HOLE_R*1.2);let dx=Math.sin(P.fa),dz=Math.cos(P.fa);
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
@@ -2922,7 +2928,8 @@ function checkUnearth(h){
 const myBodyId=()=>900000+(online()?net.id:0);
 function downAsBody(){
   if(!MISSIONS||MIS.phase!=='site')return;
-  if(online())wsSend({t:'downBody',x:+P.x.toFixed(2),z:+P.z.toFixed(2)});else if(!PROPS.has(myBodyId()))addProp(myBodyId(),'body',P.x,P.z,S.name);
+  let bx=P.x,bz=P.z;if(downInCellar()){bx=celC.x;bz=celC.z-0.6} // down in the cellar: you end up under the opening, where your friends can see (and reach) you
+  if(online())wsSend({t:"downBody",x:+bx.toFixed(2),z:+bz.toFixed(2)});else if(!PROPS.has(myBodyId()))addProp(myBodyId(),"body",bx,bz,S.name);
 }
 function followBody(){
   // while you're a body, you go wherever your friends drag, carry, cart or throw you
@@ -3004,12 +3011,54 @@ const RN=PHYS.RANCH,RANCHCOL=[];let ranchBuilt=false;
 const atRanch=()=>S.started&&P.x>RN.X-300;
 function buildRanch(){
   if(ranchBuilt)return;ranchBuilt=true;
-  const sand=new T.Mesh(new T.PlaneGeometry(800,800),M(0xdcab6e));sand.rotation.x=-Math.PI/2;sand.position.set(RN.X,0,RN.Z);sand.receiveShadow=true;scene.add(sand);
   for(const s of PHYS.layout()){const m=box(s.hx*2,s.hy*2,s.hz*2,s.c);m.position.set(s.x,s.y,s.z);if(s.rz)m.rotation.z=s.rz;scene.add(m);if(s.block&&s.y-s.hy<0.3)RANCHCOL.push({x0:s.x-s.hx,x1:s.x+s.hx,z0:s.z-s.hz,z1:s.z+s.hz,top:s.y+s.hy})}
+  buildCellar();
   if(WT_COL)RANCHCOL.push(WT_COL); // the truck is solid here too
   sign('WALKER RANCH',RN.X+3,RN.Z+7,0,3.4,1.1);
   for(const[x,y,z]of[[-3,2.6,0],[4.3,2.6,0],[-14,3.6,-14],[-20,4.4,-14]]){const l=new T.PointLight(0xffd9a0,0.9,11,1.5);l.position.set(RN.X+x,y,RN.Z+z);scene.add(l)} // a lamp in each room so you can see what you're grabbing
   const rr=mulberry32(99);for(let i=0;i<14;i++){const a=i/14*6.28,d=170+rr()*90,h=20+rr()*40,m=new T.Mesh(new T.CylinderGeometry(25+40*rr(),60+rr()*40,h,7),M(0xb98a5e));m.position.set(RN.X+Math.cos(a)*d,h/2-1,RN.Z+Math.sin(a)*d);scene.add(m)}
+}
+/* the storm cellar: boards over a patch of cracked dirt in the yard. Dig through and it caves in; down there are Kate Barlow's safe,
+   jars of her spiced peaches, and a lizard nest. Out again: a friend pulls you up (F), or dig a dirt ramp (loud). */
+const CK=PHYS.CELLAR,CEL0=()=>({open:false,ramp:false,n:0});let CEL=CEL0(),CELV=null;
+const celC={x:RN.X+(CK.ox0+CK.ox1)/2,z:RN.Z+(CK.oz0+CK.oz1)/2};
+const inCellarBox=(x,z)=>x>RN.X+CK.x0-0.3&&x<RN.X+CK.x1+0.3&&z>RN.Z+CK.z0-0.3&&z<RN.Z+CK.z1+0.3;
+const downInCellar=()=>atRanch()&&P.y<-1.2&&inCellarBox(P.x,P.z);
+function buildCellar(){
+  const W=CK.ox1-CK.ox0,L=CK.oz1-CK.oz0,hatch=new T.Group();hatch.position.set(celC.x,0,celC.z);
+  // weathered boards, half buried, with a rusty ring; dark cracks in the dirt around them (the only clue)
+  for(let i=0;i<6;i++){const b=box(W-0.1,0.06,L/6-0.06,i%2?0x7a5a3a:0x6a4a2e);b.position.set((i%3-1)*0.04,0.02,-L/2+L/12+i*L/6);b.rotation.y=(i%2?0.02:-0.03);b.castShadow=false;hatch.add(b)}
+  const ring=new T.Mesh(new T.TorusGeometry(0.12,0.025,6,12),M(0x5a4a3a));ring.rotation.x=Math.PI/2;ring.position.set(0.5,0.06,0.3);hatch.add(ring);
+  for(let i=0;i<3;i++){const d=new T.Mesh(new T.SphereGeometry(0.7,8,5),M(0xc89a60));d.scale.set(1.3,0.12,0.9);d.position.set(i===1?0.6:-0.5,0.02,-1+i*0.9);hatch.add(d)}
+  const crackM=new T.MeshBasicMaterial({color:0x3a2616});for(let i=0;i<9;i++){const c=new T.Mesh(new T.PlaneGeometry(0.05,0.8+((i*37)%7)*0.12),crackM);c.rotation.x=-Math.PI/2;c.rotation.z=i*0.7;const a=i/9*6.28;c.position.set(Math.cos(a)*(W/2+0.4),0.012,Math.sin(a)*(L/2+0.4));hatch.add(c)}
+  scene.add(hatch);
+  // the ramp you dig (a pile that grows, then a full dirt slope), a nest of straw, and a lantern hanging down there
+  const G=PHYS.rampGeom(),ramp=box(G.w,0.3,G.L,0x9a6a3e);ramp.position.set(G.x,G.y-0.15*Math.cos(G.a),G.z+0.15*Math.sin(G.a));ramp.rotation.x=-G.a;ramp.visible=false;scene.add(ramp);
+  const pile=new T.Mesh(new T.SphereGeometry(1,10,6),M(0x9a6a3e));pile.scale.set(1.1,0.01,1.4);pile.position.set(celC.x,CK.Y,celC.z+0.3);pile.visible=false;scene.add(pile);
+  const nest=new T.Mesh(new T.CylinderGeometry(0.9,1,0.15,10),M(0xb89a50));nest.position.set(RN.X+17.8,CK.Y+0.07,RN.Z-14.8);scene.add(nest);
+  const lamp=new T.PointLight(0xffb060,0.8,9,1.6);lamp.position.set(RN.X+15,CK.Y+2.1,RN.Z-13.5);scene.add(lamp);
+  const lan=box(0.16,0.24,0.16,0xd8a040);lan.position.copy(lamp.position);scene.add(lan);
+  CELV={hatch,ramp,pile};celVisual();
+}
+function celVisual(){if(!CELV)return;CELV.hatch.visible=!CEL.open;CELV.ramp.visible=!!CEL.ramp;CELV.pile.visible=CEL.open&&!CEL.ramp&&CEL.n>0;CELV.pile.scale.y=0.1+1.6*CEL.n/CK.RAMPN}
+function celSet(c){
+  if(!c||typeof c!=='object'){CEL=CEL0();celVisual();return}
+  const was=CEL.open,had=CEL.ramp;CEL={open:!!c.open,ramp:!!c.ramp,n:num(c.n,0,99,0)|0};celVisual();
+  if(CEL.open&&!was)cellarFx(c.by===net.id);if(CEL.ramp&&!had)rampFx();
+}
+function cellarFx(mine){
+  S.noRampDig=true;
+  const d=Math.hypot(celC.x-P.x,celC.z-P.z);puff(celC.x,0.2,celC.z,celC.x,celC.z,24);
+  if(d<40){sfx.thud();noise(0.5,500,1,0.3*clamp(1-d/40,0.1,1))}
+  if(d<3.5||mine)toast("The boards gave way! There's a storm cellar under here. Watch out down there: don't wake anything.",'gold',6000);
+}
+function rampFx(){if(Math.hypot(celC.x-P.x,celC.z-P.z)<30){sfx.find();toast('The dirt ramp is done. You can walk out of the cellar, and drag things up it.','good',4000)}}
+// which cellar dig you're standing at: the boards (from up top) or the ramp pile (from down inside)
+function celDigSpot(){
+  if(!atRanch()||MIS.phase!=='site')return null;const d=Math.hypot(celC.x-P.x,celC.z-P.z);
+  if(!CEL.open&&P.y>-0.5&&d<2.6)return 'hatch';
+  if(CEL.open&&!CEL.ramp&&downInCellar()&&d<3&&!S.noRampDig)return "ramp"; // (after falling in, let go of dig first: no digging on by accident)
+  return null;
 }
 /* the valuables: drawn from the physics world's positions */
 const PO=new Map();let PWL=null;
@@ -3031,8 +3080,8 @@ function poSet(a,snap){
   o.tp.set(a[1],a[2],a[3]);o.tq.set(a[4],a[5],a[6],a[7]);if(a[8]!=null)o.val=a[8];
   if(snap){o.mesh.position.copy(o.tp);o.mesh.quaternion.copy(o.tq)}
 }
-function poClear(){dogsClear();for(const o of PO.values())scene.remove(o.mesh);PO.clear();PWL=null;GR.id=null;buildMounds(null)}
-function startLocalPhysics(){if(online())return;poClear();if(!CANNON){toast('The physics engine is still loading (it needs the internet the first time). Try the trip again in a moment.','bad',6000);return}PWL=PHYS.create(CANNON,RUN.seed,1);buildMounds(PWL.digs);for(const a of PHYS.snapshot(PWL,true))poSet(a,true)}
+function poClear(){dogsClear();lizClear();for(const o of PO.values())scene.remove(o.mesh);PO.clear();PWL=null;GR.id=null;buildMounds(null);CEL=CEL0();celVisual()}
+function startLocalPhysics(){if(online())return;poClear();if(!CANNON){toast('The physics engine is still loading (it needs the internet the first time). Try the trip again in a moment.','bad',6000);return}PWL=PHYS.create(CANNON,RUN.seed,1);CEL=PWL.cellar;celVisual();buildMounds(PWL.digs);for(const a of PHYS.snapshot(PWL,true))poSet(a,true)}
 /* value popups: every bump shows what it cost you */
 const POPS=[];
 function popText(x,y,z,txt,cls){const el=document.createElement('div');el.className='dmgpop '+(cls||'');el.textContent=txt;document.body.appendChild(el);POPS.push({el,p:new T.Vector3(x,y,z),t:0})}
@@ -3062,7 +3111,7 @@ function releaseGrab(){if(GR.id==null)return;GR.id=null;if(online())wsSend({t:'p
 function yeetGrab(){if(GR.id==null)return;camera.getWorldDirection(camDir);const d=camDir.toArray().map(v=>+v.toFixed(3));GR.id=null;if(online())wsSend({t:'pyeet',dir:d});else if(PWL)PHYS.yeet(PWL,'me',d);sfx.shout()}
 addEventListener('wheel',e=>{if(GR.id!=null){GR.dist=clamp(GR.dist-Math.sign(e.deltaY)*0.25,1,3.2)}},{passive:true});
 function updateFeel(dt){
-  const ar=atRanch();if(ar)buildRanch();
+  const ar=atRanch();if(ar)buildRanch();if(!digHeld)S.noRampDig=false;
   if(ar!==S.keysRanch){S.keysRanch=ar;const k=$('#keys');if(!k.dataset.camp)k.dataset.camp=k.textContent;k.textContent=ar?'WASD move · Shift run · Space jump · Hold click: grab things / dig mounds · Right-click throw · Scroll: hold closer/farther · C crouch (sneak past dogs) · F use / climb aboard · V view · 1–5 shout':k.dataset.camp}
   if(WT_G){const tk=WT_G.getObjectByName('tank'),sd=WT_G.getObjectByName('sides');if(tk.visible===ar){tk.visible=!ar;sd.visible=ar}}
   if(GR.id!=null&&(S.ko||S.out||S.riding||!PO.has(GR.id)))releaseGrab();
@@ -3072,20 +3121,28 @@ function updateFeel(dt){
     if(!S.riding&&!S.ko&&!S.out)PHYS.setPlayer(PWL,'me',P.x,P.y,P.z,dt,{a:P.anim,crouch:!!P.crouch});else PHYS.dropPlayer(PWL,'me');
     if(hand)PHYS.hold(PWL,'me',hand.toArray());
     PHYS.placeTruck(PWL,WT.x,WT.z,WT.h,dt);PHYS.step(PWL,dt);
-    for(const e of PWL.events.splice(0)){if(e.k==='slip'){if(e.pid==='me'){GR.id=null;toast('Lost your grip!','',1500)}}else if(e.k==='bite'){if(e.pid==='me')bitten(e.x,e.z)}else if(e.k==='bark')barkFx(e.id);else physEvent(e)}
+    for(const e of PWL.events.splice(0)){if(e.k==='slip'){if(e.pid==='me'){GR.id=null;toast('Lost your grip!','',1500)}}else if(e.k==='bite'){if(e.pid==='me')bitten(e.x,e.z)}else if(e.k==='bark')barkFx(e.id);else if(e.k==='lbite'){if(e.pid==='me')lizBit()}else if(e.k==='hiss'||e.k==='stun'||e.k==='nest')lizFx(e.k,e.x,e.z);else physEvent(e)}
     for(const a of PHYS.dogSnap(PWL))dogSet(a);
+    for(const a of PHYS.lizSnap(PWL))lizSet(a);
     for(const a of PHYS.snapshot(PWL,true))poSet(a,true);
   }else{
     const k=Math.min(1,dt*15);for(const o of PO.values()){o.mesh.position.lerp(o.tp,k);o.mesh.quaternion.slerp(o.tq,k)}
     if(hand&&online()&&(GR.sent-=dt)<=0){GR.sent=0.05;wsSend({t:'phold',hand:hand.toArray().map(v=>+v.toFixed(3))})}
   }
-  updatePops2(dt);updateDogs(dt);
+  updatePops2(dt);updateDogs(dt);updateLiz(dt);
   const xh=$('#xhair');xh.hidden=!(atRanch()&&MIS.phase==='site');xh.classList.toggle('on',!!(GR.hover||GR.id!=null));
 }
+const theName=n=>/'s /.test(n)?n:"the "+n; // "the Iron safe", but "Kate Barlow's safe"
 function feelPrompt(){
-  if(GR.id==null&&!GR.hover&&atRanch()&&MIS.phase==='site'){const m=moundNear();if(m)return m.hits?`Digging… ${m.hits}/4`:"Hold click or E: dig up this mound. Something's buried here."}
-  if(GR.id!=null){const o=PO.get(GR.id);return o?`Holding the ${PHYS.LOOT[o.type].name} (${o.val} seeds). Right-click: throw · scroll: closer/farther · let go of the button to drop it`:null}
-  if(GR.hover){const o=GR.hover.o,L=PHYS.LOOT[o.type];return `Click and hold: grab the ${L.name} (${o.val} seeds${L.m>=140?', needs 3 campers to lift':L.m>=72?', needs 2 campers to lift':L.m>=20?', heavy':''})`}
+  if(GR.id==null&&!GR.hover&&atRanch()&&MIS.phase==='site'){
+    const m=moundNear();if(m)return m.hits?`Digging… ${m.hits}/4`:"Hold click or E: dig up this mound. Something's buried here.";
+    const cs=celDigSpot();
+    if(cs==='hatch')return CEL.hits?`Digging through the boards… ${CEL.hits}/${CK.HITS}`:'Old boards under the dirt, and the ground sounds hollow. Hold click or E: dig through.';
+    if(cs==='ramp')return CEL.n?`Piling up a dirt ramp… ${CEL.n}/${CK.RAMPN}${P.crouch?' (quietly)':' (loud! crouch with C to dig quietly)'}`:'Stuck down here. Hold click or E: pile up a dirt ramp. Digging is loud and something is nesting down here: crouch (C) to dig quietly. Or get a friend up top to pull you out (F).';
+  }
+  if(downInCellar()&&!CEL.ramp&&GR.id==null&&!GR.hover)return 'Too high to climb out. A friend at the edge can pull you up (F), or dig a ramp under the opening.';
+  if(GR.id!=null){const o=PO.get(GR.id);return o?`Holding ${theName(PHYS.LOOT[o.type].name)} (${o.val} seeds). Right-click: throw · scroll: closer/farther · let go of the button to drop it`:null}
+  if(GR.hover){const o=GR.hover.o,L=PHYS.LOOT[o.type];return `Click and hold: grab ${theName(L.name)} (${o.val} seeds${L.m>=140?', needs 3 campers to lift':L.m>=72?', needs 2 campers to lift':L.m>=20?', heavy':''})`}
   return null;
 }
 
@@ -3133,6 +3190,33 @@ function bitten(x,z){
   else toast(S.bites.length===1?"A guard dog bit you, and you dropped what you were holding! Throw something and it'll chase that instead.":"Bitten again! One more and you're down.",'bad',3500);
 }
 
+/* yellow-spotted lizards at the ranch (moved by phys.js; drawn here): asleep in the cellar nest and one of the mounds */
+const LIZ=new Map();
+function lizSet(a){
+  const id=a[0]|0;let l=LIZ.get(id);
+  const x=num(a[1],2500,3400,RN.X),y=num(a[2],-10,10,0),z=num(a[3],-600,600,0);
+  if(!l){l=makeLizard();scene.add(l.g);l.tp=new T.Vector3(x,y,z);l.g.position.copy(l.tp);l.ph=id*1.3;LIZ.set(id,l)}
+  if(Math.abs(y-l.tp.y)>1.5)l.g.position.set(x,y,z); // climbed in or out of the cellar
+  l.tp.set(x,y,z);l.th=num(a[4],-10,10,0);l.st=a[5]|0;
+}
+function lizClear(){for(const l of LIZ.values())scene.remove(l.g);LIZ.clear()}
+function updateLiz(dt){
+  for(const l of LIZ.values()){
+    const p=l.g.position,k=Math.min(1,dt*(PWL?30:12));p.x+=(l.tp.x-p.x)*k;p.y+=(l.tp.y+0.02-p.y)*k;p.z+=(l.tp.z-p.z)*k;
+    let dr=l.th-l.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));l.g.rotation.y+=dr*Math.min(1,dt*10);
+    l.g.rotation.z=l.st===3?Math.PI:0;if(l.st===3)p.y=l.tp.y+0.22; // stunned: belly up
+    l.ph+=dt*(l.st===2?16:l.st===1?7:0.6);l.tail.rotation.y=Math.sin(l.ph)*(l.st===0?0.1:0.5);
+    const sw=l.st===0||l.st===3?0:Math.sin(l.ph*1.3)*0.4;l.legs[0].rotation.y=sw;l.legs[3].rotation.y=sw;l.legs[1].rotation.y=-sw;l.legs[2].rotation.y=-sw;
+  }
+}
+function lizFx(k,x,z){
+  const d=Math.hypot(x-P.x,z-P.z);if(d>45)return;const v=clamp(1-d/45,0.1,1);
+  if(k==='hiss'){noise(0.6,4200,1.5,0.22*v);if(d<14&&!S.lizWarned){S.lizWarned=true;toast("A yellow-spotted lizard is awake! One bite and you're down. Run, or hit it with something (throw!).",'bad',5500)}}
+  else if(k==='stun'){sfx.thud();tone(900,0.25,'square',0.06*v,300);if(d<20)toast('Bonk! The lizard is stunned. Move!','good',2000)}
+  else if(k==='nest'){noise(0.8,4200,1.5,0.3*v);if(d<20)toast("That wasn't treasure. It's a lizard nest!",'bad',4000)}
+  else if(k==='bite'){noise(0.12,2400,1,0.3*v);tone(140,0.3,'sawtooth',0.1*v,70)}
+}
+function lizBit(){if(S.ko||S.out)return;releaseGrab();lizFx('bite',P.x,P.z);knockOut('Bitten','A yellow-spotted lizard bit you. Your crew can carry you back to the truck (or pull you out of the cellar first).')}
 /* dirt mounds in the ranch yard: dig one up (hold click or E) and something valuable pops out */
 let MOUNDS=[];
 function buildMounds(digs){
@@ -3141,6 +3225,7 @@ function buildMounds(digs){
     const m={i:d.i|0,id:d.id|0,x:num(d.x,2500,3400,RN.X),z:num(d.z,-600,600,0),type:String(d.type),dug:!!d.dug,mesh:null,hits:0};
     if(!m.dug){const g=new T.Group(),h=new T.Mesh(new T.SphereGeometry(0.9,10,6),M(0x9a6a3e));h.scale.set(1,0.38,1);g.add(h);
       for(let k=0;k<4;k++){const r=box(0.18,0.1,0.14,0x8a8070);r.position.set(Math.cos(k*1.7)*0.95,0.05,Math.sin(k*1.7)*0.95);r.rotation.y=k;g.add(r)}
+      if(m.type==="nest")for(let k=0;k<4;k++){const hl=new T.Mesh(new T.CircleGeometry(0.09,8),new T.MeshBasicMaterial({color:0x1a120a}));hl.rotation.x=-1.25;hl.position.set(Math.cos(k*1.6+0.4)*0.55,0.26,Math.sin(k*1.6+0.4)*0.55);hl.rotation.z=k;g.add(hl)} // little burrow holes: something lives in this one
       g.position.set(m.x,0,m.z);scene.add(g);m.mesh=g}
     MOUNDS.push(m);
   }
@@ -3149,7 +3234,12 @@ function setDug(i){const m=MOUNDS.find(q=>q.i===i);if(!m||m.dug)return;m.dug=tru
   if(Math.hypot(m.x-P.x,m.z-P.z)<40)sfx.find()}
 function moundNear(){let b=null,bd=2.4;for(const m of MOUNDS){if(m.dug)continue;const d=Math.hypot(m.x-P.x,m.z-P.z);if(d<bd){bd=d;b=m}}return b}
 function digMound(){ // one shovelful (called from the dig swing)
-  const m=moundNear();if(!m)return;sfx.scoop();m.hits++;
+  const m=moundNear();
+  if(!m){const cs=celDigSpot();if(!cs)return;sfx.scoop();puff(P.x-Math.sin(P.yaw)*0.8,P.y+0.1,P.z-Math.cos(P.yaw)*0.8,P.x,P.z,4);
+    if(cs==='hatch'){CEL.hits=(CEL.hits||0)+1;if(CEL.hits>=CK.HITS){if(online())wsSend({t:'pcel',a:'open'});else if(PWL&&PHYS.openCellar(PWL)){celVisual();cellarFx(true)}}}
+    else if(online())wsSend({t:'pcel',a:'ramp'});else if(PWL&&PHYS.digRamp(PWL)){celVisual();if(CEL.ramp)rampFx()}
+    return}
+  sfx.scoop();m.hits++;
   if(m.hits>=4){if(online())wsSend({t:'pdig',i:m.i});else if(PWL&&PHYS.unbury(PWL,m.i))setDug(m.i)}
 }
 /* camp is the hub now: a fence all the way round, and the only way out is Mr. Sir's truck */
@@ -3169,10 +3259,12 @@ function drawRanchMap(){
   const W=mm.width,SPAN=64,k=W/SPAN,X=v=>(v-RN.X+SPAN/2)*k,Z=v=>(v-RN.Z+SPAN/2)*k;
   mx.fillStyle='#dcab6e';mx.fillRect(0,0,W,W);
   mx.strokeStyle='#d12a2a';mx.lineWidth=2;mx.setLineDash([5,4]);mx.strokeRect(X(RN.X-RN.HALF),Z(RN.Z-RN.HALF),RN.HALF*2*k,RN.HALF*2*k);mx.setLineDash([]);
-  mx.fillStyle='#6d5238';for(const b of PHYS.layout())if(b.block)mx.fillRect(X(b.x-b.hx),Z(b.z-b.hz),Math.max(2,b.hx*2*k),Math.max(2,b.hz*2*k));
+  mx.fillStyle="#6d5238";for(const b of PHYS.layout())if(b.block&&b.y>0)mx.fillRect(X(b.x-b.hx),Z(b.z-b.hz),Math.max(2,b.hx*2*k),Math.max(2,b.hz*2*k));
   mx.save();mx.translate(X(WT.x),Z(WT.z));mx.rotate(-WT.h);mx.fillStyle='#4f8fb8';mx.fillRect(-1.1*k,-3.4*k,2.2*k,6.2*k);mx.fillStyle='#2b1d12';mx.fillRect(-1.1*k,-3.4*k,2.2*k,2*k);mx.restore();
   for(const d of DOGS.values()){mx.fillStyle=d.st===0?'#6a6a6a':'#d12a2a';mx.beginPath();mx.arc(X(d.g.position.x),Z(d.g.position.z),4.5,0,6.3);mx.fill()}
   mx.fillStyle='#7a4a24';for(const m of MOUNDS)if(!m.dug){mx.beginPath();mx.arc(X(m.x),Z(m.z),5,0,6.3);mx.fill()}
+  if(CEL.open){mx.fillStyle="#2b1d12";mx.fillRect(X(RN.X+CK.ox0),Z(RN.Z+CK.oz0),(CK.ox1-CK.ox0)*k,(CK.oz1-CK.oz0)*k)}
+  for(const l of LIZ.values())if(l.st){mx.fillStyle=l.st===2?"#d12a2a":"#6f7a3a";mx.beginPath();mx.arc(X(l.g.position.x),Z(l.g.position.z),3.5,0,6.3);mx.fill()}
   mx.fillStyle='#e8c040';mx.strokeStyle='#2b1d12';mx.lineWidth=1;for(const o of PO.values()){mx.beginPath();mx.arc(X(o.mesh.position.x),Z(o.mesh.position.z),3.5,0,6.3);mx.fill();mx.stroke()}
   for(const R2 of remotes.values()){mx.fillStyle='#fff8e8';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.arc(X(R2.p.g.position.x),Z(R2.p.g.position.z),6,0,6.3);mx.fill();mx.stroke()}
   mx.save();mx.translate(X(P.x),Z(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore();
@@ -3323,7 +3415,7 @@ function updateCoop(dt){
   const bu=!S.ko&&!uiOpen()&&KEYS['f']&&!dn?remoteNear(R=>R.f&32,2.4):null;
   if(bu){S.digOutT=(S.digOutT||0)+dt;if(S.digOutT>=3){S.digOutT=0;wsSend({t:'unbury',id:bu.rid});addXP(30);toast(`You dug ${bu.R.name} out.`,'good',2500)}}else S.digOutT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
-  if(isTrapped()&&KEYS[' ']&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
+  if(isTrapped()&&!atRanch()&&KEYS[" "]&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
   updatePings(dt);updateLights(dt);
   // Lucky Eye (level 8): dust puffs up over loot buried near you
   if(myLevel()>=8&&(luckyT-=dt)<=0){luckyT=1.3;let best=null,bd=36;for(const it of items){if(it.found||LOOT[it.type].key)continue;const d2=(it.x-P.x)**2+(it.z-P.z)**2;if(d2<bd){bd=d2;best=it}}if(best){const y=groundAt(best.x,best.z);puff(best.x,y+0.1,best.z,best.x,best.z,3)}}
@@ -3371,6 +3463,6 @@ if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
 }
 if(location.hash==='#dbg')window.__cgl={P,S,BJ,DLG,bots,use,nearSpot};
-if(location.hash.includes('expose'))window.__t={GR,PO,get PWL(){return PWL},get MOUNDS(){return MOUNDS},get nHoles(){return holes.length},tryGrab,releaseGrab,yeetGrab,camera,atRanch,P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes,toggleRope,putInCart,cartNear,KEYS};
+if(location.hash.includes('expose'))window.__t={GR,PO,get PWL(){return PWL},get CEL(){return CEL},LIZ,HELPERS,celDigSpot,downInCellar,isTrapped,popOut,get MOUNDS(){return MOUNDS},get nHoles(){return holes.length},tryGrab,releaseGrab,yeetGrab,camera,atRanch,P,S,PROPS,FLY,MIS,WT,addProp,throwCarried,dropCarried,startTrip,groundAt,addHole,touchHole,remotes,toggleRope,putInCart,cartNear,KEYS};
 })();
 </script>

@@ -124,7 +124,7 @@ wss.on('connection', ws => {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null, pwd: PW ? PW.digs : null, pwdog: PW ? PHYS.dogSnap(PW) : null,
+    truck: truckInfo(), mission: { ...world.mission, now: Date.now() }, pw: PW ? PHYS.snapshot(PW, true) : null, pwd: PW ? PW.digs : null, pwdog: PW ? PHYS.dogSnap(PW) : null, pwl: PW ? PHYS.lizSnap(PW) : null, pwcel: PW ? PW.cellar : null,
     breaches: world.breaches, rot: world.rot,
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, name: p.name })),
     peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
@@ -391,6 +391,15 @@ wss.on('connection', ws => {
         if (PHYS.unbury(PW, i)) broadcast({ t: 'pdug', i, by: c.id });
         break;
       }
+      case 'pcel': {
+        // the storm cellar: dig through the boards (from up top, standing at them), or pile dirt into a ramp (from down inside)
+        if (!PW) return; const K = PHYS.CELLAR, ox = PHYS.RANCH.X + (K.ox0 + K.ox1) / 2, oz = PHYS.RANCH.Z + (K.oz0 + K.oz1) / 2;
+        if (m.a === 'open') { if (c.y < -0.5 || Math.hypot(c.x - ox, c.z - oz) > 3.8 || !PHYS.openCellar(PW)) return; }
+        else if (m.a === 'ramp') { if (c.y > -1.5 || Math.hypot(c.x - ox, c.z - oz) > 3.8 || now - (c.rampAt || 0) < 300 || !PHYS.digRamp(PW)) return; c.rampAt = now; }
+        else return;
+        broadcast({ t: 'pcel', ...PW.cellar, by: c.id });
+        break;
+      }
       case 'unearth': {
         // dug down to a buried object: it comes up out of the hole
         const MS = world.mission, L = MS.phase === 'site' && (MS.loot || []).find(l => l.id === (num(m.id, 0, 1e7, -1) | 0));
@@ -608,7 +617,7 @@ function truckTick(now, dt) {
 let PW = null, pwTimer = null, pwLast = 0, pwSent = 0;
 function startPhysics() {
   stopPhysics(); PW = PHYS.create(CANNON, world.run.seed, joined().length >= 2 ? 2 : 1); // one guard dog for a solo camper, two for a crew pwLast = Date.now();
-  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true), digs: PW.digs, d: PHYS.dogSnap(PW) });
+  broadcast({ t: 'pwinit', s: PHYS.snapshot(PW, true), digs: PW.digs, d: PHYS.dogSnap(PW), l: PHYS.lizSnap(PW), cel: PW.cellar });
   pwTimer = setInterval(physTick, 16);
 }
 function stopPhysics() { if (pwTimer) clearInterval(pwTimer); pwTimer = null; if (PW) broadcast({ t: 'pwend' }); PW = null; }
@@ -630,9 +639,12 @@ function physTick() {
     if (e.k === 'slip') { const c = clients.get(e.pid); if (c) send(c, { t: 'pslip', id: e.id }); }
     else if (e.k === 'bite') broadcast({ t: 'pbite', pid: e.pid, id: e.id, x: r2(e.x), z: r2(e.z) });
     else if (e.k === 'bark') broadcast({ t: 'pbark', id: e.id });
+    else if (e.k === 'lbite') broadcast({ t: 'plbite', pid: e.pid, id: e.id, x: r2(e.x), z: r2(e.z) });
+    else if (e.k === 'hiss' || e.k === 'stun') broadcast({ t: 'p' + e.k, id: e.id, x: r2(e.x), z: r2(e.z) });
+    else if (e.k === 'nest') broadcast({ t: 'pnest', i: e.i, x: r2(e.x), z: r2(e.z) });
     else broadcast({ t: 'p' + e.k, id: e.id, loss: e.loss, val: e.val, x: r2(e.x || 0), y: r2(e.y || 0), z: r2(e.z || 0) });
   }
-  if (now - pwSent >= 50) { pwSent = now; broadcast({ t: 'pw', s: PHYS.snapshot(PW, false), d: PHYS.dogSnap(PW) }); }
+  if (now - pwSent >= 50) { pwSent = now; broadcast({ t: 'pw', s: PHYS.snapshot(PW, false), d: PHYS.dogSnap(PW), l: PHYS.lizSnap(PW) }); }
 }
 function missionInfo() { return { t: 'mission', ...world.mission, now: Date.now() }; }
 function missionTick(now, dt) {
