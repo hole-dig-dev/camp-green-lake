@@ -91,6 +91,7 @@ command('haboob',{usage:'haboob [direction]',help:'Start a dust storm blowing in
 command('god',{usage:'god [on|off]',help:'God mode for you: no damage, no knockouts, water never runs out. Hazards still push you around.',
   run([a]){const k=(a||'').toLowerCase();GOD=k==='on'?true:k==='off'?false:!GOD;if(GOD){S.hp=HP_MAX;S.water=waterMax()}$('#hud').classList.toggle('god',GOD);return GOD?'God mode on.':'God mode off.'}});
 command('heal',{usage:'heal',help:'Full health and water.',run(){S.hp=HP_MAX;S.water=waterMax();return'Healed.'}});
+command('respawn',{usage:'respawn',help:'Back on your feet at camp with full health and water (like Restart in the pause menu). Keeps seeds and gear.',run(){respawn();return'Respawned at camp.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
 command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',
   run([a,b]){if(inTent())exitTent();if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <z>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;return`Teleported to ${P.x.toFixed(0)}, ${P.z.toFixed(0)}.`}});
