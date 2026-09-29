@@ -150,11 +150,11 @@ function updateCurfew(dt){
   if(!night){
     if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. Madame Zeroni fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
     if(t<DAYMS-60000)CUR.warned=false;
-    else if(!CUR.warned){CUR.warned=true;siren();toast('SIREN: curfew in one minute. Get back inside the camp fence!','bad',6000)}
+    else if(!CUR.warned){CUR.warned=true;if(ZONE_ON)return;siren();toast('SIREN: curfew in one minute. Get back inside the camp fence!','bad',6000)}
     return;
   }
   const half=t<NIGHT_SPLIT?'police':'zeroni';
-  if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out)toast('Curfew. Lights out, campers.','',3500)}
+  if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out&&!ZONE_ON)toast('Curfew. Lights out, campers.','',3500)}
   else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast('01:00. The police go home. Out on the lake, someone is asking for a ride up the mountain…','',5000)}}
   const h=MONV.zer?'zeroni':MONV.trucks.length?'police':null,want=out?h:null;   // Zeroni first: the officers are out all night
   if(want!==CUR.hunter){const was=CUR.hunter;CUR.hunter=want;if(want)hunterToast(want,was);else if(was&&!out&&performance.now()-S.respawnAt>1500)toast(was==='zeroni'?'You made it inside the fence. Madame Zeroni can\'t cross it. She waits out there…':'You made it back inside the fence. The police won\'t follow you into camp.','good',4000)}

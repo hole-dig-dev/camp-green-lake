@@ -151,7 +151,7 @@ function zoneEnter(id,flags){
   S.carry=null;
   if(from.id==='lake')parkLake(true);else dropZone();
 
-  ZONE=Z;ZONE_H=Z.height||null;ZONE_TINT=Z.tint||null;ZONE_MAP=Z.map||null;ZONE_STEP=Z.height?1:0;
+  ZONE=Z;ZONE_H=Z.height||null;ZONE_TINT=Z.tint||null;ZONE_MAP=Z.map||null;ZONE_ON=Z.height?1:0;if(window.SIM)SIM.setZone(id);
   const st=ZSTORE[id];delete ZSTORE[id];
   if(st){
     holes.push(...st.holes);for(const[k,v]of st.grid)grid.set(k,v);items.push(...st.items);

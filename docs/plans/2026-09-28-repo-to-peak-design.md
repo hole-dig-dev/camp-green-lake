@@ -44,17 +44,22 @@ Zero takes off across the lake and the crew follows. From here there's no going 
 
 ## Build order
 
-Each step is its own `feature/<name>` branch off `jt/next`, and each gets `npm test` before it's merged:
+Each step is its own `feature/<name>` branch off `jt/next`, and each gets `npm test` before it's merged.
 
-1. `feature/zones`: the zone list, gathering at a checkpoint, and loading and clearing zones, tested with one empty zone.
-2. `feature/two-acts`: day 5 turns into the escape (Zero runs), a failed escape means game over, and a restart.
-3. `feature/zone-ranch`: Walker Ranch moved over from Greg's branch as zone 2.
-4. `feature/grab-physics`: the R.E.P.O. grab added onto JT's heavy loot.
-5. `feature/heat-stamina`: the *Peak* stamina bar, heat, water and shade.
+**Updated September 29.** JT's Claude ported grabbing, rope, the wheelbarrow, carrying downed friends and the
+*Peak*-style stamina bar onto `jt/next`, so Act 1 now has its co-op verbs. What's left is the turn and Act 2:
+
+1. ~~`feature/zones`~~: done (the zone list, campfire checkpoints, the Dry Canyon). Camp and curfew are lake-only as of `buissong/repo-to-peak-2026-09-29`.
+2. **`feature/two-acts` (next, and the most important):** Zero runs and the escape starts. The sentence length is a lobby setting (2, 3 or 5 days, 2 for playtests), and Zero also runs early if the crew makes quota early, so every session reaches Act 2. A failed escape means game over and a restart.
+3. **`feature/climb`:** the mantle (hang on a ledge, pull yourself up, stamina drains) and a booster who holds F. It replaces the jump-boost leg-up, and ropes share the same climbing state.
+4. **What night means in Act 2:** reach the campfire before dark, with the search party behind you. JT decides.
+5. `feature/zone-ranch`: Walker Ranch moved over from Greg's branch, using JT's grab physics.
 6. `feature/zone-onions` and `feature/zone-thumb`, then the suitcase ending.
+7. ~~`feature/grab-physics`~~ and ~~`feature/heat-stamina`~~: done by JT's Claude (`84-grab.js`, `70-player.js`).
 
 ## Open questions for JT
 
 - What stays after a game over? Today, player levels survive a firing.
-- Where does the twerk emote go? It's on B, and B is push-to-talk here.
+- ~~Where does the twerk emote go?~~ Solved: push-to-talk moved to P.
+- What does night mean once the crew has left the lake?
 - The "dig sites move outward" idea in Act 1 changes where people dig on the lake. Is that OK?

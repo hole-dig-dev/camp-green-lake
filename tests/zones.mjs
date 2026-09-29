@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'tests', 'out');
@@ -24,6 +25,19 @@ const freePort = () => new Promise((res, rej) => { const s = net.createServer();
 const results = [];
 function check(name, ok, detail) { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail !== undefined ? '  ' + JSON.stringify(detail) : ''}`); }
 const waitFor = (page, fn, ms, what, arg) => page.waitForFunction(fn, arg, { timeout: ms, polling: 200 }).catch(e => { throw new Error(`timed out waiting for ${what}: ${e.message}`); });
+
+// --- sim.js on its own: the camp, curfew and the police ring are lake-only ---
+{
+  const SIM = createRequire(import.meta.url)('../public/sim.js');
+  const camper = { id: 1, x: 0, z: 0, fa: 0, cr: false, hd: false, dn: false, nz: 0 };
+  const night = (zone) => { SIM.setZone(zone); const M = { trucks: [], zer: null }; for (let i = 0; i < 20; i++) SIM.stepMonsters(M, [camper], SIM.DAYMS + 1000, 0.1, []); return M.trucks.length; };
+  SIM.setZone('canyon');
+  check('sim: no camp box in the canyon', !SIM.inCamp(0, 40));
+  check('sim: no curfew police in the canyon', night('canyon') === 0);
+  SIM.setZone('lake');
+  check('sim: the camp is back on the lake', SIM.inCamp(0, 40));
+  check('sim: curfew police still come out on the lake', night('lake') > 0);
+}
 
 const port = await freePort();
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cgl-zones-'));
@@ -54,8 +68,8 @@ try {
   const p1 = await openPlayer('p1', 'Stanley');
   const p2 = await openPlayer('p2', 'Zero');
   await waitFor(p1, () => remotes.size === 1, 15000, 'p1 to see p2');
-  // no random hazards or curfew police in the middle of a measurement (they do run in the canyon: that's the point, but not here)
-  await p1.evaluate(() => { window.__cgl.runCommand('director off'); window.__cgl.runCommand('time 08:00'); });
+  // no random hazards, roster monsters (the Warden KOs idle campers) or curfew police in the middle of a measurement (they do run in the canyon: that's the point, but not here)
+  await p1.evaluate(() => { window.__cgl.runCommand('director off'); window.__cgl.runCommand('roster off'); window.__cgl.runCommand('time 08:00'); });
 
   // --- the crew moves together ---
   const campBefore = await p1.evaluate(() => ({ bots: bots.filter(b => b.p.g.parent === scene).length, holes: holes.length, items: items.length }));
@@ -66,10 +80,11 @@ try {
   const inCanyon = await p1.evaluate(() => {
     const a = ZONES.canyon.arrive;
     return { dArrive: Math.hypot(P.x - a.x, P.z - a.z), onGround: Math.abs(P.y - groundAt(P.x, P.z)) < 0.3, botsInScene: bots.filter(b => b.p.g.parent === scene).length,
-      items: items.length, holes: holes.length, far: !!(FAR_TERRAIN && FAR_TERRAIN.parent), step: ZONE_STEP };
+      items: items.length, holes: holes.length, far: !!(FAR_TERRAIN && FAR_TERRAIN.parent), step: ZONE_ON };
   });
   check('both campers moved to the canyon, at the start', inCanyon.dArrive < 6 && inCanyon.onGround, inCanyon);
   check('the lake camp and its far ground are set aside', inCanyon.botsInScene === 0 && !inCanyon.far && campBefore.bots > 0, { before: campBefore.bots, now: inCanyon.botsInScene });
+  check('no camp box in the canyon, on the page either', await p1.evaluate(() => !inCamp(0, 40) && !SIM.inCamp(0, 40)));
   check('the canyon has its own buried loot and no lake holes', inCanyon.items > 50 && inCanyon.items < 200 && inCanyon.holes === 0, inCanyon);
   await p1.evaluate(() => { P.yaw = 0; P.pitch = 0.05; });
   await shot(p1, 'canyon-start-1280.png');
@@ -123,14 +138,14 @@ try {
 
   // --- fall damage ---
   const fallDmg = await p1.evaluate(async () => {
-    const hp0 = S.hp; P.y = groundAt(P.x, P.z) + 1.5; P.vy = -16;   // already falling fast, about to land
+    window.__cgl.runCommand('heal'); const hp0 = S.hp; P.y = groundAt(P.x, P.z) + 1.5; P.vy = -16;   // already falling fast, about to land
     await new Promise(r => setTimeout(r, 4000));
     return { hp0, hp1: S.hp };
   });
   check('a long fall hurts', fallDmg.hp1 < fallDmg.hp0, fallDmg);
 
   // --- the campfire needs everyone ---
-  await p1.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x + 1; P.z = f.z + 2; P.y = groundAt(P.x, P.z); S.hp = 100; P.yaw = Math.PI; P.pitch = 0.1; });
+  await p1.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x + 1; P.z = f.z + 2; P.y = groundAt(P.x, P.z); window.__cgl.runCommand('heal'); P.yaw = Math.PI; P.pitch = 0.1; });
   await waitFor(p1, () => cpStat && cpStat.at === 1 && cpStat.total === 2, 10000, 'the campfire to count 1 of 2');
   const line1 = await p1.evaluate(() => document.querySelector('#zoneLine').textContent);
   check('one camper at the campfire: waiting for the crew', /1 of 2/.test(line1), { line1 });
@@ -152,9 +167,10 @@ try {
   await p1.evaluate(() => window.__cgl.runCommand('zone lake'));
   await waitFor(p1, () => ZONE.id === 'lake', 30000, 'p1 back on the lake');
   await p1.waitForTimeout(1200);
-  const back = await p1.evaluate(() => ({ bots: bots.filter(b => b.p.g.parent === scene).length, holes: holes.length, items: items.length, far: !!(FAR_TERRAIN && FAR_TERRAIN.parent), zoneGroup: !!zoneGroup, step: ZONE_STEP, h: baseH(0, 0) === ((vnoise(11, -3) - 0.5) * 0.6 + (vnoise(0, 0) - 0.5) * 0.12) }));
+  const back = await p1.evaluate(() => ({ bots: bots.filter(b => b.p.g.parent === scene).length, holes: holes.length, items: items.length, far: !!(FAR_TERRAIN && FAR_TERRAIN.parent), zoneGroup: !!zoneGroup, step: ZONE_ON, h: baseH(0, 0) === ((vnoise(11, -3) - 0.5) * 0.6 + (vnoise(0, 0) - 0.5) * 0.12) }));
   check('back on the lake: camp, holes and loot are all back', back.bots === campBefore.bots && back.holes >= campBefore.holes && back.items === campBefore.items && back.far && !back.zoneGroup && back.step === 0, { before: campBefore, back });
   check('the lake ground is the lake again', back.h, back);
+  check('the camp is back once the crew is on the lake', await p1.evaluate(() => inCamp(0, 40) && SIM.inCamp(0, 40)));
   await p1.evaluate(() => { window.__cgl.runCommand('tp camp'); P.yaw = 0; });
   await shot(p1, 'lake-after-return-1280.png');
 

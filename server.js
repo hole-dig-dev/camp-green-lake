@@ -1029,6 +1029,7 @@ function endOfDay() {
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
   const t = SIM.clockT(world.clock, now);
+  SIM.setZone(world.zone); // camp, curfew and the police ring are lake-only (sim.js)
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) endOfDay();
   lastT = t;
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;

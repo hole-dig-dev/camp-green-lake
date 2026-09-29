@@ -6,7 +6,12 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const wrapT = t => ((t % CYCLE) + CYCLE) % CYCLE;
   const clockT = (c, now) => (c && c.paused ? wrapT(c.pt) : wrapT(now + (c ? c.off : 0)));
-  const inCamp = (x, z) => z > 27 && z < 56 && x > -40 && x < 30;
+  /* The camp (and with it curfew, the police ring and Madame Zeroni) only exists on the lake. In the other Peak-style
+     maps (public/js/88-zones.js) the same square is just canyon, so it mustn't be a safe room. The server calls
+     setZone every tick; solo play calls it when the map changes. */
+  let LAKE = true;
+  function setZone(id) { LAKE = !id || id === 'lake'; }
+  const inCamp = (x, z) => LAKE && z > 27 && z < 56 && x > -40 && x < 30;
   const nearCampZone = (x, z) => x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   const HEAVY = { safe: 120, strongbox: 80 };
@@ -109,7 +114,7 @@
   }
   function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
   function stepMonsters(M, players, t, dt, ev) {
-    const night = t >= DAYMS, half = t < NIGHT_SPLIT ? 'police' : 'zeroni';
+    const night = LAKE && t >= DAYMS, half = t < NIGHT_SPLIT ? 'police' : 'zeroni';   // no curfew off the lake: the officers go home
     const outs = players.filter(p => !inCamp(p.x, p.z));
     if (night) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
       const on = M.trucks.filter(c => c.mode !== 'home'), n = CURFEW.copN;
@@ -564,7 +569,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, setZone, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
