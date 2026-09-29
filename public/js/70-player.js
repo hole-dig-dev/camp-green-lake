@@ -31,7 +31,7 @@ function updatePlayerTent(dt){
   }
   // shelter: water drains slowly just standing around inside, and resting in a bunk restores health and water
   if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);S.hp=Math.min(HP_MAX,S.hp+8*dt)}
-  else S.water=Math.max(0,S.water-0.15*dt);
+  else S.water=Math.max(0,S.water-0.15*dt/tune('water.last'));
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
@@ -79,9 +79,9 @@ function updatePlayer(dt){
   const air=P.y-g>0.2&&P.anim!==2;   // off the ground (not digging): the camper's Jump clip; the disco: its Dance clip
   animPerson(me,PARTY.on&&P.anim===0?8:air?7:P.anim,dt,P.digPh);
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
-  /* water */
+  /* water: drains per second by activity, divided by the 'Water lasts' slider (11-tune.js, 3x by default) */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
-  S.water=Math.max(0,S.water-drain*dt*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
+  S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
