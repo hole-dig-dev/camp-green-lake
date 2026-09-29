@@ -10,6 +10,7 @@ try{const t=localStorage.getItem('cgl-tune-tab');if(TUNE_TABS.includes(t))tuneTa
 function tuneOpen(){return tuneIsOpen}
 function tuneFmt(d,v){
   if(d.pct)return Math.round(v*100)+'% hp';
+  if(d.fmt)return d.fmt(v);
   if(v===0&&d.zero)return'off';
   const a=Math.abs(v),s=a>=10?v.toFixed(1):a>=1?v.toFixed(2):v.toFixed(3);
   return s.replace(/\.?0+$/,'')+d.unit;

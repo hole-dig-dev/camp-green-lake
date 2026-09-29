@@ -6,7 +6,8 @@
    "make these the new defaults" we edit `def` here and every slider snaps back to the middle with the new value.
      kind 'mul': a multiplier-style number, log scale from def/range (far left) to def*range (far right).
                  zero:true lets the far-left notch mean 0 (off).
-     kind 'lin': a plain number from def-span to def+span, clamped to [min,max].
+     kind 'lin': a plain number from def-span to def+span, clamped to [min,max]. int:true rounds it to whole numbers.
+     fmt: optional v=>text for how the value reads (e.g. an angle in radians shown as degrees).
    Saved overrides remember the default they were set against. When a default changes in code, the old override
    is dropped, so baking a value in can never leave a stale slider behind. */
 const TUNE_DEFS=[
@@ -43,7 +44,24 @@ const TUNE_DEFS=[
   {key:'vol.metal',tab:'Audio',label:'Metal clink (find coming)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.props',tab:'Audio',label:'Doors and cloth',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.synth',tab:'Audio',label:'Beeps, chimes and thuds',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  // ---- curfew: the police patrol and the watchtower searchlights. The curfew.* keys named in SIM.CURFEW_DEF (sim.js)
+  // are shared rules: the play-test server runs them and sends everyone its values. towerGlow/copLight are just the look.
+  {key:'curfew.towerReach',tab:'Curfew',label:'Searchlight reach (where the far edge lands)',def:SIM.CURFEW_DEF.towerReach,kind:'mul',range:3,unit:' m'},
+  {key:'curfew.towerHalf',tab:'Curfew',label:'Searchlight width',def:SIM.CURFEW_DEF.towerHalf,kind:'mul',range:3,fmt:v=>tuneDeg(v*2)+' wide'},
+  {key:'curfew.towerSweep',tab:'Curfew',label:'Searchlight swing (either side of its aim)',def:SIM.CURFEW_DEF.towerSweep,kind:'mul',range:3,zero:true,fmt:v=>v?'±'+tuneDeg(v):'fixed'},
+  {key:'curfew.towerSpeed',tab:'Curfew',label:'Searchlight sweep speed',def:SIM.CURFEW_DEF.towerSpeed,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'curfew.towerGlow',tab:'Curfew',label:'Searchlight brightness',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'curfew.copN',tab:'Curfew',label:'Police officers on patrol',def:SIM.CURFEW_DEF.copN,kind:'lin',span:8,min:0,max:12,int:true,fmt:v=>v?v+' officer'+(v===1?'':'s'):'none'},
+  {key:'curfew.copRing',tab:'Curfew',label:'Patrol loop size (1× ≈ 94 m from camp)',def:SIM.CURFEW_DEF.copRing,kind:'mul',range:2.5,unit:'×'},
+  {key:'curfew.copRange',tab:'Curfew',label:'Flashlight reach',def:SIM.CURFEW_DEF.copRange,kind:'mul',range:3,unit:' m'},
+  {key:'curfew.copHalf',tab:'Curfew',label:'Flashlight width',def:SIM.CURFEW_DEF.copHalf,kind:'mul',range:2.5,fmt:v=>tuneDeg(v*2)+' wide'},
+  {key:'curfew.copLight',tab:'Curfew',label:'Flashlight brightness',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'curfew.copWalk',tab:'Curfew',label:'Patrol walking speed',def:SIM.CURFEW_DEF.copWalk,kind:'mul',range:3,unit:' m/s'},
+  {key:'curfew.copRun',tab:'Curfew',label:'Chase speed (you sprint at 7.2)',def:SIM.CURFEW_DEF.copRun,kind:'mul',range:2,unit:' m/s'},
+  {key:'curfew.copLose',tab:'Curfew',label:'Time before they give up the chase',def:SIM.CURFEW_DEF.copLose,kind:'mul',range:4,unit:' s'},
+  {key:'curfew.copCatch',tab:'Curfew',label:'Catch distance',def:SIM.CURFEW_DEF.copCatch,kind:'mul',range:3,unit:' m'},
 ];
+function tuneDeg(rad){return Math.round(rad*180/Math.PI)+'°'}
 const TUNE_BY=Object.fromEntries(TUNE_DEFS.map(d=>[d.key,d]));
 const TUNE_KEY='cgl-tune';
 let TUNE_OVR={};   // key -> {v, def}: only the knobs the tester has moved
@@ -53,7 +71,7 @@ function tuneOr(key,fallback){return TUNE_BY[key]?tune(key):fallback}
 /* slider position (-1..1, 0 = default) <-> value */
 function tuneFromPos(d,p){
   if(d.kind==='mul'){if(d.zero&&p<=-0.999)return 0;return d.def*Math.pow(d.range,p)}
-  return clamp(d.def+p*d.span,d.min??-Infinity,d.max??Infinity);
+  const v=clamp(d.def+p*d.span,d.min??-Infinity,d.max??Infinity);return d.int?Math.round(v):v;
 }
 function tuneToPos(d,v){
   if(d.kind==='mul'){if(v<=0)return-1;return clamp(Math.log(v/d.def)/Math.log(d.range),-1,1)}
@@ -68,13 +86,20 @@ function tuneAdopt(o){   // keep only overrides for knobs that still exist and w
 }
 function tuneSaveLocal(){try{localStorage.setItem(TUNE_KEY,JSON.stringify(TUNE_OVR))}catch(e){}}
 try{TUNE_OVR=tuneAdopt(JSON.parse(localStorage.getItem(TUNE_KEY)||'null'))}catch(e){}
+curfewFromTune();
 
 /* The play-test server (DEV_MODE=1) also keeps a copy in data/tune.json, so Claude can read the tester's values and
    bake them in as new defaults. The server's copy wins on load; on a normal server /tune is a 404 and this is a no-op. */
-fetch('/tune',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(o=>{if(o){TUNE_OVR=tuneAdopt(o);tuneSaveLocal();if(typeof tuneApplyAll==='function')tuneApplyAll()}}).catch(()=>{});
+fetch('/tune',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(o=>{if(o){TUNE_OVR=tuneAdopt(o);tuneSaveLocal();curfewFromTune();if(typeof tuneApplyAll==='function')tuneApplyAll()}}).catch(()=>{});
 let tuneSyncT=0;
+/* Solo play runs the police and searchlights in the page, so the Curfew tab applies straight to SIM.CURFEW. Online the
+   server runs them: it applies the saved values and sends them back to everyone (the 'curfew' message in 65-net.js). */
+function curfewFromTune(){
+  if(typeof online==='function'&&online())return;
+  const v={};for(const k in SIM.CURFEW_DEF)v[k]=tuneOr('curfew.'+k,SIM.CURFEW_DEF[k]);SIM.setCurfew(v);
+}
 function tuneSync(){
-  tuneSaveLocal();
+  tuneSaveLocal();curfewFromTune();
   clearTimeout(tuneSyncT);
   tuneSyncT=setTimeout(()=>fetch('/tune',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TUNE_OVR)})
     .then(r=>r.ok,()=>false).then(ok=>{const el=document.getElementById('tuneSaved');if(el)el.textContent=ok?'Saved to the test server ✓':'Saved in this browser only'}),400);

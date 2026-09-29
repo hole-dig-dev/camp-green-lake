@@ -37,14 +37,18 @@ const COP_LOOKS=[0xe0b08a,0x8a5a3c,0xc68a5e,0x6b4a35];
 function makeTruck(i){
   const p=makePerson({suit:0x1d2a44,shirt:0x9fb3c8,skin:COP_LOOKS[i%COP_LOOKS.length],hat:'cowboy',shovel:false});
   const torch=box(0.07,0.07,0.26,0x2a2a2a);torch.position.set(0,-0.5,0.12);p.armR.add(torch);   // flashlight in the right hand
-  const spot=new T.SpotLight(0xfff0cc,0,SIM.COP_RANGE,SIM.COP_HALF_ANGLE,0.55,1);spot.position.set(0.3,1.25,0.35);spot.target.position.set(0.3,0,12);p.g.add(spot,spot.target);
-  const bg=new T.ConeGeometry(Math.tan(SIM.COP_HALF_ANGLE)*SIM.COP_RANGE,SIM.COP_RANGE,16,1,true);bg.translate(0,-SIM.COP_RANGE/2,0);bg.rotateX(-Math.PI/2+0.1);
-  const beam=new T.Mesh(bg,new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.045,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));beam.position.copy(spot.position);p.g.add(beam);
+  const spot=new T.SpotLight(0xfff0cc,0,SIM.CURFEW.copRange,SIM.CURFEW.copHalf,0.55,1);spot.position.set(0.3,1.25,0.35);spot.target.position.set(0.3,0,12);p.g.add(spot,spot.target);
+  const beam=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.045,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,fog:false}));beam.position.copy(spot.position);p.g.add(beam);
   p.g.position.y=-200;scene.add(p.g);
   const L=makeLabel(p.g,'Police','npc');
-  return{g:p.g,p,L,spot,beam,x:0,z:0,h:0,mode:'patrol',active:false};
+  return{g:p.g,p,L,spot,beam,beamKey:'',x:0,z:0,h:0,mode:'patrol',active:false};
 }
-const trucks=[0,1,2,3].map(makeTruck);   // one per officer (SIM COP_N = 4)
+/* the flashlight's visible cone: rebuilt when the Curfew tab changes its reach or width */
+function copBeamGeometry(){const C=SIM.CURFEW,g=new T.ConeGeometry(Math.tan(C.copHalf)*C.copRange,C.copRange,16,1,true);g.translate(0,-C.copRange/2,0);g.rotateX(-Math.PI/2+0.1);return g}
+const COP_LIGHT=2.2;   // flashlight SpotLight intensity (x the Curfew tab's brightness)
+// One per officer. Four are made up front (the default patrol) so their lights are in the shaders from the start;
+// more are added if the Curfew tab asks for a bigger patrol.
+const trucks=[0,1,2,3].map(makeTruck);
 const CUR={phase:clockT()<DAYMS?'day':'night',warned:clockT()>DAYMS-60000,hunter:null,half:null,msgT:0};
 function siren(){for(let i=0;i<3;i++)setTimeout(()=>tone(450,1.4,'sawtooth',0.07,900),i*1500)}
 /* trucks and Zeroni are moved by the shared rules in sim.js (on the server, or right here when you play solo). This just draws them. */
@@ -56,7 +60,9 @@ function showTruck(tk,st,dt){
   tk.g.position.set(tk.x,groundAt(tk.x,tk.z),tk.z);tk.g.rotation.y=tk.h+Math.PI;   // sim heading faces -z at 0; people models face +z
   animPerson(tk.p,st.chase?4:moving?1:0,dt);
   tk.p.armR.rotation.x=-1.25;   // flashlight held out in front
-  const on=nightF()>0.3;tk.spot.intensity=on?2.2:0;tk.beam.visible=on;
+  const C=SIM.CURFEW,key=C.copRange+','+C.copHalf,pow=tuneOr('curfew.copLight',1),on=nightF()>0.3;
+  if(key!==tk.beamKey){tk.beamKey=key;tk.beam.geometry.dispose();tk.beam.geometry=copBeamGeometry();tk.spot.distance=C.copRange;tk.spot.angle=C.copHalf}
+  tk.spot.intensity=on?COP_LIGHT*pow:0;tk.beam.visible=on&&pow>0;tk.beam.material.opacity=0.045*Math.min(pow,3);
 }
 
 /* ---------- Madame Zeroni: she hunts anyone still out on the lake after 01:00 ---------- */
@@ -139,7 +145,8 @@ function hunterToast(h,was){
 }
 function updateCurfew(dt){
   const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);
-  stepSoloMonsters(dt);stepSoloDirector(dt);trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
+  stepSoloMonsters(dt);stepSoloDirector(dt);while(trucks.length<MONV.trucks.length)trucks.push(makeTruck(trucks.length));
+  trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
   if(!night){
     if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. Madame Zeroni fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
     if(t<DAYMS-60000)CUR.warned=false;
@@ -177,7 +184,7 @@ function stepSoloDirector(dt){
   }
 }
 function monFromServer(m){
-  MONV.trucks=(Array.isArray(m.trucks)?m.trucks:[]).slice(0,4).map(a=>({x:num(a[0],-700,700,0),z:num(a[1],-700,700,0),h:num(a[2],-1e4,1e4,0),chase:a[3]===1}));
+  MONV.trucks=(Array.isArray(m.trucks)?m.trucks:[]).slice(0,SIM.CURFEW_LIM.copN[1]).map(a=>({x:num(a[0],-700,700,0),z:num(a[1],-700,700,0),h:num(a[2],-1e4,1e4,0),chase:a[3]===1}));
   MONV.zer=Array.isArray(m.zer)?{x:num(m.zer[0],-700,700,0),z:num(m.zer[1],-700,700,0),tgt:m.zer[2],drag:m.zer[3]}:null;
   if(Array.isArray(m.ev))for(const e of m.ev.slice(0,20))if(e&&typeof e==='object')monEvent(e);
 }
