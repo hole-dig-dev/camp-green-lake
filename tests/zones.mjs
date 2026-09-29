@@ -89,7 +89,7 @@ try {
   check('no friend nearby: a normal jump', ledge.soloJump === 5.6, ledge);
   const p1pos = await p1.evaluate(() => ({ x: P.x, z: P.z }));
   await p2.evaluate(q => { P.x = q.x + 0.6; P.z = q.z; P.y = groundAt(P.x, P.z); P.crouch = true; }, p1pos);
-  await waitFor(p1, () => { const R = [...remotes.values()][0]; return R && (R.f & 8) && Math.hypot(R.tx - P.x, R.tz - P.z) < 1.3; }, 10000, 'p1 to see p2 crouching beside them');
+  await waitFor(p1, () => [...remotes.values()].some(R => (R.f & 8) && Math.hypot(R.tx - P.x, R.tz - P.z) < 1.3), 10000, 'p1 to see p2 crouching beside them');   // any remote: with 3 campers, p3 can be first in the map
   const legup = await p1.evaluate(() => zoneJumpV());
   check('a crouching friend gives a leg-up', legup > 7, { legup });
   await p1.evaluate(() => { P.yaw = Math.PI * 0.85; P.pitch = 0.15; });
@@ -130,7 +130,7 @@ try {
   check('a long fall hurts', fallDmg.hp1 < fallDmg.hp0, fallDmg);
 
   // --- the campfire needs everyone ---
-  await p1.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x + 1; P.z = f.z + 2; P.y = groundAt(P.x, P.z); S.hp = 100; P.yaw = Math.PI; P.pitch = 0.1; });
+  await p1.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x + 1; P.z = f.z + 2; P.y = groundAt(P.x, P.z); clearAff(); P.yaw = Math.PI; P.pitch = 0.1; });
   await waitFor(p1, () => cpStat && cpStat.at === 1 && cpStat.total === 2, 10000, 'the campfire to count 1 of 2');
   const line1 = await p1.evaluate(() => document.querySelector('#zoneLine').textContent);
   check('one camper at the campfire: waiting for the crew', /1 of 2/.test(line1), { line1 });

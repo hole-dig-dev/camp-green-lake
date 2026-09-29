@@ -104,7 +104,7 @@ function updateTwisters(dt){
   const ci=Math.floor(fx/TW_CELL),cj=Math.floor(fz/TW_CELL),seen=new Set();
   // which twisters are around right now: this window's and the last one's (a twister can run past its window)
   const plans=[];
-  if(!DIRECTOR_ON)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)} // director owns natural twisters when on -- see public/director.js
+  if(!DIRECTOR_ON&&!ZONE_H)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){const pl=twPlan(i,j,kk);if(pl)plans.push(pl)} // director owns natural twisters when on -- see public/director.js
   plans.push(...twSpawned);
   let nearest=1e9,loud=0;
   for(const pl of plans){
@@ -177,7 +177,7 @@ function twStep(dt){
   }else if(twSt===2){                                           // thrown - tumbling flight
     P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
     P.vy-=16*dt;P.y+=P.vy*dt;
-    me.g.rotation.x+=dt*twRagX;me.g.rotation.y+=dt*twRagY;me.g.rotation.z+=dt*twRagZ;
+    if(!me.model){me.g.rotation.x+=dt*twRagX;me.g.rotation.y+=dt*twRagY;me.g.rotation.z+=dt*twRagZ}   // the Blender camper ragdolls instead (26-ragdoll.js)
     const g=groundAt(P.x,P.z);if(P.y<=g){P.y=g;P.vy=0;twLand()}
     me.g.position.set(P.x,P.y,P.z);
   }else if(twSt===3){                                           // down - skid dies out, then lie still
@@ -187,7 +187,7 @@ function twStep(dt){
     if(twStT>=TW_DOWN_TIME){twSt=4;twStT=0}
   }else if(twSt===4){                                           // getting up
     const u=clamp(twStT/TW_GETUP_TIME,0,1);
-    me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8));
+    if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}
     me.g.position.set(P.x,P.y,P.z);
     if(u>=1){twSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }

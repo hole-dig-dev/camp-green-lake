@@ -272,7 +272,7 @@ function tbStep(dt){
   }else if(tbSt===2){                                                        // airborne -- tumbling flight, same shape as twSt===2
     P.x=clamp(P.x+P.kx*dt,-HALF+3,HALF-3);P.z=clamp(P.z+P.kz*dt,-HALF+3,HALF-3);
     P.vy-=16*dt;P.y+=P.vy*dt;
-    me.g.rotation.x+=dt*tbRagX;me.g.rotation.y+=dt*tbRagY;me.g.rotation.z+=dt*tbRagZ;
+    if(!me.model){me.g.rotation.x+=dt*tbRagX;me.g.rotation.y+=dt*tbRagY;me.g.rotation.z+=dt*tbRagZ}   // the Blender camper ragdolls instead (26-ragdoll.js)
     const g=groundAt(P.x,P.z);
     if(P.y<=g){P.y=g;P.vy=0;P.grounded=true;tbSt=3;tbStT=0;P.anim=3;P.kx*=0.4;P.kz*=0.4;me.upper.rotation.z=0;me.armL.rotation.x=me.armR.rotation.x=me.legL.rotation.x=me.legR.rotation.x=0}
     me.g.position.set(P.x,P.y,P.z);
@@ -283,7 +283,7 @@ function tbStep(dt){
     if(tbStT>=TB_DOWN_TIME){tbSt=4;tbStT=0}
   }else if(tbSt===4){                                                        // getting up
     const u=clamp(tbStT/TB_GETUP_TIME,0,1);
-    me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8));
+    if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}
     me.g.position.set(P.x,P.y,P.z);
     if(u>=1){tbSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }
@@ -293,7 +293,7 @@ function updateTumbleweeds(dt){
   tbCoolT=Math.max(0,tbCoolT-dt);
   const T0=twNow(),k=Math.floor(T0/TB_WIN),fx=S.started?P.x:0,fz=S.started?P.z:12;
   const ci=Math.floor(fx/TB_CELL),cj=Math.floor(fz/TB_CELL);
-  if(!DIRECTOR_ON)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){   // natural gusts: only when the event director is off (it owns the budget)
+  if(!DIRECTOR_ON&&!ZONE_H)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){   // natural gusts: only when the event director is off (it owns the budget)
     const pl=tbPlan(i,j,kk);if(!pl||tbSeen.has(pl.id))continue;
     const e=(T0-pl.t0)/1000;if(e<0||e>TB_LIFE)continue;
     tbSeen.set(pl.id,kk);

@@ -240,6 +240,7 @@ function advanceSinkhole(sh,e,dt,fx,fz){
 
 function updateSinkholes(dt){
   if(!S.started){updateSoloRescues(dt);return}
+  if(ZONE_H){for(const[id,sh]of SINK_LIVE){disposeSinkhole(sh);if(sh.hole){const i=holes.indexOf(sh.hole);if(i>=0)holes.splice(i,1)}SINK_LIVE.delete(id)}return}   // sinkholes are the lake's (88-zones.js)
   const T0=twNow(),k=Math.floor(T0/SINK_WIN),fx=P.x,fz=P.z;
   const CMAX=Math.ceil(EDGE/SINK_CELL)+1,plans=[];
   if(!DIRECTOR_ON)for(let i=-CMAX;i<=CMAX;i++)for(let j=-CMAX;j<=CMAX;j++)for(const kk of[k-1,k]){const pl=sinkPlan(i,j,kk);if(pl)plans.push(pl)}   // natural ones only when the event director is off

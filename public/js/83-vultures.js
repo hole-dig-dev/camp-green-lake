@@ -236,7 +236,7 @@ function vStep(dt){
     if(vStT>=VULTURE_CARRY_TIME)startDrop();
   }else if(vSt===5){                                            // dropped - falling ragdoll, same idea as the twister's tumble
     P.vy-=16*dt;P.y+=P.vy*dt;
-    me.g.rotation.x+=dt*vRagX;me.g.rotation.y+=dt*vRagY;me.g.rotation.z+=dt*vRagZ;
+    if(!me.model){me.g.rotation.x+=dt*vRagX;me.g.rotation.y+=dt*vRagY;me.g.rotation.z+=dt*vRagZ}   // the Blender camper ragdolls instead (26-ragdoll.js)
     if(vStT<VULTURE_LEAVE_TIME)vDrawCarrier('me',P.x,P.y+VULTURE_HOLD_UP+vStT*4,P.z,me.g.rotation.y,'leave',dt);else vPoolFree('me');
     const g=groundAt(P.x,P.z);if(P.y<=g){const impact=Math.abs(P.vy);P.y=g;P.vy=0;vLand(impact)}
     me.g.position.set(P.x,P.y,P.z);
@@ -245,7 +245,7 @@ function vStep(dt){
     if(vStT>=VULTURE_DOWN_TIME){vSt=7;vStT=0}
   }else if(vSt===7){                                            // getting up
     const u=clamp(vStT/VULTURE_GETUP_TIME,0,1);
-    me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8));
+    if(!me.model){me.g.rotation.x=lerp(-Math.PI/2,0,u);me.g.rotation.z=lerp(me.g.rotation.z,0,Math.min(1,dt*8))}
     me.g.position.set(P.x,P.y,P.z);
     if(u>=1){vSt=0;P.kx=P.kz=0;P.anim=0;me.g.rotation.set(0,me.g.rotation.y,0)}
   }

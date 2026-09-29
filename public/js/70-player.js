@@ -38,6 +38,7 @@ function updatePlayerTent(dt){
 function updatePlayer(dt){
   if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
     animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
+  if(S.ragT>0&&!twSt&&!tbSt){P.moving=false;P.anim=0;digHeld=false;me.g.position.set(P.x,P.y,P.z);return}   // knocked flat for a moment (26-ragdoll.js)
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
@@ -77,7 +78,7 @@ function updatePlayer(dt){
   const g=groundAt(P.x,P.z);
   if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():5.6;P.grounded=false;drainStam(tune('stam.jump'))}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
   P.vy-=16*dt;P.y+=P.vy*dt;
-  if(P.y<=g){P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;
+  if(P.y<=g){if(P.vy<-11)ragKnock(1.4,P.kx||0,P.vy*0.4,P.kz||0);P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;   // ragKnock: a hard landing puts you on the ground (26-ragdoll.js)
   if(P.y<g+0.02)P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);

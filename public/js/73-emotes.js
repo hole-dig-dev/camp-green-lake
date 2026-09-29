@@ -60,7 +60,7 @@ function emotePose(p,dt){
   }
 }
 function emoteBones(p){
-  const names={hips:'hips',spine:'spine',head:'head',armL:'arm.L',armR:'arm.R',legL:'leg.L',legR:'leg.R'},B={};p.poseRest=[];
+  const names={hips:'hips',spine:'spine',head:'head',armL:'armL',armR:'armR',legL:'legL',legR:'legR'},B={};p.poseRest=[];
   for(const k in names){const b=p.model.getObjectByName(names[k]),r=MODEL.scene.getObjectByName(names[k]);B[k]=b||null;
     if(b&&r)p.poseRest.push([b,r.quaternion.clone(),r.position.clone()])}   // stepMixer (25-people.js) resets these to rest before each update
   return B;
