@@ -66,10 +66,11 @@ const numArg=(v,def,a,b)=>{if(v===undefined)return def;const n=Number(v);if(!Num
 
 command('help',{needsGame:false,usage:'help',help:'List every command.',run(){return[...CMDS.values()].map(c=>c.usage.padEnd(22)+c.help).join('\n')}});
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
-command('audio',{usage:'audio [status|old|new|<category> old|new]',help:'A/B the original and recorded sounds locally. Categories: wind, ambience, rain, steps, dig, metal, props.',
+command('audio',{usage:'audio [status|call|old|new|<category> old|new]',help:'A/B the original and recorded sounds locally. Categories: wind, ambience, rain, steps, dig, metal, props. "audio call" plays a desert call that fits the time of day.',
   run([a,b]){
     a=(a||'').toLowerCase();b=(b||'').toLowerCase();
     if(!a||a==='status')return audioModeStatus();
+    if(a==='call'){const n=desertCallNow();return n?`Playing ${n}.`:'No desert call fits this time of day yet (or it is still loading; try again).'}
     const modes={old:'original',new:'recorded',original:'original',recorded:'recorded'};
     if(modes[a]&&!b)return setAudioMode('all',modes[a]);
     if(!(a in AUDIO_MODE)||!modes[b])throw new Error('Usage: audio old | audio new | audio <wind|ambience|rain|steps|dig|metal|props> <old|new> | audio status');

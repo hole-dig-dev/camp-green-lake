@@ -21,6 +21,7 @@ JT listened to the [labeled reel](../asset-library/audio/review-reels/2026-09-28
 | House door close | Not good | Removed; leaving the house replays the door-open recording, slightly lower |
 | Tumbleweed | Good | Kept |
 | Birds (day loop) | Too much when always on | Off: `BIRDS_LEVEL` is 0; `birds.mp3` kept |
+| Desert calls | Picked hawk, distant and near coyotes, owl, dove; clean up the background noise; play every 3–5 minutes by time of day | Five noise-reduced one-shots, one every 180–300 s from a random side |
 
 Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
 
@@ -49,6 +50,7 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Digging | Four pre-mixed clips, each the CC0 shovel hit layered with a different CC0 sand step (Fantozzi L1, R1, L3, R3), played in turn and varied slightly in pitch so back-to-back digs never repeat. The bare shovel, then the old filtered-noise scrape and low tone, cover loading. |
 | Entering/leaving tents or the Warden's house | CC0 cloth rustle for tents. The Warden's house plays a CC0 wooden-door-opening recording both ways; leaving plays it slightly lower. |
 | Lying down/getting up | CC0 cloth rustle. |
+| Now and then, out on the lake | Every 3–5 minutes (randomised) one far-off call from a random side, never the same one twice in a row: a red-tailed hawk by day, a mourning dove in the morning (before 10:00), coyotes (distant or near) or an owl at night. Skipped in tents and dust storms. `audio call` in the console plays one now; F2 → Audio → Desert calls sets the level. |
 | Metal hit, loot collision, shovel bonk | CC0 metal click; the old high triangle tone plus noise are the loading fallback. |
 | Finding ordinary loot, important loot, receiving seeds, detector beeps | Web Audio oscillators: ascending three-note find, longer five-note gold fanfare, two-note coin chirp, or a signal-dependent square-wave beep. |
 | Lizard pursuit/bite, shouts, canteen fill, impact/damage | Web Audio filtered noise and short sine/sawtooth oscillator sweeps (`hiss`, `bite`, `shout`, `splash`, `thud`). |
@@ -70,6 +72,11 @@ All shipped recordings below are **CC0**. They were converted to mono 22.05 kHz 
 | --- | --- | --- |
 | `shovel.mp3` | `shovel.ogg`, trimmed to 0.52 s with a short fade | [Shovel Sound by themightyglider, derived from RavenWolfProds](https://opengameart.org/content/shovel-sound), CC0 |
 | `dig-shovel-sand-l1/r1/l3/r3.mp3` | `shovel.ogg` mixed with Fantozzi `SandL1`, `SandR1`, `SandL3`, `SandR3`, level-matched to `shovel.mp3` | Shovel Sound and Fantozzi's Footsteps (both linked in this table), CC0 |
+| `call-hawk.mp3` | Loudest R30-34 Red Tailed Hawk passage, noise-reduced (spectral gating) and high-passed | [R30-34 Red Tailed Hawk by craigsmith](https://freesound.org/people/craigsmith/sounds/479610/) on Freesound, CC0 |
+| `call-coyotes-distant.mp3` | Loudest Coyotes, distant howls and barks passage, noise-reduced (spectral gating) and high-passed | [Coyotes, distant howls and barks by TRP](https://freesound.org/people/TRP/sounds/616994/) on Freesound, CC0 |
+| `call-coyotes-near.mp3` | Loudest coyote barks and howls passage, noise-reduced (spectral gating) and high-passed | [coyote barks and howls by dkaufman](https://freesound.org/people/dkaufman/sounds/256533/) on Freesound, CC0 |
+| `call-owl.mp3` | Loudest Owl Hoot passage, noise-reduced (spectral gating) and high-passed | [Owl Hoot by Breviceps](https://freesound.org/people/Breviceps/sounds/465697/) on Freesound, CC0 |
+| `call-dove.mp3` | Loudest mourning_dove passage, noise-reduced (spectral gating) and high-passed | [mourning_dove by nathankwright](https://freesound.org/people/nathankwright/sounds/456930/) on Freesound, CC0 |
 | `step-sand-1..3.mp3`, `step-stone-1..3.mp3` | Fantozzi `SandL1..3` and `StoneL1..3` | [Fantozzi's Footsteps](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone), CC0 |
 | `birds.mp3` | `birds-isaiah658.ogg` | [Ambient Bird Sounds by isaiah658](https://opengameart.org/content/ambient-bird-sounds), CC0 |
 | `crickets.mp3` | `crickets-oneloop.mp3` | [Crickets Ambient Noise by Wolfgang_/Ted Kerr](https://opengameart.org/content/crickets-ambient-noise-loopable), CC0 |

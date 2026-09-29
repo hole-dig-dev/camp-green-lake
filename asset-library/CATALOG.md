@@ -15,6 +15,11 @@ Status meanings and rules are in the [README](README.md). Verdicts come from JT'
 | Tent cloth | In game: approved | `public/audio/cloth1.mp3` | |
 | House door open | In game: approved | `public/audio/doorOpen_1.mp3` | Also plays, slightly lower, when leaving the house |
 | Tumbleweed gust (synthesized) | In game: approved | code in `public/js/40-fx.js` | |
+| Desert 1: hawk | In game: approved | `public/audio/call-hawk.mp3` | Day. Noise-reduced; the uncleaned cut is `audio/desert-calls/call-hawk-before-cleanup.mp3`. [R30-34 Red Tailed Hawk by craigsmith](https://freesound.org/people/craigsmith/sounds/479610/), CC0 |
+| Desert 7: coyotes, distant | In game: approved | `public/audio/call-coyotes-distant.mp3` | Night. Noise-reduced; the uncleaned cut is `audio/desert-calls/call-coyotes-distant-before-cleanup.mp3`. [Coyotes, distant howls and barks by TRP](https://freesound.org/people/TRP/sounds/616994/), CC0 |
+| Desert 9: coyotes, near | In game: approved | `public/audio/call-coyotes-near.mp3` | Night. Noise-reduced; the uncleaned cut is `audio/desert-calls/call-coyotes-near-before-cleanup.mp3`. [coyote barks and howls by dkaufman](https://freesound.org/people/dkaufman/sounds/256533/), CC0 |
+| Desert 10: owl | In game: approved | `public/audio/call-owl.mp3` | Night. Noise-reduced; the uncleaned cut is `audio/desert-calls/call-owl-before-cleanup.mp3`. [Owl Hoot by Breviceps](https://freesound.org/people/Breviceps/sounds/465697/), CC0 |
+| Desert 11: dove | In game: approved | `public/audio/call-dove.mp3` | Morning. Noise-reduced; the uncleaned cut is `audio/desert-calls/call-dove-before-cleanup.mp3`. [mourning_dove by nathankwright](https://freesound.org/people/nathankwright/sounds/456930/), CC0 |
 | Shovel (bare) | In game: not reviewed | `public/audio/shovel.mp3` | Now only the loading fallback for the dig rotation, and a layer inside it |
 | Birds (day) | Off (level 0) | `public/audio/birds.mp3` | JT: the always-on day loop was too much. The file stays; `BIRDS_LEVEL` in `public/js/40-fx.js` is 0. An occasional call might return later |
 | Bunk cloth | In game: not reviewed | `public/audio/cloth2.mp3` | |
@@ -53,8 +58,12 @@ The numbers match round 2 of the dig review. The game rotates all four.
 | `audio/review-reels/2026-09-28-dig-round1-18-candidates.mp3` | Current shovel + 18 single-sound candidates |
 | `audio/review-reels/2026-09-28-dig-round2-20-layered.mp3` | 20 shovel-layered variants. JT liked #2–#5 |
 | `audio/review-reels/2026-09-28-dig-round3-focus-2-5.mp3` | #2–#5 alone, then all four rotating. JT picked the rotation |
+| `audio/review-reels/2026-09-28-desert-round1-15-candidates.mp3` | 15 CC0 desert one-shots. JT picked 1, 7, 9, 10, 11 |
+| `audio/review-reels/2026-09-28-desert-calls-cleanup-before-after.mp3` | The five picks before and after noise reduction |
 
 ## Considered, not kept
+
+- Desert round 1, not picked: two more hawk takes, three raven takes, closer coyote howls, three wind gusts, a rattlesnake (Freesound CC0; see the round-1 reel).
 
 Candidates from the dig review came from these CC0 packs. Get the packs from their pages if you need them again.
 

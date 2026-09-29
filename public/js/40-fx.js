@@ -60,6 +60,8 @@ const AUDIO_FILES={
   'step-sand-1':'step-sand-1.mp3','step-sand-2':'step-sand-2.mp3','step-sand-3':'step-sand-3.mp3',
   'step-stone-1':'step-stone-1.mp3','step-stone-2':'step-stone-2.mp3','step-stone-3':'step-stone-3.mp3',
   cloth1:'cloth1.mp3',cloth2:'cloth2.mp3',doorOpen:'doorOpen_1.mp3',metalClick:'metalClick.mp3',
+  'call-hawk':'call-hawk.mp3','call-dove':'call-dove.mp3','call-owl':'call-owl.mp3',
+  'call-coyotes-distant':'call-coyotes-distant.mp3','call-coyotes-near':'call-coyotes-near.mp3',
   'dig-1':'dig-shovel-sand-l1.mp3','dig-2':'dig-shovel-sand-r1.mp3','dig-3':'dig-shovel-sand-l3.mp3','dig-4':'dig-shovel-sand-r3.mp3'
 };
 const audioBuffers=new Map(),audioLoads=new Map(),ambientLoops=new Map();
@@ -100,6 +102,35 @@ function updateFootsteps(dt){
   if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.4:0.32,0.92+Math.random()*0.16))noise(0.07,280,0.6,0.05,'lowpass');
 }
 const BIRDS_LEVEL=0;   // the always-on day bird loop is off (JT: too much); it was 0.24. birds.mp3 stays for an occasional-call idea
+/* Desert calls: now and then (every 3-5 minutes, randomised) one far-off animal calls from a random side, picked
+   for the time of day. Out on the lake only; in a tent or a dust storm the call waits and tries again shortly. */
+const DESERT_CALLS=[
+  {name:'call-hawk',when:'day',vol:0.55},
+  {name:'call-dove',when:'morning',vol:0.4},
+  {name:'call-coyotes-distant',when:'night',vol:0.55},
+  {name:'call-coyotes-near',when:'night',vol:0.45},
+  {name:'call-owl',when:'night',vol:0.4},
+];
+const CALL_GAP=[180,300];   // seconds between calls
+let callAt=0,lastCall='';
+function callFits(c){const night=nightF()>0.5,h=hourOf(clockT());return c.when==='night'?night:c.when==='morning'?!night&&h<10:!night}
+function playDesertCall(c){
+  if(!AC)return false;const buffer=audioBuffers.get(c.name);if(!buffer){loadAudioClip(c.name);return false}
+  const src=AC.createBufferSource(),gain=AC.createGain(),pan=AC.createStereoPanner();
+  src.buffer=buffer;src.playbackRate.value=0.97+Math.random()*0.06;gain.gain.value=c.vol*tuneOr('vol.calls',1);pan.pan.value=(Math.random()*2-1)*0.8;
+  src.connect(gain).connect(pan).connect(fxBus);src.onended=()=>{src.disconnect();gain.disconnect();pan.disconnect()};src.start();lastCall=c.name;return true;
+}
+function desertCallNow(){   // the console's "audio call": play one that fits right now
+  const fit=DESERT_CALLS.filter(callFits),c=fit[(Math.random()*fit.length)|0];return c&&playDesertCall(c)?c.name:null;
+}
+function updateDesertCalls(outside,dust){
+  const now=AC.currentTime;
+  if(!callAt){callAt=now+CALL_GAP[0]+Math.random()*(CALL_GAP[1]-CALL_GAP[0]);return}
+  if(now<callAt)return;
+  const fit=DESERT_CALLS.filter(c=>callFits(c)&&(c.name!==lastCall||DESERT_CALLS.filter(callFits).length===1));
+  if(outside<1||dust>0.3||AUDIO_MODE.ambience!=='recorded'||!fit.length||!playDesertCall(fit[(Math.random()*fit.length)|0])){callAt=now+20+Math.random()*20;return}
+  callAt=now+CALL_GAP[0]+Math.random()*(CALL_GAP[1]-CALL_GAP[0]);
+}
 function updateAudioScene(){
   if(!AC||!S.started)return;
   const outside=inTent()?0.14:1,night=nightF(),dust=haboobF();
@@ -108,6 +139,7 @@ function updateAudioScene(){
   setAmbientClip('birds',AUDIO_MODE.ambience==='recorded'?outside*(1-night)*(1-dust)*BIRDS_LEVEL:0);
   setAmbientClip('crickets',AUDIO_MODE.ambience==='recorded'?outside*night*(1-dust)*0.43:0);
   setAmbientClip('rain',S.won&&recordedRain?0.33:0);
+  updateDesertCalls(outside,dust);
   const at=AC.currentTime;
   if(windNoiseGain)windNoiseGain.gain.setTargetAtTime((recordedWind?outside*(audioBuffers.has('wind')?0.013:0.06):0.07)*tune('vol.wind'),at,0.6);
   if(windLfoGain)windLfoGain.gain.setTargetAtTime((recordedWind?0:0.04)*tune('vol.wind'),at,0.6);
