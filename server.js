@@ -185,11 +185,43 @@ function sendStatic(res, subdir, rawName) {
   });
 }
 
+// ---- control-center slider values (DEV_MODE only): data/tune.json, { key: { v, def } } for the knobs someone moved.
+// Claude reads this file to bake a tester's values in as new defaults. Untrusted input: plain numbers under short keys only.
+const TUNE_FILE = path.join(DATA_DIR, 'tune.json'), TUNE_MAX_BYTES = 16384, TUNE_KEY_RE = /^[A-Za-z0-9_. ]{1,40}$/;
+function sendTune(res) {
+  fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
+    securityHeaders(res, false);
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(err ? '{}' : txt);
+  });
+}
+function saveTune(req, res) {
+  let body = '', over = false;
+  req.setEncoding('utf8');
+  req.on('data', c => { if (over) return; body += c; if (body.length > TUNE_MAX_BYTES) { over = true; res.writeHead(413); res.end('too big'); req.destroy(); } });
+  req.on('end', () => {
+    if (over) return;
+    let o; try { o = JSON.parse(body); } catch (e) { res.writeHead(400); return res.end('bad json'); }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) { res.writeHead(400); return res.end('bad shape'); }
+    const clean = {};
+    for (const k of Object.keys(o).slice(0, 200)) {
+      const e = o[k];
+      if (TUNE_KEY_RE.test(k) && e && Number.isFinite(e.v) && Number.isFinite(e.def)) clean[k] = { v: e.v, def: e.def };
+    }
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
+      if (err) { res.writeHead(500); return res.end('save failed'); }
+      fs.rename(TUNE_FILE + '.tmp', TUNE_FILE, () => { securityHeaders(res, false); res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); });
+    });
+  });
+}
+
 const server = http.createServer((req, res) => {
   try {
-    if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
-    const ip = clientIp(req);
     const url0 = (req.url || '/').split('?')[0];
+    const tunePost = DEV_MODE && req.method === 'POST' && url0 === '/tune';
+    if (req.method !== 'GET' && req.method !== 'HEAD' && !tunePost) { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
+    const ip = clientIp(req);
     const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/[\w.-]+\.glb|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
@@ -209,6 +241,8 @@ const server = http.createServer((req, res) => {
       if (url === '/admin/update') { broadcast({ t: 'update' }); return res.end('{"ok":true}'); }
       return res.end('{}');
     }
+    // The play-tester's control-center sliders (public/js/11-tune.js). Play-test server only: a normal server 404s.
+    if (url === '/tune') { if (!DEV_MODE) { res.writeHead(404); return res.end('not found'); } return tunePost ? saveTune(req, res) : sendTune(res); }
     if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
     if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');

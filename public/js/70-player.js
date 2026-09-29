@@ -130,16 +130,17 @@ function updateLizards(dt,t){
 
 /* ---------- health ---------- */
 /* Health runs 0-100. Damage takes it down, and at 0 you're downed like any other knockout (your sack drops, and
-   friends can pick you up). It heals on its own: once you've gone HEAL_DELAY seconds without getting hurt, it comes
-   back at HEAL_RATE per second (about a minute from nearly empty to full). Running out of water drains it instead
+   friends can pick you up). It heals on its own: once you've gone hp.healDelay seconds without getting hurt, it comes
+   back at hp.healRate per second (about a minute from nearly empty to full). Running out of water drains it instead
    of healing it. Lizard bites, the police and Madame Zeroni still knock you out outright. */
-const HP_MAX=100,HEAL_DELAY=5,HEAL_RATE=1.5,THIRST_DPS=4,REVIVE_HP=40;
+const HP_MAX=100,REVIVE_HP=40;   // heal delay/rate and thirst drain are tester sliders: tune('hp.healDelay'|'hp.healRate'|'hp.thirst') in 11-tune.js
 let hurtFx=0,hurtHoldT=0;
 /* #hurtFx timing (docs/ui-redesign-spec.md section 4): a short hold at peak brightness (<=180ms),
    then a decay to nothing over ~500ms -- a flash, not a lingering full-screen tint. */
 const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text){
   if(GOD)return;
+  n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
   S.hp=Math.max(0,S.hp-n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
@@ -153,10 +154,10 @@ function updateHealth(dt){
   if(GOD)S.water=waterMax();
   if(S.water<=0&&!uiOpen()&&!PARTY.on){
     if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and losing health. Get to Mr. Sir for a refill.','bad',5000)}
-    S.hurtT=0;S.hp=Math.max(0,S.hp-THIRST_DPS*dt);hurtFx=Math.max(hurtFx,0.25);
+    S.hurtT=0;S.hp=Math.max(0,S.hp-tune('hp.thirst')*dt);hurtFx=Math.max(hurtFx,0.25);
     if(S.hp<=0)knockOut('Heatstroke','You ran out of water in the sun.');
   }else{
     if(S.water>0)S.thirsty=false;
-    if(S.hurtT>=HEAL_DELAY)S.hp=Math.min(HP_MAX,S.hp+HEAL_RATE*dt);
+    if(S.hurtT>=tune('hp.healDelay'))S.hp=Math.min(HP_MAX,S.hp+tune('hp.healRate')*dt);
   }
 }

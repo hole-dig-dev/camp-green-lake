@@ -47,6 +47,7 @@ const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here
 addEventListener('keydown',e=>{
   const pk=e.key.toLowerCase();   // pause menu: the raw physical key, before any rebinding is applied
   if(e.target===conIn){conKey(e);return}
+  if(tuneKey(e))return;   // F2 control center (77-tune-panel.js); swallows keys while it's open
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}

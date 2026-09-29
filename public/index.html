@@ -288,6 +288,13 @@
     <button id="firedBtn" class="ui-button ui-button--danger">Start a new run</button>
   </div>
 </div>
+ <div id="tune" hidden role="dialog" aria-label="Control center">
+  <div class="tune-head"><b>Control center</b><span id="tuneCount"></span><button type="button" id="tuneClose" title="Close (F2 or Esc)">✕</button></div>
+  <div id="tuneTabs" role="tablist"></div>
+  <div id="tuneBody"></div>
+  <div class="tune-foot"><label><input type="checkbox" id="tunePin"> Keep on screen</label><span id="tuneSaved"></span>
+   <button type="button" id="tuneResetTab">Reset tab</button><button type="button" id="tuneResetAll">Reset all</button><button type="button" id="tuneCopy">Copy changes</button></div>
+ </div>
  <div id="console" hidden><div id="conLog" aria-live="polite"></div><div id="conRow"><b>&gt;</b><input id="conIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type a command (help lists them). Esc closes."></div></div>
 <button id="conBtn" type="button" hidden aria-label="Open console">&gt;_</button>
 <input id="chatIn" maxlength="80" placeholder="Say something. Only campers near you will see it." autocomplete="off" hidden>
@@ -395,6 +402,7 @@
 <script src="sim.js"></script>
 <script src="director.js"></script>
 <script src="js/10-core.js"></script>
+<script src="js/11-tune.js"></script>
 <script src="js/15-terrain.js"></script>
 <script src="js/20-world.js"></script>
 <script src="js/22-security.js"></script>
@@ -417,6 +425,7 @@
 <script src="js/75-tumbleweed.js"></script>
 <script src="js/75-haboob.js"></script>
 <script src="js/76-console.js"></script>
+<script src="js/77-tune-panel.js"></script>
 <script src="js/78-hud.js"></script>
 <script src="js/80-ui.js"></script>
 <script src="js/81-inventory.js"></script>

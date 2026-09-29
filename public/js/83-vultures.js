@@ -19,9 +19,7 @@ const VULTURE_ALT_BASE=54;          // baseline altitude (m) - spec wants roughl
 const VULTURE_ALT_SPREAD=10;        // +/- per bird, so the flock isn't a flat disc
 const VULTURE_ORBIT_MIN=18,VULTURE_ORBIT_MAX=32;   // each bird's own orbit radius (m), picked once
 const VULTURE_TIGHT_MIN=0.35;       // how much the orbit shrinks when circling tight over someone hurt/warned
-const VULTURE_ATTRACT_FRAC=0.55;    // below this fraction of HP_MAX, the flock starts drifting to/over that camper
-const VULTURE_THRESH=0.30;          // below this fraction of HP_MAX (out on the lake), the grace timer starts
-const VULTURE_CLEAR_FRAC=0.40;      // must heal back above this to call an active warn/dive off (hysteresis, no flicker right at the line)
+// health lines (circle below / target below / give up above) are tester sliders: tune('vulture.attract'|'vulture.thresh'|'vulture.clear'), defaults 0.55/0.30/0.40 in 11-tune.js
 const VULTURE_GRACE=4;              // seconds under threshold before the warning fires - a beat to notice your own health bar
 const VULTURE_WARN_TIME=5;          // seconds of tightening circling before the dive - JT's window to heal/onion/run
 const VULTURE_DIVE_TIME=1.3;        // swoop-in duration, timed to be readable (and shoo-able)
@@ -84,7 +82,7 @@ function updateVultureFlock(dt){
   const k=1-Math.exp(-dt*0.25);   // slow drift - they're loitering, not homing missiles
   vFlockX+=(tx-vFlockX)*k;vFlockZ+=(tz-vFlockZ)*k;
   const dayVis=clamp(1-nightF()*1.4,0,1);   // fold away as night falls - they're a daytime hazard
-  const attractTight=worstFrac<VULTURE_ATTRACT_FRAC?lerp(1,VULTURE_TIGHT_MIN,clamp(1-worstFrac/VULTURE_ATTRACT_FRAC,0,1)):1;
+  const attractTight=worstFrac<tune('vulture.attract')?lerp(1,VULTURE_TIGHT_MIN,clamp(1-worstFrac/tune('vulture.attract'),0,1)):1;
   const warnTight=vSt>=1?VULTURE_TIGHT_MIN*0.7:1;   // an active warning/dive on YOU tightens it further, as a readable tell
   const tight=Math.min(attractTight,warnTight);
   for(let i=0;i<VULTURE_COUNT;i++){
@@ -163,10 +161,10 @@ function vPersonPose(dt,k){
 
 /* ---- transitions ---- */
 function underThreatNow(){
-  return S.started&&!S.ko&&!twSt&&!inTent()&&!inCamp(P.x,P.z)&&S.hp<HP_MAX*VULTURE_THRESH&&nightF()<VULTURE_NIGHT_CUTOFF&&vulturesEnabled&&vCool<=0;
+  return S.started&&!S.ko&&!twSt&&!inTent()&&!inCamp(P.x,P.z)&&S.hp<HP_MAX*tune('vulture.thresh')&&nightF()<VULTURE_NIGHT_CUTOFF&&vulturesEnabled&&vCool<=0;
 }
 function vCancelCheck(){
-  return !vulturesEnabled||S.ko||twSt||inTent()||inCamp(P.x,P.z)||S.hp>=HP_MAX*VULTURE_CLEAR_FRAC||nightF()>=VULTURE_NIGHT_CUTOFF;
+  return !vulturesEnabled||S.ko||twSt||inTent()||inCamp(P.x,P.z)||S.hp>=HP_MAX*tune('vulture.clear')||nightF()>=VULTURE_NIGHT_CUTOFF;
 }
 function vCancelToIdle(){vSt=0;vStT=0;vGraceT=0;vShadow.material.opacity=0;vPoolFree('me')}
 function startWarn(){
@@ -285,9 +283,9 @@ command('vultures',{usage:'vultures [on|off|now]',help:'Toggle the vulture hazar
     if(a==='on'){vulturesEnabled=true;return'Vultures enabled.'}
     if(a==='now'){
       if(vSt>=3)return'One already has you.';
-      S.hp=Math.min(S.hp,HP_MAX*VULTURE_THRESH-1);   // otherwise vCancelCheck() sees full health next frame and calls it straight back off
+      S.hp=Math.min(S.hp,HP_MAX*tune('vulture.thresh')-1);   // otherwise vCancelCheck() sees full health next frame and calls it straight back off
       startWarn();startDive();return'A vulture dives at you now.';
     }
-    S.hp=Math.min(S.hp,HP_MAX*VULTURE_THRESH-1);vGraceT=0;
+    S.hp=Math.min(S.hp,HP_MAX*tune('vulture.thresh')-1);vGraceT=0;
     return`Health set to ${Math.round(S.hp)}. Stay out on the lake, out of camp and a tent, and they'll notice you in a few seconds.`;
   }});

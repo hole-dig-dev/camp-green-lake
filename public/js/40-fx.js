@@ -27,8 +27,13 @@ function itemMesh(type){
   if(type==='pistol'){const g=new T.Group();const b=box(0.32,0.07,0.06,c),h=box(0.07,0.16,0.06,0x5a3a1e);h.position.set(-0.12,-0.08,0);g.add(b,h);return g}
   return cyl(0.07,0.07,0.03,8,c);
 }
-function popItem(it,hx,hz){const m=itemMesh(it.type);const y=groundAt(hx,hz);m.position.set(hx,y+0.2,hz);scene.add(m);pops.push({m,t:0,y0:y})}
-function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;p.m.position.y=p.y0+0.2+Math.sin(Math.min(p.t,1)*Math.PI*0.5)*2.4;p.m.rotation.y+=dt*4;if(p.t>2.2){p.m.scale.multiplyScalar(0.85);if(p.m.scale.x<0.05){scene.remove(p.m);pops.splice(i,1)}}}}
+/* size, float height, timing and spin come from the tester's control center (11-tune.js, Finds tab) */
+const bigFind=type=>!!(LOOT[type].heavy||LOOT[type].key);
+function popItem(it,hx,hz){const m=itemMesh(it.type);const y=groundAt(hx,hz);m.scale.multiplyScalar(tune(bigFind(it.type)?'finds.bigScale':'finds.smallScale'));
+  m.position.set(hx,y+tune('finds.start'),hz);scene.add(m);pops.push({m,t:0,y0:y,s0:m.scale.x})}
+function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;
+  const up=Math.sin(Math.min(p.t/tune('finds.riseTime'),1)*Math.PI*0.5);p.m.position.y=p.y0+tune('finds.start')+up*tune('finds.rise');p.m.rotation.y+=dt*tune('finds.spin');
+  if(p.t>tune('finds.hold')){p.m.scale.multiplyScalar(0.85);if(p.m.scale.x<0.05*p.s0){scene.remove(p.m);pops.splice(i,1)}}}}
 
 /* Warden's flags around the search area */
 const flags=new T.Group();flags.visible=false;scene.add(flags);
@@ -66,8 +71,10 @@ function loadAudioClip(name){
     .then(bytes=>AC.decodeAudioData(bytes)).then(buffer=>{audioBuffers.set(name,buffer);return buffer}).catch(()=>null);
   audioLoads.set(name,p);return p;
 }
+const CLIP_VOL=n=>/^step-/.test(n)?'vol.steps':/^dig-|^shovel$/.test(n)?'vol.dig':n==='metalClick'?'vol.metal':/^cloth|^door/.test(n)?'vol.props':null;
 function playAudioClip(name,volume=1,rate=1){
   if(!AC)return false;
+  const vk=CLIP_VOL(name);if(vk)volume*=tune(vk);
   const buffer=audioBuffers.get(name);if(!buffer){loadAudioClip(name);return false}
   const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.playbackRate.value=rate;
   gain.gain.value=volume;src.connect(gain).connect(fxBus);src.onended=()=>{src.disconnect();gain.disconnect()};src.start();return true;
@@ -79,7 +86,7 @@ function setAmbientClip(name,volume){
     const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.loop=true;gain.gain.value=0;
     src.connect(gain).connect(fxBus);src.start();loop={src,gain};ambientLoops.set(name,loop);
   }
-  loop.gain.gain.setTargetAtTime(volume,AC.currentTime,0.9);
+  loop.gain.gain.setTargetAtTime(volume*tuneOr('vol.'+name,1),AC.currentTime,0.9);
 }
 let footstepT=0,footstepN=0;
 function updateFootsteps(dt){
@@ -101,9 +108,9 @@ function updateAudioScene(){
   setAmbientClip('crickets',AUDIO_MODE.ambience==='recorded'?outside*night*(1-dust)*0.43:0);
   setAmbientClip('rain',S.won&&recordedRain?0.33:0);
   const at=AC.currentTime;
-  if(windNoiseGain)windNoiseGain.gain.setTargetAtTime(recordedWind?outside*(audioBuffers.has('wind')?0.013:0.06):0.07,at,0.6);
-  if(windLfoGain)windLfoGain.gain.setTargetAtTime(recordedWind?0:0.04,at,0.6);
-  if(rainGain)rainGain.gain.setTargetAtTime(S.won?(recordedRain&&audioBuffers.has('rain')?0.02:0.18):0,at,0.6);
+  if(windNoiseGain)windNoiseGain.gain.setTargetAtTime((recordedWind?outside*(audioBuffers.has('wind')?0.013:0.06):0.07)*tune('vol.wind'),at,0.6);
+  if(windLfoGain)windLfoGain.gain.setTargetAtTime((recordedWind?0:0.04)*tune('vol.wind'),at,0.6);
+  if(rainGain)rainGain.gain.setTargetAtTime((S.won?(recordedRain&&audioBuffers.has('rain')?0.02:0.18):0)*tune('vol.rain'),at,0.6);
 }
 function initAudio(){
   if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=SETTINGS.volMaster;master.connect(AC.destination);
@@ -116,8 +123,8 @@ function initAudio(){
   for(const name of Object.keys(AUDIO_FILES))loadAudioClip(name);
   }catch(e){AC=null}
 }
-function noise(dur,freq,q,gain,type){if(!AC)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
-function tone(freq,dur,type,gain,to){if(!AC)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
+function noise(dur,freq,q,gain,type){if(!AC)return;gain*=tune('vol.synth');if(gain<=0)return;const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();const t=AC.currentTime;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);s.connect(f).connect(g).connect(fxBus);s.start(t,Math.random());s.stop(t+dur+0.05)}
+function tone(freq,dur,type,gain,to){if(!AC)return;gain*=tune('vol.synth');if(gain<=0)return;const o=AC.createOscillator();o.type=type||'sine';const g=AC.createGain();const t=AC.currentTime;o.frequency.setValueAtTime(freq,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g).connect(fxBus);o.start(t);o.stop(t+dur+0.05)}
 let digClip=0;
 const sfx={
   // Four shovel+sand layers played in turn so back-to-back digs never repeat; the bare shovel covers loading.
