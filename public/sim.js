@@ -567,9 +567,54 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
+  /* ---- the buried town of Green Lake (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
+     A maze of dark rooms deep under the lake, a new layout every day. You get in by digging an 8 ft hole that breaks
+     through (always inside OLD_TOWN on the lake, sometimes elsewhere), and out by climbing a shaft or an old well
+     (you need help: a friend boosting you, a hand from the top, or a staked rope ladder) or walking up the collapsed
+     stairwell. It lives off the lake map (x 2000), like the tent rooms live underground, so nothing on the lake can
+     reach you down there. */
+  const TOWN = { X: 2000, Z: 0, N: 6, C: 14, Y: -30, H: 4 };
+  const OLD_TOWN = { x: -230, z: -250, r: 70 };   // where the old town sits under the lake: every 8 ft hole in here breaks through
+  const TOWN_ROOMS = ['Schoolhouse', "Sheriff's office", 'Jail', 'General store', 'Church', "Sam's boat shed", 'Saloon', 'Post office', "Kate's house", 'Barbershop', 'Stable', 'Bank', 'Onion cellar', "Doctor's office", 'Hotel'];
+  const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
+  const townCellAt = (x, z) => { const cx = Math.floor((x - TOWN.X) / TOWN.C + TOWN.N / 2), cz = Math.floor((z - TOWN.Z) / TOWN.C + TOWN.N / 2); return cx >= 0 && cz >= 0 && cx < TOWN.N && cz < TOWN.N ? cz * TOWN.N + cx : -1; };
+  const townCellCenter = i => ({ x: TOWN.X + ((i % TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C, z: TOWN.Z + (Math.floor(i / TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C });
+  const inTownXZ = x => x > TOWN.X - TOWN.N * TOWN.C;
+  function townLayout(day) {
+    const r = roRnd(day * 71 + 13), N = TOWN.N, cells = [];
+    for (let i = 0; i < N * N; i++) cells.push({ i, e: 0, s: 0, name: TOWN_ROOMS[Math.floor(r() * TOWN_ROOMS.length)], flood: false, rot: false, loot: [] });
+    // doors: a random maze that reaches every room, plus some extra doors; 1 in 5 is a crawlspace (crouch to get through)
+    const seen = new Set([0]), stack = [0];
+    while (stack.length) {
+      const i = stack[stack.length - 1], cx = i % N, cz = Math.floor(i / N), nb = [];
+      if (cx < N - 1 && !seen.has(i + 1)) nb.push([i + 1, 'e', i]); if (cx > 0 && !seen.has(i - 1)) nb.push([i - 1, 'e', i - 1]);
+      if (cz < N - 1 && !seen.has(i + N)) nb.push([i + N, 's', i]); if (cz > 0 && !seen.has(i - N)) nb.push([i - N, 's', i - N]);
+      if (!nb.length) { stack.pop(); continue; }
+      const [j, side, owner] = nb[Math.floor(r() * nb.length)]; cells[owner][side] = r() < 0.2 ? 2 : 1; seen.add(j); stack.push(j);
+    }
+    for (const c of cells) { const cx = c.i % N, cz = Math.floor(c.i / N); if (cx < N - 1 && !c.e && r() < 0.22) c.e = 1; if (cz < N - 1 && !c.s && r() < 0.22) c.s = 1; }
+    const order = cells.map(c => c.i).sort(() => r() - 0.5);
+    const vault = order[0], stair = order[1], wells = [order[2], order[3]];
+    cells[vault].name = "Kate's vault"; cells[vault].vault = true; cells[stair].stair = true; cells[stair].name = 'Collapsed stairwell';
+    for (const w of wells) { cells[w].well = true; cells[w].name = 'Old well'; }
+    for (const i of order.slice(4, 9)) cells[i].flood = true;   // (framework: flooded cellars and rotten floors are marked, not playable yet)
+    for (const i of order.slice(9, 14)) cells[i].rot = true;
+    let id = 0;
+    for (const c of cells) {
+      const n = c.vault ? 4 : Math.floor(r() * 3), cc = townCellCenter(c.i);
+      for (let k = 0; k < n; k++) c.loot.push({ id: id++, type: c.vault ? 'goldbar' : TOWN_LOOT[Math.floor(r() * TOWN_LOOT.length)], x: cc.x + (r() - 0.5) * (TOWN.C - 4), z: cc.z + (r() - 0.5) * (TOWN.C - 4) });
+    }
+    return { day, cells, vault, stair, wells };
+  }
+  // which room a breach from hole (x,z) drops you into (same answer everywhere)
+  const townBreachCell = (x, z, lay) => { const cand = lay.cells.filter(c => !c.vault && !c.stair && !c.well && !c.flood); return cand[Math.abs(Math.floor(x * 7.3 + z * 3.1)) % cand.length].i; };
+  // does an 8 ft hole at (x,z) break through? Always in the old town; now and then anywhere else (seeded by spot + day)
+  const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < OLD_TOWN.r || roRnd(Math.floor(x * 10) * 7919 + Math.floor(z * 10) * 104729 + day * 31)() < 0.1;
+
   const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
+    TOWN, OLD_TOWN, townLayout, townCellAt, townCellCenter, inTownXZ, townBreachCell, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

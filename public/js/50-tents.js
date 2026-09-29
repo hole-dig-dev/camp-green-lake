@@ -271,7 +271,7 @@ function knockOut(title,text){
   const lost=S.sack.length;dropBag();
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
 }
-function respawn(){if(inTent())exitTent();S.ko=0;clearAff();S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
+function respawn(){if(inTent())exitTent();if(S.inTown)exitTown(0,39,'');S.ko=0;clearAff();S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
 
 /* win */
 function triggerWin(who,mine){

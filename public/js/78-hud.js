@@ -13,6 +13,7 @@ const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
   sinkRescue:s=>`Hold to link hands and pull ${s.R.name} out`+(sinkPulling?' (holding on, keep it up)':''),
+  townDown:s=>'Climb down into the buried town',townLoot:s=>`Pick up: ${LOOT[s.e.L.type].name}`,townShaft:s=>'Climb up the shaft',townWell:s=>'Climb the old well',townStair:s=>'Walk up the collapsed stairwell',
   cartLoad:s=>`Put it in the wheelbarrow (${(s.cart.load||[]).length}/${SIM.CART.CAP})`,
   drop:s=>`Let go of the ${propName(s.pr)}`+(s.pr.grab&&s.pr.grab.length>=2?` (${s.pr.grab.length} of you on it)`:' (just you)')+' · click to throw · scroll: closer / farther',
   prop:s=>s.pr.type==='cart'?`Push the wheelbarrow${s.pr.tip?' (set it back up)':''}, or aim and hold R`:`Grab the ${LOOT[s.pr.type].name} (${s.pr.val!=null?s.pr.val:SIM.HEAVY[s.pr.type]} seeds, ${SIM.PHYS[s.pr.type].m} kg), or aim and hold R`+(s.pr.grab&&s.pr.grab.length?` · ${s.pr.grab.length} holding`:''),

@@ -129,7 +129,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Camper';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
-const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol'];
+const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'goldbar'];
 
 /* Peak-style maps (public/js/88-zones.js). The whole crew is always in ONE map (world.zone, 'lake' when unset), so
    everything else here runs unchanged on whichever map is loaded. Each map keeps its own holes, finds, heavy loot,
@@ -410,6 +410,7 @@ wss.on('connection', (ws, req) => {
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
+      breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
       rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day), // and the day's roster
     });
   }
@@ -466,14 +467,15 @@ wss.on('connection', (ws, req) => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
+        c.town = m.tn === true; // down in the buried town (public/js/89-town.js), at x ~2000, y -30
+        c.x = num(m.x, -620, c.town ? SIM.TOWN.X + 60 : 620, c.x); c.y = num(m.y, c.town ? SIM.TOWN.Y - 5 : -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js)
-        c.f = num(m.f, 0, 255, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
+        c.f = num(m.f, 0, 1023, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
         if (!(c.f & 2) && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
           if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }
           c.body = null; c.cartId = null; broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });
@@ -585,6 +587,28 @@ wss.on('connection', (ws, req) => {
           }
           if (sell.length) { broadcast(runInfo()); if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
         }
+        break;
+      }
+      case 'breach': { // an 8 ft hole broke through into the buried town (89-town.js). Must be a real, deep hole near you.
+        const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), k = x + '|' + z;
+        if ((world.zone || 'lake') !== 'lake' || Math.hypot(x - c.x, z - c.z) > 6 || (world.holes[k] || 0) < 2.4) return;
+        if (!SIM.townBreaks(x, z, world.run.day)) return;
+        world.breaches = world.breaches || {}; if (world.breaches[k]) return;
+        world.breaches[k] = { x, z, at: Date.now(), ladder: false }; dirty = true;
+        LOG.log('breach', { id: c.id, n: c.n, x, z });
+        broadcast({ t: 'breach', k, ...world.breaches[k] });
+        break;
+      }
+      case 'ladder': { // someone staked a rope ladder in a shaft: anyone can climb it now
+        const k = String(m.k || ''), b = (world.breaches || {})[k]; if (!b) return;
+        b.ladder = true; dirty = true; broadcast({ t: 'breach', k, ...b });
+        break;
+      }
+      case 'tgot': { // town loot picked up (ids are per day's layout)
+        const id = num(m.id, 0, 999, -1) | 0; if (id < 0) return;
+        world.tgot = world.tgot && world.tgot.day === world.run.day ? world.tgot : { day: world.run.day, ids: [] };
+        if (world.tgot.ids.includes(id)) return;
+        world.tgot.ids.push(id); dirty = true; broadcast({ t: 'tgot', id }, c.id);
         break;
       }
       case 'pslip': { // the rope slipped (the owner's physics says so): everyone's rope on it comes loose
@@ -999,7 +1023,7 @@ function tickJavelinas(t, dt, players) {
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 let policeOn = false, zerOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
-  return joined().map(c => ({
+  return joined().filter(c => !c.town).map(c => ({   // campers down in the buried town (89-town.js) are out of reach of the lake
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, hp: c.hp,
     hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,

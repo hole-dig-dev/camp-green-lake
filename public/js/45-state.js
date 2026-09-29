@@ -63,6 +63,7 @@ function toast(msg,cls,ms){
 /* ---------- digging ---------- */
 let lastWarn=0;
 function scoop(){
+  if(S.inTown)return;   // no digging down in the buried town
   if(!inSinkhole()&&remoteNear(R=>R.f&32,SINK_RESCUE_R))return;   // E at a trapped friend's rim links hands (87-sinkhole.js), it doesn't dig
   if(vShoo())return;   // a well-timed swing while a vulture is diving close in front of you chases it off (83-vultures.js)
   if(rosterSwing())return;   // a hatchling, rattlesnake or scorpion in front of you: squash it (83-roster.js)
@@ -86,7 +87,7 @@ function scoop(){
   }
   const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
-  touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});
+  touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 8 ft in the old town: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
   for(const it of items){
@@ -112,8 +113,10 @@ function foundItem(it,h){
 /* ---------- interactions ---------- */
 function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
+  if(S.inTown)return townSpot();   // the buried town's own spots (89-town.js)
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)
+  {const br=breachNear(1.6);if(br&&holeDepthHere()>1.8)return{id:'townDown',k:br.k}}   // standing in a hole that broke through
   if(GRAB_ST.id!=null){const c=cartNear();if(c&&c.id!==GRAB_ST.id)return{id:'cartLoad',cart:c}}   // F: into the wheelbarrow (84-grab.js)
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   if(!inTent()){
@@ -135,6 +138,7 @@ function use(){
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);countUp('helps',10,'ladder');toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='sinkRescue')return; // hold F to link hands: handled every frame in updateSinkholes (87-sinkhole.js)
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
+  if(s.id.startsWith('town')&&townUse(s))return;
   if(s.id==='cartLoad'){loadIntoCart();return}
   if(s.id==='prop'){useProp(s.pr);return}   // grab it / let go (84-grab.js)
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}

@@ -50,7 +50,8 @@ const LOOT={
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
-  suitcase:{name:'Suitcase marked "STANLEY YELNATS"',val:500,color:0x6b3e1f,key:true}
+  suitcase:{name:'Suitcase marked "STANLEY YELNATS"',val:500,color:0x6b3e1f,key:true},
+  goldbar:{name:'Gold bar',val:90,color:0xd4af37}   // only in the buried town's vault (89-town.js)
 };
 const WEIGHTS=[['cap',30],['can',24],['spoon',14],['shoe',12],['arrow',9],['jar',6],['fossil',5],['lipstick',2],['sploosh',1.6],['locket',1.2],['pistol',0.8]];
 const WSUM=WEIGHTS.reduce((s,w)=>s+w[1],0);

@@ -164,7 +164,8 @@ function updateCurfew(dt){
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
 const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
-function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,kt:kateLoot(),on:S.onionT>0,vy:P.yaw}}
+function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:S.inTown?0:P.x,z:S.inTown?40:P.z,   // down in the buried town: out of reach, like being in camp
+  fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,kt:kateLoot(),on:S.onionT>0,vy:P.yaw}}
 function stepSoloMonsters(dt){
   if(online())return;const ev=[];if(!ZONE_H)SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);else{MONL.trucks=[];MONL.zer=null}   // police/Zeroni: lake only (88-zones.js)
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
