@@ -159,6 +159,7 @@ const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.
   const awning=box(8.8,0.22,2.5,0x493427);awning.position.set(0,2.9,-4);g.add(awning);
   const step=box(3,0.17,0.6,0x877257);step.position.set(0,0.09,-4.35);g.add(step);
   const chimney=box(0.9,2.15,0.9,0x6d5948);chimney.position.set(2.45,4.25,0.9);g.add(chimney);
+  for(const x of[-3.45,3.45])solid(-30+x,45-4.05,0.35,0.35);   // porch pillars
   const plaque=new T.Mesh(new T.PlaneGeometry(3.2,0.58),new T.MeshStandardMaterial({map:signTex('THE WARDEN',512,96,'#d9c396','#302016',39),roughness:1}));
   plaque.position.set(0,2.72,-3.1);plaque.rotation.y=Math.PI;g.add(plaque);
 }
@@ -181,10 +182,10 @@ let WATER_TRUCK_PROC=null;
 }
 /* flagpole + camp sign */
 const FLAG_PROC=[];
-{const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);
+{const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);solid(-4,38,0.4,0.4);
  const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);FLAG_PROC.push(p,f);}
-const campSign=sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);
-sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);
+const campSign=sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);solid(-11,30.5,5.1,0.35);   // posts + the board overhead, as one wall
+sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);solid(2.4,44.2,1.9,0.3);
 
 /* ---------- secured perimeter ----------
    Dense steel panels and a solid collision line share the same gate gaps. A player can jump, but the
@@ -230,6 +231,11 @@ const FENCE_POSTS=[],FENCE_SPANS=[],LAMP_POSTS=[];let FENCE_PROC=null,GATE_PROC=
   addG(GATE_X1-GATE_X0,0.42,0.36,steel,0,baseH(0,FENCE_Z0)+4.1,FENCE_Z0);
   for(const z of[EAST_GATE_Z0,EAST_GATE_Z1])gatePost(FENCE_X1,z);
   addG(0.35,0.34,EAST_GATE_Z1-EAST_GATE_Z0,steel,FENCE_X1,baseH(FENCE_X1,39)+4.0,39);
+  // The fence's collision spans stop at the last whole 2.5 m / 2.4 m panel, short of each gate post; close those
+  // slivers (posts included) so the gate opening itself is the only way through.
+  const fillX=(a,b)=>solid((a+b)/2,FENCE_Z0,b-a,0.4),fillZ=(a,b)=>solid(FENCE_X1,(a+b)/2,0.4,b-a);
+  fillX(-7.5,GATE_X0+0.2);fillX(GATE_X1-0.2,7.5);
+  fillZ(FENCE_Z0+2.4*3,EAST_GATE_Z0+0.2);fillZ(EAST_GATE_Z1-0.2,FENCE_Z0+2.4*7);
   // Camp paths visually lead to the two openings.
   add(8,0.025,7,0xb5a079,0,baseH(0,27)+0.02,27);
   add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
@@ -238,6 +244,7 @@ const FENCE_POSTS=[],FENCE_SPANS=[],LAMP_POSTS=[];let FENCE_PROC=null,GATE_PROC=
   for(const [lx,lz] of [[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
     lparts.push([0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz],[0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz]);
     LAMP_POSTS.push({x:lx,y:baseH(lx,lz),z:lz,ry:Math.atan2(-lx,40-lz)});   // lamp arm leans toward the middle of camp
+    solid(lx,lz,0.35,0.35);
   }
   LAMP_PROC=new T.Mesh(mergeBoxes(lparts),mergedMat);LAMP_PROC.castShadow=true;scene.add(LAMP_PROC);
   const gm=new T.Mesh(mergeBoxes(parts),mergedMat);gm.castShadow=true;gm.receiveShadow=true;scene.add(gm);
