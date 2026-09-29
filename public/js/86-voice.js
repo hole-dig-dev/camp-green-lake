@@ -131,6 +131,11 @@ function voiceProximityTick(){
   for(const[id,e]of VOX.relayIn)if(!remotes.has(id)||now-e.last>10000)dropRelayIn(id);   // gone, or quiet for a while
 }
 setInterval(voiceProximityTick,500);
+// play-test log (data/logs): what this camper's voice is doing, every 10 s while it's on
+setInterval(()=>{if(!VOX.enabled||typeof logEv!=='function')return;
+  logEv('voice',{mode:VOX.mode,tx:!!VOX.tx,muted:!!VOX.muted,vol:SETTINGS.volVoice,ctx:AC&&AC.state,
+    direct:[...VOX.peers].map(([id,p])=>id+':'+p.pc.connectionState),relayTo:[...(VOX.relayTo||[])],
+    relayIn:[...(VOX.relayIn||new Map())].map(([id,e])=>id+':'+(VOX.relayInN&&VOX.relayInN[id]||0)),sent:VOX.relaySent||0})},10000);
 
 /* ---- relay fallback (server side: relayVoice in server.js) ----
    Direct WebRTC needs the two browsers to reach each other, which strict home/mobile NATs block, and there's no TURN
@@ -152,7 +157,7 @@ function startRelayCapture(){
       const inp=e.inputBuffer.getChannelData(0),step=AC.sampleRate/RELAY_RATE;
       for(;relayPos<inp.length;relayPos+=step){
         relayAcc[relayN++]=muEnc(inp[relayPos|0]);
-        if(relayN===RELAY_FRAME){relayN=0;wsSend({t:'vo',to:[...VOX.relayTo].slice(0,8),a:btoa(String.fromCharCode.apply(null,relayAcc))})}
+        if(relayN===RELAY_FRAME){relayN=0;VOX.relaySent=(VOX.relaySent||0)+1;wsSend({t:'vo',to:[...VOX.relayTo].slice(0,8),a:btoa(String.fromCharCode.apply(null,relayAcc))})}
       }
       relayPos-=inp.length;
     };
@@ -164,6 +169,7 @@ function stopRelayCapture(){if(!relayNodes)return;for(const n of Object.values(r
 function handleRelayVoice(from,a){
   if(!VOX.enabled||!AC||typeof a!=='string'||!remotes.has(from))return;
   let e=VOX.relayIn.get(from);if(!e){e=Object.assign(voicePanner(),{next:0,last:0});VOX.relayIn.set(from,e)}
+  (VOX.relayInN||(VOX.relayInN={}))[from]=((VOX.relayInN[from])||0)+1;
   let bin;try{bin=atob(a)}catch(_){return}
   const n=Math.min(bin.length,RELAY_FRAME*2);if(!n)return;
   const buf=AC.createBuffer(1,n,RELAY_RATE),ch=buf.getChannelData(0);for(let i=0;i<n;i++)ch[i]=MU_DEC[bin.charCodeAt(i)&255];

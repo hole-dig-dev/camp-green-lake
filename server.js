@@ -44,15 +44,18 @@ const VO_MAX = 2048, VO_A_MAX = 1400, VO_BURST = 30, VO_REFILL = 0.025, VO_RANGE
 function relayVoice(c, raw) {
   const now = Date.now();
   c.voTok = Math.min(VO_BURST, (c.voTok == null ? VO_BURST : c.voTok) + (now - (c.voLast || now)) * VO_REFILL); c.voLast = now;
-  if (!c.joined || c.voTok < 1) return;
+  const st = c.voStat || (c.voStat = { in: 0, fwd: {}, drop: {} });   // diagnostics: GET /admin/voice
+  st.in++;
+  if (!c.joined || c.voTok < 1) { st.drop.rate = (st.drop.rate || 0) + 1; return; }
   c.voTok -= 1;
   let m; try { m = JSON.parse(raw); } catch (e) { return; }
   if (!m || typeof m.a !== 'string' || m.a.length > VO_A_MAX || !Array.isArray(m.to)) return;
   let out = null;
   for (const id of m.to.slice(0, 8)) {
     const t = clients.get(id | 0);
-    if (!t || t === c || !t.joined || t.room !== c.room || Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE) continue;
-    send(t, out || (out = JSON.stringify({ t: 'vo', f: c.id, a: m.a })));
+    const why = !t ? 'gone' : t === c ? 'self' : !t.joined ? 'notjoined' : t.room !== c.room ? 'room' : Math.hypot((t.x || 0) - (c.x || 0), (t.z || 0) - (c.z || 0)) > VO_RANGE ? 'far' : '';
+    if (why) { st.drop[why] = (st.drop[why] || 0) + 1; continue; }
+    send(t, out || (out = JSON.stringify({ t: 'vo', f: c.id, a: m.a }))); st.fwd[t.n] = (st.fwd[t.n] || 0) + 1;
   }
 }
 const LOG_BURST = 60, LOG_RATE = 0.012; // per-client play-test log budget: 60 events at once, refilling 12/s
@@ -265,6 +268,7 @@ const server = http.createServer((req, res) => {
       const q = new URL(req.url, 'http://x').searchParams;
       securityHeaders(res, false);
       res.writeHead(200, { 'content-type': 'application/json' });
+      if (url === '/admin/voice') return res.end(JSON.stringify([...clients.values()].filter(c => c.joined).map(c => ({ id: c.id, n: c.n, x: c.x, z: c.z, room: c.room, vo: c.voStat || null }))));
       if (url === '/admin/who') return res.end(JSON.stringify([...clients.values()].map(c => ({ id: c.id, n: c.n, joined: c.joined, host: c.host, v: c.v || 0 }))));
       if (url === '/admin/sethost') { const n = cleanName(q.get('name')).toLowerCase(); if (!world.hostNames.includes(n)) world.hostNames.push(n); dirty = true; for (const c of clients.values()) if (c.n.toLowerCase() === n) { c.host = true; send(c, { t: 'host', on: true }); } return res.end(JSON.stringify(world.hostNames)); }
       if (url === '/admin/refresh') { broadcast({ t: 'reset' }); return res.end('{"ok":true}'); }
