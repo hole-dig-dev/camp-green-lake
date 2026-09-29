@@ -67,8 +67,8 @@ function renderBadges(){
 /* ---- supplies: onion tonic and the first-aid kit (Wreck Room), and Q ---- */
 function useSupply(){
   if(S.ko)return;
-  if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}
-  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.onionT=Math.max(S.onionT,30);
+  if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}
+  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.onionT=Math.max(S.onionT,30);
     tone(330,0.3,'triangle',0.1,220);toast('You drink some of Sam\'s onion tonic. The sting fades, and lizards won\'t like your smell for 30 seconds.','good',4000);logEv('tonic',{});return}
   eatOnion();
 }

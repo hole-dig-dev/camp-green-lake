@@ -51,12 +51,12 @@ const SHOP=[
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
   {id:'tonic',name:'Sam\'s onion tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and lizards stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'onion'},
   {id:'medkit',name:'First-aid kit',desc:'Q: patches your injuries. Or pick up a downed friend in 1 second instead of 3 (uses one).',cost:30,stack:'medkit',cat:'survival',icon:'heart'},
-  {id:'walkie',name:'Walkie-talkie',desc:'Your chat (Enter) reaches anyone else with a walkie-talkie, anywhere on the lake.',cost:60,cat:'survival',icon:'ping'},
+  {id:'walkie',name:'Walkie-talkie',desc:'Your chat (Enter) reaches anyone else with a walkie-talkie, anywhere on the lake. You hold it up to talk, so everyone can see who\'s on the radio.',cost:60,cat:'survival',icon:'ping'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
 // painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
 // and inventory cards in place of the SVG line icons, which stay as the fallback for anything without art
-const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds']);
+const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds','tonic','medkit','walkie']);
 function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg':''}" src="icons/${path}.png" alt="">`}
 function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
 const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'}];

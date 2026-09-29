@@ -349,8 +349,24 @@ def anim_dance(rig):
     return make_action(rig, "Dance", [(1, p(1, 0.0)), (9, p(0, 0.08)), (17, p(-1, 0.0)), (25, p(0, 0.08)), (33, p(1, 0.0))])
 
 
+def anim_radio(rig):
+    """Talking into the walkie-talkie: the left hand holds it up beside the mouth (the right keeps the shovel), head tipped
+    toward it, a small nod while talking. Looping. The game lays only arm.L, forearm.L and head from this clip over
+    whatever the body is doing, so you can walk and talk (public/js/86-walkie.js)."""
+    out = []
+    for f, nod in ((1, 0.0), (12, 0.06), (24, 0.0)):
+        base = {"head": (0.08 + nod, 0.18, -0.06), "arm.R": (0.1, 0, 0.05)}
+        _apply(rig, base)
+        mouth = _center(_part(rig, "_Mouth"))
+        tgt = mouth + head_forward(rig) * 0.1 + Vector((-0.07, 0, -0.03))   # just in front of the mouth, off to the left
+        pose, err = reach(rig, "L", tgt, base, init=(1.4, 0.0, 0.2, 2.2))
+        out.append((f, pose)); print("radio frame", f, "hand error", round(err, 3))
+    return make_action(rig, "Radio", out, loop=True)
+
+
 ANIMS = {"Idle": anim_idle, "Walk": anim_walk, "Run": anim_run, "Dig": anim_dig, "Jump": anim_jump,
-         "KO": anim_ko, "Drink": anim_drink, "WipeSweat": anim_wipe, "Dance": anim_dance, "Wave": anim_wave}
+         "KO": anim_ko, "Drink": anim_drink, "WipeSweat": anim_wipe, "Dance": anim_dance, "Wave": anim_wave,
+         "Radio": anim_radio}
 
 
 GLB_PATH = r"C:\Users\jthol\Projects\camp-green-lake\public\models\camper.glb"

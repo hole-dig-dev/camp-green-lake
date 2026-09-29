@@ -904,9 +904,10 @@ wss.on('connection', (ws, req) => {
         dirty = true; LOG.log('runset', { by: c.n, curse: world.run.curse, mood: world.run.mood }); broadcast(runInfo());
         break;
       }
-      case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s
-        const k = m.k === 'twerk' || m.k === 'sing' ? m.k : null; if (!k) return;
+      case 'emote': { // twerk / sing (public/js/73-emotes.js), tonic / medkit in hand (86-walkie.js): relay to everyone else, at most one every 0.8 s
+        const k = ['twerk', 'sing', 'tonic', 'medkit'].includes(m.k) ? m.k : null; if (!k) return;
         const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
+        if (k === 'tonic' || k === 'medkit') { broadcast({ t: 'emote', id: c.id, k }, c.id); break }
         c.nz = 1; // noisy: draws Madame Zeroni like a shout
         if (k === 'sing' && MON.zer && Math.hypot(MON.zer.x - c.x, MON.zer.z - c.z) < 14) { // the lullaby, close to her: she fades away for the night
           MON.zer.song = (MON.zer.song || 0) + 1;

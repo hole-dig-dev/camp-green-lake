@@ -213,7 +213,7 @@ function updateVoice(now){
       let sum=0;for(const v of VOX.selfBuf){const d=v-128;sum+=d*d}
       speaking=Math.sqrt(sum/VOX.selfBuf.length)/128>SPEAK_LVL;
     }
-    $('#voiceBtn').classList.toggle('speaking',speaking);
+    $('#voiceBtn').classList.toggle('speaking',speaking);VOX.selfSpeaking=speaking;   // open mic: the walkie comes up while you speak (86-walkie.js)
   }
 }
 $('#voiceBtn').onclick=()=>setVoiceEnabled(!VOX.enabled);

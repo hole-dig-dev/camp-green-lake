@@ -174,10 +174,11 @@ function animModel(p,mode,dt,digPhase,speed){
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
+  if(p.held||p.heldW)heldPose(p,dt);   // walkie-talkie / tonic / first-aid kit in the left hand (86-walkie.js)
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
-  new T.GLTFLoader().load('models/camper.glb?v=1',g=>{
+  new T.GLTFLoader().load('models/camper.glb?v=2',g=>{
     MODEL.scene=g.scene;
     /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
        so the model's orange matches the rest of the camp */

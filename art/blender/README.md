@@ -16,6 +16,7 @@ The build scripts recreate their scenes from scratch:
 | `furniture.py` | BunkBed, Cot, Footlocker, CardTable, Stool, WardenDesk, SupplyCrate, WaterDrum, Bench |
 | `buildings.py` | TentSmall, TentCrew, WreckRoom, WardenHouse, Watchtower, WaterTower |
 | `beasts.py` + `rig.py` | Lizard, Javelina, Lion: modelled, then rigged, animated and exported to `glb/Creature*.glb` |
+| `supplies.py` | SupplyWalkie, SupplyTonic, SupplyMedkit: the Wreck Room supplies, matched to their painted store icons, stood on their base with the grip height recorded for the game's hand props (`public/js/86-walkie.js`) |
 | `vulture.py` | Vulture, standalone: model with rigged legs and talons, Glide/Flap/Reach/Carry clips, a `gripR` bone the game hangs a carried camper from; run it with the checkout's .blend open, then copy the GLB to `public/models/` |
 
 Sizes match the game's current layout (bunk 1.3 x 2.35 with mattress tops at 0.56/1.72, fence posts

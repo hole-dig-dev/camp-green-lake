@@ -17,7 +17,7 @@ if(PASS)campIn.value=PASS;
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0);   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0);   // 2048: talking on the walkie (86-walkie.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
   net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,tn:!!S.inTown,kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
@@ -117,7 +117,7 @@ function onMsg(m){
     case 'carried':if(Array.isArray(m.who)&&m.who.includes(myId())){badge('pallbearer');countUp('helps',10,'ladder');addXP(40)}break;
     case 'chatw':{const R=remotes.get(m.id);if(typeof m.s==='string'){const name=R?R.name:cleanName(m.n)||'Someone';toast(`📻 ${name}: ${m.s.slice(0,80)}`,'',6000);tone(900,0.05,'square',0.04)}break}
     case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
-    case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);break}
+    case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);else if(R&&HOLD_SECS[m.k])holdProp(R.p,m.k,HOLD_SECS[m.k]);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;

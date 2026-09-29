@@ -126,7 +126,7 @@ const chatIn=$('#chatIn');
 function chatOpen(){return!chatIn.hidden}
 function openChat(){chatIn.hidden=false;chatIn.value='';releaseLock();digHeld=false;for(const k in KEYS)KEYS[k]=false;setTimeout(()=>chatIn.focus(),10)}
 function closeChat(){chatIn.hidden=true;chatIn.blur()}
-function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,80);closeChat();if(!s)return;say(meL,s,6500);S.noise=1;wsSend({t:'chat',s})}
+function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,80);closeChat();if(!s)return;say(meL,s,6500);S.noise=1;wsSend({t:'chat',s});walkieChatSent()}
 
 /* ---- flashlight (L): yours, plus the three nearest friends' ---- */
 const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45,1.2);scene.add(s,s.target);FL.push(s)}
@@ -150,7 +150,7 @@ function updateCoop(dt){
   // heavy loot moves by grab physics now: 84-grab.js (updateGrab)
   // hold F next to a downed friend for 3 seconds to pick them up
   const dn=!S.ko&&!uiOpen()&&KEYS['f']?remoteNear(R=>R.f&2,2.4):null;
-  if(dn){S.revT+=dt;const need=S.medkit>0?1:3;if(S.revT>=need){S.revT=0;if(need===1){S.medkit--;toast('You used a first-aid kit.','',1800)}wsSend({t:'revive',id:dn.rid});addXP(50);countUp('helps',10,'ladder');toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
+  if(dn){S.revT+=dt;const need=S.medkit>0?1:3;if(S.revT>=need){S.revT=0;if(need===1){S.medkit--;showSupply('medkit');toast('You used a first-aid kit.','',1800)}wsSend({t:'revive',id:dn.rid});addXP(50);countUp('helps',10,'ladder');toast(`You picked up ${dn.R.name}.`,'good',2500);sfx.find()}}else S.revT=0;
   // stuck in a deep hole: hold Space to climb out slowly (fast with a rope ladder)
   if(isTrapped()&&KEYS[' ']&&!uiOpen()){S.climbT+=dt;if(S.climbT>=(S.up.rope?1.5:8)){popOut();toast('You climbed out.','',1500)}}else if(!isTrapped())S.climbT=0;
   updatePings(dt);updateLights(dt);

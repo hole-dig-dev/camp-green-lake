@@ -32,8 +32,8 @@ function invEntries(){
   // supplies
   out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
-  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
-  if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
+  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
+  if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',art:'gear/medkit',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
   out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
   out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
