@@ -74,12 +74,13 @@ function loadAudioClip(name){
   audioLoads.set(name,p);return p;
 }
 const CLIP_VOL=n=>/^step-/.test(n)?'vol.steps':/^dig-|^shovel$/.test(n)?'vol.dig':n==='metalClick'?'vol.metal':/^cloth|^door/.test(n)?'vol.props':null;
-function playAudioClip(name,volume=1,rate=1){
+function playAudioClip(name,volume=1,rate=1,lowpass=0){   // lowpass (Hz): muffle the clip through a low-pass filter
   if(!AC)return false;
   const vk=CLIP_VOL(name);if(vk)volume*=tune(vk);
   const buffer=audioBuffers.get(name);if(!buffer){loadAudioClip(name);return false}
-  const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.playbackRate.value=rate;
-  gain.gain.value=volume;src.connect(gain).connect(fxBus);src.onended=()=>{src.disconnect();gain.disconnect()};src.start();return true;
+  const src=AC.createBufferSource(),gain=AC.createGain();src.buffer=buffer;src.playbackRate.value=rate;gain.gain.value=volume;
+  let lp=null;if(lowpass){lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=lowpass;lp.Q.value=0.7;src.connect(lp).connect(gain)}else src.connect(gain);
+  gain.connect(fxBus);src.onended=()=>{src.disconnect();gain.disconnect();if(lp)lp.disconnect()};src.start();return true;
 }
 function setAmbientClip(name,volume){
   if(!AC)return;
@@ -99,8 +100,9 @@ function updateFootsteps(dt){
   const running=P.anim===4,kind=inTent()?'stone':'sand';
   footstepT=running?0.29:P.crouch?0.58:0.43;
   footstepN=(footstepN+1)%3;
-  // 10% of the original levels (JT: footsteps too loud); were 0.4 running / 0.32 walking, 0.05 for the loading fallback
-  if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.04:0.032,0.92+Math.random()*0.16))noise(0.07,280,0.6,0.005,'lowpass');
+  // 10% of the original levels and muffled below 800 Hz (JT: too loud and too crisp); were 0.4 running / 0.32 walking,
+  // 0.05 for the loading fallback (already a low-pass rumble)
+  if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.04:0.032,0.92+Math.random()*0.16,800))noise(0.07,280,0.6,0.005,'lowpass');
 }
 const BIRDS_LEVEL=0;   // the always-on day bird loop is off (JT: too much); it was 0.24. birds.mp3 stays for an occasional-call idea
 /* Desert calls: now and then (every 3-5 minutes, randomised) one far-off animal calls from a random side, picked
