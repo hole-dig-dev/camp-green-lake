@@ -52,6 +52,11 @@ const TUNE_DEFS=[
   {key:'stam.rope',tab:'Grab',label:'Pulling a taut rope costs (stamina)',def:5,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'grab.cartTip',tab:'Grab',label:'Wheelbarrow tips over above (speed)',def:1,kind:'mul',range:3,unit:'×'},
   {key:'grab.fragile',tab:'Grab',label:'How much bumps chip off the value',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  // ---- other maps (88-zones.js, 89-zone-canyon.js)
+  {key:'zone.fallSafe',tab:'Maps',label:'Falls start to hurt above (landing speed)',def:11,kind:'mul',range:2,unit:' m/s'},
+  {key:'zone.fallDmg',tab:'Maps',label:'Fall damage per m/s over that',def:7,kind:'mul',range:4,zero:true,unit:''},
+  {key:'zone.legup',tab:'Maps',label:'Leg-up jump speed (a crouching friend)',def:8.2,kind:'mul',range:1.6,unit:' m/s'},
+  {key:'zone.ropeSlow',tab:'Maps',label:'Climbing a dropped rope: walking speed',def:0.35,kind:'mul',range:3,unit:'×'},
   // ---- creatures
   {key:'vulture.attract',tab:'Creatures',label:'Vultures start circling below',def:0.55,kind:'lin',span:0.45,min:0,max:1,unit:'% hp',pct:true},
   {key:'vulture.thresh',tab:'Creatures',label:'Vultures target you below',def:0.30,kind:'lin',span:0.30,min:0,max:1,unit:'% hp',pct:true},

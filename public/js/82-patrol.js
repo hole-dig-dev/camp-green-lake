@@ -144,6 +144,7 @@ function hunterToast(h,was){
   else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
+  $('#hud').classList.toggle('zone-away',!!ZONE_H);   // curfew rows hide outside the lake (game.css)
   const t=clockT(),night=t>=DAYMS,out=!inCamp(P.x,P.z);
   stepSoloMonsters(dt);stepSoloDirector(dt);while(trucks.length<MONV.trucks.length)trucks.push(makeTruck(trucks.length));
   trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
@@ -165,7 +166,7 @@ const MONL={trucks:[],zer:null},MONV={trucks:[],zer:null};
 function myId(){return online()?net.id:'me'}
 function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:P.x,z:P.z,fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,kt:kateLoot(),on:S.onionT>0,vy:P.yaw}}
 function stepSoloMonsters(dt){
-  if(online())return;const ev=[];SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);
+  if(online())return;const ev=[];if(!ZONE_H)SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev);else{MONL.trucks=[];MONL.zer=null}   // police/Zeroni: lake only (88-zones.js)
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
   for(const e of ev)monEvent(e);
 }
@@ -176,7 +177,7 @@ function stepSoloDirector(dt){
   if(online()||!DIRECTOR_ON)return;
   if(!soloDirState)soloDirState=DIRECTOR.createState();
   const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
-  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT()});
+  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id});
   for(const d of decisions){
     if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
     else if(d.kind==='javelinas'){const ev=[];SIM.spawnJavHerd(JAV_LOCAL,{x:P.x,z:P.z},SIM.JAV_COUNT,clamp(Math.hypot(d.x-P.x,d.z-P.z),50,100),ev);for(const e of ev)javEvent(e)}

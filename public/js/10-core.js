@@ -18,12 +18,12 @@ function vnoise(x,z){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,sx=
 const HALF=600, EDGE=HALF-5, RES=0.4, N=Math.round(HALF*2/RES)+1;
 const HOLE_R=1.25, MR=1.15, CELL=4, OUTER_Y=3.2;
 const FIVE_FT=1.5, EIGHT_FT=2.6, FT=5/1.5;
-function inCamp(x,z){return z>27&&z<56&&x>-40&&x<30}
-function nearCampZone(x,z){return x>-46&&x<36&&z>12&&z<62}
+function inCamp(x,z){return !ZONE_H&&z>27&&z<56&&x>-40&&x<30}   // lake only: other maps (88-zones.js) have no camp
+function nearCampZone(x,z){return !ZONE_H&&x>-46&&x<36&&z>12&&z<62}
 /* no-dig strip around the camp fence: a hole dug right against it got half swallowed by the flat camp ground.
    The lime line and stakes in 20-world.js mark it; server.js refuses digs inside it too (same numbers). */
 const CAMP_NODIG=4;   // m out from the fence line
-function nearCampNoDig(x,z){return Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,z-56))<CAMP_NODIG}
+function nearCampNoDig(x,z){return !ZONE_H&&Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,z-56))<CAMP_NODIG}
 /* Peak-style maps (88-zones.js): while the crew is in another map, these point at that map's ground, colours, minimap
    and climbing limit. They're all null/0 on the lake, so none of the lake code changes. */
 let ZONE_H=null,ZONE_TINT=null,ZONE_MAP=null,ZONE_STEP=0;

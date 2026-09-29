@@ -135,6 +135,11 @@
      rand (optional () => [0,1) RNG; defaults to Math.random -- tests pass a seeded one for determinism)}.
      Returns an array (0 or 1 entries in practice, since DIR_MIN_GAP_MS is normally well over DIR_ROLL_MS) of
      decisions: {id,kind,x,z,a,major,mode,targetId,start}. */
+  // per-map hazard weights (88-zones.js): multiply each kind's weight in that map; missing = 1, 0 = never there
+  const ZONE_WEIGHTS = {
+    lake: {},
+    canyon: { landslide: 2.5, twister: 0.3, haboob: 0.5, tumbleweed: 0.4, sinkhole: 0, javelinas: 0.6, lion: 1.5 },
+  };
   function step(state, ctx) {
     const now = ctx.now, rand = ctx.rand || Math.random;
     state.active = (state.active || []).filter(e => e.expiresAt > now); // drop expired before budget checks below
@@ -151,9 +156,11 @@
     for (const k in REGISTRY) { const cfg = REGISTRY[k]; if (cfg.enabled && day >= cfg.minDay && cfg.times.includes(phase) && now >= (state.cooldowns[k] || 0)) eligible.push(cfg); }
     if (!eligible.length) return [];
     const outs = players.filter(p => !p.inCamp && !p.down);
-    let total = 0; for (const cfg of eligible) total += cfg.weight;
+    const zw = ZONE_WEIGHTS[ctx.zone || 'lake'] || {}, wOf = cfg => cfg.weight * (zw[cfg.key] != null ? zw[cfg.key] : 1);
+    let total = 0; for (const cfg of eligible) total += wOf(cfg);
+    if (total <= 0) return [];
     let roll = rand() * total, chosen = eligible[eligible.length - 1];
-    for (const cfg of eligible) { roll -= cfg.weight; if (roll <= 0) { chosen = cfg; break; } }
+    for (const cfg of eligible) { const w = wOf(cfg); if (w <= 0) continue; roll -= w; if (roll <= 0) { chosen = cfg; break; } }
     let placed = null, targetId = null;
     if (!outs.length) return []; // nobody out on the lake: nothing to put near anyone, and a storm nobody's out in is wasted
     if (chosen.placement === 'mapwide') {

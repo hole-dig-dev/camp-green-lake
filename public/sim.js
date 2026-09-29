@@ -6,8 +6,11 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const wrapT = t => ((t % CYCLE) + CYCLE) % CYCLE;
   const clockT = (c, now) => (c && c.paused ? wrapT(c.pt) : wrapT(now + (c ? c.off : 0)));
-  const inCamp = (x, z) => z > 27 && z < 56 && x > -40 && x < 30;
-  const nearCampZone = (x, z) => x > -46 && x < 36 && z > 12 && z < 62;
+  // the camp only exists on the lake: in another map (88-zones.js) there's no safe fence box (setZone below)
+  let ZONE_NOW = 'lake';
+  const setZone = z => { ZONE_NOW = typeof z === 'string' ? z : 'lake'; };
+  const inCamp = (x, z) => ZONE_NOW === 'lake' && z > 27 && z < 56 && x > -40 && x < 30;
+  const nearCampZone = (x, z) => ZONE_NOW === 'lake' && x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   const HEAVY = { safe: 120, strongbox: 80 };
   // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
@@ -564,7 +567,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };

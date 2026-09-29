@@ -57,7 +57,7 @@ function zoneBlocked(x0,z0,x,z,y){
 /* called from updatePlayer (70-player.js) with the move it wants: returns the move it gets */
 function zoneStep(x0,z0,x1,z1,y){
   if(!zoneBlocked(x0,z0,x1,z1,y)){
-    if(ropeAt(x1,z1)&&groundAt(x1,z1)>y+0.05)return[x0+(x1-x0)*ROPE_SLOW,z0+(z1-z0)*ROPE_SLOW];   // hand over hand
+    if(ropeAt(x1,z1)&&groundAt(x1,z1)>y+0.05)return[x0+(x1-x0)*tuneOr('zone.ropeSlow',ROPE_SLOW),z0+(z1-z0)*tuneOr('zone.ropeSlow',ROPE_SLOW)];   // hand over hand
     return[x1,z1];
   }
   ledgeHitT=0.4;
@@ -69,7 +69,7 @@ function zoneStep(x0,z0,x1,z1,y){
 function zoneJumpV(){
   for(const R of remotes.values())if((R.f&8)&&Math.hypot(R.tx-P.x,R.tz-P.z)<LEGUP_R&&Math.abs(R.ty-P.y)<0.9){
     logEv('legup',{from:R.name});if(!zoneJumpV.told){zoneJumpV.told=true;toast(`${R.name} gave you a leg-up!`,'good',1800)}
-    return LEGUP_V;
+    return tuneOr('zone.legup',LEGUP_V);
   }
   return 5.6;
 }
@@ -139,6 +139,7 @@ function zoneSeed(id){let h=2166136261;for(const ch of id+'|'+(net.day||1))h=Mat
 
 /* Move this client into map `id`. flags: that map's shared state from the server (ropes already dropped). */
 function zoneEnter(id,flags){
+  SIM.setZone(id);if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false);S.inCart=null}   // camp box, grabs and ropes don't cross maps
   const Z=ZONES[id];
   if(!Z){console.warn('No map called',id);return false}
   if(Z===ZONE){setZoneFlags(flags);return false}
@@ -245,7 +246,7 @@ function updateZones(dt){
   if(!S.started){zoneLine('');return}
   if(zonePlaceLater)zonePlace(ZONE);
   // Peak-style falls: a long drop off a ledge hurts (a twister's throw does its own damage)
-  if(P.grounded&&lastVy<-FALL_SAFE&&!(typeof twSt!=='undefined'&&twSt))hurt((-lastVy-FALL_SAFE)*FALL_DMG,'Fall','You fell off a ledge.');
+  {const fs=tuneOr('zone.fallSafe',FALL_SAFE);if(P.grounded&&lastVy<-fs&&!(typeof twSt!=='undefined'&&twSt))hurt((-lastVy-fs)*tuneOr('zone.fallDmg',FALL_DMG),'Fall','You fell off a ledge.')}
   lastVy=P.vy;
   // walking into a ledge you can't climb: say how, now and then
   if(ledgeHitT>0){ledgeHitT-=dt;ledgeTipT+=dt;if(ledgeTipT>1.2){ledgeTipT=-25;toast(online()?'Too tall to climb. A friend crouches (C) against the wall and you jump off them, or find a way round.':'Too tall to climb alone. Look for a way round: a cairn marks it.','',5200)}}

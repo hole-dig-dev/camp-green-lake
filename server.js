@@ -153,7 +153,7 @@ function zoneSwitch(id, why) {
   world.zones[cur] = { holes: world.holes, got: [...gotSet], props: world.props, bags: world.bags, zflags: world.zflags || {} };
   const z = world.zones[id] || {};
   delete world.zones[id];
-  world.zone = id; world.holes = z.holes || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
+  world.zone = id; SIM.setZone(id); ROSTER.mobs = []; JAV.list = []; world.holes = z.holes || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
   for (const c of clients.values()) c.cp = false;
   dirty = true;
   LOG.log('zone', { from: cur, to: id, why });
@@ -181,6 +181,7 @@ if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
 LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
+SIM.setZone(world.zone || 'lake');
 let dirty = false;
 let nextObj = Date.now() % 100000;
 
@@ -1038,7 +1039,7 @@ setInterval(() => {
   for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
-  SIM.stepMonsters(MON, players, t, dt, ev);
+  if ((world.zone || 'lake') === 'lake') SIM.stepMonsters(MON, players, t, dt, ev); else { MON.trucks = []; MON.zer = null; } // police and Zeroni are the lake's (88-zones.js)
   if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
   LION.noNatural = dirState.enabled; // ditto for the lion's own pre-curfew window
   SIM.stepLion(LION, players, t, dt, ev);
@@ -1068,7 +1069,7 @@ setInterval(() => {
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz })) {
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake' })) {
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
     else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }
