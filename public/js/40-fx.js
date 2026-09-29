@@ -174,5 +174,5 @@ const sfx={
   bite(){noise(0.3,900,1,0.5);tone(200,0.4,'sawtooth',0.18,60)},
   shout(){tone(300,0.15,'sawtooth',0.06,420)},
   splash(){noise(0.4,1200,0.7,0.3)},
-  thud(){tone(80,0.2,'sine',0.35,40)}
+  thud(v=1){tone(80,0.2,'sine',0.35*v,40)}   // v: volume multiplier (tumbleweeds use 0.1)
 };

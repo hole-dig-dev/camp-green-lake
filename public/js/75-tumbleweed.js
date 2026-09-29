@@ -136,10 +136,11 @@ function tbPlan(ci,cj,k){
   return{id:ci+','+cj+','+k,x,z,a,n,t0:k*TB_WIN+r()*(TB_WIN-4000),seed:((ci+640)*130363+(cj+640)*160481+k*2971215073)>>>0};
 }
 
+const TB_VOL=0.1;   // tumbleweed thuds at 10% (JT: tumbleweeds too loud)
 function tbSound(level){
   if(!AC)return;
   if(!tbWind){const src=AC.createBufferSource();src.buffer=noiseBuf;src.loop=true;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=0.6;tbWind=AC.createGain();tbWind.gain.value=0;src.connect(f).connect(tbWind).connect(fxBus);src.start()}
-  tbWind.gain.setTargetAtTime(level*0.5,AC.currentTime,0.3);
+  tbWind.gain.setTargetAtTime(level*0.05,AC.currentTime,0.3);   // 10% of the old 0.5 (JT: tumbleweeds too loud)
 }
 
 /* looks: a pooled InstancedMesh pair (two twig shades) so every tumbleweed on screen ever, twigs and all, is 2 draw
@@ -245,7 +246,7 @@ function tbRelease(cause){
     const dmg=Math.round(TB_DMG_MIN+Math.random()*(TB_DMG_MAX-TB_DMG_MIN));
     hurt(dmg,'Tumbleweed',cause==='bigbounce'?'A giant tumbleweed bounced you loose.':'You rode a giant tumbleweed too long and got flung off.');
     if(!S.ko)toast(`The tumbleweed flings you loose! -${dmg} health`,'bad',3000);
-  }else if(cause==='wriggle'){sfx.thud();toast('You wriggle free and tumble off the tumbleweed!','good',2400)}
+  }else if(cause==='wriggle'){sfx.thud(TB_VOL);toast('You wriggle free and tumble off the tumbleweed!','good',2400)}
   else toast('The tumbleweed rolls on without you.','',2200);
 }
 /* drives states 1-4 every frame, in place of the normal movement/digging code in updatePlayer (which it replaces
@@ -318,7 +319,7 @@ function updateTumbleweeds(dt){
       if(S.started&&!S.ko&&!tbSt&&tbCoolT<=0)tbHit(w);
     }
   }
-  if(nearBounce)sfx.thud();
+  if(nearBounce)sfx.thud(TB_VOL);
   tbSound(loud);
   for(let i=tbWeeds.length-1;i>=0;i--)if(tbWeeds[i].dead&&tbWeeds[i].deadT>=TB_FADE_TIME)tbWeeds.splice(i,1);
   for(let i=tbGusts.length-1;i>=0;i--)if((T0-tbGusts[i].t0)/1000>=TB_LIFE+TB_FADE_TIME+1)tbGusts.splice(i,1);
