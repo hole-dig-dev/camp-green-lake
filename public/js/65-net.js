@@ -20,7 +20,7 @@ function sendPresence(now){
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0);
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water)});
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
 }
 
 /* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
@@ -80,6 +80,7 @@ function onMsg(m){
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
       if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
       javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
+      rosterSnapshot(m.rost||[],m.rostToday); // and the day's roster (83-roster.js)
       lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
       renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
@@ -105,6 +106,7 @@ function onMsg(m){
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
+    case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
     case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;

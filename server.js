@@ -372,6 +372,7 @@ wss.on('connection', (ws, req) => {
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
+      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day), // and the day's roster
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -429,6 +430,7 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
+        c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js)
@@ -663,6 +665,24 @@ wss.on('connection', (ws, req) => {
         if (SIM.lionSwat(LION)) { LOG.log('lionSwat', { id: c.id, n: c.n, hp: Math.round(LION.hp) }); lionEvQ.push({ k: 'swat', id: c.id }); }
         break;
       }
+      case 'rswat': { // a shovel swing at the small roster critters (public/js/83-roster.js rosterSwing)
+        const now = Date.now(); if (now - (c.rswatAt || 0) < 300) return; c.rswatAt = now;
+        const sx = num(m.x, -620, 620, c.x), sz = num(m.z, -620, 620, c.z), sfa = num(m.fa, -10, 10, c.r);
+        if (Math.hypot(sx - c.x, sz - c.z) > 3) return; // must be (about) where the server last saw you
+        const rev = []; if (SIM.rosterSwat(ROSTER, { id: c.id, x: sx, z: sz, fa: sfa }, rev)) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
+        break;
+      }
+      case 'roster': { // host/play-test console: roster all | off | today | <kind>  (see 83-roster.js)
+        if (!c.host) return;
+        const op = String(m.op || '');
+        if (op === 'all') { ROSTER.all = true; ROSTER.off = []; }
+        else if (op === 'today') { ROSTER.all = false; ROSTER.force = []; ROSTER.off = []; }
+        else if (op === 'off') { ROSTER.all = false; ROSTER.force = []; ROSTER.off = SIM.RO_KINDS.slice(); ROSTER.mobs = []; }
+        else if (SIM.RO_KINDS.includes(op)) { ROSTER.off = (ROSTER.off || []).filter(k => k !== op); ROSTER.force = [...new Set([...(ROSTER.force || []), op])]; SIM.rosterSpawnNow(ROSTER, op, { x: c.x, z: c.z }); }
+        else return;
+        LOG.log('roster', { op, by: c.n });
+        break;
+      }
       case 'emote': { // twerk / sing (public/js/73-emotes.js): relay to everyone else, at most one every 0.8 s
         const k = m.k === 'twerk' || m.k === 'sing' ? m.k : null; if (!k) return;
         const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
@@ -762,6 +782,21 @@ function dirStartMonster(d, tx, tz) {
     broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
   } else if (d.kind === 'lion') LION.pendingSpawn = { x: d.x, z: d.z };
 }
+// The day's monster roster (sim.js stepRoster): hatchlings, rattlesnakes, scorpions, Mr. Sir, the Warden, the Sheriff's
+// ghost and Kate Barlow's ghost. Same pattern as the herd: server-authoritative, one 'rost' message per tick while any are out.
+const ROSTER = { mobs: [] };
+let rostOn = false;
+function tickRoster(t, dt, players) {
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day });
+  const now = Date.now();
+  for (const e of rev) {
+    if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
+    if (e.k !== 'rattle') LOG.log('roster', { ev: e.k, id: e.id, by: e.by });
+  }
+  const on = ROSTER.mobs.length > 0;
+  if (on || rostOn || rev.length) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
+  rostOn = on;
+}
 function tickJavelinas(t, dt, players) {
   JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
   const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
@@ -781,6 +816,7 @@ function simPlayers(now) {
     hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
     nz: now - (c.chatAt || 0) < 3000 ? 1 : c.nz,
+    kt: !!c.kt, on: !!c.on, vy: c.vy || 0, // for the roster (sim.js stepRoster): Kate's loot, an onion on, where the camera looks
   }));
 }
 function endOfDay() {
@@ -860,6 +896,7 @@ setInterval(() => {
     broadcast({ t: 'dirinfo', ...DIRECTOR.describe(dirState, now, world.run.day, Math.max(1, joined().length)) });
   }
   tickJavelinas(t, dt, players);
+  tickRoster(t, dt, players);
   for (const c of clients.values()) c.nz *= 0.9;
 }, 100);
 

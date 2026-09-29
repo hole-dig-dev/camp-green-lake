@@ -65,6 +65,7 @@ let lastWarn=0;
 function scoop(){
   if(!inSinkhole()&&remoteNear(R=>R.f&32,SINK_RESCUE_R))return;   // E at a trapped friend's rim links hands (87-sinkhole.js), it doesn't dig
   if(vShoo())return;   // a well-timed swing while a vulture is diving close in front of you chases it off (83-vultures.js)
+  if(rosterSwing())return;   // a hatchling, rattlesnake or scorpion in front of you: squash it (83-roster.js)
   if(javSwing())return;   // a live javelina in shovel reach gets whacked instead of the ground getting dug
   if(lionSwing())return;   // the mountain lion is in melee range: this shovel swing hits it instead of digging (see 85-lion.js)
   if(bonkSwing())return;   // a friend (or crew member) right in front of you: the swing bonks them instead (71-bonk.js)

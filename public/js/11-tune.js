@@ -27,6 +27,9 @@ const TUNE_DEFS=[
   {key:'dmg.Bitten',tab:'Damage',label:'Javelina bite',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Mountain lion',tab:'Damage',label:'Mountain lion pounce',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Vulture',tab:'Damage',label:'Vulture drop',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'dmg.Lizard hatchling',tab:'Damage',label:'Lizard hatchling bite (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'dmg.Rattlesnake',tab:'Damage',label:'Rattlesnake strike (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'dmg.Scorpion',tab:'Damage',label:'Scorpion sting (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'hp.thirst',tab:'Damage',label:'Heatstroke builds (out of water)',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
   {key:'water.last',tab:'Damage',label:'Water lasts (vs the original drain)',def:3,kind:'mul',range:4,unit:'×'},   // JT: water lasts 3x longer by default
   {key:'hp.healRate',tab:'Damage',label:'Injuries heal',def:1.5,kind:'mul',range:4,zero:true,unit:' hp/s'},
