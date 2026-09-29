@@ -22,7 +22,7 @@ function ensureVoiceBus(){if(voiceMaster)return;initAudio();voiceMaster=AC.creat
 function sendRtc(to,d){wsSend({t:'rtc',to,d})}
 function updateVoiceHud(){
   const b=$('#voiceBtn');b.textContent=VOX.enabled?'Voice on':'Voice off';b.setAttribute('aria-pressed',VOX.enabled?'true':'false');
-  $('#voiceModeBtn').hidden=!VOX.enabled;$('#voiceModeBtn').textContent=VOX.mode==='ptt'?'Push-to-talk (hold B)':'Open mic (always on)';
+  $('#voiceModeBtn').hidden=!VOX.enabled;$('#voiceModeBtn').textContent=VOX.mode==='ptt'?'Push-to-talk (hold P)':'Open mic (always on)';
   $('#voiceMuteBtn').hidden=!VOX.enabled;$('#voiceMuteBtn').textContent=VOX.muted?'Unmute voices':'Mute voices';
 }
 function setMicTransmitting(on){VOX.tx=on;if(VOX.localStream)for(const t of VOX.localStream.getAudioTracks())t.enabled=on}
