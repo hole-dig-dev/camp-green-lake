@@ -66,7 +66,7 @@ const numArg=(v,def,a,b)=>{if(v===undefined)return def;const n=Number(v);if(!Num
 
 command('help',{needsGame:false,usage:'help',help:'List every command.',run(){return[...CMDS.values()].map(c=>c.usage.padEnd(22)+c.help).join('\n')}});
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
-command('audio',{usage:'audio [status|call|old|new|<category> old|new]',help:'A/B the original and recorded sounds locally. Categories: wind, ambience, rain, steps, dig, metal, props. "audio call" plays a desert call that fits the time of day.',
+command('audio',{usage:'audio [status|call|old|new|<cat> old|new]',help:'A/B old vs new sounds here (cat: wind ambience rain steps dig metal props); call = a desert call now',
   run([a,b]){
     a=(a||'').toLowerCase();b=(b||'').toLowerCase();
     if(!a||a==='status')return audioModeStatus();
