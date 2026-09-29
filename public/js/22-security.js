@@ -62,7 +62,7 @@ function towerRy(o){
 }
 /* The beam is the same tilted cone SIM.towerLit uses, drawn long enough that its far end is underground: the terrain
    hides everything past where it lands, so the top edge visibly reaches farther than the bottom one (no floating
-   end cap). It fades toward the far end. Where it lands, 47-searchlight-ground.js lights up the terrain (SL_U). */
+   end cap). It fades toward the far end. Where it lands, 47-searchlight-glow.js lights up the terrain (SL_U). */
 const TOWER_AXIS=new T.Vector3(0,-1,0),TOWER_DIR=new T.Vector3();
 const TOWER_BEAM_FADE=0.3;   // how bright the far end of the visible beam is, compared with the lamp end
 const TOWER_POOL=0.55;       // brightness of the lit patch on the ground, at full night
