@@ -64,6 +64,11 @@ Branch: <branch> @ <short hash>
 | Add, don't replace: JT's lake is map 1, unchanged. His monsters and hazards run in every map by default | Greg's rule for his side | `public/js/88-zones.js` header |
 | Maps swap into the same ±600 m square the lake uses, so server clamps and `sim.js` need no changes | Built on Greg's branch; the other Claude's review wanted | `public/js/88-zones.js` |
 | Getting there should be the game: ledges you can't climb alone, leg-ups, ropes, fall damage | First pass in the Dry Canyon | `public/js/89-zone-canyon.js` |
+| Physics for carried things runs on the first grabber's computer (no cannon-es) | Both Claudes agree for now | `public/js/84-grab.js` |
+| Health and stamina are one *Peak*-style bar that afflictions shrink; water stays separate | Built by JT's Claude | `public/js/70-player.js` |
+| The camp, curfew and the police ring only exist on the lake | Both Claudes agree; built | `public/sim.js` `setZone`, `public/js/10-core.js` |
+| Off the lake, night means "reach the campfire before dark", with the search party behind you | Both Claudes agree; JT hasn't decided | `2026-09-29-0905-jt-claude-reply-zones-and-arc.md` |
+| Sentence length is a lobby setting (2 for playtests), and Zero runs early on quota, so every session reaches Act 2 | Proposed by both Claudes; JT and Greg to decide | `docs/plans/2026-09-28-repo-to-peak-design.md` |
 
 ## Open questions
 
@@ -71,11 +76,14 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 - **JT:** does the two-act arc fit how you see the game, or does it take it somewhere you don't want to go?
 - **JT:** what should survive a game over? Levels survive being fired today.
-- **JT / Greg:** twerk is on B, which is push-to-talk on `jt/next`. Which one moves?
+- ~~**JT / Greg:** twerk or push-to-talk on B?~~ Push-to-talk moved to P.
 - **JT:** in Act 1, is it OK for dig sites to push outward day by day, changing where people dig on the lake?
-- **Claude:** which of JT's hazards feel wrong in a narrow canyon? For example, police trucks driving their camp ring. Should maps be able to switch hazards off, or should hazards learn about maps?
-- **Claude:** should the *Peak*-style stamina and heat bar be built on JT's existing health and water, or be separate? Greg's older branch had its own stamina.
-- **Claude:** the leg-up (jumping off a crouching friend) is simple. Is it enough, or do we need real climbing (hold a key on a wall, stamina drains)?
+- **Claude:** which hazards feel wrong in a narrow canyon? Police are off the lake now. Next: per-map weights (`zone.hazards = {landslide: 2, warden: 0}`) and a placement check so spawns don't land in walls.
+- ~~**Claude:** stamina separate or on JT's health?~~ One bar, built by JT's Claude.
+- **JT / Greg:** should about 1 in 3 finds come out as fragile objects you carry (more from deeper holes)? It changes how digging feels.
+- **Claude:** carry Act 1's loot through Act 2, or spend it on gear before Zero runs? (Greg's Claude leans towards spending most of it and carrying Kate's strongbox as the score.)
+- **Claude:** when a grabber lets go or disconnects, who owns the object's physics next?
+- ~~**Claude:** is the leg-up enough?~~ No: a mantle plus a booster who holds F (`feature/climb`).
 - **Claude:** how should the map order and daily variants work (lake → ranch or ruins → canyon or onion fields → Big Thumb)?
 - **Claude:** where does the late-game *R.E.P.O.* loot go in Act 2? Cash it in at the end, turn it into gear, or both?
 
@@ -83,4 +91,6 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `buissong/repo-to-peak-2026-09-29`: merged `jt/next` @ `7dd1e97` (JT's ports), made the camp and curfew lake-only, updated the build order. See `2026-09-29-1400-greg-claude-reply-ports-and-refocus.md`.
+- `jt/next` (JT's Claude): the ports of Greg's systems (emotes, stamina, roster, grabbing, rope, wheelbarrow, bodies, quick wins) and the reply on zones. See the three `2026-09-29-*-jt-claude-*` notes.
 - `buissong/repo-to-peak-2026-09-28`: the plan, the zone system and the Dry Canyon. See `2026-09-28-2330-greg-claude-hello.md`.
