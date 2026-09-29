@@ -13,7 +13,7 @@ const TUNE_DEFS=[
   // ---- finds: the item that pops out of your hole
   {key:'finds.smallScale',tab:'Finds',label:'Common find size (cap, can, spoon…)',def:3,kind:'mul',range:4,unit:'×'},
   {key:'finds.bigScale',tab:'Finds',label:'Big find size (safe, strongbox, KB, suitcase)',def:1,kind:'mul',range:4,unit:'×'},
-  {key:'finds.rise',tab:'Finds',label:'How high it floats up',def:2.4,kind:'lin',span:2.4,min:0,unit:' m'},
+  {key:'finds.rise',tab:'Finds',label:'How high it floats up',def:1.04,kind:'lin',span:2,min:0,unit:' m'},
   {key:'finds.start',tab:'Finds',label:'Where it starts (above the hole floor)',def:0.2,kind:'lin',span:1,min:-1,unit:' m'},
   {key:'finds.riseTime',tab:'Finds',label:'Time to float up',def:1,kind:'mul',range:4,unit:' s'},
   {key:'finds.hold',tab:'Finds',label:'Time before it shrinks away',def:2.2,kind:'mul',range:4,unit:' s'},
