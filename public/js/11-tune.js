@@ -30,8 +30,8 @@ const TUNE_DEFS=[
   {key:'dmg.Lizard hatchling',tab:'Damage',label:'Lizard hatchling bite (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Rattlesnake',tab:'Damage',label:'Rattlesnake strike (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Scorpion',tab:'Damage',label:'Scorpion sting (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
-  {key:'hp.thirst',tab:'Damage',label:'Heatstroke builds (out of water)',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
-  {key:'water.last',tab:'Damage',label:'Water lasts (vs the original drain)',def:3,kind:'mul',range:4,unit:'×'},   // JT: water lasts 3x longer by default
+  {key:'hp.thirst',tab:'Damage',label:'Thirst: health lost per second once your water runs out',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
+  {key:'water.last',tab:'Damage',label:'Water lasts (how long a full canteen goes, vs the original)',def:3,kind:'mul',range:4,unit:'×'},   // JT: water lasts 3x longer by default
   {key:'hp.healRate',tab:'Damage',label:'Injuries heal',def:1.5,kind:'mul',range:4,zero:true,unit:' hp/s'},
   {key:'hp.healDelay',tab:'Damage',label:'Wait before injuries start healing',def:5,kind:'mul',range:4,unit:' s'},
   // ---- stamina and afflictions (70-player.js)
@@ -57,6 +57,29 @@ const TUNE_DEFS=[
   {key:'zone.fallDmg',tab:'Maps',label:'Fall damage per m/s over that',def:7,kind:'mul',range:4,zero:true,unit:''},
   {key:'zone.legup',tab:'Maps',label:'Leg-up jump speed (a crouching friend)',def:8.2,kind:'mul',range:1.6,unit:' m/s'},
   {key:'zone.ropeSlow',tab:'Maps',label:'Climbing a dropped rope: walking speed',def:0.35,kind:'mul',range:3,unit:'×'},
+  // ---- you: moving and digging (70-player.js, 45-state.js)
+  {key:'move.walk',tab:'Player',label:'Walking speed',def:4.3,kind:'mul',range:2,unit:' m/s'},
+  {key:'move.sprint',tab:'Player',label:'Sprinting speed',def:7.2,kind:'mul',range:2,unit:' m/s'},
+  {key:'move.crouch',tab:'Player',label:'Crouching speed',def:2,kind:'mul',range:2,unit:' m/s'},
+  {key:'move.jump',tab:'Player',label:'Jump (take-off speed; 5.6 is about 1 m)',def:5.6,kind:'mul',range:1.6,unit:' m/s'},
+  {key:'dig.time',tab:'Player',label:'Time per shovel scoop',def:0.42,kind:'mul',range:3,unit:' s'},
+  {key:'dig.depth',tab:'Player',label:'How deep each scoop goes',def:1,kind:'mul',range:3,unit:'×'},
+  // ---- ragdolls (26-ragdoll.js) and what throws you around
+  {key:'rag.flop',tab:'Ragdoll',label:'How floppy arms and legs are',def:1,kind:'mul',range:3,unit:'×'},
+  {key:'rag.flail',tab:'Ragdoll',label:'Arm flailing in the air',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'rag.fallKnock',tab:'Ragdoll',label:'A landing this fast knocks you flat',def:11,kind:'mul',range:2,unit:' m/s'},
+  {key:'rag.knockTime',tab:'Ragdoll',label:'Knocked flat for',def:1.4,kind:'mul',range:3,unit:' s'},
+  {key:'rag.twister',tab:'Ragdoll',label:'Twister throw strength',def:1,kind:'mul',range:2.5,unit:'×'},
+  {key:'rag.bonk',tab:'Ragdoll',label:'Shovel bonk launch',def:1,kind:'mul',range:3,zero:true,unit:'×'},
+  // ---- monsters, events and the curse (the server reads these too, from the play-test server's saved sliders)
+  {key:'mon.roster',tab:'Monsters',label:'Roster monsters spawn rate',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'mon.events',tab:'Monsters',label:'Hazard events (twisters, storms…) happen',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'curse.ko',tab:'Monsters',label:'Curse: per knockout',def:4,kind:'mul',range:4,zero:true,unit:'%'},
+  {key:'curse.curfew',tab:'Monsters',label:'Curse: per camper outside at curfew',def:5,kind:'mul',range:4,zero:true,unit:'%'},
+  {key:'curse.dawn',tab:'Monsters',label:'Curse: eases each dawn by',def:3,kind:'mul',range:4,zero:true,unit:'%'},
+  {key:'curse.quota',tab:'Monsters',label:'Curse: eases when the quota is met by',def:10,kind:'mul',range:3,zero:true,unit:'%'},
+  {key:'curse.lullaby',tab:'Monsters',label:'Curse: eases when Zeroni is sung away by',def:20,kind:'mul',range:3,zero:true,unit:'%'},
+  {key:'mood.heat',tab:'Monsters',label:'Heatwave: water drain',def:1.6,kind:'mul',range:2,unit:'×'},
   // ---- creatures
   {key:'vulture.attract',tab:'Creatures',label:'Vultures start circling below',def:0.55,kind:'lin',span:0.45,min:0,max:1,unit:'% hp',pct:true},
   {key:'vulture.thresh',tab:'Creatures',label:'Vultures target you below',def:0.30,kind:'lin',span:0.30,min:0,max:1,unit:'% hp',pct:true},

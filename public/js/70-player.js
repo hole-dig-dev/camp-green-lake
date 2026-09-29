@@ -56,13 +56,13 @@ function updatePlayer(dt){
   const digging=digHeld&&!uiOpen()&&S.carry==null;
   P.moving=false;
   if(digging){
-    P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=0.42;P.digPh=(P.digT%iv)/iv;
+    P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=tune('dig.time');P.digPh=(P.digT%iv)/iv;
     if(P.digT>=iv){P.digT-=iv;scoop()}
     P.anim=2;
   }else{
     P.digT=0.3;
     if(ml>0.1){
-      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?2:sprint?7.2:4.3)*Math.min(1,ml);if(S.carry!=null)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
+      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(S.carry!=null)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
@@ -76,9 +76,9 @@ function updatePlayer(dt){
   // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever
   // non-zero while that state machine owns the frame, so there's nothing left to integrate here.
   const g=groundAt(P.x,P.z);
-  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():5.6;P.grounded=false;drainStam(tune('stam.jump'))}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
+  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():tune('move.jump');P.grounded=false;drainStam(tune('stam.jump'))}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
   P.vy-=16*dt;P.y+=P.vy*dt;
-  if(P.y<=g){if(P.vy<-11)ragKnock(1.4,P.kx||0,P.vy*0.4,P.kz||0);P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;   // ragKnock: a hard landing puts you on the ground (26-ragdoll.js)
+  if(P.y<=g){if(P.vy<-tune('rag.fallKnock'))ragKnock(tune('rag.knockTime'),P.kx||0,P.vy*0.4,P.kz||0);P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;   // ragKnock: a hard landing puts you on the ground (26-ragdoll.js)
   if(P.y<g+0.02)P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
@@ -87,7 +87,7 @@ function updatePlayer(dt){
   if(PARTY.on&&P.anim===0){const beat=PARTY.t*BPM/60;danceArms(me,beat,0);me.g.position.y=P.y+Math.abs(Math.sin(beat*Math.PI))*0.45}
   /* water: drains per second by activity, divided by the 'Water lasts' slider (11-tune.js, 3x by default) */
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
-  S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(RUN.mood==='heatwave'?1.6:1)*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
+  S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(RUN.mood==='heatwave'?tune('mood.heat'):1)*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);

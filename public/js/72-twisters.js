@@ -150,8 +150,8 @@ function twStart(tw,d){
 /* the throw: flings you outward and hurts you same as before, then hands off to the airborne ragdoll tumble */
 function twThrow(tw){
   twCool=4;                                                    // a few seconds before it can grab you again
-  const out=Math.random()*Math.PI*2,sp=16+tw.s*6;
-  P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=10+tw.s*3;P.grounded=false;
+  const out=Math.random()*Math.PI*2,tk=tune('rag.twister'),sp=(16+tw.s*6)*tk;
+  P.kx=Math.cos(out)*sp;P.kz=Math.sin(out)*sp;P.vy=(10+tw.s*3)*Math.min(1.6,tk);P.grounded=false;
   twRagX=(Math.random()*2-1)*11;twRagY=(Math.random()*2-1)*7;twRagZ=(Math.random()*2-1)*9;  // mixed axes: a tumble, not a spin
   twSt=2;twStT=0;digHeld=false;sfx.hiss();
   const dmg=Math.round(TW_DMG*tw.s);

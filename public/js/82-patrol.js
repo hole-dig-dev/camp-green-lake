@@ -178,7 +178,7 @@ function stepSoloDirector(dt){
   if(online()||!DIRECTOR_ON)return;
   if(!soloDirState)soloDirState=DIRECTOR.createState();
   const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
-  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id,curse:RUN.curse||0});
+  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id,curse:RUN.curse||0,rate:tune('mon.events')});
   for(const d of decisions){
     if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
     else if(d.kind==='javelinas'){const ev=[];SIM.spawnJavHerd(JAV_LOCAL,{x:P.x,z:P.z},SIM.JAV_COUNT,clamp(Math.hypot(d.x-P.x,d.z-P.z),50,100),ev);for(const e of ev)javEvent(e)}

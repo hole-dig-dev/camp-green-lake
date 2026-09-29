@@ -85,7 +85,7 @@ function scoop(){
     if(now-lastWarn>3000){lastWarn=now;if(maxD<EIGHT_FT)toast('That\'s 5 feet, as deep as your shovel reaches. A long-handled shovel from the Wreck Room goes to 8 feet.');else toast('8 feet. Your shovel won\'t go any deeper.')}
     sfx.thud();return;
   }
-  const step=(S.up.spade?0.15:0.088)*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
+  const step=(S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 8 ft in the old town: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)

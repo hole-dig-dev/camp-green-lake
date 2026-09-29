@@ -249,6 +249,10 @@ function sendStatic(res, subdir, rawName) {
 // ---- control-center slider values (DEV_MODE only): data/tune.json, { key: { v, def } } for the knobs someone moved.
 // Claude reads this file to bake a tester's values in as new defaults. Untrusted input: plain numbers under short keys only.
 const TUNE_FILE = path.join(DATA_DIR, 'tune.json'), TUNE_MAX_BYTES = 16384, TUNE_KEY_RE = /^[A-Za-z0-9_. ]{1,40}$/;
+// the server's copy of the tester's sliders (the few rules the server runs: roster, events, the curse)
+let TUNE_S = {};
+try { TUNE_S = JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')) || {}; } catch (e) { /* none saved yet */ }
+function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
     securityHeaders(res, false);
@@ -282,6 +286,7 @@ function saveTune(req, res) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
       if (err) { res.writeHead(500); return res.end('save failed'); }
+      TUNE_S = clean;
       fs.rename(TUNE_FILE + '.tmp', TUNE_FILE, () => { securityHeaders(res, false); res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); });
     });
   });
@@ -889,7 +894,7 @@ wss.on('connection', (ws, req) => {
       }
       case 'koCurse': { // a camper got knocked out (any cause): the curse grows a little. At most once a minute each.
         const now = Date.now(); if (now - (c.koCurseAt || 0) < 60000) return; c.koCurseAt = now;
-        addCurse(SIM.CURSE.KO, `${c.n} knocked out`);
+        addCurse(tuneS('curse.ko', 4), `${c.n} knocked out`);
         break;
       }
       case 'runset': { // host/play-test console: curse <n> | mood <name>
@@ -908,7 +913,7 @@ wss.on('connection', (ws, req) => {
           if (MON.zer.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
             const zx = MON.zer.x, zz = MON.zer.z; MON.appeased = true; MON.zer = null;
             LOG.log('appeased', { by: c.n }); broadcast({ t: 'mon', ...monSnapshot(), ev: [{ k: 'appeased', x: r1(zx), z: r1(zz), by: c.n }] });
-            addCurse(SIM.CURSE.LULLABY, `${c.n} sang Madame Zeroni away`);
+            addCurse(-tuneS('curse.lullaby', 20), `${c.n} sang Madame Zeroni away`);
           }
         }
         broadcast({ t: 'emote', id: c.id, k }, c.id);
@@ -1026,7 +1031,7 @@ ensureCart();
 const ROSTER = { mobs: [] };
 let rostOn = false;
 function tickRoster(t, dt, players) {
-  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood });
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1) });
   const now = Date.now();
   for (const e of rev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -1066,7 +1071,7 @@ function endOfDay() {
   if (world.run.bank >= q.quota) {
     LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
     world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
-    world.run.curse = Math.max(0, (world.run.curse || 0) + SIM.CURSE.QUOTA); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
+    world.run.curse = Math.max(0, (world.run.curse || 0) - tuneS('curse.quota', 10)); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
     broadcast({ ...runInfo(), t: 'quota', met: true });
   } else {
     // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
@@ -1085,10 +1090,10 @@ setInterval(() => {
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)
     const out = (world.zone || 'lake') === 'lake' ? joined().filter(c => !c.town && !SIM.inCamp(c.x, c.z)).length : 0;
-    if (out) addCurse(SIM.CURSE.CURFEW_OUT * out, `${out} camper${out > 1 ? 's' : ''} outside the fence at curfew`);
+    if (out) addCurse(tuneS('curse.curfew', 5) * out, `${out} camper${out > 1 ? 's' : ''} outside the fence at curfew`);
     endOfDay();
   }
-  if (lastT > t + SIM.CYCLE / 2 && (world.run.curse || 0) > 0) addCurse(SIM.CURSE.DAWN, 'dawn');   // the clock wrapped: a new morning
+  if (lastT > t + SIM.CYCLE / 2 && (world.run.curse || 0) > 0) addCurse(-tuneS('curse.dawn', 3), 'dawn');   // the clock wrapped: a new morning
   lastT = t;
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
@@ -1127,7 +1132,7 @@ setInterval(() => {
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0 })) {
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0, rate: tuneS('mon.events', 1) })) {
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
     else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }

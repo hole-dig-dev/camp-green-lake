@@ -43,7 +43,7 @@ $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.curse=Math.max(0,(RUN.curse||0)+SIM.CURSE.QUOTA);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
+  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.curse=Math.max(0,(RUN.curse||0)-tune('curse.quota'));RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
   else if(played<180)graceDay();
   else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;RUN.curse=0;RUN.mood='normal';saveRun();fired(b,q)}
 }

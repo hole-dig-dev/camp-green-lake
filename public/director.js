@@ -147,7 +147,8 @@
     if (!state.enabled) return [];
     if (now < state.nextRollAt) return [];
     const day = ctx.day || 1, players = ctx.players || [], crew = Math.max(1, players.length);
-    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200);   // the curse: up to 1.5x
+    const rate = ctx.rate == null ? 1 : ctx.rate; if (rate <= 0) return [];   // the tester's events slider
+    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200) * rate;   // the curse: up to 1.5x
     state.nextRollAt = now + Math.max(4000, DIR_ROLL_MS / intensity + (rand() * 2 - 1) * DIR_ROLL_JITTER);
     if (now - state.lastGlobalAt < DIR_MIN_GAP_MS) return []; // global cooldown: never two natural events too close together
     if (rand() > Math.min(0.9, DIR_BASE_CHANCE * intensity)) return []; // the roll itself

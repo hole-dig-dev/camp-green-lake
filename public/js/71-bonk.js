@@ -39,7 +39,7 @@ function bonked(by,dx,dz){
   sfx.clank();sfx.thud();hurtFx=Math.max(hurtFx,0.2);logEv('bonked',{by,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(holeDepthHere()>BONK_DEEP||S.carry!=null){toast(`BONK! ${by} rang your bell.`,'',2000);return}   // in a hole or hauling loot: dizzy, not launched
   const l=Math.hypot(dx,dz)||1;
-  P.kx=dx/l*BONK_SPEED;P.kz=dz/l*BONK_SPEED;P.vy=BONK_VY;P.grounded=false;digHeld=false;
+  const bk=tune('rag.bonk');P.kx=dx/l*BONK_SPEED*bk;P.kz=dz/l*BONK_SPEED*bk;P.vy=BONK_VY*Math.min(1.5,bk);P.grounded=false;digHeld=false;
   twRagX=(Math.random()*2-1)*9;twRagY=(Math.random()*2-1)*6;twRagZ=(Math.random()*2-1)*8;   // same mixed-axis tumble as a twister throw
   twSt=2;twStT=0;   // hand the player to the twister's airborne -> down -> get-up states (72-twisters.js twStep)
   toast(`BONK! ${by} whacked you with a shovel.`,'',2500);

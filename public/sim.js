@@ -482,7 +482,8 @@
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
     const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
     const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k);
-    const cmul = 1 + cz / 100;   // the curse: everything spawns faster
+    const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the curse (and the tester's rate slider): everything spawns faster
+    if (o.rate === 0) { R.mobs = R.mobs.filter(m => !roSmall(m.k)); }
     const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];

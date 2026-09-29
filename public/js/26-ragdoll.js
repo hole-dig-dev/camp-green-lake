@@ -69,12 +69,13 @@ function ragStep(p,dt,ground){
   const damp=0.992,g=RAG_G*(1-(r.lift||0))*dt*dt;
   for(const q of pts){const vx=(q.x-q.px)*damp,vy=(q.y-q.py)*damp,vz=(q.z-q.pz)*damp;q.px=q.x;q.py=q.y;q.pz=q.z;q.x+=vx;q.y+=vy-g;q.z+=vz}
   // flailing (Peak's airborne arms): little random shoves on the hands and feet while pinned in the air
-  if(r.flail){for(const i of[RP.hdL,RP.hdR,RP.ftL,RP.ftR]){const q=pts[i],s=r.flail*dt*dt*60;q.x+=(Math.random()-0.5)*s;q.y+=(Math.random()-0.3)*s;q.z+=(Math.random()-0.5)*s}}
+  if(r.flail&&tune('rag.flail')>0){const fl=tune('rag.flail');for(const i of[RP.hdL,RP.hdR,RP.ftL,RP.ftR]){const q=pts[i],s=r.flail*fl*dt*dt*60;q.x+=(Math.random()-0.5)*s;q.y+=(Math.random()-0.3)*s;q.z+=(Math.random()-0.5)*s}}
   for(let it=0;it<RAG_ITER;it++){
-    for(const[a,b,len,stiff,min]of r.links){
-      const A=pts[a],B=pts[b],dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z,d=Math.hypot(dx,dy,dz)||1e-4;
+    const fold=clamp(1/tune('rag.flop'),0.3,1.9);   // rag.flop: how far elbows, legs and neck may fold (floppier = folds more)
+    for(const[a,b,len0,stiff,min]of r.links){
+      const len=min?len0*fold:len0,A=pts[a],B=pts[b],dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z,d=Math.hypot(dx,dy,dz)||1e-4;
       if(min&&d>=len)continue;   // an inequality ("at least this far") that's already satisfied
-      const k=(d-len)/d*0.5*stiff;A.x+=dx*k;A.y+=dy*k;A.z+=dz*k;B.x-=dx*k;B.y-=dy*k;B.z-=dz*k;
+      const k=(d-len)/d*0.5*(stiff<1?Math.min(1,stiff*fold):stiff);A.x+=dx*k;A.y+=dy*k;A.z+=dz*k;B.x-=dx*k;B.y-=dy*k;B.z-=dz*k;
     }
     if(r.pin){const q=pts[r.pin.at==='chest'?RP.chest:RP.pelvis],k=r.pin.k;q.x+=(r.pin.x-q.x)*k;q.y+=(r.pin.y-q.y)*k;q.z+=(r.pin.z-q.z)*k}
     for(const q of pts){const gy=ground(q.x,q.z)+0.06;if(q.y<gy){q.y=gy;q.px+=(q.x-q.px)*0.35;q.pz+=(q.z-q.pz)*0.35;if(q.py<gy)q.py=gy+(q.py-gy)*0.2}}   // floor, with friction

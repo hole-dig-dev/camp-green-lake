@@ -23,15 +23,15 @@ function moodHud(){
 /* solo: the same rules the server runs */
 function soloCurse(d,why){if(online())return;const was=RUN.curse||0;RUN.curse=clamp(was+d,0,100);saveRun();curseNote(d,Math.round(RUN.curse),why);moodHud()}
 function curseNote(d,c,why){if(!S.started||!why||why==='dawn')return;toast(d>0?`The curse grows (${c}%): ${why}.`:`The curse eases (${c}%): ${why}.`,d>0?'bad':'good',4500)}
-function curseKo(){if(online())wsSend({t:'koCurse'});else soloCurse(SIM.CURSE.KO,'you got knocked out')}
+function curseKo(){if(online())wsSend({t:'koCurse'});else soloCurse(tune('curse.ko'),'you got knocked out')}
 let moodLastT=-1;
 function updateMood(dt){
   if(!S.started)return;
   moodAnnounce();if((moodHud.t=(moodHud.t||0)-dt)<=0){moodHud.t=1;moodHud()}
   const t=clockT();
   if(!online()&&moodLastT>=0){
-    if(moodLastT<DAYMS&&t>=DAYMS&&!inCamp(P.x,P.z)&&!S.inTown&&!ZONE_H)soloCurse(SIM.CURSE.CURFEW_OUT,'you were outside the fence at curfew');
-    if(moodLastT>t+CYCLE/2&&(RUN.curse||0)>0)soloCurse(SIM.CURSE.DAWN,'dawn');
+    if(moodLastT<DAYMS&&t>=DAYMS&&!inCamp(P.x,P.z)&&!S.inTown&&!ZONE_H)soloCurse(tune('curse.curfew'),'you were outside the fence at curfew');
+    if(moodLastT>t+CYCLE/2&&(RUN.curse||0)>0)soloCurse(-tune('curse.dawn'),'dawn');
   }
   moodLastT=t;
   // sandstorm: murky air out on the lake by day (on top of whatever the sky code set this frame)
@@ -49,7 +49,7 @@ function sneakersFall(){
 let zSongSolo=0;
 function moodSing(){
   if(online()||!MONL.zer)return;
-  if(Math.hypot(MONL.zer.x-P.x,MONL.zer.z-P.z)<14&&++zSongSolo>=SIM.CURSE.SONG){zSongSolo=0;MONL.zer=null;MONL.appeased=true;MONV.zer=null;monEvent({k:'appeased',by:S.name});soloCurse(SIM.CURSE.LULLABY,'you sang Madame Zeroni away')}
+  if(Math.hypot(MONL.zer.x-P.x,MONL.zer.z-P.z)<14&&++zSongSolo>=SIM.CURSE.SONG){zSongSolo=0;MONL.zer=null;MONL.appeased=true;MONV.zer=null;monEvent({k:'appeased',by:S.name});soloCurse(-tune('curse.lullaby'),'you sang Madame Zeroni away')}
 }
 command('curse',{usage:'curse [0-100]',help:'Show or set the crew\'s curse (testing).',
   run([a]){if(a==null)return`Curse: ${Math.round(RUN.curse||0)}%.`;const v=numArg(a,0,0,100);if(online())wsSend({t:'runset',curse:v});else{RUN.curse=v;saveRun();moodHud()}return`Curse set to ${v}%.`}});
