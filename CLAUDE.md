@@ -28,6 +28,10 @@ JT often runs sessions unattended from his phone. Claude Code still asks for per
 
 `server.js` (Node `http` + `ws`) serves `public/` and runs the shared world, monsters (via `public/sim.js`), logging (`logger.js`) and security limits. The client is **ordered classic scripts** in `public/js/NN-name.js` (plus `public/css/game.css` and a thin `public/index.html`): top-level names are shared across files, but a file's *load-time* code can only use names from earlier files (a violation crashes the whole page = black screen). `95-pause.js` must stay last: it ends with the saved-session resume and the `#dbg` debug export. New features get a new `public/js/NN-feature.js` file registered in `index.html` (and in `scripts/split-client.mjs`'s MANIFEST notes if relevant), not more code in `index.html`.
 
+## Art and models
+
+Any change to a model (new parts, legs, bones, animation clips) is made in Blender: the build scripts in `art/blender/` (see its README), exported to GLB and copied to `public/models/`. Don't patch a model in the game's JS by bolting on boxes or moving its pieces around. JT called a code-side leg fix a bandaid. The code only reads what the model provides, e.g. a named bone such as the vulture's `gripR`.
+
 ## Style
 
 Match the surrounding code: compact JS, `const`, short helpers, named tuning constants with a one-line comment each, comments that explain *why* in plain words for teammates. Commit messages: a summary line, a blank line, then a plain-language body (what changed and why, tuning numbers, what was tested).
