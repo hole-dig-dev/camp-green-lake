@@ -38,6 +38,7 @@ function updatePlayerTent(dt){
 function updatePlayer(dt){
   if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
     animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
+  if(me&&me.ragBlend>0.3&&!twSt&&!tbSt&&!vSt&&!S.ko){P.moving=false;P.anim=0;digHeld=false;me.g.position.set(P.x,P.y,P.z);animPerson(me,0,dt);return}   // still getting up (26-ragdoll.js)
   if(S.ragT>0&&!twSt&&!tbSt){P.moving=false;P.anim=0;digHeld=false;me.g.position.set(P.x,P.y,P.z);return}   // knocked flat for a moment (26-ragdoll.js)
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state

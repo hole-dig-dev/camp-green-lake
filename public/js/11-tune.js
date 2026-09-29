@@ -69,6 +69,7 @@ const TUNE_DEFS=[
   {key:'rag.flail',tab:'Ragdoll',label:'Arm flailing in the air',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'rag.fallKnock',tab:'Ragdoll',label:'A landing this fast knocks you flat',def:11,kind:'mul',range:2,unit:' m/s'},
   {key:'rag.knockTime',tab:'Ragdoll',label:'Knocked flat for',def:1.4,kind:'mul',range:3,unit:' s'},
+  {key:'rag.getup',tab:'Ragdoll',label:'Getting back up takes',def:1.4,kind:'mul',range:3,unit:' s'},
   {key:'rag.twister',tab:'Ragdoll',label:'Twister throw strength',def:1,kind:'mul',range:2.5,unit:'×'},
   {key:'rag.bonk',tab:'Ragdoll',label:'Shovel bonk launch',def:1,kind:'mul',range:3,zero:true,unit:'×'},
   // ---- monsters, events and the curse (the server reads these too, from the play-test server's saved sliders)

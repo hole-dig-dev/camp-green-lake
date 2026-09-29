@@ -13,7 +13,7 @@
      ragdollPin(p, x,y,z, k)                 pull the pelvis toward (x,y,z) this frame: k 1 = locked, 0.05 = a nudge
      ragdollOff(p)                           let go: the body blends back into its animation over RAG_BLEND s
    The rig has no knees or hands, so legs are one piece and hands are the forearm tips. */
-const RAG_G=16,RAG_ITER=6,RAG_BLEND=0.5;
+const RAG_G=16,RAG_ITER=6;
 const RAG_BONES=['hips','spine','head','armL','forearmL','armR','forearmR','legL','legR'];
 const RP={pelvis:0,chest:1,head:2,shL:3,elL:4,hdL:5,shR:6,elR:7,hdR:8,hipL:9,ftL:10,hipR:11,ftR:12};
 const _rv=new T.Vector3(),_rv2=new T.Vector3(),_rv3=new T.Vector3(),_rq=new T.Quaternion(),_rq2=new T.Quaternion(),_rm=new T.Matrix4(),_Y=new T.Vector3(0,1,0);
@@ -49,6 +49,9 @@ function ragBuild(p){
   L.push([R.shL,R.hdL,up*1.0,1,1]);L.push([R.shR,R.hdR,up*1.0,1,1]);   // inequality: hand at least this far from the shoulder
   L.push([R.ftL,R.ftR,0.18,1,1]);                                       // feet don't pass through each other
   L.push([R.pelvis,R.ftL,legLen*0.8,1,1]);L.push([R.pelvis,R.ftR,legLen*0.8,1,1]);   // legs don't fold up into the belly
+  // ...or swing all the way up alongside the body (they'd vanish inside the torso): a foot stays well away from the chest
+  {const ch=pts[R.chest],fl=pts[R.ftL],fr=pts[R.ftR];L.push([R.chest,R.ftL,Math.hypot(ch.x-fl.x,ch.y-fl.y,ch.z-fl.z)*0.8,1,1]);L.push([R.chest,R.ftR,Math.hypot(ch.x-fr.x,ch.y-fr.y,ch.z-fr.z)*0.8,1,1])}
+  {const hd=pts[R.head],fl=pts[R.ftL];L.push([R.head,R.ftL,Math.hypot(hd.x-fl.x,hd.y-fl.y,hd.z-fl.z)*0.75,1,1]);L.push([R.head,R.ftR,Math.hypot(hd.x-fl.x,hd.y-fl.y,hd.z-fl.z)*0.75,1,1])}
   return{pts,links:L,up,legLen,hipH:pel.y-p.g.position.y,chestH:chest.y-p.g.position.y};
 }
 function ragdollOn(p,o){
@@ -123,7 +126,7 @@ function ragAfterMixer(p,dt,ground){
   if(!p.model)return;
   if(p.rag&&p.rag.on){ragStep(p,dt,ground||groundAt);ragApply(p);return}
   if(p.ragBlend>0&&p.ragQ){
-    p.ragBlend=Math.max(0,p.ragBlend-dt/RAG_BLEND);const B=ragBones(p),k=sm(p.ragBlend);
+    p.ragBlend=Math.max(0,p.ragBlend-dt/tune('rag.getup'));const B=ragBones(p),k=1-sm(clamp((1-p.ragBlend-0.2)/0.8,0,1));   // stay down a moment, then push up slowly
     for(const n of RAG_BONES)B[n].quaternion.slerp(p.ragQ[n],k);
     B.hips.position.lerp(p.ragHipP,k);
     if(p.ragBlend<=0){p.rag=null;p.model.traverse(n=>{if(n.isMesh)n.frustumCulled=true})}
@@ -138,10 +141,10 @@ function ragHead(p){return p&&p.rag?p.rag.pts[RP.head]:null}
    WHERE you are (P); the ragdoll decides how your body looks getting there. S.ragT: a short knock (bonk, hard fall). */
 function myRagState(){
   if(S.ko){const held=typeof bodyHeld==='function'&&bodyHeld();return{on:true,pin:held?0.35:0.03,lift:held?0.55:0,flail:0}}
-  if(twSt===1)return{on:true,pin:0.5,lift:1.15,flail:1.4};              // sucked up the funnel: flailing in the wind
+  if(twSt===1)return{on:true,pin:0.5,lift:0.85,flail:1.4};              // sucked up the funnel: flailing in the wind
   if(twSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};                // thrown: tumbling through the air
   if(twSt===3)return{on:true,pin:0.03,lift:0,flail:0};                  // down: a heap on the ground
-  if(tbSt===1)return{on:true,pin:0.45,lift:1,flail:1.3};               // stuck in a rolling tumbleweed: tumbled round with it
+  if(tbSt===1)return{on:true,pin:0.45,lift:0.8,flail:1.3};               // stuck in a rolling tumbleweed: tumbled round with it
   if(tbSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(tbSt===3)return{on:true,pin:0.03,lift:0,flail:0};
   if(vSt===3||vSt===4)return{on:true,pin:0.6,lift:0.9,flail:1.2,at:'chest'};   // carried off by the shoulders

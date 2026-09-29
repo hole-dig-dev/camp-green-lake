@@ -155,7 +155,7 @@ function twThrow(tw){
   twRagX=(Math.random()*2-1)*11;twRagY=(Math.random()*2-1)*7;twRagZ=(Math.random()*2-1)*9;  // mixed axes: a tumble, not a spin
   twSt=2;twStT=0;digHeld=false;sfx.hiss();
   const dmg=Math.round(TW_DMG*tw.s);
-  logEv('twThrow',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+tw.x.toFixed(1),twz:+tw.z.toFixed(1),dmg});
+  logEv('twThrow',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+(tw.x??twCenter.x).toFixed(1),twz:+(tw.z??twCenter.z).toFixed(1),dmg});   // tw can be {s} alone if the twister despawned mid-grab
   hurt(dmg,'Twister','A twister picked you up and threw you across the lake.');
   if(!S.ko)toast(`The twister threw you! -${dmg} health`,'bad',3000);
 }
