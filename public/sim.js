@@ -15,14 +15,46 @@
     { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },
     { x: -39, z: 55, a: -0.79 }, { x: 29, z: 55, a: 0.79 },
   ];
-  const TOWER_RANGE = 52, TOWER_HALF_ANGLE = 0.26, COP_RANGE = 30, COP_HALF_ANGLE = 0.42;   // COP_*: an officer's flashlight cone
-  function towerHeading(i, t) { return TOWERS[i].a + Math.sin(t / 2900 + i * 1.7) * 0.86; }
+  /* Curfew knobs. The play-tester's control center (F2, Curfew tab) changes these live: the server applies the saved
+     values and sends them to everyone (setCurfew), so the light you see is still the light that spots you. */
+  const CURFEW_DEF = {
+    towerReach: 78,      // m along the ground to where a searchlight's far (top) edge lands (JT: 50% past the old 52 m)
+    towerHalf: 0.26,     // rad: half the width of a searchlight beam
+    towerSweep: 0.86,    // rad: how far each searchlight swings either side of its aim
+    towerSpeed: 1,       // x: how fast the searchlights sweep
+    copN: 4,             // officers on patrol
+    copRing: 1,          // x: size of their patrol loop around camp
+    copRange: 30,        // m: how far an officer's flashlight reaches
+    copHalf: 0.42,       // rad: half the width of the flashlight cone
+    copWalk: 1.7,        // m/s strolling the loop
+    copRun: 6.3,         // m/s chasing: faster than walking (4.3), slower than sprinting (7.2)
+    copLose: 5,          // seconds without seeing you before an officer gives up
+    copCatch: 1.6,       // m: close enough to cuff you (only while their light or a tower is on you)
+  };
+  const CURFEW_LIM = { towerReach: [15, 250], towerHalf: [0.03, 0.8], towerSweep: [0, 3.2], towerSpeed: [0, 10], copN: [0, 12], copRing: [0.3, 4],
+    copRange: [3, 120], copHalf: [0.05, 1.2], copWalk: [0.2, 8], copRun: [0.5, 15], copLose: [0, 60], copCatch: [0.5, 6] };
+  const CURFEW = Object.assign({}, CURFEW_DEF);
+  function setCurfew(o) {   // untrusted input: known keys, finite numbers, clamped
+    for (const k in CURFEW_DEF) { const v = o && o[k]; if (Number.isFinite(v)) CURFEW[k] = clamp(v, CURFEW_LIM[k][0], CURFEW_LIM[k][1]); }
+    CURFEW.copN = Math.round(CURFEW.copN);
+    return CURFEW;
+  }
+  const TOWER_RANGE = CURFEW_DEF.towerReach, TOWER_HALF_ANGLE = CURFEW_DEF.towerHalf, COP_RANGE = CURFEW_DEF.copRange, COP_HALF_ANGLE = CURFEW_DEF.copHalf;   // defaults, for tests
+  /* A searchlight is a real cone from the lamp (TOWER_LAMP_Y up) tilted down onto the flat lakebed: its top edge lands
+     towerReach away, its bottom edge much nearer, so the lit patch on the ground is a long oval, not a flat wedge. */
+  const TOWER_LAMP_Y = 8.55, TOWER_SPOT_Y = 0.2;   // lamp height; the height on a camper the light has to touch (feet in the lit patch count)
+  function towerTilt() { return Math.atan2(TOWER_LAMP_Y, CURFEW.towerReach) + CURFEW.towerHalf; }   // how far the beam's axis points below level
+  function towerHeading(i, t) { return TOWERS[i].a + Math.sin(t / 2900 * CURFEW.towerSpeed + i * 1.7) * CURFEW.towerSweep; }
+  function towerLit(x, y, z, o, h) {
+    const dx = x - o.x, dy = y - TOWER_LAMP_Y, dz = z - o.z, d = Math.hypot(dx, dy, dz), tl = towerTilt();
+    return d > 0.01 && (Math.cos(tl) * (dx * Math.sin(h) + dz * Math.cos(h)) - Math.sin(tl) * dy) / d > Math.cos(CURFEW.towerHalf);
+  }
   function inBeam(x, z, ox, oz, h, range, halfAngle) {
     const dx = x - ox, dz = z - oz, d = Math.hypot(dx, dz);
     return d < range && d > 0.01 && (dx * Math.sin(h) + dz * Math.cos(h)) / d > Math.cos(halfAngle);
   }
   function towerSees(p, t) {
-    return !p.hd && TOWERS.some((o, i) => inBeam(p.x, p.z, o.x, o.z, towerHeading(i, t), TOWER_RANGE, TOWER_HALF_ANGLE));
+    return !p.hd && TOWERS.some((o, i) => towerLit(p.x, TOWER_SPOT_Y, p.z, o, towerHeading(i, t)));
   }
 
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
@@ -52,30 +84,29 @@
      searchlights' reach, all night, whether or not anyone is outside. At dawn they walk back in through the gate.
      You're spotted when an officer's flashlight cone or a tower beam is on you (crouched down in a deep hole hides
      you); a tower sighting sends the nearest officer running over. Officers run a bit slower than a sprinting camper,
-     give up after COP_LOSE seconds without seeing you, and never cross the camp fence. The array keeps its old wire
+     give up after CURFEW.copLose seconds without seeing you, and never cross the camp fence. The array keeps its old wire
      name (M.trucks) so the server, logs and client plumbing stay the same; each entry is one officer. */
-  const COP_N = 4;                          // officers on patrol
   const COP_GATE = { x: 0, z: 29 };         // where they come out of / go back into camp (just inside the main gate)
-  const COP_RING = { x: -5, z: 41, rx: 96, rz: 92 };   // patrol loop around camp, outside the towers' ~52 m beams
-  const COP_WALK = 1.7, COP_BRISK = 2.9;    // m/s strolling the loop / walking out to it or home at dawn
-  const COP_RUN = 6.3;                      // m/s chasing: faster than walking (4.3), slower than sprinting (7.2)
+  const COP_RING = { x: -5, z: 41, rx: 96, rz: 92 };   // patrol loop around camp (x CURFEW.copRing); speeds etc. are in CURFEW
+  const COP_BRISK = 2.9;                    // m/s walking out to the loop or home at dawn
   const COP_TURN = 3;                       // rad/s turn rate
-  const COP_LOSE = 5;                       // seconds without seeing you before an officer gives up
-  const COP_CATCH = 1.6;                    // m: close enough to cuff you (only while their light or a tower is on you)
   const COP_STAGGER = 3;                    // s between officers walking out of the gate
   const COP_WOBBLE = 9;                     // m of in-and-out drift around the loop, so they don't walk a perfect ellipse
-  function ringPoint(th) { return { x: COP_RING.x + Math.sin(th) * COP_RING.rx, z: clamp(COP_RING.z - Math.cos(th) * COP_RING.rz, -EDGE + 6, EDGE - 6) }; }
-  function spawnCops() {
-    return Array.from({ length: COP_N }, (_, i) => {
-      const th = i * Math.PI / 2 + Math.PI / 4;
-      return { x: COP_GATE.x + (i - 1.5) * 1.2, z: COP_GATE.z, h: 0, mode: 'out', th, dir: i % 2 ? -1 : 1, delay: i * COP_STAGGER, lost: 0, tgt: null, tx: 0, tz: 0, wob: i * 1.7 };
-    });
+  function ringPoint(th) { const k = CURFEW.copRing; return { x: COP_RING.x + Math.sin(th) * COP_RING.rx * k, z: clamp(COP_RING.z - Math.cos(th) * COP_RING.rz * k, -EDGE + 6, EDGE - 6) }; }
+  // officer i of n: they spread evenly round the loop, alternate directions, and leave the gate COP_STAGGER apart (k-th in line)
+  function spawnCop(i, n, k) {
+    const th = i / Math.max(n, 1) * Math.PI * 2 + Math.PI / 4;
+    return { x: COP_GATE.x + ((i % 4) - 1.5) * 1.2, z: COP_GATE.z, h: 0, mode: 'out', th, dir: i % 2 ? -1 : 1, delay: k * COP_STAGGER, lost: 0, tgt: null, tx: 0, tz: 0, wob: i * 1.7 };
   }
-  function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, COP_RANGE, COP_HALF_ANGLE); }
+  function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
   function stepMonsters(M, players, t, dt, ev) {
     const night = t >= DAYMS, half = t < NIGHT_SPLIT ? 'police' : 'zeroni';
     const outs = players.filter(p => !inCamp(p.x, p.z));
-    if (night) { if (!M.trucks.length) M.trucks = spawnCops(); }
+    if (night) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
+      const on = M.trucks.filter(c => c.mode !== 'home'), n = CURFEW.copN;
+      for (let k = 0; on.length + k < n; k++) M.trucks.push(spawnCop(on.length + k, n, k));
+      for (const c of on.slice(n)) { c.mode = 'home'; c.tgt = null; c.delay = 0; }
+    }
     else for (const c of M.trucks) if (c.mode !== 'home') { c.mode = 'home'; c.tgt = null; c.delay = 0; }
     for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
     M.trucks = M.trucks.filter(c => !c.gone);
@@ -100,18 +131,18 @@
         if (near === c) { seenP = p; seenD = nd; break; }
       }
       if (seenP) { if (c.mode !== 'chase' || c.tgt !== seenP.id) ev.push({ k: 'spot', id: seenP.id }); c.mode = 'chase'; c.tgt = seenP.id; c.tx = seenP.x; c.tz = seenP.z; c.lost = 0; }
-      else if (c.mode === 'chase' && (c.lost += dt) > COP_LOSE) { if (c.tgt != null) ev.push({ k: 'lost', id: c.tgt }); c.mode = 'return'; c.tgt = null; }
+      else if (c.mode === 'chase' && (c.lost += dt) > CURFEW.copLose) { if (c.tgt != null) ev.push({ k: 'lost', id: c.tgt }); c.mode = 'return'; c.tgt = null; }
     }
     // where to walk, and how fast
     let gx, gz, sp;
-    if (c.mode === 'chase') { gx = c.tx; gz = c.tz; sp = COP_RUN; }
+    if (c.mode === 'chase') { gx = c.tx; gz = c.tz; sp = CURFEW.copRun; }
     else if (c.mode === 'home') { gx = COP_GATE.x; gz = COP_GATE.z; sp = COP_BRISK; }
     else {
-      if (c.mode === 'patrol') c.th += c.dir * COP_WALK / ((COP_RING.rx + COP_RING.rz) / 2) * dt;
+      if (c.mode === 'patrol') c.th += c.dir * CURFEW.copWalk / ((COP_RING.rx + COP_RING.rz) / 2 * CURFEW.copRing) * dt;
       else if (c.mode === 'return') { let best = c.th, bd = 1e9; for (let k = 0; k < 24; k++) { const th = k / 24 * Math.PI * 2, q = ringPoint(th), d = Math.hypot(q.x - c.x, q.z - c.z); if (d < bd) { bd = d; best = th; } } c.th = best; c.mode = 'out'; }
       c.wob += dt * 0.07;
       const q = ringPoint(c.th), w = Math.sin(c.wob) * COP_WOBBLE, ox = Math.sin(c.th), oz = -Math.cos(c.th);
-      gx = q.x + ox * w; gz = q.z + oz * w; sp = c.mode === 'out' ? COP_BRISK : COP_WALK;
+      gx = q.x + ox * w; gz = q.z + oz * w; sp = c.mode === 'out' ? COP_BRISK : CURFEW.copWalk;
       if (c.mode === 'out' && Math.hypot(gx - c.x, gz - c.z) < 3) c.mode = 'patrol';
     }
     const dx = gx - c.x, dz = gz - c.z, d = Math.hypot(dx, dz);
@@ -123,7 +154,7 @@
       if (c.mode === 'out' || c.mode === 'home' || !inCamp(nx, nz)) { c.x = nx; c.z = nz; }
       else if (!inCamp(nx, c.z)) c.x = nx; else if (!inCamp(c.x, nz)) c.z = nz;
     }
-    if (c.mode !== 'home') for (const p of outs) { if (p.dn || p.hd) continue; const pd = Math.hypot(p.x - c.x, p.z - c.z); if (pd < COP_CATCH && (copLit(c, p) || towerSees(p, t))) ev.push({ k: 'down', id: p.id, by: 'police' }); }
+    if (c.mode !== 'home') for (const p of outs) { if (p.dn || p.hd) continue; const pd = Math.hypot(p.x - c.x, p.z - c.z); if (pd < CURFEW.copCatch && (copLit(c, p) || towerSees(p, t))) ev.push({ k: 'down', id: p.id, by: 'police' }); }
   }
   // put Zeroni near player p: behind them, or (front=true) right in front of them
   function place(z, p, dist, front) {
@@ -399,7 +430,7 @@
   // Returns true if it counted, so the caller knows to log/broadcast it.
   function lionSwat(L) { if (!L.active) return false; L.hp = Math.max(0, L.hp - LION_SWAT_DMG); return true; }
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters,
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;

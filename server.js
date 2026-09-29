@@ -196,6 +196,15 @@ function sendTune(res) {
     res.end(err ? '{}' : txt);
   });
 }
+/* The Curfew tab's sliders drive the shared police/searchlight rules, which run here: apply the saved values (only
+   those set against the current default, like the page's tuneAdopt) and send them to everyone. */
+function applyCurfewTune(o, quiet) {
+  const v = {};
+  for (const k in SIM.CURFEW_DEF) { const e = o && o['curfew.' + k]; if (e && e.def === SIM.CURFEW_DEF[k]) v[k] = e.v; }
+  SIM.setCurfew(Object.assign({}, SIM.CURFEW_DEF, v));
+  if (!quiet) broadcast({ t: 'curfew', v: SIM.CURFEW });
+}
+if (DEV_MODE) { try { applyCurfewTune(JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')), true); } catch (e) {} }   // at startup: nobody to tell yet
 function saveTune(req, res) {
   let body = '', over = false;
   req.setEncoding('utf8');
@@ -209,6 +218,7 @@ function saveTune(req, res) {
       const e = o[k];
       if (TUNE_KEY_RE.test(k) && e && Number.isFinite(e.v) && Number.isFinite(e.def)) clean[k] = { v: e.v, def: e.def };
     }
+    applyCurfewTune(clean);
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
       if (err) { res.writeHead(500); return res.end('save failed'); }
@@ -377,6 +387,7 @@ wss.on('connection', (ws, req) => {
       c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0;
       c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
+      send(c, { t: 'curfew', v: SIM.CURFEW });
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
       if (!c.joined) {
