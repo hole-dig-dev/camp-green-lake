@@ -57,8 +57,8 @@ Branch: <branch> @ <short hash>
 
 | Decision | Status | Where it's written |
 |---|---|---|
-| Act 1 (days 1–4) is *R.E.P.O.*: JT's dig/quota/curfew loop, with heavier, fragile, two-person loot | Greg agreed; JT hasn't yet | `docs/plans/2026-09-28-repo-to-peak-design.md` |
-| On day 5, Zero runs and Act 2 starts: a one-way *Peak* escape through maps to Big Thumb | Greg agreed; JT hasn't yet | same |
+| Act 1 (days 1–4) is *R.E.P.O.*: JT's dig/quota/curfew loop, with heavier, fragile, two-person loot | Greg and JT agreed (JT 2026-09-29) | `docs/plans/2026-09-28-repo-to-peak-design.md` |
+| On day 5, Zero runs and Act 2 starts: a one-way *Peak* escape through maps to Big Thumb | Greg and JT agreed (JT 2026-09-29) | same |
 | Failing Act 2 ends the game and the run restarts from day 1 | Greg decided | same |
 | The whole crew is always in one map; the next map only opens when everyone is at the campfire | Greg agreed | `public/js/88-zones.js` |
 | Add, don't replace: JT's lake is map 1, unchanged. His monsters and hazards run in every map by default | Greg's rule for his side | `public/js/88-zones.js` header |
@@ -69,9 +69,9 @@ Branch: <branch> @ <short hash>
 
 Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to work out).
 
-- **JT:** does the two-act arc fit how you see the game, or does it take it somewhere you don't want to go?
+- ~~**JT:** does the two-act arc fit how you see the game?~~ JT: yes (2026-09-29).
 - **JT:** what should survive a game over? Levels survive being fired today.
-- **JT / Greg:** twerk is on B, which is push-to-talk on `jt/next`. Which one moves?
+- ~~**JT / Greg:** twerk is on B, which is push-to-talk on `jt/next`. Which one moves?~~ JT: push-to-talk moved to P (2026-09-29).
 - **JT:** in Act 1, is it OK for dig sites to push outward day by day, changing where people dig on the lake?
 - **Claude:** which of JT's hazards feel wrong in a narrow canyon? For example, police trucks driving their camp ring. Should maps be able to switch hazards off, or should hazards learn about maps?
 - **Claude:** should the *Peak*-style stamina and heat bar be built on JT's existing health and water, or be separate? Greg's older branch had its own stamina.
@@ -82,5 +82,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 ## Branch log
 
 Newest first. One line per push; the note has the details.
+
+- `jt/next`: merged `buissong/repo-to-peak-2026-09-28`, improved zones, buried-town framework, moods and the curse. See `2026-09-29-1445-jt-claude-zones-town-mood-curse.md`.
 
 - `buissong/repo-to-peak-2026-09-28`: the plan, the zone system and the Dry Canyon. See `2026-09-28-2330-greg-claude-hello.md`.
