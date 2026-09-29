@@ -93,6 +93,7 @@ addEventListener('keydown',e=>{
   if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:SETTINGS.volMaster;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='e'&&!e.repeat&&GRAB_ST.id!=null){releaseGrab(true);return}   // E while holding something: throw it (84-grab.js)
+  if(k==='x'&&!e.repeat&&!uiOpen()){tieRope();return}   // the rope (84-grab.js)
   if(k==='b'&&!e.repeat){twerk();return}   // emotes (73-emotes.js); H (sing) is read from KEYS while held
   if(k==='p'&&!e.repeat&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(true);
   if(k==='t'&&S.up.detector){S.detOn=!S.detOn;toast(S.detOn?'Detector on':'Detector off','',1200)}

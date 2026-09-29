@@ -36,7 +36,8 @@ function updatePlayerTent(dt){
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
 function updatePlayer(dt){
-  if(S.ko){S.ko-=dt;downed(dt);animPerson(me,3,dt);if(S.ko<=0)respawn();return}
+  if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
+    animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
   if(twSt){twStep(dt);return}   // a twister has you: it drives position/pose/anim entirely, no input
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea

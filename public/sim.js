@@ -12,7 +12,11 @@
   const HEAVY = { safe: 120, strongbox: 80 };
   // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
   // One camper pulls at most GRAB.FMAX newtons, so ~71 kg is the most one of you can lift: the safe takes two.
-  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 } };
+  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 }, cart: { m: 25, frag: 0 }, body: { m: 70, frag: 0 } };
+  // the rope (84-grab.js, X): slack up to L m, then it pulls like a pair of hands from wherever you are, up to MAX m away
+  const ROPE = { L: 4.5, MAX: 7.5, K: 900 };
+  // the crew's wheelbarrow: holds CAP things (loot or a downed friend), parks by the main gate, tips if you hit a bump fast
+  const CART = { CAP: 3, HOME: { x: -8, z: 31 }, TIP_SPEED: 3.2, TIP_STEP: 0.32 };
   const GRAB = { K: 1400, DAMP: 70, FMAX: 700, SNAP: 4.2, THROW: 7.5, REACH: 4.5 };
   const DMG = { MIN: 2.4, RATE: 0.06, COOL: 0.25 };   // landings faster than MIN m/s chip value off
   // Tower optics are shared with the renderer, so the light a player sees is the light that can spot them.
@@ -560,7 +564,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG,
+  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };

@@ -52,15 +52,21 @@ function soloEndOfDay(){
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
-  if(ITEM_MODELS[type]){g.add(itemMesh(type));scene.add(g);return g}   // the Blender safe / strongbox (23-models.js), once loaded
+  if(ITEM_MODELS[type]){g.add(itemMesh(type));scene.add(g);return g}
+  if(type==='cart'){   // the crew's wheelbarrow (84-grab.js): tray, wheel up front, two handles
+    const tray=box(0.75,0.28,1.0,0x6f7f6a);tray.position.set(0,0.55,0.05);g.add(tray);
+    const lip=box(0.8,0.06,1.05,0x4d5a4a);lip.position.set(0,0.7,0.05);g.add(lip);
+    const wheel=cyl(0.24,0.24,0.1,12,0x2a2a2a);wheel.rotation.z=Math.PI/2;wheel.position.set(0,0.24,0.62);g.add(wheel);
+    for(const s of[-1,1]){const h=box(0.05,0.05,1.3,0x8a6440);h.position.set(s*0.3,0.55,-0.45);h.rotation.x=0.18;g.add(h);const l=box(0.05,0.4,0.05,0x5a4a3a);l.position.set(s*0.28,0.2,-0.35);g.add(l)}
+    scene.add(g);return g}   // the Blender safe / strongbox (23-models.js), once loaded
   if(type==='safe'){const b=box(1.1,1.1,1,0x3b3f45);b.position.y=0.55;const d=cyl(0.18,0.18,0.06,10,0xb8b8b8);d.rotation.x=Math.PI/2;d.position.set(0,0.62,0.52);const h=box(0.3,0.06,0.06,0xd4af37);h.position.set(0.3,0.35,0.52);g.add(b,d,h)}
   else{const b=box(1.2,0.7,0.8,0x5b3a1e);b.position.y=0.35;g.add(b);for(const x of[-0.4,0.4]){const s=box(0.1,0.72,0.82,0xd4af37);s.position.set(x,0.36,0);g.add(s)}}
   scene.add(g);return g;
 }
-function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',1.7)})}
+function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='cart'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',type==='cart'?1.2:1.7)})}
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
-  const pr=PROPS.get(id),name=pr?LOOT[pr.type].name:'heavy find';removeProp(id);
+  const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
   if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin()}
 }
@@ -91,6 +97,7 @@ function revived(by){if(!S.ko)return;S.ko=0;setHp(REVIVE_HP);S.stam=S.hp;S.hurtT
 function downed(dt){
   // downed with friends around: crawl, and wait for someone to pick you up
   const fine=$('#koFine');
+  if(othersOnline()&&stepMyBody(dt)){fine.textContent=S.inCart!=null?'You\'re in the wheelbarrow. Hang on.':'Your crew has hold of you. Get carried inside the fence and you\'re back up.';me.g.position.set(P.x,P.y,P.z);return}
   if(othersOnline()){fine.textContent=`Downed. ${Math.ceil(S.ko)}s left for a friend to pick you up (they hold F next to you). You can crawl.`;
     let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0),iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
     const dragged=MONV.zer&&MONV.zer.drag===myId();

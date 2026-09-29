@@ -114,6 +114,7 @@ function nearSpot(){
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)
+  if(GRAB_ST.id!=null){const c=cartNear();if(c&&c.id!==GRAB_ST.id)return{id:'cartLoad',cart:c}}   // F: into the wheelbarrow (84-grab.js)
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   if(!inTent()){
     const pr=propNear(2.4);if(pr)return{id:'prop',pr};
@@ -134,6 +135,7 @@ function use(){
   if(s.id==='pull'){wsSend({t:'pull',id:s.rid});addXP(15);toast(`You pulled ${s.R.name} out of the hole.`,'good',2000);sfx.thud();return}
   if(s.id==='sinkRescue')return; // hold F to link hands: handled every frame in updateSinkholes (87-sinkhole.js)
   if(s.id==='drop'){S.carry=null;toast('You let go.','',1200);return}
+  if(s.id==='cartLoad'){loadIntoCart();return}
   if(s.id==='prop'){useProp(s.pr);return}   // grab it / let go (84-grab.js)
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
   if(s.id==='sir')openDialog('sir');

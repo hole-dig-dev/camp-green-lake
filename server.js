@@ -366,7 +366,7 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, owner: p.owner, grab: p.grab || [] })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
@@ -435,6 +435,10 @@ wss.on('connection', (ws, req) => {
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js)
         c.f = num(m.f, 0, 255, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
+        if (!(c.f & 2) && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
+          if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }
+          c.body = null; c.cartId = null; broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });
+        }
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
@@ -485,27 +489,39 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
       }
-      /* ---- grab physics for heavy loot (public/js/84-grab.js). One camper "owns" a moving prop: their page runs its
-         physics and reports it ('pst'); other grabbers send their hand position ('phand'), which goes to the owner. ---- */
+      /* ---- grab physics (public/js/84-grab.js): heavy loot, the wheelbarrow and downed campers' bodies.
+         A target id >= 0 is a prop in world.props; a negative id is the body of camper -id (downed).
+         A moving prop has one "owner" whose page runs its physics and reports it ('pst'); a body's owner is always the
+         downed camper themself (their own position). Everyone else holding on (hands, or a rope) sends 'phand', and the
+         server passes it to the owner. The cart carries up to 3 things (loot or bodies); they ride along with it. ---- */
       case 'pgrab': {
-        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p) return;
-        if (Math.hypot(p.x - c.x, p.z - c.z) > SIM.GRAB.REACH + 1) return;
-        p.grab = [...new Set([...(p.grab || []).filter(g => clients.has(g)), c.id])].slice(0, 8);
-        if (p.owner == null || !clients.has(p.owner)) p.owner = c.id;
-        broadcast({ t: 'pown', id, owner: p.owner, grab: p.grab });
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        const reach = SIM.GRAB.REACH + (m.rope ? SIM.ROPE.L + 2 : 1);
+        if (Math.hypot(T.x - c.x, T.z - c.z) > reach) return;
+        const key = m.rope ? 'ropes' : 'grab';
+        T.o.grab = (T.o.grab || []).filter(g => g !== c.id && clients.has(g)); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id && clients.has(g));
+        T.o[key] = [...T.o[key], c.id].slice(0, 8);
+        if (id >= 0) {
+          if (T.o.cartId != null) unloadFromCart(id); // taking it out of the wheelbarrow
+          if (T.o.owner == null || !clients.has(T.o.owner)) T.o.owner = c.id;
+        } else send(T.c, { t: 'pown', id, owner: T.c.id, grab: T.o.grab, ropes: T.o.ropes });
+        broadcast({ t: 'pown', id, owner: id >= 0 ? T.o.owner : T.c.id, grab: T.o.grab, ropes: T.o.ropes });
         break;
       }
       case 'prel': case 'pyeet': {
-        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p) return;
-        p.grab = (p.grab || []).filter(g => g !== c.id);
-        if (m.t === 'pyeet' && p.owner !== c.id && clients.has(p.owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(p.owner), { t: 'pyeet', id, pid: c.id, d }); }
-        broadcast({ t: 'pown', id, owner: p.owner, grab: p.grab });
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        T.o.grab = (T.o.grab || []).filter(g => g !== c.id); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id);
+        const owner = id >= 0 ? T.o.owner : T.c.id;
+        if (m.t === 'pyeet' && owner !== c.id && clients.has(owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(owner), { t: 'pyeet', id, pid: c.id, d }); }
+        broadcast({ t: 'pown', id, owner, grab: T.o.grab, ropes: T.o.ropes });
         break;
       }
       case 'phand': {
-        const id = num(m.id, 0, MAX_ITEM, -1) | 0, p = world.props[id]; if (!p || !(p.grab || []).includes(c.id) || p.owner === c.id) return;
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        const rope = m.rope === true; if (!(rope ? T.o.ropes || [] : T.o.grab || []).includes(c.id)) return;
+        const owner = id >= 0 ? T.o.owner : T.c.id; if (owner === c.id) return;
         const h = Array.isArray(m.h) ? m.h.slice(0, 3).map((v, i) => num(v, i === 1 ? -10 : -620, i === 1 ? 210 : 620, 0)) : null; if (!h) return;
-        const o = clients.get(p.owner); if (o) send(o, { t: 'phand', id, pid: c.id, h });
+        const o = clients.get(owner); if (o) send(o, { t: 'phand', id, pid: c.id, h, rope, st: num(m.st, 0, 200, 100) });
         break;
       }
       case 'pst': {
@@ -513,16 +529,62 @@ wss.on('connection', (ws, req) => {
         const x = num(m.x, -595, 595, p.x), z = num(m.z, -595, 595, p.z);
         if (Math.hypot(x - c.x, z - c.z) > 40) return; // the owner is somewhere near their prop
         p.x = r2(x); p.z = r2(z); p.y = r2(num(m.y, -10, 60, p.y || 0));
-        const v0 = SIM.HEAVY[p.type]; p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
-        if (m.rest === true && !(p.grab || []).includes(c.id)) p.owner = null; // settled and let go: the next grabber takes over
+        const v0 = SIM.HEAVY[p.type] || 0; if (v0) p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
+        if (p.type === 'cart') p.tip = m.tip === true;
+        if (m.rest === true && !(p.grab || []).includes(c.id) && !(p.ropes || []).includes(c.id)) p.owner = null; // settled and let go: the next grabber takes over
+        for (const lid of p.load || []) if (lid >= 0 && world.props[lid]) { world.props[lid].x = p.x; world.props[lid].z = p.z; } // loot riding in the cart
         dirty = true;
-        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, owner: p.owner, grab: p.grab || [] }, c.id);
+        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, tip: p.tip, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [] }, c.id);
         if (Math.hypot(p.x - SIM.SELL.x, p.z - SIM.SELL.z) < SIM.SELL.r) {
-          const v = p.val == null ? v0 : p.val, who = [...new Set([c.id, ...(p.grab || [])])]; delete world.props[id];
-          world.run.bank += v; dirty = true;
-          LOG.log('propSold', { item: id, type: p.type, v, who });
-          broadcast({ t: 'psold', id, v, who }); broadcast(runInfo());
+          const sell = p.type === 'cart' ? (p.load || []).filter(l => l >= 0 && world.props[l]) : [id];
+          for (const sid of sell) {
+            const q = world.props[sid], v = q.val == null ? SIM.HEAVY[q.type] : q.val, who = [...new Set([c.id, ...(p.grab || []), ...(p.ropes || [])])];
+            delete world.props[sid]; if (p.load) p.load = p.load.filter(l => l !== sid);
+            world.run.bank += v; dirty = true;
+            LOG.log('propSold', { item: sid, type: q.type, v, who, cart: p.type === 'cart' });
+            broadcast({ t: 'psold', id: sid, v, who });
+          }
+          if (sell.length) { broadcast(runInfo()); if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
         }
+        break;
+      }
+      case 'pslip': { // the rope slipped (the owner's physics says so): everyone's rope on it comes loose
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
+        if ((id >= 0 ? T.o.owner : T.c.id) !== c.id) return;
+        T.o.ropes = []; LOG.log('ropeSlip', { id, by: c.n });
+        broadcast({ t: 'pslip', id }); broadcast({ t: 'pown', id, owner: id >= 0 ? T.o.owner : T.c.id, grab: T.o.grab || [], ropes: [] });
+        break;
+      }
+      case 'pcall': { // host/play-test console: bring the wheelbarrow to just in front of you
+        if (!c.host) return; ensureCart(); const k = world.props[CART_ID];
+        for (const l of k.load || []) if (l >= 0 && world.props[l]) world.props[l].cartId = null;
+        k.x = r2(num(m.x, -595, 595, c.x)); k.z = r2(num(m.z, -595, 595, c.z)); k.tip = false; k.load = []; k.owner = null; k.grab = []; k.ropes = []; dirty = true;
+        broadcast({ t: 'pcart', id: CART_ID, load: [], tip: false }); broadcast({ t: 'pst', id: CART_ID, x: k.x, y: 0, z: k.z, vx: 0, vy: 0, vz: 0, rest: true, tip: false, owner: null, grab: [], ropes: [] });
+        break;
+      }
+      case 'pload': { // put what you're holding (loot, or a downed friend: negative id) in the wheelbarrow
+        const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, cartId = num(m.cart, 0, MAX_ITEM, -1) | 0, cart = world.props[cartId], T = grabTarget(id);
+        if (!cart || cart.type !== 'cart' || !T || id === cartId || cart.tip) return;
+        if (!near(c, cart, 4) || Math.hypot(T.x - cart.x, T.z - cart.z) > 5) return;
+        cart.load = (cart.load || []).filter(l => l >= 0 ? !!world.props[l] : clients.has(-l));
+        if (cart.load.length >= SIM.CART.CAP || cart.load.includes(id)) return;
+        cart.load.push(id); T.o.grab = []; T.o.ropes = [];
+        if (id >= 0) { T.o.cartId = cartId; T.o.owner = null; T.o.x = cart.x; T.o.z = cart.z; broadcast({ t: 'pown', id, owner: null, grab: [], ropes: [] }); }
+        else { T.c.cartId = cartId; send(T.c, { t: 'pown', id, owner: T.c.id, grab: [], ropes: [] }); }
+        dirty = true; LOG.log('cartLoad', { id, cart: cartId, by: c.n });
+        broadcast({ t: 'pcart', id: cartId, load: cart.load });
+        break;
+      }
+      case 'ptip': { // the wheelbarrow went over: everything in it spills out around it (only its owner can say so)
+        const id = num(m.id, 0, MAX_ITEM, -1) | 0, cart = world.props[id]; if (!cart || cart.type !== 'cart' || cart.owner !== c.id) return;
+        cart.tip = true; const spill = [];
+        for (const l of cart.load || []) {
+          const a = Math.random() * Math.PI * 2, x = r2(cart.x + Math.cos(a) * 1.6), z = r2(cart.z + Math.sin(a) * 1.6);
+          if (l >= 0 && world.props[l]) { const q = world.props[l]; q.cartId = null; q.x = x; q.z = z; spill.push([l, x, z]); }
+          else if (l < 0 && clients.has(-l)) { clients.get(-l).cartId = null; spill.push([l, x, z]); }
+        }
+        cart.load = []; dirty = true; LOG.log('cartTip', { cart: id, by: c.n, n: spill.length });
+        broadcast({ t: 'pcart', id, load: [], tip: true, spill });
         break;
       }
       case 'bag': {
@@ -822,6 +884,21 @@ function dirStartMonster(d, tx, tz) {
     broadcast({ t: 'jav', list: javSnapshot(), ev: jev });
   } else if (d.kind === 'lion') LION.pendingSpawn = { x: d.x, z: d.z };
 }
+// Grab targets (see 'pgrab'): a prop, or the body of a downed camper (negative id). o holds its grab/ropes lists.
+function grabTarget(id) {
+  if (id >= 0) { const p = world.props[id]; return p ? { o: p, x: p.x, z: p.z } : null; }
+  const b = clients.get(-id); if (!b || !b.joined || !((b.f & 2) || Date.now() - b.dnAt < 2000)) return null;
+  b.body = b.body || { grab: [], ropes: [] }; return { o: b.body, c: b, x: b.x, z: b.z };
+}
+function unloadFromCart(id) {
+  const p = world.props[id]; if (!p || p.cartId == null) return;
+  const cart = world.props[p.cartId]; p.cartId = null;
+  if (cart) { cart.load = (cart.load || []).filter(l => l !== id); broadcast({ t: 'pcart', id: +Object.keys(world.props).find(k => world.props[k] === cart), load: cart.load }); }
+}
+// the crew's wheelbarrow: always one, parked by the Wreck Room (id CART_ID, never sold)
+const CART_ID = 9999;
+function ensureCart() { if (!world.props[CART_ID]) { world.props[CART_ID] = { type: 'cart', x: SIM.CART.HOME.x, z: SIM.CART.HOME.z, load: [] }; dirty = true; } }
+ensureCart();
 // The day's monster roster (sim.js stepRoster): hatchlings, rattlesnakes, scorpions, Mr. Sir, the Warden, the Sheriff's
 // ghost and Kate Barlow's ghost. Same pattern as the herd: server-authoritative, one 'rost' message per tick while any are out.
 const ROSTER = { mobs: [] };
@@ -872,7 +949,7 @@ function endOfDay() {
     // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
     const got = q.bank;
     LOG.log('fired', { bank: got, quota: q.quota });
-    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() });
+    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() }); ensureCart();
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
   }
@@ -939,7 +1016,7 @@ setInterval(() => {
     c.alive = false; try { c.ws.ping(); } catch (e) { /* closing */ }
   }
   if (world.won && Date.now() - world.wonAt > NEW_DAY_AFTER_WIN_MS) {
-    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); gotSet = new Set(); kbHolder = null; dirty = true; save();
+    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); ensureCart(); gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'reset' });
   }
 }, 30000);

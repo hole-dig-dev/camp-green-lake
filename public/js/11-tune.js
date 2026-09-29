@@ -49,6 +49,8 @@ const TUNE_DEFS=[
   // ---- grabbing heavy loot (84-grab.js)
   {key:'grab.fmax',tab:'Grab',label:'How hard one camper can pull (the safe is ~1180 N)',def:700,kind:'mul',range:3,unit:' N'},
   {key:'grab.throw',tab:'Grab',label:'Throw strength',def:1,kind:'mul',range:4,unit:'×'},
+  {key:'stam.rope',tab:'Grab',label:'Pulling a taut rope costs (stamina)',def:5,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'grab.cartTip',tab:'Grab',label:'Wheelbarrow tips over above (speed)',def:1,kind:'mul',range:3,unit:'×'},
   {key:'grab.fragile',tab:'Grab',label:'How much bumps chip off the value',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   // ---- creatures
   {key:'vulture.attract',tab:'Creatures',label:'Vultures start circling below',def:0.55,kind:'lin',span:0.45,min:0,max:1,unit:'% hp',pct:true},
