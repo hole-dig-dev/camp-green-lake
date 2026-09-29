@@ -75,8 +75,11 @@ def tent_room(name,W,D,crew=False):
     cyl('bulb',0.07,0.1,(0,0,2.88),('bulb',(0xff,0xe8,0xb0),0.3),verts=8,bevel=0,parent=r)
     # by the door: shovel rack and the rules board (door wall is +Y; doorway spans x -1.3..1.3)
     ry=D-0.2
-    box('rackboard',(2.2,0.06,0.14),(-3.2,ry,1.55),WOOD,bevel=0.01,parent=r)
-    for k in range(4):
+    # D Tent's rack is empty and six slots wide: the crew's own shovels hang here at night (the game draws them,
+    # one per camper, see RACK in public/js/30-npcs.js). The small tents keep four shovels baked in.
+    if crew:box('rackboard',(2.6,0.06,0.14),(-2.875,ry,1.55),WOOD,bevel=0.01,parent=r)
+    else:box('rackboard',(2.2,0.06,0.14),(-3.2,ry,1.55),WOOD,bevel=0.01,parent=r)
+    for k in range(0 if crew else 4):
         x=-4.0+k*0.55;tube(f'handle{k}',(x,ry-0.08,1.6),(x+0.05,ry-0.28,0.35),0.025,m=('shovelhandle',(0x8a,0x6a,0x44),0.85),parent=r)
         box(f'blade{k}',(0.26,0.04,0.34),(x+0.06,ry-0.3,0.2),('shovelblade',(0x70,0x74,0x72),0.6),rot=(math.radians(-20),0,0),bevel=0.01,parent=r)
     box('rules',(1.2,0.04,0.9),(3.1,ry+0.05,1.65),('corkboard',(0xb8,0x8f,0x5c),0.95),bevel=0.01,parent=r)

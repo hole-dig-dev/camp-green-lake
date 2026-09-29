@@ -42,28 +42,90 @@ const bots=BOTDEF.map(d=>{
 });
 /* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
 const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
-/* X-Ray always deals; everyone else gets one of D Tent's bunks (there are 6, one more than the 5 who need one) */
-const D_TENT_BUNKS=BUNKS.map((b,i)=>({b,i})).filter(o=>o.b.tent===TENTS.indexOf(D_TENT)).map(o=>o.i);
-const BOT_BUNK={};BOTDEF.filter(d=>d.n!=='X-Ray').forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[i]});
-function botIndoorSpot(b){return b.d.n==='X-Ray'?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
+/* Inside D Tent (the room sits underground at the tent's x/z): come in at the entry, hang your shovel on your own
+   rack slot by the door, then go to your bunk. X-Ray deals at the card table until 01:00 and takes the sixth bunk. */
+const D_TI=TENTS.indexOf(D_TENT),D_ROOM_Z0=D_TENT.z-D_TENT.roomD;   // the room's door wall
+const D_TENT_BUNKS=BUNKS.map((b,i)=>({b,i})).filter(o=>o.b.tent===D_TI).map(o=>o.i);
+const BOT_BUNK={};BOTDEF.forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[d.n==='X-Ray'?5:i-1]});   // X-Ray is BOTDEF[0]; the rest take bunks 0-4
+const D_ENTRY={x:D_TENT.x,z:D_ROOM_Z0+2.6},D_EXIT={x:D_TENT.x,z:D_ROOM_Z0+0.85};
+/* the rack: six slots on the door wall, left of the doorway (the room model has the board, art/blender/interiors.py).
+   Each crew member owns a slot; its shovel shows there while that shovel is racked. */
+const RACK=BOTDEF.map((d,k)=>{
+  const x=D_TENT.x-4.0+k*0.45,g=new T.Group(),F=TENT_FLOOR_Y;
+  const hMat=new T.MeshStandardMaterial({color:0x8a6a44,roughness:0.85}),bMat=new T.MeshStandardMaterial({color:0x707472,roughness:0.6,metalness:0.2});
+  const a=new T.Vector3(x,F+1.6,D_ROOM_Z0+0.28),b=new T.Vector3(x+0.05,F+0.35,D_ROOM_Z0+0.48),len=a.distanceTo(b);
+  const handle=new T.Mesh(new T.CylinderGeometry(0.025,0.025,len,6),hMat);handle.position.copy(a).add(b).multiplyScalar(0.5);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());
+  const blade=new T.Mesh(new T.BoxGeometry(0.26,0.34,0.04),bMat);blade.position.set(x+0.06,F+0.2,D_ROOM_Z0+0.5);blade.rotation.x=-0.35;
+  g.add(handle,blade);g.visible=false;ROOM_MESHES[D_TI].add(g);
+  return{x,front:{x,z:D_ROOM_Z0+1.3},mesh:g};
+});
+function botBedPath(b){   // walk to beside your bunk (they run along the west wall), or round the table to the dealer's seat
+  if(b.d.n==='X-Ray'&&!b.xraySleeps){const s=D_TENT.dealerSeat;return[{x:s.x+2.5,z:s.z-4.75},{x:s.x+2.5,z:s.z},{x:s.x,z:s.z}]}   // round the east side of the card table
+  const k=BUNKS[BOT_BUNK[b.d.n]];return[{x:k.x+1.4,z:k.z}];
+}
+function botIndoorSpot(b){return b.d.n==='X-Ray'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
+function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
+const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout']);
+const curfewSoon=()=>clockT()>=DAYMS-60000;   // the siren (82-patrol.js) through the night
+const xrayBedtime=()=>clockT()>=tAtHour(1);    // 01:00 until dawn
+function walkTo(b,x,z,dt,speed,y){   // true once there
+  const g=b.p.g,dx=x-g.position.x,dz=z-g.position.z,d=Math.hypot(dx,dz);
+  if(d<0.1)return true;
+  const s=Math.min(d,dt*speed);g.position.x+=dx/d*s;g.position.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);
+  g.position.y=y!==undefined?y:groundAt(g.position.x,g.position.z);animPerson(b.p,speed>3?4:1,dt,0,speed>3?1:undefined);return false;
+}
+function goIndoor(b,path,then){b.state='indoor';b.path=path;b.then=then}
 function updateBots(dt,now){
   if(PARTY.on)return;
-  const isNight=clockT()>=DAYMS;
+  const siren=curfewSoon();
   for(const b of bots){
     if(b.sinkOverride)continue;   // off pulling someone out of a sinkhole right now (87-sinkhole.js drives him instead)
-    const g=b.p.g;
-    g.visible=b.state!=='inside'||S.tent===TENTS.indexOf(D_TENT);
+    const g=b.p.g,indoors=b.state==='inside'||b.state==='indoor';
+    /* sent back outside by something else (the party ending, a sinkhole rescue) while still in the room: step out at the door with your shovel */
+    if(OUTDOOR.has(b.state)&&g.position.y<TENT_FLOOR_Y+1){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);rackShovel(b,false)}
+    g.visible=!indoors||S.tent===D_TI;
     if(DLG.open&&DLG.bot===b){ /* mid-conversation: stop and face the player */
       let dr=Math.atan2(P.x-g.position.x,P.z-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*8);
       animPerson(b.p,0,dt);continue;
     }
-    b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
+    const asleep=b.state==='inside'&&(b.d.n!=='X-Ray'||b.xraySleeps);
+    b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
+    /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
+    if(siren){
+      if(b.state==='dig'||b.state==='rest'||b.state==='walk'||b.state==='return'||b.state==='gatebackout'){b.state='gateout';b.tx=0;b.tz=25}
+      else if(b.state==='gatebackin'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
+    }
+    if(b.state==='indoor'){
+      /* walking a path inside the room, then doing b.then */
+      const w=b.path[0];
+      if(w){if(walkTo(b,w.x,w.z,dt,1.6,TENT_FLOOR_Y))b.path.shift();continue}
+      b.t=(b.t||0)-dt;if(b.t>0){animPerson(b.p,0,dt);continue}
+      if(b.then==='rack'){b.then='hang';b.t=0.6}   // a moment at the rack
+      else if(b.then==='hang'){rackShovel(b,true);goIndoor(b,botBedPath(b),'settle')}
+      else if(b.then==='settle'){
+        const spot=botIndoorSpot(b);g.position.set(spot.x,TENT_FLOOR_Y,spot.z);b.state='inside';
+        b.t=siren?null:20+botRng()*40;   // a daytime break lasts 20-60 s; a night lasts until a wake-up time after dawn
+      }
+      else if(b.then==='unrack'){rackShovel(b,false);goIndoor(b,[D_EXIT],'out')}
+      else if(b.then==='out'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);g.rotation.y=Math.PI;b.state='gatebackin';b.tx=0;b.tz=30}
+      continue;
+    }
     if(b.state==='inside'){
-      /* hanging out in D Tent: sitting at the table (X-Ray) or lying on a bunk (everyone else) */
-      if(b.d.n==='X-Ray'){g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt)}          // dealing at the card table
-      else{animPerson(b.p,0,dt);sleepPose(b.p,botIndoorSpot(b))}                      // everyone else lies on their own bunk
-      b.t-=dt;
-      if(!isNight&&b.t<=0){b.state='leaving';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
+      /* dealing at the card table (X-Ray, until 01:00) or lying on your bunk */
+      if(b.d.n==='X-Ray'&&!b.xraySleeps){
+        g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt);
+        if(xrayBedtime()){b.xraySleeps=true;goIndoor(b,[{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z},{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z-4.75},...botBedPath(b)],'settle')}
+        else if(!siren&&b.t==null)b.t=0;   // a daytime visit's dealing ends when the day timer does
+      }else{animPerson(b.p,0,dt);sleepPose(b.p,botIndoorSpot(b))}
+      if(!siren){
+        if(b.t==null)b.t=botRng()*40;   // morning: each gets up at their own time, 06:00-07:00
+        b.t-=dt;
+        if(b.t<=0){   // up: stand beside the bunk (or leave the dealer's seat), fetch your shovel and head out
+          const seated=b.d.n==='X-Ray'&&!b.xraySleeps,k=BUNKS[BOT_BUNK[b.d.n]];b.xraySleeps=false;
+          if(!seated)g.position.set(k.x+1.4,TENT_FLOOR_Y,k.z);
+          const s=D_TENT.dealerSeat;goIndoor(b,[...(seated?[{x:s.x+2.5,z:s.z},{x:s.x+2.5,z:s.z-4.75}]:[]),RACK[bots.indexOf(b)].front],'unrack');
+        }
+      }
       continue;
     }
     if(b.state==='dig'){
@@ -87,7 +149,7 @@ function updateBots(dt,now){
       animPerson(b.p,b.restT<2.2?5:b.restT<3.8?6:0,dt);
       if(b.t<=0){
         /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
-        if(isNight||botRng()<0.22){b.state='gateout';b.tx=0;b.tz=25}
+        if(botRng()<0.22){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
         else{
           for(let k=0;k<20;k++){const a=botRng()*Math.PI*2;const x=r1(b.hole.x+Math.cos(a)*3.3),z=r1(clamp(b.hole.z+Math.sin(a)*3.3,14,26));if(!holeNear(x,z,2.9)){b.tx=x;b.tz=z;break}}
           if(b.tx||b.tz)b.state='walk';else b.t=4;
@@ -98,14 +160,11 @@ function updateBots(dt,now){
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=FIVE_FT?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
       else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=0;b.tz=30}
       else if(d<0.1&&b.state==='gatein'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
-      else if(d<0.1&&b.state==='gotent'){
-        const spot=botIndoorSpot(b);g.position.set(spot.x,TENT_FLOOR_Y,spot.z);b.state='inside';b.t=20+botRng()*40;
-      }
-      else if(d<0.1&&b.state==='leaving'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);b.state='gatebackin';b.tx=0;b.tz=30}
+      else if(d<0.1&&b.state==='gotent'){g.position.set(D_ENTRY.x,TENT_FLOOR_Y,D_ENTRY.z);goIndoor(b,[RACK[bots.indexOf(b)].front],'rack')}   // in through the flap, straight to the rack
       else if(d<0.1&&b.state==='gatebackin'){b.state='gatebackout';b.tx=0;b.tz=25}
       else if(d<0.1&&b.state==='gatebackout'){b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
       else if(d<0.1){b.hole=addHole({x:b.tx,z:b.tz,d:0.05,bot:true});b.tx=b.tz=0;b.state='dig';b.dph=0;touchHole(b.hole)}
-      else{const s=Math.min(d,dt*(b.state==='return'?3.5:2.2));g.position.x+=dx/d*s;g.position.z+=dz/d*s;g.rotation.y=Math.atan2(dx,dz);g.position.y=groundAt(g.position.x,g.position.z);animPerson(b.p,1,dt)}
+      else walkTo(b,b.tx,b.tz,dt,siren?3.6:b.state==='return'?3.5:2.2);
     }
   }
 }

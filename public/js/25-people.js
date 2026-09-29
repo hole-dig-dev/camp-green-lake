@@ -44,7 +44,7 @@ function sleepPose(p,bk){
 }
 function animPerson(p,mode,dt,digPhase,speed){
   if(p.model){animModel(p,mode,dt,digPhase,speed);return}
-  if(p.shovel&&!p.shovel.visible)p.shovel.visible=true;   // back in hand when you're up (sleepPose hides it)
+  if(p.shovel)p.shovel.visible=!p.stowed;   // back in hand when you're up (sleepPose hides it), unless it's on a rack (p.stowed)
   if(mode===3){p.g.rotation.x=lerp(p.g.rotation.x,-Math.PI/2,Math.min(1,dt*8));return}
   p.g.rotation.x=lerp(p.g.rotation.x,0,Math.min(1,dt*8));
   const k=Math.min(1,dt*10);
@@ -163,7 +163,7 @@ function setClip(p,name,fade){
 function animModel(p,mode,dt,digPhase,speed){
   const now=performance.now();if(dt==null)dt=Math.min(0.05,(now-p.lastT)/1000);p.lastT=now;
   p.g.rotation.x=0;
-  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=!p.o||p.o.shovel!==false;   // back in hand once you're up (sleepPose hides it)
+  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=(!p.o||p.o.shovel!==false)&&!p.stowed;   // back in hand once you're up (sleepPose hides it), unless it's on a rack (p.stowed)
   if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
   const name=MODE_CLIP[mode]||'Idle';
   setClip(p,name);
