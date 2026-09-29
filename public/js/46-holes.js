@@ -116,7 +116,7 @@ function hlBuild(slot,h){
 function hlDirtyNear(h){
   for(const s of hlPool)if(s.h&&s.h!==h&&Math.hypot(s.h.x-h.x,s.h.z-h.z)<s.h.r+HL_LIP+h.r+1.0+MR)s.dirty=true;
 }
-/* backstop: dark soil well below the deepest hole. Where two liners meet, rounding can leave a hairline between
+/* backstop: dark soil well below the deepest hole (hidden while you're inside a tent room, which sits lower still). Where two liners meet, rounding can leave a hairline between
    them; through it you see this, a dark crease, instead of the sky (the terrain under a lined hole is cut away). */
 const hlUnder=new T.Mesh(new T.PlaneGeometry(260,260).rotateX(-Math.PI/2),new T.MeshStandardMaterial({color:0x3a2616,roughness:1,metalness:0}));
 hlUnder.position.y=-EIGHT_FT-0.8;hlUnder.frustumCulled=false;scene.add(hlUnder);
@@ -125,6 +125,7 @@ function updateHoleLiners(dt){
   hlScanT-=dt;
   const fx=S.started?P.x:0,fz=S.started?P.z:12;
   hlUnder.position.x=fx;hlUnder.position.z=fz;
+  hlUnder.visible=!inTent();   // the tent rooms are built underground (floor at TENT_FLOOR_Y, below this plane): never draw it through them
   if(hlScanT<=0){
     hlScanT=HL_RESCAN;
     // the nearest real holes (not sinkhole craters, which draw themselves) get a liner
