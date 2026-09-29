@@ -138,6 +138,7 @@ function use(){
   if(s.id==='cartLoad'){loadIntoCart();return}
   if(s.id==='prop'){useProp(s.pr);return}   // grab it / let go (84-grab.js)
   if(s.id==='bag'){if(online())wsSend({t:'grab',id:s.b.id});else{takeBag(s.b.items,s.b.n);removeBag(s.b.id)}return}
+  if(s.use){s.use();return}   // a spot that brings its own action (another map's rope anchor: 88-zones.js)
   if(s.id==='sir')openDialog('sir');
   else if(s.id==='warden')openDialog('warden');
   else if(s.id==='store')openShop();

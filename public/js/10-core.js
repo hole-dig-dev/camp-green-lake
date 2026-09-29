@@ -24,7 +24,13 @@ function nearCampZone(x,z){return x>-46&&x<36&&z>12&&z<62}
    The lime line and stakes in 20-world.js mark it; server.js refuses digs inside it too (same numbers). */
 const CAMP_NODIG=4;   // m out from the fence line
 function nearCampNoDig(x,z){return Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,z-56))<CAMP_NODIG}
+/* Peak-style maps (88-zones.js): while the crew is in another map, these point at that map's ground, colours, minimap
+   and climbing limit. They're all null/0 on the lake, so none of the lake code changes. */
+let ZONE_H=null,ZONE_TINT=null,ZONE_MAP=null,ZONE_STEP=0;
+let HELLO_LATER=null;   // a hello naming a map whose script hasn't loaded yet waits here (65-net.js, replayed by 88-zones.js)
+const ZONE_MAX_Y=200;   // highest a camper can stand in any map (the canyon floor climbs); server.js clamps the same
 function baseH(x,z){
+  if(ZONE_H)return ZONE_H(x,z);
   let h=(vnoise(x*0.07+11,z*0.07-3)-0.5)*0.6+(vnoise(x*0.31,z*0.31)-0.5)*0.12;
   if(inCamp(x,z))h*=0.25;
   const e=Math.max(Math.abs(x),Math.abs(z));

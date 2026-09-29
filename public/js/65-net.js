@@ -37,7 +37,7 @@ function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
   const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;
-  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,10,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
+  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,255,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
@@ -60,9 +60,12 @@ function onMsg(m){
   if(!m||typeof m!=='object')return;
   switch(m.t){
     case 'hello':{
+      // the crew is in another map whose script is still loading: handle this hello once it has (88-zones.js)
+      if(typeof m.zone==='string'&&m.zone!=='lake'&&(typeof ZONES==='undefined'||!ZONES[m.zone])){HELLO_LATER=m;break}
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
+      if(typeof zoneEnter==='function')zoneEnter(typeof m.zone==='string'?m.zone:'lake',m.zflags);   // which map the crew is in (88-zones.js); before the holes below, which are that map's
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
@@ -102,8 +105,9 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,10,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,ZONE_MAX_Y,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,255,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
+    case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
     case 'pown':case 'pst':case 'phand':case 'pyeet':case 'pcart':case 'pslip':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)

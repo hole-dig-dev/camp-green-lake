@@ -65,6 +65,7 @@ function updatePlayer(dt){
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
       if(trap&&groundAt(nx,nz)-P.y>0.6){nx=P.x;nz=P.z}
+      if(ZONE_STEP){const q=zoneStep(P.x,P.z,nx,nz,P.y);nx=q[0];nz=q[1]}   // other maps: ledges too tall to walk up (88-zones.js)
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
       if(sprint)drainStam(tune('stam.sprint')*dt);
       if(S.carry!=null){drainStam(tune('stam.carry')*dt);if(S.stam<=0&&!GOD){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500);logEv('carryDrop',{why:'stamina'})}}
@@ -73,7 +74,7 @@ function updatePlayer(dt){
   // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever
   // non-zero while that state machine owns the frame, so there's nothing left to integrate here.
   const g=groundAt(P.x,P.z);
-  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=5.6;P.grounded=false;drainStam(tune('stam.jump'))}
+  if(KEYS[' ']&&P.grounded&&!P.crouch&&!trap){P.vy=ZONE_STEP?zoneJumpV():5.6;P.grounded=false;drainStam(tune('stam.jump'))}   // zoneJumpV: a leg-up from a crouching friend (88-zones.js)
   P.vy-=16*dt;P.y+=P.vy*dt;
   if(P.y<=g){P.y=g;P.vy=0;P.grounded=true}else if(P.y-g>0.05)P.grounded=P.grounded&&P.y-g<0.3;
   if(P.y<g+0.02)P.grounded=true;

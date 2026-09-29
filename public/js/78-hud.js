@@ -68,7 +68,7 @@ function updateHUD(){
   else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
 }
@@ -121,6 +121,7 @@ function buildMapCache(night){
   const g=mapCacheCtx;mapCacheNight=night;
   g.clearRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);
   g.fillStyle=night?'#161f1c':'#b98a5e';g.fillRect(0,0,MAP_CACHE_RES,MAP_CACHE_RES);   // beyond EDGE
+  if(ZONE_MAP){ZONE_MAP(g,night);return}   // another map paints its own (88-zones.js)
   g.fillStyle=night?'#26332d':'#d9a86c';g.fillRect(ccx(-EDGE),ccz(-EDGE),ccs(EDGE*2),ccs(EDGE*2));   // lake bed
   g.strokeStyle=night?'rgba(237,226,200,.08)':'rgba(43,29,18,.10)';g.lineWidth=1;g.setLineDash([3,5]);
   for(let gx=Math.ceil(-EDGE/50)*50;gx<=EDGE;gx+=50){g.beginPath();g.moveTo(ccx(gx),ccz(-EDGE));g.lineTo(ccx(gx),ccz(EDGE));g.stroke()}

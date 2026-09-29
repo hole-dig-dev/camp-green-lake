@@ -131,6 +131,42 @@ const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim(
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
 const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol'];
 
+/* Peak-style maps (public/js/88-zones.js). The whole crew is always in ONE map (world.zone, 'lake' when unset), so
+   everything else here runs unchanged on whichever map is loaded. Each map keeps its own holes, finds, heavy loot,
+   sacks and flags (a dropped rope); the ones not in use wait in world.zones. ZONE_ORDER is the escape route and
+   must match the client's. */
+const ZONE_ORDER = ['lake', 'canyon'];
+const ZONE_MAX_Y = 200; // the canyon floor climbs; public/js/10-core.js has the same number
+function zoneMsg() {
+  return {
+    t: 'zone', zone: world.zone || 'lake', zflags: world.zflags || {},
+    holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
+    got: [...gotSet],
+    bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
+    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+  };
+}
+function zoneSwitch(id, why) {
+  const cur = world.zone || 'lake';
+  if (id === cur || !ZONE_ORDER.includes(id)) return;
+  if (!world.zones || typeof world.zones !== 'object') world.zones = {};
+  world.zones[cur] = { holes: world.holes, got: [...gotSet], props: world.props, bags: world.bags, zflags: world.zflags || {} };
+  const z = world.zones[id] || {};
+  delete world.zones[id];
+  world.zone = id; world.holes = z.holes || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
+  for (const c of clients.values()) c.cp = false;
+  dirty = true;
+  LOG.log('zone', { from: cur, to: id, why });
+  broadcast(zoneMsg());
+}
+/* Like Peak's campfires: the next map only opens once every joined camper is standing at this one's. */
+function checkCampfire() {
+  const js = joined(), at = js.filter(c => c.cp).length;
+  broadcast({ t: 'cpstat', at, total: js.length });
+  const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
+  if (js.length && at === js.length && next) zoneSwitch(next, 'campfire');
+}
+
 function freshRun() { return { day: 1, bank: 0, peak: 1 }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
@@ -363,6 +399,7 @@ wss.on('connection', (ws, req) => {
   function sendHello() {
     send(c, {
       t: 'hello', id: c.id, day: world.day, iceServers: ICE_SERVERS,
+      zone: world.zone || 'lake', zflags: world.zflags || {}, // which map the crew is in; the holes etc. below are that map's
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
@@ -428,7 +465,7 @@ wss.on('connection', (ws, req) => {
     if (!c.joined) return;
     switch (m.t) {
       case 'pos':
-        c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, 10, c.y); c.z = num(m.z, -620, 620, c.z);
+        c.x = num(m.x, -620, 620, c.x); c.y = num(m.y, -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
@@ -693,6 +730,27 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'clock', ...world.clock }, c.id);
         break;
       }
+      case 'zone':
+        // Host console "zone <name>": move the whole crew to another map (for testing, until the escape starts it).
+        if (!c.host || typeof m.zone !== 'string') return;
+        zoneSwitch(m.zone, 'console by ' + c.n);
+        break;
+      case 'cp':
+        // A camper walked into (or out of) the current map's campfire circle.
+        c.cp = m.on === true;
+        checkCampfire();
+        break;
+      case 'zev': {
+        // Something in a map that changes for everyone and stays changed, e.g. a rope dropped down a dry fall.
+        if (typeof m.k !== 'string' || !/^[a-z]{1,12}$/.test(m.k)) return;
+        const key = m.k + (num(m.i, 0, 50, 0) | 0);
+        if (!world.zflags || typeof world.zflags !== 'object') world.zflags = {};
+        if (world.zflags[key]) return;
+        world.zflags[key] = 1; dirty = true;
+        LOG.log('zev', { id: c.id, n: c.n, key, zone: world.zone || 'lake' });
+        broadcast({ t: 'zev', key, n: c.n });
+        break;
+      }
       case 'sleep':
         // A camper lay down in (or got out of) a bunk. If it's night and EVERY joined camper is asleep, skip to dawn.
         c.sleeping = m.on === true;
@@ -853,7 +911,7 @@ wss.on('connection', (ws, req) => {
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
-    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); }
+    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); }
   });
 });
 
@@ -961,9 +1019,11 @@ function endOfDay() {
     // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
     const got = q.bank;
     LOG.log('fired', { bank: got, quota: q.quota });
+    const wasZone = world.zone || 'lake';
     world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() }); ensureCart();
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
+    if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
   }
 }
 setInterval(() => {
