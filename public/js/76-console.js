@@ -44,7 +44,7 @@ function openConsole(){
   if(!conLog.children.length)conPrint('Camp Green Lake console. Type help for commands.');
   conIn.value='';conIn.focus();   // focus right away, so fast typing never leaks keys into the game
 }
-function closeConsole(){conEl.hidden=true;conIn.blur()}
+function closeConsole(){conEl.hidden=true;conIn.blur();relockSoon()}
 function consoleOpen(){return!conEl.hidden}
 function runCommand(line){
   const words=line.trim().split(/\s+/).filter(Boolean);if(!words.length)return;

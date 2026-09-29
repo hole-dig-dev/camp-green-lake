@@ -8,7 +8,7 @@ function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
 function uiOpen(){return shopOpen||invOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||tuneOpen()||!$('#fired').hidden||PAUSE.open||fieldMapOpen}
 function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
-function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true}
+function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true;relockSoon()}
 function showNode(node){
   $('#dlgName').textContent=node.name;$('#dlgText').textContent=node.text;
   const box=$('#dlgOpts');box.textContent='';DLG.opts=node.opts;

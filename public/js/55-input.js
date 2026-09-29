@@ -12,6 +12,10 @@ function lockMouse(){
   const plain=()=>{try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(e){}};
   try{const r=canvas.requestPointerLock({unadjustedMovement:true});if(r&&r.catch)r.catch(e=>{if(e&&e.name==="NotSupportedError")plain()})}catch(e){plain()}
 }
+// Back to looking around once a menu closes (dialog, console). Next tick, so a dialog option that opens the shop
+// doesn't grab the mouse first. Chrome lets a page re-lock without a click when the page itself let go of the lock.
+// Chrome refuses a lock that comes too soon after the last one ("too many requests"), so try a few times over ~1.5 s.
+function relockSoon(){for(const ms of[0,300,700,1500])setTimeout(()=>{if(S.started&&!lockOk()&&!overlayBlocking()&&!PAUSE.open)lockMouse()},ms)}
 // Spike filter, the second guard against those jumps: a single mouse reading far bigger than the recent
 // average is thrown away. A real flick builds up over several readings, so it still gets through.
 const LOOK_SPIKE_MIN=120;   // px in one event: anything smaller is always accepted
@@ -47,6 +51,7 @@ const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here
 addEventListener('keydown',e=>{
   const pk=e.key.toLowerCase();   // pause menu: the raw physical key, before any rebinding is applied
   if(e.target===conIn){conKey(e);return}
+  if(consoleOpen()&&(e.key==='Escape'||e.key==='`')){e.preventDefault();closeConsole();return}   // even when the typing box has lost focus
   if(tuneKey(e))return;   // F2 control center (77-tune-panel.js); swallows keys while it's open
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
