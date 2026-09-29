@@ -121,10 +121,14 @@ function makeVultureModel(){
   g.visible=false;scene.add(g);
   return{g,wingL,wingR,legL,legR,tail,ph:Math.random()*6.28,used:null};
 }
+const VULTURE_RIG_BELLY=1.72;   // the Blender vulture's belly above its origin (model 1.086 m up, x1.6 scale): where its talons hang from
+const VULTURE_TALON=0.5;        // talon leg length before scaling: the camper's hand is pinned to the tip (26-ragdoll.js)
 const VPOOL_N=4;   // 1 for whoever has YOU, a few spares so several carried friends can be seen at once
 const vPool=Array.from({length:VPOOL_N},makeVultureModel);
 creatureUpgrade('vulture',()=>{vFlockRigs=vFlock.map(()=>{const r=spawnCreature('vulture');scene.add(r.obj);return r});vMesh.visible=false;
-  for(const v of vPool){const r=spawnCreature('vulture');for(const c of v.g.children)c.visible=false;v.g.add(r.obj);v.rig=r}});   // (registered after vPool exists)
+  for(const v of vPool){const r=spawnCreature('vulture');for(const c of v.g.children)c.visible=false;v.g.add(r.obj);v.rig=r;
+    // the Blender vulture has no legs: keep the box model's legs, moved up under its belly and scaled to match, as the talons
+    for(const L of[v.legL,v.legR]){L.visible=true;L.position.y=VULTURE_RIG_BELLY;L.scale.setScalar(1.6)}}});   // (registered after vPool exists)
 function vPoolGet(key){
   let v=vPool.find(p=>p.used===key);if(v)return v;
   v=vPool.find(p=>!p.used);if(v){v.used=key;v.g.visible=true}return v;
@@ -137,8 +141,12 @@ function vDrawCarrier(key,x,y,z,yaw,mode,dt){
   vFlap(v,dt,mode==='carry'?9:mode==='dive'?5:7,mode==='carry'?0.55:0.4);
   const legOut=mode==='carry'||mode==='grab';   // swinging legs while it's actually holding someone
   v.legL.rotation.x=legOut?Math.sin(v.ph*1.6)*0.5-0.6:0;
-  v.legR.rotation.x=legOut?Math.sin(v.ph*1.6+3.1)*0.5-0.6:0;
+  v.legR.rotation.x=legOut?Math.sin(v.ph*1.6+3.1)*0.15-0.35:0;   // the right foot has you: it barely swings
+  v.legL.visible=v.legR.visible=legOut||!v.rig;
+  v.g.updateMatrixWorld(true);v.talon=legOut?v.legR.localToWorld((v.talon||new T.Vector3()).set(0,-VULTURE_TALON,0)):null;
 }
+/* where the vulture that has camper `key` ('me' or 'r'+id) is gripping: the right foot's tip, or null */
+function vTalonOf(key){const v=vPool.find(p=>p.used===key);return v&&v.talon||null}
 /* other clients' carried campers: driven purely off the flag bit + ordinary pos sync, no local state needed */
 function vRenderRemoteCarries(dt){
   for(const[id,R]of remotes){

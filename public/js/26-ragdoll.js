@@ -75,8 +75,11 @@ function ragActive(p){return!!(p&&p.rag&&p.rag.on)}
 /* one physics step for p's ragdoll; ground(x,z) gives the floor under a point */
 function ragStep(p,dt,ground){
   const r=p.rag,pts=r.pts;dt=Math.min(dt,1/30);r.t+=dt;
-  const damp=0.992,g=RAG_G*(1-(r.lift||0))*dt*dt;
-  for(const q of pts){const vx=(q.x-q.px)*damp,vy=(q.y-q.py)*damp,vz=(q.z-q.pz)*damp;q.px=q.x;q.py=q.y;q.pz=q.z;q.x+=vx;q.y+=vy-g;q.z+=vz}
+  const damp=r.damp||0.992,g=RAG_G*(1-(r.lift||0))*dt*dt;
+  // air drag, measured against whatever's holding you (a vulture's grip moves with the bird): when the bird stops climbing
+  // you don't swing up over its feet, you settle under them
+  const o=r.pin&&r.pin.k>=1&&r.pinPrev,hq=o&&pts[RP[r.pin.at]??RP.pelvis],ux=o?hq.x-hq.px:0,uy=o?hq.y-hq.py:0,uz=o?hq.z-hq.pz:0;
+  for(const q of pts){const vx=ux+(q.x-q.px-ux)*damp,vy=uy+(q.y-q.py-uy)*damp,vz=uz+(q.z-q.pz-uz)*damp;q.px=q.x;q.py=q.y;q.pz=q.z;q.x+=vx;q.y+=vy-g;q.z+=vz}
   // flailing (Peak's airborne arms): little random shoves on the hands and feet while pinned in the air
   if(r.flail&&tune('rag.flail')>0){const fl=tune('rag.flail');for(const i of[RP.hdL,RP.hdR,RP.ftL,RP.ftR]){const q=pts[i],s=r.flail*fl*dt*dt*60;q.x+=(Math.random()-0.5)*s;q.y+=(Math.random()-0.3)*s;q.z+=(Math.random()-0.5)*s}}
   for(let it=0;it<RAG_ITER;it++){
@@ -86,9 +89,13 @@ function ragStep(p,dt,ground){
       if(min&&d>=len)continue;   // an inequality ("at least this far") that's already satisfied
       const k=(d-len)/d*0.5*(stiff<1?Math.min(1,stiff*fold):stiff);A.x+=dx*k;A.y+=dy*k;A.z+=dz*k;B.x-=dx*k;B.y-=dy*k;B.z-=dz*k;
     }
-    if(r.pin){const q=pts[r.pin.at==='chest'?RP.chest:RP.pelvis],k=r.pin.k;q.x+=(r.pin.x-q.x)*k;q.y+=(r.pin.y-q.y)*k;q.z+=(r.pin.z-q.z)*k}
+    if(r.pin){const q=pts[RP[r.pin.at]??RP.pelvis],k=r.pin.k;q.x+=(r.pin.x-q.x)*k;q.y+=(r.pin.y-q.y)*k;q.z+=(r.pin.z-q.z)*k}
     for(const q of pts){const gy=ground(q.x,q.z)+0.06;if(q.y<gy){q.y=gy;q.px+=(q.x-q.px)*0.35;q.pz+=(q.z-q.pz)*0.35;if(q.py<gy)q.py=gy+(q.py-gy)*0.2}}   // floor, with friction
   }
+  // a hard pin (a vulture's grip) carries its point along exactly: moving it adds no speed of its own, so the body
+  // swings from it instead of being whipped over the top every frame
+  if(r.pin&&r.pin.k>=1){const q=pts[RP[r.pin.at]??RP.pelvis],o=r.pinPrev;q.x=r.pin.x;q.y=r.pin.y;q.z=r.pin.z;
+    if(o){q.px=o.x;q.py=o.y;q.pz=o.z}else{q.px=q.x;q.py=q.y;q.pz=q.z}r.pinPrev={x:q.x,y:q.y,z:q.z}}else r.pinPrev=null;
   r.pin=null;
 }
 /* point the camper's bones along the skeleton (world space, through each parent's current world transform) */
@@ -147,7 +154,8 @@ function myRagState(){
   if(tbSt===1)return{on:true,pin:0.45,lift:0.8,flail:1.3};               // stuck in a rolling tumbleweed: tumbled round with it
   if(tbSt===2)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(tbSt===3)return{on:true,pin:0.03,lift:0,flail:0};
-  if(vSt===3||vSt===4)return{on:true,pin:0.6,lift:0.9,flail:1.2,at:'chest'};   // carried off by the shoulders
+  if(vSt===3||vSt===4){const t=vTalonOf('me');if(t)return{on:true,pin:1,lift:0,flail:0.5,at:'hdR',grip:t,damp:0.93};   // dangling by one hand from its talons
+    return{on:true,pin:0.6,lift:0.9,flail:1.2,at:'chest'}}
   if(vSt===5)return{on:true,pin:0.12,lift:0,flail:1.0};
   if(vSt===6)return{on:true,pin:0.03,lift:0,flail:0};
   if(S.ragT>0)return{on:true,pin:0.03,lift:0,flail:0};
@@ -166,8 +174,8 @@ function updateRagdolls(dt){
     if(st){
       {const q=ragPelvis(me);if(q&&Math.hypot(q.x-P.x,q.z-P.z)>4){me.rag=null;me.ragBlend=0}}   // you were moved (respawn, teleport, the town): start the body fresh where you are
       if(!ragActive(me))ragdollOn(me,{vx:P.kx||0,vy:P.vy||0,vz:P.kz||0});
-      const r=me.rag,at=st.at==='chest';r.lift=st.lift;r.flail=st.flail;
-      ragdollPin(me,P.x,P.y+(at?r.chestH:r.hipH),P.z,st.pin,st.at);
+      const r=me.rag,at=st.at==='chest';r.lift=st.lift;r.flail=st.flail;r.damp=st.damp||0;
+      if(st.grip)ragdollPin(me,st.grip.x,st.grip.y,st.grip.z,st.pin,st.at);else ragdollPin(me,P.x,P.y+(at?r.chestH:r.hipH),P.z,st.pin,st.at);
       me.g.rotation.set(0,me.g.rotation.y,0);
       ragAfterMixer(me,dt,ragGroundMe);
       // lying there: you get up where your body ended up, not where the throw said
@@ -182,7 +190,7 @@ function updateRagdolls(dt){
     me.ragOn=!!st;
   }
   // friends: pos flag 512 = ragdolled (1024 = airborne), 2 = downed. Each of us runs the flop pinned to where they are.
-  for(const R of remotes.values()){
+  for(const[rid,R]of remotes){
     const p=R.p;if(!p.model)continue;
     const want=(R.f&512)||(R.f&2);
     if(want){
@@ -190,7 +198,8 @@ function updateRagdolls(dt){
       if(!ragActive(p)){ragdollOn(p,{vx:(R.tx-(R.rx0??R.tx))/Math.max(dt,0.016),vy:0,vz:(R.tz-(R.rz0??R.tz))/Math.max(dt,0.016)})}
       const r=p.rag,gp=p.g.position,sp=Math.hypot(gp.x-(R.rgx??gp.x),gp.z-(R.rgz??gp.z))/Math.max(dt,0.016);
       r.flail=(R.f&1024)?1:0;r.lift=0;
-      ragdollPin(p,gp.x,gp.y+r.hipH,gp.z,(R.f&1024)?0.15:sp>0.6?0.3:0.03);
+      const t=(R.f&128)&&vTalonOf('r'+rid);   // a vulture has them: hanging by one hand from its talons, like on their screen
+      r.damp=t?0.93:0;if(t){r.lift=0;r.flail=0.5;ragdollPin(p,t.x,t.y,t.z,1,'hdR')}else ragdollPin(p,gp.x,gp.y+r.hipH,gp.z,(R.f&1024)?0.15:sp>0.6?0.3:0.03);
       p.g.rotation.set(0,p.g.rotation.y,0);
       const under=gp.y<groundAt(gp.x,gp.z)-1.5;
       ragAfterMixer(p,dt,under?(()=>gp.y):groundAt);
