@@ -1,8 +1,21 @@
 # Camp Green Lake Blender art
 
-`camp-green-lake-art.blend` holds every 3D asset, **one scene per asset** (plus `ARCHIVED_Camper_minipc`, the archived minipc camper scene
-from the character work). In each scene the `<Name>.Asset` collection is the model and
-`<Name>.Studio` is the preview camera, lights and floor.
+The 3D assets live in five `.blend` files, grouped so an edit only touches (and commits) its own group. **One scene
+per asset.** In each scene the `<Name>.Asset` collection is the model and `<Name>.Studio` is the preview camera,
+lights and floor.
+
+| File | Scenes | Build scripts |
+| --- | --- | --- |
+| `buildings.blend` | tents, tent rooms, Warden's house and office, Wreck Room (Supply Depot), watchtower, water tower, fence, gates, yard (flag pole, hammock, lamp post, mess table, oak, outhouse, shower block, water truck) | `buildings.py`, `interiors.py`, `fence.py`, `gates.py`, `yard.py`, `wreckroom.py` |
+| `props.blend` | signs, furniture, supplies, carried loot, Mr. Sir's truck, rocks, boulders, tumbleweed | `signs.py`, `signs_export.py`, `furniture.py`, `supplies.py`, `carryloot.py`, `rocks.py` |
+| `finds.blend` | the dig-up finds, including the five-way variant scenes (`Can_1`..`Can_5`, `KB_v01`..`KB_v10`, ...) the final finds were picked from | `finds.py`, `finds2.py`, `finds3.py`, `heavy.py`, `kb.py`, `kbfinal.py` |
+| `creatures.blend` | lizard, javelina, mountain lion, vulture (rigged, with clips), plus their first-round variants (`Liz_1`..) | `creatures.py`, `beasts.py`, `rig.py`, `vulture.py` |
+| `characters.blend` | `Camper`: the player/crew/staff camper (from JT's PC, rigged by `/blender/cgl_rig.py`, exported to `public/models/camper.glb`); `ARCHIVED_Camper_minipc`: the superseded minipc camper | `/blender/cgl_rig.py` |
+
+Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
+it. The files are saved **compressed** (Blender keeps compression on every later save): the old single
+`camp-green-lake-art.blend` was 53 MB uncompressed and grew the repo by that much on every commit; the five together are
+about 5 MB. Split on 2026-09-30; every scene's meshes were checked against the old file.
 
 Built live in Blender through the blender-mcp socket (`bx.py` runs a Python file inside the running
 Blender). `cgl_blender.py` is the shared toolkit (palette, materials, bevelled boxes/cylinders, 3D
@@ -25,7 +38,7 @@ Sizes match the game's current layout (bunk 1.3 x 2.35 with mattress tops at 0.5
 3.5 m every 2.5 m, tower lamp at 8.55 m, etc.). Origins sit on the ground at the footprint centre;
 fronts face Blender -Y (= +Z in the game after glTF's Y-up conversion).
 
-`glb/` has the exports (~2 MB for all 21), `renders/` the previews. Fonts: Anton and Big Shoulders
+`glb/` has the exports, `renders/` the previews. Fonts: Anton and Big Shoulders
 Stencil Display (SIL OFL, Google Fonts) in `../fonts/`.
 
 The build scripts share helpers by exec-ing each other's top halves (`beasts.py` <- `creatures.py` <- `finds2.py` <- `finds.py` <- `cgl_blender.py`). Older scripts point those at `/tmp` copies; `vulture.py` loads them from this folder instead.

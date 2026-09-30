@@ -1,3 +1,4 @@
+# blend: buildings.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 import numpy as np
 if bpy.data.scenes.get('RenderTest'):

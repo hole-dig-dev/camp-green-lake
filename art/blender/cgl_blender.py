@@ -1,6 +1,6 @@
 """Camp Green Lake asset toolkit for the live Blender (run through the blender-mcp socket).
 
-Every asset gets its OWN SCENE in art/blender/camp-green-lake-art.blend:
+Every asset gets its OWN SCENE in its group's .blend (buildings/props/finds/creatures/characters.blend, see README):
   - collection "Asset"  : the model itself (the only thing exported to GLB)
   - collection "Studio" : camera, key/fill lights and a shadow-catching floor, for preview renders
 Units are metres, +Z up in Blender (the glTF exporter converts to the game's +Y up). An asset's

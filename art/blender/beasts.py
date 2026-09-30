@@ -1,3 +1,4 @@
+# blend: creatures.blend
 exec(open('/tmp/claude-1001/bl/creatures.py').read().split("# ================== yellow-spotted lizard")[0])
 from mathutils import noise
 SKEL={};ARMS={}
@@ -179,4 +180,4 @@ for k,p in []:claws(f'claw{k}',(p[0],p[1]-0.05,0.02),(0,-1,-0.4),r,n=4,spread=0.
 shot('Lion',elev=16,azim=-52,margin=1.12)
 
 # ======================= VULTURE: now in vulture.py (model, legs, rig, clips and export in one script) =======================
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

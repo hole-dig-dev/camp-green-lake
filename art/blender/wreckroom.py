@@ -1,5 +1,6 @@
+# blend: buildings.blend
 # Rebuild just the Wreck Room (the cabin with the serving window, from buildings.py) and export glb/WreckRoom.glb,
-# without re-running the tents, towers and the rest. Run with the checkout's camp-green-lake-art.blend open:
+# without re-running the tents, towers and the rest. Run with art/blender/buildings.blend open (bx.py opens it for you):
 #   python3 bx.py wreckroom.py        then copy glb/WreckRoom.glb to public/models/
 import bpy,os,re
 HERE=os.path.dirname(bpy.data.filepath)

@@ -1,5 +1,6 @@
+# blend: props.blend
 # Rebuild the signs (signs.py) and export the ones listed in EXPORT to glb/.
-# Run with the checkout's camp-green-lake-art.blend open:  python3 bx.py signs_export.py   then copy the GLBs to public/models/
+# Run with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py signs_export.py   then copy the GLBs to public/models/
 EXPORT=['SignWreckRoom','SignDirections']
 import bpy,os,re
 HERE=os.path.dirname(bpy.data.filepath)
@@ -8,4 +9,4 @@ s=open(os.path.join(HERE,'signs.py')).read()
 exec(re.sub(r"open\('[^']*/([\w.]+)'\)\.read\(\)",lambda m:f"open(os.path.join(HERE,'{m.group(1)}')).read()",s))
 for n in EXPORT:
     bpy.context.window.scene=bpy.data.scenes[n];print(export_glb(os.path.join(ART,'glb',n+'.glb')))
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

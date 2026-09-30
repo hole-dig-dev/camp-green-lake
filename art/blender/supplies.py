@@ -1,7 +1,8 @@
+# blend: props.blend
 # Wreck Room supplies ported from Greg's branch: Sam's onion tonic, the first-aid kit and the walkie-talkie.
 # Modelled to match their painted store icons (public/icons/gear/{tonic,medkit,walkie}.png; the raw sheet is
 # docs/art/supplies-icons-chatgpt-sheet.png). One scene per asset, exported to glb/Supply*.glb for public/models/.
-# Run inside Blender with the checkout's camp-green-lake-art.blend open:  python3 bx.py supplies.py
+# Run inside Blender with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py supplies.py
 #
 # Real-world sizes, origin on the ground under the middle (like every asset), front facing Blender -Y (= +Z in the
 # game). Each is modelled around its grip point and then stood on the floor; GRIP is how far above the origin the

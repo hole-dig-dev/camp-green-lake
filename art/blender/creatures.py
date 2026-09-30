@@ -1,3 +1,4 @@
+# blend: creatures.blend
 exec(open('/tmp/claude-1001/bl/finds2.py').read().split("# ---------------- cans, round 2")[0])
 from mathutils import Vector
 def blob(name,loc,scale,m,parent,seg=10,rings=6,rot=(0,0,0),jit=0.0,seed=0):
@@ -136,4 +137,4 @@ vulture('Vult_2',(0x18,0x18,0x18),(0x5a,0x5a,0x58),(0xd8,0xd4,0xcc),span=1.1)   
 vulture('Vult_3',(0x2e,0x26,0x20),(0xc8,0x3a,0x2a),(0x6a,0x60,0x56),span=1.2,fingers=7,wingup=0.2)  # big, strong dihedral
 vulture('Vult_4',(0x3a,0x30,0x28),(0xe0,0x9a,0x80),(0xa8,0xa0,0x90),ruff=(0xf4,0xf0,0xe6))          # ragged, pale ruff
 vulture('Vult_5',(0x24,0x20,0x1e),(0x8a,0x2a,0x28),(0x9a,0x96,0x8e),span=0.95,wingup=0.05,fingers=5)  # flatter glide
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

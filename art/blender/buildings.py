@@ -1,3 +1,4 @@
+# blend: buildings.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(21)
 MET=('steel','steel',0.55,0.6)
@@ -266,4 +267,4 @@ for k in range(11):box(f'lrung{k}',(0.6,0.05,0.05),(0,-1.55,0.5+k*0.47),MET,beve
 for s in (-0.28,0.28):box(f'lrail{s}',(0.06,0.06,5.2),(s,-1.55,2.8),MET,bevel=0,parent=r)
 studio(elev=14,azim=-30,lens=40);frame(margin=1.06);print('watertower',tris());render()
 
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

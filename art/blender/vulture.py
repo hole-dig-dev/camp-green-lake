@@ -1,6 +1,7 @@
+# blend: creatures.blend
 # The vulture: modelled, rigged, animated and exported in one go (moved here from beasts.py + rig.py so it can be
 # rebuilt on its own without touching the other creatures).
-# Run inside Blender with the checkout's camp-green-lake-art.blend open:  python3 bx.py vulture.py
+# Run inside Blender with art/blender/creatures.blend open (bx.py opens it for you):  python3 bx.py vulture.py
 # Writes the Vulture scene, glb/CreatureVulture.glb and renders/Vulture*.png; copy the GLB to public/models/.
 #
 # Legs (added for the carry): feathered thighs, bare shanks, three front toes and a hind toe with hooked talons,

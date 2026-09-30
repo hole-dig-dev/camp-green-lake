@@ -1,3 +1,4 @@
+# blend: buildings.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(31)
 MET=('steel','steel',0.55,0.6);DARK=('gate_steel',(0x3a,0x44,0x43),0.55,0.6)
@@ -88,4 +89,4 @@ tube('mphpost',(-3.9,-0.8,0),(-3.9,-0.8,2.0),0.035,parent=r)
 box('mph',(0.5,0.03,0.62),(-3.9,-0.83,1.75),('paint_white','paint_white',0.7),bevel=0.005,parent=r)
 text('mph1','SPEED',(-3.9,-0.85,1.9),0.09,('ink','ink',0.85),parent=r);text('mph2','5',(-3.9,-0.85,1.7),0.24,('ink','ink',0.85),parent=r)
 studio(elev=16,azim=-150,lens=40);frame(margin=1.05);print('service gate',tris());render()
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

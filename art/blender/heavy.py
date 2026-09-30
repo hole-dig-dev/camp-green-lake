@@ -1,3 +1,4 @@
+# blend: finds.blend
 exec(open('/tmp/claude-1001/bl/finds2.py').read().split("# ---------------- cans, round 2")[0])
 rnd=random.Random(606)
 GRN=M_('h_safe_green',(0x2f,0x46,0x3a),0.55,0.3);BLK=M_('h_black',(0x22,0x24,0x26),0.5,0.3);GOLDT=M_('h_gold',(0xd4,0xaf,0x37),0.35,0.5);BRASS=M_('h_brass',(0xc8,0x9b,0x3c),0.4,0.5)
@@ -165,4 +166,4 @@ n='Case_5';scene(n);r=root(n);b=dense_box('trunk',(0.72,0.36,0.42),(0,0,0.21),r,
 for x in (-0.24,0.24):box(f'band{x}',(0.05,0.38,0.44),(x,0,0.22),BRASS,bevel=0.004,parent=r)
 box('lid',(0.74,0.38,0.04),(0,0,0.36),LEATH,bevel=0.005,parent=r);cyl('lock',0.035,0.02,(0,-0.19,0.33),BRASS,verts=10,rot=(math.pi/2,0,0),bevel=0.004,parent=r)
 nametag(r,0.0,0.15,D=0.36);heavy_finish(n,elev=15)
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()
