@@ -1,3 +1,4 @@
+# blend: finds.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 import bmesh,re
 rnd=random.Random(77)
@@ -189,4 +190,4 @@ finish(n,elev=50)
 n='Fossil_4';scene(n);r=root(n);bpy.ops.mesh.primitive_uv_sphere_add(segments=14,ring_count=8,radius=1,location=(0,0,0.03));o=bpy.context.active_object;o.name='nodule';o.scale=(0.11,0.075,0.04);bpy.ops.object.transform_apply(scale=True);_finish(o,STONE2,0,r)
 fish('f',r,BONE,0.066,scale=0.85);finish(n,elev=45)
 n='Fossil_5';scene(n);r=root(n);slab('slab',r,M_('f_stone_dark',(0x6a,0x60,0x52),0.95),seed=5);fish('f',r,M_('f_bone_pale',(0xd8,0xcc,0xa8),0.9),0.031);finish(n,elev=50)
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

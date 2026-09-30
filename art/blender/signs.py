@@ -1,3 +1,4 @@
+# blend: props.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(7)
 def planks(prefix,w,h,n,y,zc,material='wood',parent=None,gap=0.018,depth=0.05):
@@ -59,4 +60,4 @@ for label,ang,z,m in arrows:
     for side,ry in ((-0.03,0),(0.03,math.pi)):
         text('t',label,(L/2+0.02,side,0),0.19,('ink','ink',0.8),rot=(math.pi/2,0,ry),parent=g)
 studio(elev=14,azim=-35,lens=45);frame(margin=1.15);print('dir tris',tris());render()
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

@@ -1,3 +1,4 @@
+# blend: finds.blend
 exec(open('/tmp/claude-1001/bl/finds.py').read().split("# ---------------- bottle cap")[0])
 import bmesh
 from mathutils import noise
@@ -91,4 +92,4 @@ n='Spoon2_2';scene(n);r=root(n);spoon2('s',r,seed=2,patina=0.15);finish(n,elev=4
 n='Spoon2_3';scene(n);r=root(n);spoon2('s',r,seed=3,bentv=0.35);finish(n,elev=32)
 n='Spoon2_4';scene(n);r=root(n);spoon2('s',r,seed=4,fiddle=True,patina=0.05);finish(n,elev=40)
 n='Spoon2_5';scene(n);r=root(n);spoon2('s',r,seed=5,L=0.13,bowl=(0.016,0.024),handle_w=0.007);finish(n,elev=40)
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

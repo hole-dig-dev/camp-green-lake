@@ -1,3 +1,4 @@
+# blend: props.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(11)
 MET=('steel','steel',0.55,0.6)
@@ -127,4 +128,4 @@ for x in (-0.75,0.75):
 box('stretch',(1.5,0.05,0.06),(0,0,0.15),'wood_dark',parent=r)
 studio(elev=22,azim=-30,lens=50);frame(margin=1.2);print('bench',tris());render()
 
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

@@ -37,7 +37,7 @@ every remote branch, then answer anything unanswered. Never change Greg's branch
 
 ## Art and models
 
-Any change to a model (new parts, legs, bones, animation clips) is made in Blender: the build scripts in `art/blender/` (see its README), exported to GLB and copied to `public/models/`. Don't patch a model in the game's JS by bolting on boxes or moving its pieces around. JT called a code-side leg fix a bandaid. The code only reads what the model provides, e.g. a named bone such as the vulture's `gripR`.
+Any change to a model (new parts, legs, bones, animation clips) is made in Blender: the build scripts in `art/blender/` (see its README), exported to GLB and copied to `public/models/`. The assets are split into `buildings`, `props`, `finds`, `creatures` and `characters.blend`, saved compressed; don't merge them back into one file or save them uncompressed (the old single 53 MB file bloated the repo on every commit). Don't patch a model in the game's JS by bolting on boxes or moving its pieces around. JT called a code-side leg fix a bandaid. The code only reads what the model provides, e.g. a named bone such as the vulture's `gripR`.
 
 ## Style
 

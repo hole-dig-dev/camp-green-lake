@@ -1,3 +1,4 @@
+# blend: buildings.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(41)
 MET=('steel','steel',0.55,0.6)
@@ -203,4 +204,4 @@ L=bpy.data.objects.new('WardenRoom.lamp',bpy.data.lights.new('WardenRoom.lamp','
 for o in coll('Studio').objects:
     if o.type=='LIGHT' and o.data.type=='SUN':o.data.energy=0
 print('warden room',tris());render()
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

@@ -1,3 +1,4 @@
+# blend: creatures.blend
 for a in list(bpy.data.actions):
     if a.name.split('_')[0] in ('Lizard','Javelina','Lion','Vulture') or a.name in ('Walk','Run','Idle','Trot','Glide','Flap') or a.name[:4] in ('Walk','Run.','Idle','Trot','Glid','Flap'):bpy.data.actions.remove(a)
 # run after beasts.py (same namespace): SKEL/ARMS hold each body's skeleton
@@ -158,4 +159,4 @@ clip(arm,'Idle',60,lambda ph:{'b6':[(Zax,10*S2(ph*TAU))],**{f'b{i}':[(Zax,(4+k*4
 print('lion exported',export_rig('Lion','/home/botuser/camp-green-lake-blockbench/art/blender/glb/CreatureLion.glb'))
 
 # ---------------- VULTURE: now in vulture.py ----------------
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

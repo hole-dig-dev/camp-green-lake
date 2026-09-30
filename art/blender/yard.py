@@ -1,3 +1,4 @@
+# blend: buildings.blend
 exec(open('/home/botuser/camp-green-lake-blockbench/art/blender/cgl_blender.py').read())
 rnd=random.Random(51)
 MET=('steel','steel',0.55,0.6)
@@ -180,4 +181,4 @@ box('handle',(0.04,0.06,0.2),(0.4,-0.71,1.1),MET,bevel=0,parent=r)
 for z in (0.4,1.8):box(f'hinge{z}',(0.2,0.03,0.05),(-0.55,-0.7,z),MET,bevel=0,parent=r)
 tube('vent',(0.4,0.4,2.3),(0.4,0.4,2.9),0.05,m=MET,parent=r)
 studio(elev=14,azim=-35,lens=50);frame(margin=1.2);print('outhouse',tris());render()
-bpy.context.window.scene=bpy.data.scenes['ARCHIVED_Camper_minipc'];bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_mainfile()

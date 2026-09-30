@@ -1,4 +1,5 @@
 # Rig + animation helpers for the Camp Green Lake camper.
+# The camper's .blend is now scene `Camper` in art/blender/characters.blend (was blender/camper.blend until 2026-09-30).
 # Load inside Blender with: exec(open(r"C:\Users\jthol\Projects\camp-green-lake\blender\cgl_rig.py").read())
 # (it loads cgl_helpers.py itself)
 exec(open(r"C:\Users\jthol\Projects\camp-green-lake\blender\cgl_helpers.py").read())

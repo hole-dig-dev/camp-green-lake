@@ -1,9 +1,10 @@
+# blend: props.blend
 # Carried finds: the middle tier of loot, too big for the sack (public/js/45-state.js turns about 1 in 3 finds into
 # one of these; more from deeper holes). Grabbed and hauled like the safe (84-grab.js), and they chip when dropped:
 #   LootCrate   a slatted crate of spiced-peach jars in straw   ~30 kg, glass: chips easily
 #   LootTools   a bundle of old tools roped together            ~28 kg, iron: hard to hurt
 #   LootJug     a big stoneware jug of Sploosh                  ~18 kg, pottery: the most fragile
-# Run inside Blender with the checkout's camp-green-lake-art.blend open:  python3 bx.py carryloot.py
+# Run inside Blender with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py carryloot.py
 # One scene per asset, origin on the ground at the middle, front facing -Y; exports to glb/Loot*.glb for public/models/.
 import bpy,os,re,math
 HERE=os.path.dirname(bpy.data.filepath)
