@@ -52,7 +52,7 @@ function zoneBlocked(x0,z0,x,z,y){
   const dx=x-x0,dz=z-z0,d=Math.hypot(dx,dz);if(d<1e-6)return false;
   const lx=x0+dx/d*STEP_LOOK,lz=z0+dz/d*STEP_LOOK;
   if(ropeAt(lx,lz)||ropeAt(x,z))return false;
-  return groundAt(lx,lz)-y>STEP_RISE||groundAt(x,z)-y>STEP_RISE;
+  const rise=tuneOr('zone.stepRise',STEP_RISE);return groundAt(lx,lz)-y>rise||groundAt(x,z)-y>rise;
 }
 /* called from updatePlayer (70-player.js) with the move it wants: returns the move it gets */
 function zoneStep(x0,z0,x1,z1,y){
@@ -67,7 +67,7 @@ function zoneStep(x0,z0,x1,z1,y){
 }
 /* called from updatePlayer when you jump */
 function zoneJumpV(){
-  for(const R of remotes.values())if((R.f&8)&&Math.hypot(R.tx-P.x,R.tz-P.z)<LEGUP_R&&Math.abs(R.ty-P.y)<0.9){
+  for(const R of remotes.values())if((R.f&8)&&Math.hypot(R.tx-P.x,R.tz-P.z)<tuneOr('zone.legupR',LEGUP_R)&&Math.abs(R.ty-P.y)<0.9){
     logEv('legup',{from:R.name});if(!zoneJumpV.told){zoneJumpV.told=true;toast(`${R.name} gave you a leg-up!`,'good',1800)}
     return tuneOr('zone.legup',LEGUP_V);
   }
@@ -253,7 +253,7 @@ function updateZones(dt){
   // the campfire
   const f=ZONE.fire;let txt='';
   if(f){
-    const on=!S.ko&&Math.hypot(P.x-f.x,P.z-f.z)<f.r;
+    const on=!S.ko&&Math.hypot(P.x-f.x,P.z-f.z)<f.r*tune('zone.fireR');
     if(on!==cpOn){cpOn=on;if(online())wsSend({t:'cp',on});else if(on)cpStat={at:1,total:1}}
     const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];
     if(cpOn&&cpStat){

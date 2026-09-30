@@ -11,6 +11,25 @@
   const setZone = z => { ZONE_NOW = typeof z === 'string' ? z : 'lake'; };
   const inCamp = (x, z) => ZONE_NOW === 'lake' && z > 27 && z < 56 && x > -40 && x < 30;
   const nearCampZone = (x, z) => ZONE_NOW === 'lake' && x > -46 && x < 36 && z > 12 && z < 62;
+  // the Dry Canyon's floor plan: public/js/89-zone-canyon.js builds its ground from this, and the server uses it to put
+  // spawning monsters on the canyon floor, not inside a wall or up on a cliff top (toFloor). Z0 south end, Z1 the campfire end.
+  const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  const CANYON = { Z0: 520, Z1: -525, W: [[600, 30], [430, 30], [355, 13], [300, 9], [240, 10], [190, 14], [130, 22], [0, 18], [-120, 26], [-185, 15], [-240, 34], [-600, 44]].sort((a, b) => b[0] - a[0]) };
+  CANYON.x = z => 250 + 55 * Math.sin(z * 0.0065) + 18 * Math.sin(z * 0.021 + 1.3);   // the floor's centre line
+  CANYON.w = z => {   // the floor's half-width
+    const W = CANYON.W; let w = W[W.length - 1][1];
+    for (let i = 0; i < W.length - 1; i++) { const [a, wa] = W[i], [b, wb] = W[i + 1]; if (z <= a && z >= b) { w = wa + (wb - wa) * smooth((a - z) / (a - b)); break; } }
+    return w + 2.2 * Math.sin(z * 0.05);
+  };
+  // a spawn point in this map, moved onto open floor if it isn't (only the canyon has walls; the lake is all floor)
+  const toFloor = (x, z, pad) => {
+    if (ZONE_NOW !== 'canyon') return { x, z };
+    z = clamp(z, CANYON.Z1 + 15, CANYON.Z0 - 5);
+    const cx = CANYON.x(z), w = Math.max(2, CANYON.w(z) - (pad == null ? 2.5 : pad));
+    return { x: clamp(x, cx - w, cx + w), z };
+  };
+  // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
+  const RO_LAKE_ONLY = ['sir', 'warden'];
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
@@ -246,6 +265,7 @@
       let x = clamp(cx + Math.sin(a) * dist + (Math.random() - 0.5) * 12, -EDGE + 5, EDGE - 5);
       let z = clamp(cz + Math.cos(a) * dist + (Math.random() - 0.5) * 12, -EDGE + 5, EDGE - 5);
       if (inCamp(x, z)) { x = clamp(x, -EDGE + 5, -50); } // shouldn't happen at these distances, but never spawn inside the fence
+      ({ x, z } = toFloor(x, z));
       list.push({ x, z, h: 0, hp: JAV_HP, state: 0, biteCd: 0, mx: x, mz: z, idx: i });
     }
     Object.assign(J, { list, age: 0, noTgtT: 0, leaving: false, leaveT: 0 });
@@ -370,6 +390,7 @@
     Object.assign(L, { active: true, hp: LION_HP, mode: 'stalk', tgt: p ? p.id : null, pounceCd: 2, waitT: 0, fleeT: 0, retargetT: 0, circleDir: Math.random() < 0.5 ? 1 : -1 });
     if (atX != null) { L.x = atX; L.z = atZ; }
     else { const a = (p ? p.fa : 0) + Math.PI + (Math.random() - 0.5) * 0.8; L.x = clamp((p ? p.x : 0) + Math.sin(a) * LION_SPAWN_R, -EDGE + 5, EDGE - 5); L.z = clamp((p ? p.z : -40) + Math.cos(a) * LION_SPAWN_R, -EDGE + 5, EDGE - 5); }
+    ({ x: L.x, z: L.z } = toFloor(L.x, L.z));   // in the canyon: on the floor, not up a wall
     L.h = p ? Math.atan2(p.x - L.x, p.z - L.z) : 0;
   }
   // move L toward (x,z) at speed sp, never into camp; returns the distance that was left. Also faces it that way.
@@ -470,7 +491,8 @@
   function roSpawn(R, k, p, dmin, dmax, extra) {
     for (let i = 0; i < 12; i++) {
       const a = Math.random() * Math.PI * 2, d = dmin + Math.random() * (dmax - dmin), x = clamp(p.x + Math.cos(a) * d, -EDGE + 3, EDGE - 3), z = clamp(p.z + Math.sin(a) * d, -EDGE + 3, EDGE - 3);
-      if (!nearCampZone(x, z)) { const m = Object.assign({ id: R.nid++, k, x, z, h: 0, y: 0, st: 0, t: 0, cd: 0 }, extra || {}); R.mobs.push(m); return m; }
+      const f = toFloor(x, z);
+      if (!nearCampZone(f.x, f.z)) { const m = Object.assign({ id: R.nid++, k, x: f.x, z: f.z, h: 0, y: 0, st: 0, t: 0, cd: 0 }, extra || {}); R.mobs.push(m); return m; }
     }
     return null;
   }
@@ -484,9 +506,10 @@
     const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.curse || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
     const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
-    const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k);
+    const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k) && !(ZONE_NOW !== 'lake' && RO_LAKE_ONLY.includes(k));
     const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the curse (and the tester's rate slider): everything spawns faster
     if (o.rate === 0) { R.mobs = R.mobs.filter(m => !roSmall(m.k)); }
+    if (ZONE_NOW !== 'lake') R.mobs = R.mobs.filter(m => !RO_LAKE_ONLY.includes(m.k));   // camp staff don't follow the crew off the lake
     const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];
@@ -499,7 +522,7 @@
       if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
       if (has('warden') && !night && !count('warden')) roSpawn(R, 'warden', pickP(), 50, 70, {});
       const kt = live.filter(p => p.kt);
-      if (has('sheriff') && (t > cur - 90000 || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
+      if (has('sheriff') && (t > cur - DAYMS * (o.sheriffWin == null ? 0.15 : o.sheriffWin) || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
       if (has('kate') && (night || R.force.includes('kate')) && !count('kate')) { if (roSpawn(R, 'kate', pickP(), 35, 45, {})) ev.push({ k: 'kate' }); }
     }
     for (const m of R.mobs) {
@@ -642,7 +665,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

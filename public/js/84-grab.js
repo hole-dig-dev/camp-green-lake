@@ -245,7 +245,7 @@ function stepMyBody(dt){
    (88-zones.js ZONE.fire). JT: the campfire counts as home off the lake. */
 function atHome(x,z){
   if(inCamp(x,z))return true;
-  const f=typeof ZONE!=='undefined'&&ZONE_H&&ZONE.fire;return!!(f&&Math.hypot(x-f.x,z-f.z)<f.r);
+  const f=typeof ZONE!=='undefined'&&ZONE_H&&ZONE.fire;return!!(f&&Math.hypot(x-f.x,z-f.z)<f.r*tune('zone.fireR'));
 }
 function carriedHome(){
   if(!S.ko)return;

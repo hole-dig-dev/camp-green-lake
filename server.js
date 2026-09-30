@@ -1049,7 +1049,7 @@ ensureCart();
 const ROSTER = { mobs: [] };
 let rostOn = false;
 function tickRoster(t, dt, players) {
-  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1) });
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1), sheriffWin: tuneS('ro.sheriffWin', 0.15) });
   const now = Date.now();
   for (const e of rev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }

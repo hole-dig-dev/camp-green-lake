@@ -15,17 +15,11 @@
    z -525 (the campfire). Everything off the canyon floor is sheer cliff and plateau.
 */
 {
-const CY_Z0=520, CY_Z1=-525;           // start (south) and campfire (north) ends of the canyon floor
+const CY_Z0=SIM.CANYON.Z0, CY_Z1=SIM.CANYON.Z1;   // start (south) and campfire (north) ends of the canyon floor (the floor plan is shared with the server: sim.js CANYON)
 const CY_SLOPE=0.018;                   // the floor climbs this much per metre north, on top of the ledges (~19 m in all)
 const CY_WALL_K=2.8;                    // cliff steepness (rise per metre); anything over ~1.1 can't be walked up
-function cyX(z){return 250+55*Math.sin(z*0.0065)+18*Math.sin(z*0.021+1.3)}   // the floor's centre line
-/* floor half-width along the canyon, [z, m], north to south order doesn't matter (sorted below) */
-const CY_W=[[600,30],[430,30],[355,13],[300,9],[240,10],[190,14],[130,22],[0,18],[-120,26],[-185,15],[-240,34],[-600,44]].sort((a,b)=>b[0]-a[0]);
-function cyW(z){
-  let w=CY_W[CY_W.length-1][1];
-  for(let i=0;i<CY_W.length-1;i++){const[a,wa]=CY_W[i],[b,wb]=CY_W[i+1];if(z<=a&&z>=b){w=lerp(wa,wb,sm((a-z)/(a-b)));break}}
-  return w+2.2*Math.sin(z*0.05);
-}
+const cyX=SIM.CANYON.x;   // the floor's centre line
+const cyW=SIM.CANYON.w;   // the floor's half-width along the canyon (widths table: sim.js CANYON.W)
 /* the steps up the canyon. side: which side its boulder is on (+1 east). The dry fall has the shelf instead. */
 const CY_STEPS=[{z:370,h:1.8,side:1},{z:150,h:1.8,side:-1},{z:90,h:2.0,side:1},{z:25,h:1.75,side:-1},{z:-330,h:1.9,side:1}];
 const CY_FALL={z:-165,h:4.8,shelf:95};  // the dry fall, and how far back (m) the shelf up the east wall starts
