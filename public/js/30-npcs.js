@@ -128,7 +128,8 @@ function updateBots(dt,now){
     if(b.state==='inside'){
       /* dealing at the card table (X-Ray, until 01:00) or lying on your bunk */
       if(b.d.n==='X-Ray'&&!b.xraySleeps){
-        g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt);
+        const st=SEATS.find(q=>q.tent===D_TI&&q.z>D_TENT.table.z+3);   // X-Ray deals sitting on the far stool (86-sit.js)
+        if(st)sitPose(b.p,st.x,TENT_FLOOR_Y+st.y,st.z,st.h,dt);else{g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt)}
         if(xrayBedtime()){b.xraySleeps=true;goIndoor(b,[{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z},{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z-4.75},...botBedPath(b)],'settle')}
         else if(!siren&&b.t==null)b.t=0;   // a daytime visit's dealing ends when the day timer does
       }else{animPerson(b.p,0,dt);sleepPose(b.p,botIndoorSpot(b))}

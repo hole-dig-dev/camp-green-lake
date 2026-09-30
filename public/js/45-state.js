@@ -125,6 +125,7 @@ function foundItem(it,h){
 
 /* ---------- interactions ---------- */
 function nearSpot(){
+  if(S.sit!=null)return seatedSpot();   // sitting down (86-sit.js)
   {const t=truckSpot();if(t&&S.inTruck)return t}   // in Mr. Sir's pickup: F only gets you out (87-truck.js)
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   {const t=truckSpot();if(t)return t}
@@ -143,6 +144,7 @@ function nearSpot(){
     if(roomSpot?S.tent==null||(s.ti!=null&&s.ti!==S.tent)||(s.id==='bunk'&&BUNKS[s.bi].tent!==S.tent)||(s.id==='cards'&&S.tent!==TENTS.indexOf(D_TENT)):S.tent!=null)continue;
     if((P.x-s.x)**2+(P.z-s.z)**2<s.r*s.r)return s;
   }
+  {const t=sitSpot();if(t)return t}   // a free bench or stool (86-sit.js)
   let best=null,bd=2.8*2.8;
   for(const b of bots){if(!b.p.g.visible)continue;const dx=b.p.g.position.x-P.x,dz=b.p.g.position.z-P.z,d2=dx*dx+dz*dz;if(d2<bd){bd=d2;best=b}}
   return best?{id:'bot',bot:best}:null;

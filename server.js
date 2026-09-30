@@ -179,20 +179,17 @@ function checkCampfire() {
 }
 
 /* Mr. Sir's pickup (public/js/87-truck.js): drivable while the F2 flag veh.drivable is on. One driver runs its physics
-   and sends where it is; up to four ride in the back. With the flag on it waits just inside the service gate, nose in;
+   and sends where it is; seats: drive, shotgun and two on the tailgate (TRUCK_SEATS). With the flag on it waits just inside the service gate, nose in;
    backing it out through the gate and driving off is the escape: the whole crew moves on to the next map (like
    everyone reaching the campfire). With the flag off it's parked by Mr. Sir. */
-const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_GATE_PARK = { x: 25.4, z: 39, h: -Math.PI / 2 }, TRUCK_RIDERS = 4;
-const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, driver: null, riders: [] };
+const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_GATE_PARK = { x: 25.4, z: 39, h: -Math.PI / 2 }, TRUCK_SEATS = ['drive', 'shotgun', 'tail0', 'tail1'];
+const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, seats: {} };
+const truckSeatOf = id => TRUCK_SEATS.find(k => TRUCK.seats[k] === id) || null;
 const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake';
 let truckWasOn = false;
-const truckMsg = () => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, driver: TRUCK.driver, riders: TRUCK.riders, on: truckOn() } });
-function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { driver: null, riders: [] }); broadcast(truckMsg()); }
-function truckLeave(id) {
-  if (TRUCK.driver !== id && !TRUCK.riders.includes(id)) return;
-  if (TRUCK.driver === id) TRUCK.driver = null;
-  TRUCK.riders = TRUCK.riders.filter(r => r !== id); broadcast(truckMsg());
-}
+const truckMsg = () => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn() } });
+function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {} }); broadcast(truckMsg()); }
+function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUCK.seats[k]; broadcast(truckMsg()); }
 function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
@@ -511,7 +508,7 @@ wss.on('connection', (ws, req) => {
       case 'pos':
         c.town = m.tn === true; // down in the buried town (public/js/89-town.js), at x ~2000, y -30
         c.x = num(m.x, -620, c.town ? SIM.TOWN.X + 60 : 620, c.x); c.y = num(m.y, c.town ? SIM.TOWN.Y - 5 : -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
-        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 4, 0) | 0; c.sc = num(m.sc, 0, 1e6, 0) | 0;
+        c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 10, 0) | 0; /* 10: sitting (86-sit.js) */ c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
@@ -637,15 +634,16 @@ wss.on('connection', (ws, req) => {
       case 'truck': { // Mr. Sir's pickup (87-truck.js): get in/out, the driver's position, driving out the service gate
         const op = m.op;
         if (op === 'out') { truckLeave(c.id); return; }
-        if (!truckOn()) { if (TRUCK.driver || TRUCK.riders.length) truckPark(); return; }
+        if (!truckOn()) { if (Object.keys(TRUCK.seats).length) truckPark(); return; }
         if (op === 'in') {
-          if (Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) > 6 || TRUCK.driver === c.id || TRUCK.riders.includes(c.id)) return;
-          if (m.seat === 'drive') { if (TRUCK.driver != null && clients.has(TRUCK.driver)) return; TRUCK.driver = c.id; }
-          else { if (TRUCK.riders.length >= TRUCK_RIDERS) return; TRUCK.riders.push(c.id); }
-          LOG.log('truck', { id: c.id, n: c.n, seat: m.seat === 'drive' ? 'drive' : 'bed' });
+          const k = TRUCK_SEATS.includes(m.seat) ? m.seat : null;
+          if (!k || Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) > 6 || truckSeatOf(c.id)) return;
+          if (TRUCK.seats[k] != null && clients.has(TRUCK.seats[k])) return;   // taken
+          TRUCK.seats[k] = c.id;
+          LOG.log('truck', { id: c.id, n: c.n, seat: k });
           broadcast(truckMsg()); return;
         }
-        if (TRUCK.driver !== c.id) return;
+        if (TRUCK.seats.drive !== c.id) return;
         if (op === 'pos') {
           TRUCK.x = num(m.x, -600, 600, TRUCK.x); TRUCK.z = num(m.z, -600, 600, TRUCK.z); TRUCK.h = num(m.h, -100, 100, TRUCK.h);
           broadcast({ t: 'truck', pos: [r1(TRUCK.x), r1(TRUCK.z), Math.round(TRUCK.h * 1000) / 1000, Math.round(num(m.v, -30, 30, 0) * 10) / 10] }, c.id); return;
@@ -653,7 +651,7 @@ wss.on('connection', (ws, req) => {
         if (op === 'gate') { // out through the service gate: the escape to the next map
           const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
           if (!next || TRUCK.x < 30.5 || Math.hypot(TRUCK.x - 30, TRUCK.z - 39) < 15) return; // outside the east fence, well clear of the gate
-          LOG.log('escape', { id: c.id, n: c.n, riders: TRUCK.riders.length });
+          LOG.log('escape', { id: c.id, n: c.n, aboard: Object.keys(TRUCK.seats).length });
           broadcast({ t: 'truck', escaped: c.n });
           truckPark(); zoneSwitch(next, 'escape in Mr. Sir\'s pickup, driven by ' + c.n);
         }

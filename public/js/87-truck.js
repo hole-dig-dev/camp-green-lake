@@ -1,8 +1,9 @@
 'use strict';
 /* public/js/87-truck.js -- Mr. Sir's pickup, drivable (JT, 2026-09-30) while the F2 flag "Make drivable" is on
    (Vehicles tab, veh.drivable; off by default).
-   F by the driver's door (the cab's left side) to drive; F by the bed or the tailgate to ride in the back (up to 4);
-   F again to get out. W/S gas and brake/reverse, A/D steer, Space handbrake.
+   Four seats (JT): F at the left door to drive, F at the right door to ride shotgun, F at the back to sit on the end of
+   the bed with your legs hanging over the dropped tailgate (two spots). F again to get out. Everyone in it sits (the
+   camper's Sit clip, blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
    With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
    out through the gate, swing round outside and drive off. Once it's out through the gate and ESCAPE_R away, that's
    the escape: the whole crew moves on to the next map, the same as everyone reaching the campfire (server.js 'truck',
@@ -15,10 +16,16 @@ const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the
 const ESCAPE_R=18;                                            // out through the gate and this far from it: gone
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
-const TRUCK_SEAT=[0.38,0.45],TRUCK_DOOR=[1.45,0.45];          // the driver sits on the truck's left (local +x)
-const TRUCK_BED=[[0.4,-0.8],[-0.4,-0.8],[0.4,-1.8],[-0.4,-1.8]],TRUCK_BED_Y=0.82;
+/* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face,
+   (0 forward, PI backward), where you stand to get in, and where you step out */
+const TRUCK_SEATS={
+  drive:  {at:[0.38,0.3],y:0.9,face:0,door:[1.45,0.35],out:[1.75,0.35],label:'Drive Mr. Sir\'s pickup'},
+  shotgun:{at:[-0.38,0.3],y:0.9,face:0,door:[-1.45,0.35],out:[-1.75,0.35],label:'Ride shotgun'},
+  tail0:  {at:[0.42,-2.2],y:0.84,face:Math.PI,door:[0,-3.2],out:[0.6,-3.7],label:'Sit on the tailgate'},
+  tail1:  {at:[-0.42,-2.2],y:0.84,face:Math.PI,door:[0,-3.2],out:[-0.6,-3.7],label:'Sit on the tailgate'}};
+const TRUCK_SEAT_KEYS=Object.keys(TRUCK_SEATS);
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
-const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,driver:null,riders:[],on:false,
+const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,seats:{},on:false,
   root:null,col:null,sendT:0,tgt:null,escaped:false,outGate:false,prevH:TRUCK_PARK.h,outAt:0,wasOn:false};
 const truckMe=()=>online()?net.id:'me';
 const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
@@ -40,36 +47,37 @@ function truckPose(){
 truckPose();
 
 /* ---- getting in and out ---- */
-function truckSeat(){const id=truckMe();return TRUCK.driver===id?'drive':TRUCK.riders.includes(id)?'bed':null}
+const truckDriver=()=>TRUCK.seats.drive??null;
+function truckSeatOf(id){for(const k of TRUCK_SEAT_KEYS)if(TRUCK.seats[k]===id)return k;return null}
+function truckSeat(){return truckSeatOf(truckMe())}
 function truckSpot(){
   if(S.inTruck)return{id:'truck',label:'Get out of the truck',use:()=>truckOut()};
   if(!truckOn()||S.inTown||inTent()||S.ko||S.carry!=null)return null;
-  const d=truckAt(TRUCK_DOOR[0],TRUCK_DOOR[1]);
-  if(Math.hypot(P.x-d.x,P.z-d.z)<1.8&&TRUCK.driver==null)return{id:'truck',label:'Drive Mr. Sir\'s pickup',use:()=>truckIn('drive')};
-  for(const[lx,lz]of[[1.35,-1.4],[-1.35,-1.4],[0,-3.1]]){const b=truckAt(lx,lz);
-    if(Math.hypot(P.x-b.x,P.z-b.z)<1.8&&TRUCK.riders.length<TRUCK_BED.length)return{id:'truck',label:'Hop in the back of the pickup',use:()=>truckIn('bed')}}
-  return null;
+  let best=null,bd=1.7;
+  for(const k of TRUCK_SEAT_KEYS){const q=TRUCK_SEATS[k];if(TRUCK.seats[k]!=null)continue;const d=truckAt(q.door[0],q.door[1]),dd=Math.hypot(P.x-d.x,P.z-d.z);if(dd<bd){bd=dd;best=k}}
+  return best?{id:'truck',label:TRUCK_SEATS[best].label,use:()=>truckIn(best)}:null;
 }
 function truckIn(seat){
   if(online()){wsSend({t:'truck',op:'in',seat});return}
-  if(seat==='drive')TRUCK.driver='me';else TRUCK.riders.push('me');
-  truckSeated();
+  TRUCK.seats[seat]='me';truckSeated();
 }
 function truckOut(){
-  const id=truckMe();if(TRUCK.driver===id)TRUCK.driver=null;TRUCK.riders=TRUCK.riders.filter(r=>r!==id);   // off at once; the server agrees
+  const k=truckSeat();if(k)delete TRUCK.seats[k];   // off at once; the server agrees
   if(online())wsSend({t:'truck',op:'out'});
   truckSeated();
 }
-/* my seat changed (from the server, or solo right away): step in or climb out */
+/* my seat changed (from the server, or solo right away): sit down or climb out */
 function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
-  if(seat){S.inTruck=seat;TRUCK.prevH=TRUCK.h;P.moving=false;digHeld=false;
-    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, swing round and drive: that\'s the way out of here.':'You\'re riding in the back. F to hop out.','',4500);sfx.thud();return}
-  const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();if(me)me.g.visible=true;
-  const p=was==='drive'?truckAt(TRUCK_DOOR[0]+0.2,TRUCK_DOOR[1]):truckAt(0,-3.4);
+  if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;P.moving=false;digHeld=false;if(was)return;
+    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, swing round and drive: that\'s the way out of here.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
+  const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;
+  const o=TRUCK_SEATS[was].out,p=truckAt(o[0],o[1]);
   P.x=p.x;P.z=p.z;P.y=groundAt(p.x,p.z);P.vy=0;
 }
-function truckLeaveLocal(){if(S.inTruck){S.inTruck=null;if(me)me.g.visible=true}Object.assign(TRUCK,truckPark(),{v:0,steer:0,driver:null,riders:[],tgt:null,escaped:false,outGate:false});truckPose()}
+function truckLeaveLocal(){S.inTruck=null;Object.assign(TRUCK,truckPark(),{v:0,steer:0,seats:{},tgt:null,escaped:false,outGate:false});truckPose()}
+/* put a camper in a seat: hips on it, facing the right way, sitting */
+function truckSit(p,seat,dt){const q=TRUCK_SEATS[seat],w=truckAt(q.at[0],q.at[1]);p.g.visible=true;sitPose(p,w.x,TRUCK.y+q.y,w.z,TRUCK.h+q.face,dt)}
 
 /* ---- the driver: a simple bicycle model on the ground, bumping off anything solid ---- */
 function truckDrive(dt){
@@ -102,9 +110,8 @@ function truckPlayer(dt){
   const T=TRUCK;
   if(S.inTruck==='drive')truckDrive(dt);
   P.yaw+=T.h-T.prevH;T.prevH=T.h;   // your view turns with the truck
-  const s=S.inTruck==='drive'?TRUCK_SEAT:TRUCK_BED[Math.max(0,T.riders.indexOf(truckMe()))];
-  const p=truckAt(s[0],s[1]);P.x=p.x;P.z=p.z;P.y=T.y+(S.inTruck==='drive'?0.45:TRUCK_BED_Y);P.vy=0;P.grounded=true;P.moving=false;P.anim=0;
-  if(me){me.g.visible=S.inTruck!=='drive';me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=T.h;animPerson(me,0,dt)}
+  if(me)truckSit(me,S.inTruck,dt);
+  const g=me?me.g.position:truckAt(0,0);P.x=g.x;P.z=g.z;P.y=me?g.y:T.y;P.vy=0;P.grounded=true;P.moving=false;P.anim=10;P.fa=T.h+TRUCK_SEATS[S.inTruck].face;
 }
 /* the third-person camera while driving: behind and above, looking down the road */
 function truckCamera(dt){
@@ -119,24 +126,26 @@ function updateTruck(dt){
   const T=TRUCK,on=truckOn();
   if(S.inTruck&&!on)truckOut();
   if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
-  if(T.driver!==truckMe()&&T.tgt){   // ease toward the driver's last word, carried on by its speed in between
+  if(truckDriver()!==truckMe()&&T.tgt){   // ease toward the driver's last word, carried on by its speed in between
     const[tx,tz,th,tv]=T.tgt,k=Math.min(1,dt*8);T.tgt[0]+=Math.sin(th)*tv*dt;T.tgt[1]+=Math.cos(th)*tv*dt;
     T.x+=(tx-T.x)*k;T.z+=(tz-T.z)*k;let dh=th-T.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));T.h+=dh*k;truckPose();
   }
-  for(const[id,R]of remotes){   // the driver is inside the cab; riders stand in the bed
-    if(id===T.driver)R.p.g.visible=false;
-    const i=T.riders.indexOf(id);if(i>=0){const s=TRUCK_BED[i],p=truckAt(s[0],s[1]);R.p.g.position.set(p.x,T.y+TRUCK_BED_Y,p.z)}
-  }
+  // (remote campers in seats are posed from updateRemotes: truckRemoteSeat)
 }
+
+/* from updateRemotes (65-net.js): a friend in one of the seats sits there, whatever their last position said */
+function truckRemoteSeat(id,R,dt){const k=truckSeatOf(id);if(!k)return false;truckSit(R.p,k,dt);return true}
 
 /* ---- network (65-net.js) ---- */
 function truckMsg(m){
-  if(m.st){const s=m.st,wasDriver=TRUCK.driver===truckMe();
-    if(!S.inTruck&&Date.now()-TRUCK.outAt<1500&&(s.driver===truckMe()||(s.riders||[]).includes(truckMe())))return;TRUCK.on=!!s.on;TRUCK.driver=s.driver??null;TRUCK.riders=Array.isArray(s.riders)?s.riders.slice(0,TRUCK_BED.length):[];
-    if(TRUCK.driver!==truckMe()){if(wasDriver||!TRUCK.driver){TRUCK.x=num(s.x,-600,600,TRUCK.x);TRUCK.z=num(s.z,-600,600,TRUCK.z);TRUCK.h=num(s.h,-100,100,TRUCK.h);TRUCK.tgt=null;truckPose()}}
+  if(m.st){const s=m.st,me_=truckMe(),wasDriver=truckDriver()===me_,seats={};
+    if(s.seats&&typeof s.seats==='object')for(const k of TRUCK_SEAT_KEYS)if(s.seats[k]!=null)seats[k]=s.seats[k];
+    if(!S.inTruck&&Date.now()-TRUCK.outAt<1500&&seats[TRUCK.outSeat]===me_)delete seats[TRUCK.outSeat];   // the seat I just got out of: old news
+    TRUCK.on=!!s.on;TRUCK.seats=seats;
+    if(truckDriver()!==me_){if(wasDriver||truckDriver()==null){TRUCK.x=num(s.x,-600,600,TRUCK.x);TRUCK.z=num(s.z,-600,600,TRUCK.z);TRUCK.h=num(s.h,-100,100,TRUCK.h);TRUCK.tgt=null;truckPose()}}
     else if(!wasDriver){TRUCK.v=0;TRUCK.escaped=false}
     truckSeated()}
-  if(Array.isArray(m.pos)&&TRUCK.driver!==truckMe())TRUCK.tgt=[num(m.pos[0],-600,600,TRUCK.x),num(m.pos[1],-600,600,TRUCK.z),num(m.pos[2],-100,100,TRUCK.h),num(m.pos[3],-30,30,0)];
+  if(Array.isArray(m.pos)&&truckDriver()!==truckMe())TRUCK.tgt=[num(m.pos[0],-600,600,TRUCK.x),num(m.pos[1],-600,600,TRUCK.z),num(m.pos[2],-100,100,TRUCK.h),num(m.pos[3],-30,30,0)];
   if(m.escaped)toast(`${String(m.escaped).slice(0,24)} drives Mr. Sir's pickup out through the service gate. Everyone's out of camp!`,'gold',6000);
 }
 function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
@@ -144,4 +153,4 @@ function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 command('truck',{usage:'truck [park]',help:'Mr. Sir\'s pickup: where it is and who is in it; park puts it back (solo). Drivable only with the F2 flag Vehicles > Make drivable.',
   run([a]){
     if(a==='park'){if(online())return'Online it parks itself when the flag goes off or the crew changes map.';truckLeaveLocal();return'Parked by the main gate.'}
-    return`Drivable: ${truckOn()?'yes':'no (F2 > Vehicles > Make drivable)'}. At ${TRUCK.x.toFixed(1)}, ${TRUCK.z.toFixed(1)}. Driver: ${TRUCK.driver??'nobody'}. In the back: ${TRUCK.riders.length}.`}});
+    return`Drivable: ${truckOn()?'yes':'no (F2 > Vehicles > Make drivable)'}. At ${TRUCK.x.toFixed(1)}, ${TRUCK.z.toFixed(1)}. Seats: ${TRUCK_SEAT_KEYS.map(k=>k+' '+(TRUCK.seats[k]??'-')).join(', ')}.`}});
