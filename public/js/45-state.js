@@ -11,7 +11,7 @@ const KEYS={};let digHeld=false;
 /* first / third person (V) and the first-person shovel */
 let FP=false;
 const pc=v=>clamp(v,FP?-1.35:-0.15,FP?1.35:1.25);
-function toggleView(){FP=!FP;if(me)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(FP?'First person. Press V to switch back.':'Third person','',1500)}
+function toggleView(){FP=!FP;if(me&&!me.model)me.g.visible=!FP;P.pitch=FP?0.05:0.32;toast(FP?'First person. Press V to switch back.':'Third person','',1500)}
 const vm=new T.Group();
 {const hd=new T.Mesh(new T.CylinderGeometry(0.02,0.02,0.9,5),M(0x8a6440));hd.rotation.x=Math.PI/2;hd.position.z=-0.25;const bl=new T.Mesh(new T.BoxGeometry(0.22,0.02,0.26),M(0x7d8288));bl.position.z=-0.78;const sh=new T.Group();sh.rotation.x=-0.35;sh.add(hd,bl);vm.add(sh)}
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
@@ -31,7 +31,8 @@ function vmUseModelShovel(){
   holder.position.set(0,-0.02,0.3);
   const sh=vm.children[0];sh.clear();sh.add(holder);
 }
-function updateViewmodel(){if(!vmBlender&&MODEL.ready)vmUseModelShovel();vm.visible=FP&&S.started&&!S.ko&&!twSt&&!tbSt;if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
+function updateViewmodel(){if(!vmBlender&&MODEL.ready)vmUseModelShovel();vm.visible=FP&&S.started&&!S.ko&&!twSt&&!tbSt&&!(me&&me.model);   // only for the box camper: with the model you see your own arms (fpBody, 70-player.js)
+  if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen?160:100)+(myLevel()>=4?20:0)}
 function digDepthMax(){return S.up.long?EIGHT_FT:FIVE_FT}

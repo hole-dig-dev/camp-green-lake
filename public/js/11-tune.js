@@ -69,6 +69,7 @@ const TUNE_DEFS=[
   {key:'move.sprint',tab:'Player',label:'Sprinting speed',def:7.2,kind:'mul',range:2,unit:' m/s'},
   {key:'move.crouch',tab:'Player',label:'Crouching speed',def:2,kind:'mul',range:2,unit:' m/s'},
   {key:'move.jump',tab:'Player',label:'Jump (take-off speed; 5.6 is about 1 m)',def:5.6,kind:'mul',range:1.6,unit:' m/s'},
+  {key:'fp.bob',tab:'Player',label:'First person: how much your view follows your head (0 steady, 1 all of it)',def:0.5,kind:'lin',span:0.5,min:0,max:1,unit:''},
   {key:'dig.time',tab:'Player',label:'Time per shovel scoop',def:0.42,kind:'mul',range:3,unit:' s'},
   {key:'dig.depth',tab:'Player',label:'How deep each scoop goes',def:1,kind:'mul',range:3,unit:'×'},
   // ---- ragdolls (26-ragdoll.js) and what throws you around
