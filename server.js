@@ -94,10 +94,11 @@ const MAX_CONNS_PER_IP_PER_MIN = 10;         // new socket attempts per address 
 const JOIN_TIMEOUT_MS = 15000;               // sockets that never send a valid join get dropped
 const MAX_BAD_JOINS = 5;                     // wrong-password attempts before we hang up on a socket
 const HTTP_RATE = 120, HTTP_WINDOW_MS = 60000; // page/other HTTP requests per address per minute
-// The client is ~35 static files (public/js/*.js, css, sim.js, director.js), so one page load is ~35 requests.
+// One page load is ~150 static requests now (53 scripts, 67 models, 24 sounds, css; measured 2026-09-29).
 // Counting those against HTTP_RATE blocked a player after 3 reloads in a minute (429s -> missing scripts ->
-// "setClock is not defined" -> dead page). Static files get their own, much bigger budget instead.
-const STATIC_RATE = 1500; // static file requests per address per minute (~40 full page loads)
+// "setClock is not defined" -> dead page). Static files get their own, much bigger budget instead. At 1500 that
+// was only ~10 loads a minute, and the two-browser smoke test started tripping it ("setHat is not defined").
+const STATIC_RATE = 6000; // static file requests per address per minute (~40 full page loads)
 const MAX_DIG_DIST = 6;                      // can't report a dig farther than this from your last known position
 const CAMP_NODIG = 4;                       // no digging within this many m of the camp fence (matches CAMP_NODIG in public/js/10-core.js)
 const MAX_PLACE_DIST = 14;                   // ditto for dropped bags (props are placed at the dig site)
