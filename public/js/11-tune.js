@@ -59,6 +59,9 @@ const TUNE_DEFS=[
   {key:'zone.fallSafe',tab:'Maps',label:'Falls start to hurt above (landing speed)',def:11,kind:'mul',range:2,unit:' m/s'},
   {key:'zone.fallDmg',tab:'Maps',label:'Fall damage per m/s over that',def:7,kind:'mul',range:4,zero:true,unit:''},
   {key:'zone.legup',tab:'Maps',label:'Leg-up jump speed (a crouching friend)',def:8.2,kind:'mul',range:1.6,unit:' m/s'},
+  {key:'zone.legupR',tab:'Maps',label:'Leg-up: how close to a crouching friend',def:1.3,kind:'mul',range:2,unit:' m'},
+  {key:'zone.stepRise',tab:'Maps',label:'Tallest step you walk up without jumping',def:0.55,kind:'mul',range:2,unit:' m'},
+  {key:'zone.fireR',tab:'Maps',label:'Campfire: how close counts as at the fire (also "home" for a carried friend)',def:1,kind:'mul',range:3,unit:'×'},
   {key:'zone.ropeSlow',tab:'Maps',label:'Climbing a dropped rope: walking speed',def:0.35,kind:'mul',range:3,unit:'×'},
   // ---- you: moving and digging (70-player.js, 45-state.js)
   {key:'move.walk',tab:'Player',label:'Walking speed',def:4.3,kind:'mul',range:2,unit:' m/s'},
@@ -96,6 +99,7 @@ const TUNE_DEFS=[
   {key:'env.bonkReach',tab:'Environment',label:'Shovel bonk reach',def:2.3,kind:'mul',range:2,unit:' m'},
   // ---- monsters, events and the curse (the server reads these too, from the play-test server's saved sliders)
   {key:'cart.spillKo',tab:'Grab',label:'Tipped out of the wheelbarrow while downed: knockout time lost',def:6,kind:'mul',range:3,zero:true,unit:' s'},
+  {key:'ro.sheriffWin',tab:'Monsters',label:'The Sheriff\'s ghost hunts loot carriers in the last part of the day',def:0.15,kind:'lin',span:0.15,min:0,max:1,unit:'%',pct:true},
   {key:'mon.hatchBite',tab:'Monsters',label:'Lizard hatchling bite (poison)',def:8,kind:'mul',range:3,unit:' hp'},
   {key:'aff.poisonHold',tab:'Monsters',label:'Poison stops wearing off for this long after a bite',def:4,kind:'mul',range:3,zero:true,unit:' s'},
   {key:'mon.roster',tab:'Monsters',label:'Roster monsters spawn rate',def:1,kind:'mul',range:4,zero:true,unit:'×'},

@@ -140,7 +140,8 @@ Merging nine branches found real bugs that none of the branches had on its own:
   merged with git: it has to be ported, phase by phase, into the split layout, and overlaps with this build
   (vultures, bonk, sinkhole vs his buried-town cave-ins, director vs his daily roster, haboob vs his sandstorm mood)
   need a decision per feature. **Key clash: his twerk emote is on B, which is push-to-talk here.** Nothing of his is
-  merged; JT and Greg decide.
+  merged; JT and Greg decide. **Update 2026-09-29:** most of its Act 1 systems have since been ported to `jt/next`;
+  see the table in `docs/claude-to-claude/README.md`.
 - **Repo move**: JT may move the repo to a GitHub organization so Greg's Claude can connect. GitHub redirects the
   old URL, but after a transfer update both checkouts:
   `git remote set-url origin https://github.com/<org>/camp-green-lake.git` in `~/camp-green-lake` and

@@ -24,6 +24,13 @@ JT often runs sessions unattended from his phone. Claude Code still asks for per
 - Better still, don't delete: overwrite (`ffmpeg -y`, `>`), or write to a fresh folder in the scratchpad.
 - Keep deletes out of long `;` chains, so a prompt can't hold up the useful work around them.
 
+## Working alongside Greg's Claude
+
+Greg's Claude and JT's Claude talk through notes in `docs/claude-to-claude/` (its README has the rules, the design
+decisions, and a table of everything ported from Greg's branches to `jt/next`). Notes can land on **any** branch
+(Greg's Claude writes on his own `buissong/*` branches), so before writing one, `git fetch` and list that folder on
+every remote branch, then answer anything unanswered. Never change Greg's branches; bring his work over to `jt/next`.
+
 ## Code layout in one paragraph
 
 `server.js` (Node `http` + `ws`) serves `public/` and runs the shared world, monsters (via `public/sim.js`), logging (`logger.js`) and security limits. The client is **ordered classic scripts** in `public/js/NN-name.js` (plus `public/css/game.css` and a thin `public/index.html`): top-level names are shared across files, but a file's *load-time* code can only use names from earlier files (a violation crashes the whole page = black screen). `95-pause.js` must stay last: it ends with the saved-session resume and the `#dbg` debug export. New features get a new `public/js/NN-feature.js` file registered in `index.html` (and in `scripts/split-client.mjs`'s MANIFEST notes if relevant), not more code in `index.html`.

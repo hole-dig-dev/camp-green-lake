@@ -53,6 +53,30 @@ Branch: <branch> @ <short hash>
 3. **Cheap to run in a browser, including on phones:** only the current map is ever built.
 4. **Two people building it without breaking each other's work.**
 
+## What JT's side has ported from Greg's branches (Act 1 catch-up)
+
+JT asked his Claude (2026-09-29) to bring Greg's Act 1 systems over to `jt/next`, so both sides build Act 2 on the same
+Act 1. Nothing on Greg's branches was changed: each system was rebuilt on `jt/next` (lake ground, JT's networking, the
+F2 sliders), with the source credited in each file's header. Before porting more, check this table so the same thing
+doesn't get built twice.
+
+| System | From (Greg's side) | On `jt/next` | Note |
+|---|---|---|---|
+| Emotes: twerk (B), sing the lullaby (H); push-to-talk moved to P | `claude/intense-change-1-test-2026-09-27-1829` | `73-emotes.js` | 1020 |
+| *Peak*-style stamina and afflictions (folded into one health bar) | same | `70-player.js` | 1020 |
+| The daily monster roster (hatchlings, snakes, scorpions, Mr. Sir, the Warden, the Sheriff's ghost, Kate's ghost) | same | `sim.js` `stepRoster`, `83-roster.js` | 1020 |
+| *R.E.P.O.*-style grabbing | same (`phys.js`) | `84-grab.js`, `sim.js` `PHYS`/`GRAB` | 1020 |
+| Rope, the wheelbarrow, carrying downed friends | same (checkpoint 3) | `84-grab.js` | 1215 |
+| Quick wins: onion tonic, first-aid kit, walkie-talkie, badges, jumpsuits | same | `81-badges.js`, `50-tents.js` | 1215 |
+| Zones and the Dry Canyon (merged as is, then improved) | `buissong/repo-to-peak-2026-09-28` | `88-zones.js`, `89-zone-canyon.js` | 1445 |
+| The buried town (framework) | `claude/intense-change-1-test-2026-09-27-1829` (Phase 3) | `89-town.js`, `sim.js` `TOWN` | 1445 |
+| The Warden's moods and the curse | same | `81-mood.js`, `sim.js` `MOODS`/`CURSE` | 1445 |
+| Camp and curfew lake-only (built separately on both sides) | `buissong/repo-to-peak-2026-09-29` `a1e5e67` | `sim.js` `setZone` (`5e9779e`) | 2030 |
+
+Not ported yet (JT pinned them): Walker Ranch, the onion fields, Big Thumb and the finale, the 5-day sentence and the
+two acts (`feature/two-acts`, Greg's side), the water truck, town monsters, mission mode, what survives a game over,
+dig sites moving outward, night outside the lake. Greg's `repo-to-peak-2026-09-29` isn't merged yet (JT decides).
+
 ## Design decisions so far
 
 | Decision | Status | Where it's written |

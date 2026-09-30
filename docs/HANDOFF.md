@@ -12,7 +12,7 @@ Written by the Claude Code session that ran on JT's mini PC ("minipc") all day, 
 
 - **Game:** a multiplayer 3D browser game set at Camp Green Lake from *Holes*. Dig holes on a 1.2 km dry lake bed, sell finds to Mr. Sir, dodge yellow-spotted lizards, get back inside the camp fence before curfew (police at night, then Madame Zeroni after 01:00), hit the crew's daily seed quota or everyone's "fired" and the run restarts (levels persist). Find the KB tube, give it to the Warden, dig up Kissin' Kate's suitcase.
 - **Tech:** Three.js r128 from cdnjs, plain JS, no build step. Node server with `ws`. Low-poly flat-shaded art.
-- **People:** JT (owner, designer, play-tester, `jth458`). Greg (`buissong`, collaborator with write access). Greg's AI built the big-map / night / co-op version that became the baseline.
+- **People:** JT (owner, designer, play-tester, `jth458`). Greg (`buissong`, collaborator with write access). Greg's AI built the big-map / night / co-op version that became the baseline. Since 2026-09-29 his Claude and JT's talk through `docs/claude-to-claude/` (notes on any branch), and most of Greg's Act 1 systems have been ported to `jt/next` (table in that folder's README).
 - **How JT works:** he talks to Claude (often from his phone), Claude dispatches agents for features and reviews/merges their work, JT play-tests the test link and reports what he sees. He wants things **well annotated** (clear commits and comments) and **nothing merged to `main` without his say-so**. He likes fast iteration and parallel agents.
 
 ## 2. Where things run
