@@ -217,6 +217,7 @@ function tbRender(){
    sheltered the same way the twister is (tent, or a hole deeper than 4 ft). */
 function tbHit(w){
   if(inTent())return;
+  if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab (87-truck.js)
   if(holeDepthHere()>TB_SAFE_DEPTH)return;
   // Real 3D contact: the ball against your body (a vertical segment from shins to head), not a flat radius plus a
   // loose height window. Anything the ball's surface touches gets swept up; a ball bounding over your head doesn't.

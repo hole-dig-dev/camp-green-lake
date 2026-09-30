@@ -36,6 +36,7 @@ function updatePlayerTent(dt){
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
 function updatePlayer(dt){
+  if(S.inTruck&&(S.ko||twSt||tbSt||vSt>=3||lionPinT>0))truckEject(0,2,0);   // something's got you: out of the pickup first (87-truck.js)
   if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
     animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
   if(me&&me.ragBlend>0.3&&!twSt&&!tbSt&&!vSt&&!S.ko){P.moving=false;P.anim=0;digHeld=false;me.g.position.set(P.x,P.y,P.z);animPerson(me,0,dt);return}   // still getting up (26-ragdoll.js)
@@ -199,6 +200,7 @@ let hurtFx=0,hurtHoldT=0;
 const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text,kind){
   if(GOD)return;
+  if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
   n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
   afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();   // poison hold: a swarm stacks up, one bite still fades
