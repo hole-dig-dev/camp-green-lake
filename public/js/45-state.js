@@ -83,7 +83,7 @@ function scoop(){
   const maxD=digDepthMax();
   if(!h){h=addHole({x:r1(tx),z:r1(tz),d:0,mine:true,own:true})}
   if(h.d>=maxD-0.001){
-    if(now-lastWarn>3000){lastWarn=now;if(maxD<EIGHT_FT)toast('That\'s 5 feet, as deep as your shovel reaches. A long-handled shovel from the Wreck Room goes to 8 feet.');else toast('8 feet. Your shovel won\'t go any deeper.')}
+    if(now-lastWarn>3000){lastWarn=now;if(maxD<EIGHT_FT)toast('That\'s 5 feet, as deep as your shovel reaches. A long-handled shovel from the Supply Depot goes to 8 feet.');else toast('8 feet. Your shovel won\'t go any deeper.')}
     sfx.thud();return;
   }
   const step=(S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);

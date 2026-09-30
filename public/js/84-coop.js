@@ -131,7 +131,7 @@ function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim()
 
 /* ---- flashlight (L): yours, plus the three nearest friends' ---- */
 const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45,1.2);scene.add(s,s.target);FL.push(s)}
-function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Wreck Room sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
+function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Supply Depot sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
 function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?2.4:0;if(!on)return;s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
 function updateLights(dt){
   if(S.light){S.batt=Math.max(0,S.batt-dt*0.6);if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}

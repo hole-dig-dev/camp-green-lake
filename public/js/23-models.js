@@ -118,7 +118,7 @@ function towerLampMount(parts){
   // fence: posts where 20-world.js put them; spans stretched to each gap (the model is 2.5 m long)
   Promise.all([instanceModel('FencePost',FENCE_POSTS),instanceModel('FenceSpan',FENCE_SPANS.map(s=>Object.assign({sx:s.len/2.5},s)))])
     .then(()=>hideProc(FENCE_PROC)).catch(()=>{});
-  // signs: the painted camp sign and the Wreck Room's blade sign on its front corner
+  // signs: the painted camp sign and the Supply Depot's blade sign (SignWreckRoom) on its front corner
   placeModel('SignCampEntrance',{x:-11,y:baseH(-11,30.5),z:30.5,ry:Math.PI}).then(()=>hideProc(campSign)).catch(()=>{});
   placeModel('SignWreckRoom',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(wreckSign)).catch(()=>{});
   // gates: the arch gate at the lake side and the sliding service gate on the east fence (outside faces away from camp)
@@ -152,11 +152,11 @@ const CAMP_PROPS=[
   {m:'WaterDrum',x:8.5,z:34.9,ry:2.3,w:0.65,d:0.65},
   {m:'Bench',x:-12,z:42.3,ry:0,w:1.9,d:0.45},                  // between A and B Tents
   {m:'Bench',x:-26.5,z:39.2,ry:0,w:1.9,d:0.45},                // in front of the Warden's porch
-  {m:'SupplyCrate',x:20.6,z:43.2,ry:0.2,w:0.95,d:0.95},        // by the Wreck Room door
+  {m:'SupplyCrate',x:20.6,z:43.2,ry:0.2,w:0.95,d:0.95},        // by the Supply Depot window
   {m:'SupplyCrate',x:21.6,z:43.4,ry:-0.3,w:0.95,d:0.95},
   {m:'SupplyCrate',x:21.1,z:43.3,ry:0.9,w:0.1,d:0.1,y:0.9},    // stacked on the other two
   {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
-  {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Wreck Room, doors facing the yard
+  {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Supply Depot, doors facing the yard
   {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
   {m:'MrSirTruck',x:6.1,z:31.2,ry:Math.PI/2,w:2.0,d:5.2},      // Mr. Sir's pickup, tailgate down toward him: heavy loot sells here (sim.js SELL)
 ];

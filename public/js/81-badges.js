@@ -64,7 +64,7 @@ function renderBadges(){
     bt.append(sw,t);bt.onclick=()=>setSuit(i);sb.appendChild(bt)});
 }
 
-/* ---- supplies: onion tonic and the first-aid kit (Wreck Room), and Q ---- */
+/* ---- supplies: onion tonic and the first-aid kit (Supply Depot), and Q ---- */
 function useSupply(){
   if(S.ko)return;
   if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}

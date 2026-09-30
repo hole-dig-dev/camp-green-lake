@@ -22,16 +22,16 @@ for x in (-2.0,2.0):   # bolts
     for z in (2.72,3.98):cyl(f'bolt{x}{z}',0.03,0.03,(x,-0.13,z),('steel','steel',0.4,0.8),verts=6,rot=(math.pi/2,0,0),bevel=0,parent=r)
 studio(elev=10,azim=-24,lens=45);frame();print('entrance tris',tris());render()
 
-# ---------- SignWreckRoom: plank sign hung from a wall bracket by two chains ----------
+# ---------- SignWreckRoom (reads SUPPLY DEPOT; the scene keeps its old name): plank sign hung from a wall bracket by two chains ----------
 scene('SignWreckRoom');r=root('SignWreckRoom')
 box('wallplate',(0.12,0.04,0.3),(0,0.02,2.9),('steel','steel',0.5,0.7),parent=r)
-box('bracket',(0.05,0.9,0.05),(0,-0.43,3.0),('steel','steel',0.5,0.7),parent=r)
+box('bracket',(0.05,1.0,0.05),(0,-0.48,3.0),('steel','steel',0.5,0.7),parent=r)
 box('brace',(0.04,0.55,0.04),(0,-0.25,2.85),('steel','steel',0.5,0.7),rot=(math.radians(-35),0,0),parent=r)
-for y in (-0.18,-0.78):
+for y in (-0.08,-0.88):
     for k in range(3):cyl(f'chain{y}{k}',0.02,0.08,(0,y,2.93-k*0.09),('steel','steel',0.5,0.8),verts=6,bevel=0,rot=(0,0,0),r2=0.02,parent=r)
-brd=box('board',(0.05,0.95,0.42),(0,-0.48,2.52),('wood_pale','wood_pale',0.9),bevel=0.015,parent=r)
+brd=box('board',(0.05,1.15,0.42),(0,-0.48,2.52),('wood_pale','wood_pale',0.9),bevel=0.015,parent=r)
 for sx,rx in ((-0.03,-math.pi/2),(0.03,math.pi/2)):   # lettering on both faces
-    text(f'txt{sx}','WRECK ROOM',(sx,-0.48,2.52),0.2,('ink','ink',0.8),rot=(math.pi/2,0,rx),parent=r)
+    text(f'txt{sx}','SUPPLY DEPOT',(sx,-0.48,2.52),0.19,('ink','ink',0.8),rot=(math.pi/2,0,rx),parent=r)
 studio(elev=12,azim=-65,lens=50,target=(0,-0.4,2.6));frame(margin=1.3);print('wreck tris',tris());render()
 
 # ---------- SignLizardWarning: dented tin sign on a steel post ----------
@@ -51,7 +51,7 @@ studio(elev=8,azim=-22,lens=50);frame(margin=1.2);print('warn tris',tris());rend
 scene('SignDirections');r=root('SignDirections')
 cyl('post',0.07,3.0,(0,0,1.5),'wood_dark',verts=8,parent=r)
 cyl('cap',0.075,0.1,(0,0,3.03),'wood_dark',verts=8,r2=0.02,parent=r)
-arrows=[('MESS HALL',35,2.65,'wood_pale'),('WRECK ROOM',-20,2.3,'wood'),('D TENT',160,1.95,'wood_pale'),('THE LAKE',-150,1.6,'wood')]
+arrows=[('MESS HALL',35,2.65,'wood_pale'),('SUPPLY DEPOT',-20,2.3,'wood'),('D TENT',160,1.95,'wood_pale'),('THE LAKE',-150,1.6,'wood')]
 for label,ang,z,m in arrows:
     g=root('arrow_'+label.replace(' ','_'));g.parent=r;g.location=(0,0,z);g.rotation_euler=(0,0,math.radians(ang))
     L=0.2+0.105*len(label);box('board',(L,0.045,0.3),(L/2+0.02,0,0),(m,m,0.9),bevel=0.01,parent=g)

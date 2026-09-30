@@ -1042,7 +1042,7 @@ function unloadFromCart(id) {
   const cart = world.props[p.cartId]; p.cartId = null;
   if (cart) { cart.load = (cart.load || []).filter(l => l !== id); broadcast({ t: 'pcart', id: +Object.keys(world.props).find(k => world.props[k] === cart), load: cart.load }); }
 }
-// the crew's wheelbarrow: always one, parked by the Wreck Room (id CART_ID, never sold)
+// the crew's wheelbarrow: always one, parked by the Supply Depot (id CART_ID, never sold)
 const CART_ID = 9999;
 function ensureCart() { if (!world.props[CART_ID]) { world.props[CART_ID] = { type: 'cart', x: SIM.CART.HOME.x, z: SIM.CART.HOME.z, load: [] }; dirty = true; } }
 ensureCart();

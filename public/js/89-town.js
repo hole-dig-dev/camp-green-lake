@@ -123,7 +123,7 @@ function townUse(s){
     const help=climbHelp(s.id==='townShaft'?s.b:null);
     if(!help){
       if(s.id==='townShaft'&&S.up.rope){S.up.rope=false;if(online())wsSend({t:'ladder',k:s.k});else{s.b.ladder=true;addBreach(s.k,s.b)}toast('You stake your rope ladder in the shaft. Now anyone can climb it alone.','good',4000);sfx.clank();return true}
-      toast(s.id==='townWell'?'The well is too high to climb alone. A friend down here has to crouch (C) next to you and boost you.':'Too high to climb alone. A friend down here can crouch (C) and boost you, someone up top can hold F at the hole, or stake a rope ladder (Wreck Room).','bad',5000);return true}
+      toast(s.id==='townWell'?'The well is too high to climb alone. A friend down here has to crouch (C) next to you and boost you.':'Too high to climb alone. A friend down here can crouch (C) and boost you, someone up top can hold F at the hole, or stake a rope ladder (Supply Depot).','bad',5000);return true}
     if(!spendStam(20)){toast('Too tired to climb. Catch your breath first.','bad',2500);return true}
     if(s.id==='townWell'){const a=s.i*2.39;exitTown(Math.cos(a)*250,Math.sin(a)*250-60,`You climb up the old well (${help}) and come out somewhere on the lake.`);return true}
     exitTown(s.b.x+1.8,s.b.z,`You climb out (${help}).`);countUp('helps',10,'ladder');return true;

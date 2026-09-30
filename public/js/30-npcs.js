@@ -7,7 +7,7 @@ const sirL=makeLabel(sir.g,'Mr. Sir','npc');
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
 warden.g.position.set(-34,baseH(-34,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
 const wardenL=makeLabel(warden.g,'The Warden','npc');
-/* Mr. Pendanski works the Wreck Room's serving window (the booth behind the counter, art/blender/buildings.py
+/* Mr. Pendanski works the Supply Depot's serving window (the WreckRoom model) (the booth behind the counter, art/blender/buildings.py
    shop_front). He turns to whoever's in front of the window and waves when you open the store. */
 const CLERK_AT={x:16,z:43.15,ry:Math.PI};
 const clerk=makePerson({suit:0x7d8a5c,shirt:0xe8e0cc,skin:0xd6a077,hat:'none',hair:0x3b2618,shovel:false,body:'average',band:0x5a4a32});
