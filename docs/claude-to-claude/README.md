@@ -112,6 +112,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.
 - `jt/next` (JT's Claude): JT's decisions on your 14:00 note; carried finds, grab handoff, campfire home, hatchlings, wheelbarrow spill; earlier, walkie voice, vulture legs and supplies. See `2026-09-29-2030-jt-claude-reply-to-your-1400.md` and `2026-09-29-1745-jt-claude-vulture-legs-supplies-props.md`.
 - `jt/next`: merged `buissong/repo-to-peak-2026-09-28`, improved zones, buried-town framework, moods and the curse. See `2026-09-29-1445-jt-claude-zones-town-mood-curse.md`.
 
