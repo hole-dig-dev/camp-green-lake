@@ -32,10 +32,13 @@ const ZONE_MAX_Y=200;   // highest a camper can stand in any map (the canyon flo
 /* ---------- the end of Act 1, toward Big Thumb (north, -z): the trench, the ramps and the wall (JT, 2026-09-30) ----------
    A trench runs the whole width of the lake's north edge: sheer both sides, so there's no way round it on foot or by truck
    -- only a jump in Mr. Sir's pickup off the ramp (87-truck.js; land short and it's wrecked till dawn). A few dirt slopes
-   on the camp side let anyone who falls in walk back out. Past it, flat land to the wall: three rock ledges, each too
-   tall to walk up (a leg-up from a crouching friend, a hand from a friend on the ledge above, or your rope ladder).
+   on the camp side let anyone who falls in walk back out. Past it, flat land to the wall (JT: a full climb to finish):
+   ~30 m up in 24 steps -- 0.9 m ones you jump, and every third a 2 m ledge too tall to jump (a leg-up from a crouching
+   friend, a hand from a friend on the ledge above, or your rope ladder).
    Get the whole crew up top and Act 1 is won (88-zones.js summit, server.js). */
-const NORTH={trench:[-514,-522],depth:5,ramp:{x:120,w:5,len:12,h:3.2},exits:[-300,0,300],exitW:6,wall:-575,tier:4,tierH:2,tiers:3};
+const NORTH={trench:[-514,-522],depth:5,ramp:{x:120,w:5,len:12,h:3.2},exits:[-300,0,300],exitW:6,wall:-552,tier:1.4,
+  rises:Array.from({length:24},(_,i)=>i%3===2?2.0:0.9)};   // the wall: step i starts tier*i m north of wall and rises rises[i]
+NORTH.tops=NORTH.rises.reduce((a,r)=>(a.push((a.length?a[a.length-1]:0)+r),a),[]);   // height on top of each step
 function northH(x,z,h){
   const N=NORTH,[t0,t1]=N.trench;if(z>-495)return h;
   if(z<t0+14)h*=Math.max(0,(z-(t0))/14);                                   // the land flattens out toward the trench and beyond it
@@ -47,7 +50,7 @@ function northH(x,z,h){
     if(z<=t0+R.len&&z>t0)return R.h*(1-(z-t0)/R.len);
     if(z<t1&&z>=t1-R.len)return R.h*(1-(t1-z)/R.len);
   }
-  if(z<=N.wall){const k=Math.min(N.tiers,Math.floor((N.wall-z)/N.tier)+1);return k*N.tierH}   // the wall's ledges, then the top
+  if(z<=N.wall){const i=Math.min(N.rises.length-1,Math.floor((N.wall-z)/N.tier));return N.tops[i]}   // the wall's steps, then the top
   return h;
 }
 function baseH(x,z){
