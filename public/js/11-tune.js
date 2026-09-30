@@ -7,10 +7,16 @@
      kind 'mul': a multiplier-style number, log scale from def/range (far left) to def*range (far right).
                  zero:true lets the far-left notch mean 0 (off).
      kind 'lin': a plain number from def-span to def+span, clamped to [min,max]. int:true rounds it to whole numbers.
+     kind 'flag': an on/off switch (1/0), shown as a checkbox.
      fmt: optional v=>text for how the value reads (e.g. an angle in radians shown as degrees).
    Saved overrides remember the default they were set against. When a default changes in code, the old override
    is dropped, so baking a value in can never leave a stale slider behind. */
 const TUNE_DEFS=[
+  // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
+  {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
+  {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
+  {key:'veh.accel',tab:'Vehicles',label:'Acceleration',def:6,kind:'mul',range:3,unit:' m/s²'},
+  {key:'veh.steer',tab:'Vehicles',label:'Steering lock',def:0.55,kind:'mul',range:2,fmt:v=>tuneDeg(v)},
   // ---- finds: the item that pops out of your hole
   {key:'loot.carryOdds',tab:'Finds',label:'Finds too big for the sack (carried): chance in a shallow hole',def:0.33,kind:'lin',span:0.33,min:0,max:1,unit:'%',pct:true},
   {key:'loot.carryDeep',tab:'Finds',label:'…extra chance at the deepest (a 5 ft hole)',def:0.25,kind:'lin',span:0.25,min:0,max:1,unit:'%',pct:true},
@@ -162,10 +168,12 @@ function tuneOr(key,fallback){return TUNE_BY[key]?tune(key):fallback}
 
 /* slider position (-1..1, 0 = default) <-> value */
 function tuneFromPos(d,p){
+  if(d.kind==='flag')return p>0?1:0;
   if(d.kind==='mul'){if(d.zero&&p<=-0.999)return 0;return d.def*Math.pow(d.range,p)}
   const v=clamp(d.def+p*d.span,d.min??-Infinity,d.max??Infinity);return d.int?Math.round(v):v;
 }
 function tuneToPos(d,v){
+  if(d.kind==='flag')return v?1:-1;
   if(d.kind==='mul'){if(v<=0)return-1;return clamp(Math.log(v/d.def)/Math.log(d.range),-1,1)}
   return clamp((v-d.def)/d.span,-1,1);
 }

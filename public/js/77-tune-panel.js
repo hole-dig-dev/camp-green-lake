@@ -9,6 +9,7 @@ let tuneTab=TUNE_TABS[0],tuneIsOpen=false;
 try{const t=localStorage.getItem('cgl-tune-tab');if(TUNE_TABS.includes(t))tuneTab=t}catch(e){}
 function tuneOpen(){return tuneIsOpen}
 function tuneFmt(d,v){
+  if(d.kind==='flag')return v?'on':'off';
   if(d.pct)return Math.round(v*100)+'% hp';
   if(d.fmt)return d.fmt(v);
   if(v===0&&d.zero)return'off';
@@ -16,6 +17,15 @@ function tuneFmt(d,v){
   return s.replace(/\.?0+$/,'')+d.unit;
 }
 function tuneRow(d){
+  if(d.kind==='flag'){   // an on/off switch
+    const row=document.createElement('div');row.className='tune-row tune-flag'+(d.key in TUNE_OVR?' changed':'');
+    row.innerHTML='<label><input type="checkbox"> <span></span></label><output></output><button type="button" title="Back to default">↺</button><small></small>';
+    const cb=row.querySelector('input'),out=row.querySelector('output');row.querySelector('span').textContent=d.label;
+    cb.checked=!!tune(d.key);out.textContent=cb.checked?'on':'off';row.querySelector('small').textContent='default '+(d.def?'on':'off');
+    cb.onchange=()=>{tuneSet(d.key,cb.checked?1:0);out.textContent=cb.checked?'on':'off';row.classList.toggle('changed',d.key in TUNE_OVR);tuneCount()};
+    row.querySelector('button').onclick=()=>{tuneSet(d.key,d.def);renderTune()};
+    return row;
+  }
   const v=tune(d.key),changed=d.key in TUNE_OVR;
   const row=document.createElement('div');row.className='tune-row'+(changed?' changed':'');
   row.innerHTML='<label></label><input type="range" min="-1" max="1" step="0.005"><output></output><button type="button" title="Back to default">↺</button><small></small>';
