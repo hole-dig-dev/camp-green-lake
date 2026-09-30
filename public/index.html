@@ -352,6 +352,13 @@
       <div class="optrow"><span>Voice chat</span><input type="range" id="oVolVoice" min="0" max="100" step="1"><output id="oVolVoiceV"></output></div>
     </div>
     <div class="optgrp">
+      <h3>Voice chat</h3>
+      <div class="optrow chk"><input type="checkbox" id="oVoiceOn"><span>Voice chat on (asks for your microphone the first time; stays on next time you play)</span></div>
+      <div class="optrow"><span>Microphone</span><div class="seg" id="oVoiceMode">
+        <button type="button" data-v="ptt">Push-to-talk (hold P)</button><button type="button" data-v="open">Always on</button>
+      </div></div>
+    </div>
+    <div class="optgrp">
       <h3>Graphics</h3>
       <div class="optrow"><span>Minimap</span><div class="seg" id="oMapStyle">
         <button type="button" data-v="square">Square (north up)</button><button type="button" data-v="compass">Compass (turns with you)</button>

@@ -235,6 +235,6 @@ function updateVoice(now){
     $('#voiceBtn').classList.toggle('speaking',speaking);VOX.selfSpeaking=speaking;   // open mic: the walkie comes up while you speak (86-walkie.js)
   }
 }
-$('#voiceBtn').onclick=()=>setVoiceEnabled(!VOX.enabled);
-$('#voiceModeBtn').onclick=()=>{VOX.mode=VOX.mode==='ptt'?'open':'ptt';if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud()};
+$('#voiceBtn').onclick=async()=>{await setVoiceEnabled(!VOX.enabled);rememberVoice()};   // remembered in Options (95-pause.js)
+$('#voiceModeBtn').onclick=()=>{VOX.mode=VOX.mode==='ptt'?'open':'ptt';if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud();rememberVoice()};
 $('#voiceMuteBtn').onclick=()=>{VOX.muted=!VOX.muted;applyVolume();updateVoiceHud()};

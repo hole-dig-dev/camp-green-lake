@@ -35,13 +35,14 @@ const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
 
 /* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
 const SETTINGS_KEY='cgl-settings';
-const SETTINGS={sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
+const SETTINGS={voiceOn:false,voiceMode:'ptt',sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
   shadows:true,quality:'auto',showFps:false,mapStyle:'square',mapScale:1,mapOpacity:1,binds:defaultBinds()};
 function loadSettings(){
   try{
     const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
     for(const k of['sens','touchSens','fov','volMaster','volFx','volMusic','volVoice'])if(Number.isFinite(o[k]))SETTINGS[k]=o[k];
     if(typeof o.invertY==='boolean')SETTINGS.invertY=o.invertY;
+    if(typeof o.voiceOn==='boolean')SETTINGS.voiceOn=o.voiceOn;if(o.voiceMode==='ptt'||o.voiceMode==='open')SETTINGS.voiceMode=o.voiceMode;
     if(typeof o.shadows==='boolean')SETTINGS.shadows=o.shadows;
     if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
     if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
@@ -53,6 +54,9 @@ function loadSettings(){
   }catch(e){}
 }
 function saveSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS))}catch(e){}}
+/* voice chat (86-voice.js): remember whether it's on and push-to-talk vs always on, from Options or the HUD buttons */
+function rememberVoice(){SETTINGS.voiceOn=!!VOX.enabled;SETTINGS.voiceMode=VOX.mode;saveSettings();if(typeof oVoiceOn!=='undefined')syncVoiceOpts()}
+function syncVoiceOpts(){oVoiceOn.checked=!!VOX.enabled;for(const b of oVoiceMode.children)b.setAttribute('aria-pressed',b.dataset.v===VOX.mode?'true':'false')}
 
 /* ---- key remap layer: turns whatever key is physically pressed into the default key name the rest
    of the file already checks (KEYS['w'], k==='e', ...), so none of that code had to change. Rebuilt
@@ -141,7 +145,7 @@ const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('
       oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
       oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
       oVolVoice=$('#oVolVoice'),oVolVoiceV=$('#oVolVoiceV'),
-      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle');
+      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle'),oVoiceOn=$('#oVoiceOn'),oVoiceMode=$('#oVoiceMode');
 function renderOptions(){
   oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
   oMapScale.value=SETTINGS.mapScale;oMapScaleV.textContent=Math.round(SETTINGS.mapScale*100)+'%';
@@ -156,6 +160,7 @@ function renderOptions(){
   oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;
   for(const b of oQuality.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.quality?'true':'false');
   for(const b of oMapStyle.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.mapStyle?'true':'false');
+  syncVoiceOpts();
   renderBindList();
 }
 oMapScale.oninput=()=>{SETTINGS.mapScale=+oMapScale.value;oMapScaleV.textContent=Math.round(SETTINGS.mapScale*100)+'%';applyMapLook();saveSettings()};
@@ -169,6 +174,8 @@ oVolFx.oninput=()=>{SETTINGS.volFx=+oVolFx.value/100;oVolFxV.textContent=oVolFx.
 oVolMusic.oninput=()=>{SETTINGS.volMusic=+oVolMusic.value/100;oVolMusicV.textContent=oVolMusic.value+'%';applyVolume();saveSettings()};
 oVolVoice.oninput=()=>{SETTINGS.volVoice=+oVolVoice.value/100;oVolVoiceV.textContent=oVolVoice.value+'%';applyVolume();saveSettings()};
 oShadows.onchange=()=>{SETTINGS.shadows=oShadows.checked;applyShadows();saveSettings()};
+oVoiceOn.onchange=async()=>{await setVoiceEnabled(oVoiceOn.checked);rememberVoice()};   // (mic denied: it stays off, and the box unticks)
+oVoiceMode.onclick=e=>{const b=e.target.closest('button');if(!b)return;VOX.mode=b.dataset.v;if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud();rememberVoice()};
 oMapStyle.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.mapStyle=b.dataset.v;for(const c of oMapStyle.children)c.setAttribute('aria-pressed',c===b?'true':'false');setMapStyle(SETTINGS.mapStyle);saveSettings()};
 oFps.onchange=()=>{SETTINGS.showFps=oFps.checked;applyFpsVisibility();saveSettings()};
 oQuality.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.quality=b.dataset.v;for(const c of oQuality.children)c.setAttribute('aria-pressed',c===b?'true':'false');applyQuality();saveSettings()};
@@ -231,7 +238,7 @@ function renderControlsList(){
   pControlsListEl.appendChild(note);
 }
 
-loadSettings();
+loadSettings();VOX.mode=SETTINGS.voiceMode;updateVoiceHud();   // push-to-talk or always on, as you left it
 applySettings();
 
 /* Resume a saved session LAST, after every section above has run: startGame() touches things defined late in
