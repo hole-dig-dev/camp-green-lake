@@ -21,8 +21,8 @@ for(const[bx,bz]of[[-12,42.3],[-26.5,39.2]])for(const dx of[-0.45,0.45])   // th
 }
 const seatFloor=s=>s.tent!=null?TENT_FLOOR_Y:groundAt(s.x,s.z);
 const bodyH=p=>((BODY_TYPES[(p.o||{}).body]||{h:1}).h);
-/* pose any camper sitting at (x,z) on a seat whose top is at height y, facing h */
-function sitPose(p,x,y,z,h,dt){p.g.position.set(x,y-SIT_HIP*bodyH(p),z);p.g.rotation.set(0,h,0);animPerson(p,10,dt)}
+/* pose any camper sitting at (x,z) on a seat whose top is at height y, facing h (mode 11: on an edge, legs dangling) */
+function sitPose(p,x,y,z,h,dt,mode=10){p.g.position.set(x,y-SIT_HIP*bodyH(p),z);p.g.rotation.set(0,h,0);animPerson(p,mode,dt)}
 function seatTaken(s){
   for(const R of remotes.values())if(R.anim===10&&(R.tx-s.x)**2+(R.tz-s.z)**2<0.16)return true;
   for(const b of bots){const g=b.p.g.position;if((g.x-s.x)**2+(g.z-s.z)**2<0.36&&b.state==='inside')return true}
