@@ -30,7 +30,7 @@ The build scripts recreate their scenes from scratch:
 | `furniture.py` | BunkBed, Cot, Footlocker, CardTable, Stool, WardenDesk, SupplyCrate, WaterDrum, Bench |
 | `buildings.py` | TentSmall, TentCrew, WreckRoom (the Supply Depot: serving window + booth, `shop_front`), WardenHouse, Watchtower, WaterTower |
 | `wreckroom.py` | Rebuilds only WreckRoom from `buildings.py` and exports `glb/WreckRoom.glb` |
-| `camper_export.py` | Rebuilds the camper from `characters.blend` (rig, wardrobe, every clip in `/blender/cgl_rig.py`, now including Sit) and writes `public/models/camper.glb` |
+| `camper_export.py` | Rebuilds the camper from `characters.blend` (rig, wardrobe, every clip in `/blender/cgl_rig.py`, now including Sit and SitEdge) and writes `public/models/camper.glb` |
 | `beasts.py` + `rig.py` | Lizard, Javelina, Lion: modelled, then rigged, animated and exported to `glb/Creature*.glb` |
 | `carryloot.py` | LootCrate, LootTools, LootJug: carried finds (the middle loot tier, too big for the sack), grabbed and hauled like the safe |
 | `supplies.py` | SupplyWalkie, SupplyTonic, SupplyMedkit: the Wreck Room supplies, matched to their painted store icons, stood on their base with the grip height recorded for the game's hand props (`public/js/86-walkie.js`) |

@@ -1,9 +1,10 @@
 'use strict';
 /* public/js/87-truck.js -- Mr. Sir's pickup, drivable (JT, 2026-09-30) while the F2 flag "Make drivable" is on
    (Vehicles tab, veh.drivable; off by default).
-   Four seats (JT): F at the left door to drive, F at the right door to ride shotgun, F at the back to sit on the end of
-   the bed with your legs hanging over the dropped tailgate (two spots). F again to get out. Everyone in it sits (the
-   camper's Sit clip, blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
+   Four seats (JT): F at the left door to drive, F at the right door to ride shotgun, F at the back to sit on the edge
+   of the dropped tailgate (two spots). F again to get out. Up front you're out of sight, "in the truck" (JT: no heads
+   through the roof); on the tailgate your legs hang down past its edge (the camper's SitEdge clip,
+   blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
    With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
    out through the gate, swing round outside and drive off. Once it's out through the gate and ESCAPE_R away, that's
    the escape: the whole crew moves on to the next map, the same as everyone reaching the campfire (server.js 'truck',
@@ -16,13 +17,14 @@ const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the
 const ESCAPE_R=18;                                            // out through the gate and this far from it: gone
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
-/* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face,
-   (0 forward, PI backward), where you stand to get in, and where you step out */
+/* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face
+   (0 forward, PI backward), where you stand to get in, where you step out; hide: in the cab, out of sight; clip: the
+   animPerson mode you sit with. The tailgate is dropped flat at z -2.3..-2.8, top 0.81 (art/blender/heavy.py). */
 const TRUCK_SEATS={
-  drive:  {at:[0.38,0.3],y:0.9,face:0,door:[1.45,0.35],out:[1.75,0.35],label:'Drive Mr. Sir\'s pickup'},
-  shotgun:{at:[-0.38,0.3],y:0.9,face:0,door:[-1.45,0.35],out:[-1.75,0.35],label:'Ride shotgun'},
-  tail0:  {at:[0.42,-2.2],y:0.84,face:Math.PI,door:[0,-3.2],out:[0.6,-3.7],label:'Sit on the tailgate'},
-  tail1:  {at:[-0.42,-2.2],y:0.84,face:Math.PI,door:[0,-3.2],out:[-0.6,-3.7],label:'Sit on the tailgate'}};
+  drive:  {at:[0.38,0.3],y:0.9,face:0,hide:true,door:[1.45,0.35],out:[1.75,0.35],label:'Drive Mr. Sir\'s pickup'},
+  shotgun:{at:[-0.38,0.3],y:0.9,face:0,hide:true,door:[-1.45,0.35],out:[-1.75,0.35],label:'Ride shotgun'},
+  tail0:  {at:[0.42,-2.86],y:0.83,face:Math.PI,clip:11,door:[0,-3.4],out:[0.6,-3.9],label:'Sit on the tailgate'},
+  tail1:  {at:[-0.42,-2.86],y:0.83,face:Math.PI,clip:11,door:[0,-3.4],out:[-0.6,-3.9],label:'Sit on the tailgate'}};
 const TRUCK_SEAT_KEYS=Object.keys(TRUCK_SEATS);
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,seats:{},on:false,
@@ -71,13 +73,13 @@ function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
   if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;P.moving=false;digHeld=false;if(was)return;
     toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, swing round and drive: that\'s the way out of here.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
-  const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;
+  const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;if(me)me.g.visible=true;
   const o=TRUCK_SEATS[was].out,p=truckAt(o[0],o[1]);
   P.x=p.x;P.z=p.z;P.y=groundAt(p.x,p.z);P.vy=0;
 }
-function truckLeaveLocal(){S.inTruck=null;Object.assign(TRUCK,truckPark(),{v:0,steer:0,seats:{},tgt:null,escaped:false,outGate:false});truckPose()}
+function truckLeaveLocal(){if(S.inTruck&&me)me.g.visible=true;S.inTruck=null;Object.assign(TRUCK,truckPark(),{v:0,steer:0,seats:{},tgt:null,escaped:false,outGate:false});truckPose()}
 /* put a camper in a seat: hips on it, facing the right way, sitting */
-function truckSit(p,seat,dt){const q=TRUCK_SEATS[seat],w=truckAt(q.at[0],q.at[1]);p.g.visible=true;sitPose(p,w.x,TRUCK.y+q.y,w.z,TRUCK.h+q.face,dt)}
+function truckSit(p,seat,dt){const q=TRUCK_SEATS[seat],w=truckAt(q.at[0],q.at[1]);sitPose(p,w.x,TRUCK.y+q.y,w.z,TRUCK.h+q.face,dt,q.clip||10);p.g.visible=!q.hide}
 
 /* ---- the driver: a simple bicycle model on the ground, bumping off anything solid ---- */
 function truckDrive(dt){
