@@ -12,6 +12,9 @@
    is dropped, so baking a value in can never leave a stale slider behind. */
 const TUNE_DEFS=[
   // ---- finds: the item that pops out of your hole
+  {key:'loot.carryOdds',tab:'Finds',label:'Finds too big for the sack (carried): chance in a shallow hole',def:0.33,kind:'lin',span:0.33,min:0,max:1,unit:'%',pct:true},
+  {key:'loot.carryDeep',tab:'Finds',label:'…extra chance at the deepest (a 5 ft hole)',def:0.25,kind:'lin',span:0.25,min:0,max:1,unit:'%',pct:true},
+  {key:'loot.carryValue',tab:'Finds',label:'Carried find worth (× its sack value, +10)',def:2.5,kind:'mul',range:3,unit:'×'},
   {key:'finds.smallScale',tab:'Finds',label:'Common find size (cap, can, spoon…)',def:3,kind:'mul',range:4,unit:'×'},
   {key:'finds.bigScale',tab:'Finds',label:'Big find size (safe, strongbox, KB, suitcase)',def:1,kind:'mul',range:4,unit:'×'},
   {key:'finds.rise',tab:'Finds',label:'How high it floats up',def:1.04,kind:'lin',span:2,min:0,unit:' m'},
@@ -92,6 +95,9 @@ const TUNE_DEFS=[
   {key:'env.grabReach',tab:'Environment',label:'Grab reach (hold R on loot, a friend, the wheelbarrow)',def:4.5,kind:'mul',range:2,unit:' m'},
   {key:'env.bonkReach',tab:'Environment',label:'Shovel bonk reach',def:2.3,kind:'mul',range:2,unit:' m'},
   // ---- monsters, events and the curse (the server reads these too, from the play-test server's saved sliders)
+  {key:'cart.spillKo',tab:'Grab',label:'Tipped out of the wheelbarrow while downed: knockout time lost',def:6,kind:'mul',range:3,zero:true,unit:' s'},
+  {key:'mon.hatchBite',tab:'Monsters',label:'Lizard hatchling bite (poison)',def:8,kind:'mul',range:3,unit:' hp'},
+  {key:'aff.poisonHold',tab:'Monsters',label:'Poison stops wearing off for this long after a bite',def:4,kind:'mul',range:3,zero:true,unit:' s'},
   {key:'mon.roster',tab:'Monsters',label:'Roster monsters spawn rate',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'mon.events',tab:'Monsters',label:'Hazard events (twisters, storms…) happen',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'curse.ko',tab:'Monsters',label:'Curse: per knockout',def:4,kind:'mul',range:4,zero:true,unit:'%'},

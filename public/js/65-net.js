@@ -71,7 +71,7 @@ function onMsg(m){
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null}}
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null}}
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
@@ -133,7 +133,7 @@ function onMsg(m){
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);lionFromServer(m);break;
     case 'jav':javFromServer(m.list,m.ev);break;
-    case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0));break;
+    case 'prop':addProp(num(m.id,0,1e5,-1)|0,String(m.type),num(m.x,-600,600,0),num(m.z,-600,600,0),m.val!=null?num(m.val,0,1e4,0)|0:null,m.v0!=null?num(m.v0,0,1e4,0)|0:null);break;
     case 'props':if(Array.isArray(m.list))for(const a of m.list){const pr=PROPS.get(a[0]);if(pr){pr.x=num(a[1],-600,600,pr.x);pr.z=num(a[2],-600,600,pr.z);pr.n=num(a[3],0,40,0)|0}}break;
     case 'psold':propSold(num(m.id,0,1e5,-1)|0,num(m.v,0,1e4,0)|0,Array.isArray(m.who)?m.who:[]);break;
     case 'bag':addBag(num(m.id,0,1e9,-1),num(m.x,-600,600,0),num(m.z,-600,600,0),Array.isArray(m.items)?m.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(m.n));break;

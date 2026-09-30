@@ -99,9 +99,21 @@ function scoop(){
     }
   }
 }
+/* carried finds: about 1 in 3 ordinary finds is too big for the sack (more from deeper down), and comes up as a crate,
+   a tool bundle or a jug that has to be carried to Mr. Sir, worth more than the sack version. Sliders: F2 > Finds. */
+function carryFind(it){
+  const L=LOOT[it.type];if(L.key||L.heavy||S.inTown)return null;
+  const p=tune('loot.carryOdds')+tune('loot.carryDeep')*clamp((it.depth-0.3)/1.15,0,1);if(Math.random()>=p)return null;
+  const type=L.val<=12?'tools':L.val<=30?'crate':'jug';
+  return{type,val:clamp(Math.round(L.val*tune('loot.carryValue')+10),5,SIM.HEAVY[type])};
+}
 function foundItem(it,h){
-  it.found=true;wsSend({t:'got',item:it.id,kb:it.type==='kb'});popItem(it,h.x,h.z);
+  const cv=carryFind(it);
+  it.found=true;wsSend({t:'got',item:it.id,kb:it.type==='kb'});popItem(cv?{...it,type:cv.type}:it,h.x,h.z);
   const L=LOOT[it.type];
+  if(cv){const C=LOOT[cv.type];sfx.clank();sfx.find();addXP(8);logEv('found',{item:it.id,type:it.type,carry:cv.type,value:cv.val,x:+h.x.toFixed(1),z:+h.z.toFixed(1)});
+    toast(`You dug up a ${C.name.toLowerCase()} (${cv.val} seeds). Too big for your sack: grab it (hold R) and carry it to Mr. Sir's pickup. ${C.note}`,'gold',6500);
+    if(online())wsSend({t:'prop',item:it.id,type:cv.type,x:h.mx,z:h.mz,val:cv.val});else addProp(it.id,cv.type,h.mx,h.mz,cv.val);return}
   logEv('found',{item:it.id,type:it.type,value:L.val,x:+h.x.toFixed(1),z:+h.z.toFixed(1),heavy:!!L.heavy,kb:it.type==='kb'});
   if(it.type==='suitcase'){badge('stanley');sfx.gold();triggerWin(S.name,true);return}
   if(it.type==='kb'){S.hasKB=true;sfx.gold();toast('A gold tube marked "KB"! The Warden will want this. Take it to her cabin.','gold',6000);shout(2);return}

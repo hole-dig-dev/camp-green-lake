@@ -26,7 +26,7 @@ function physOf(pr){
     const P0=SIM.PHYS[pr.type]||{m:80,frag:0.3};
     pr.ph={m:P0.m,frag:P0.frag,h:Math.max(0.3,sz.y),r:Math.max(0.3,Math.max(sz.x,sz.z)/2)};
     if(pr.y==null)pr.y=groundAt(pr.x,pr.z);pr.vx=pr.vy=pr.vz=0;pr.hands=pr.hands||new Map();pr.grab=pr.grab||[];pr.ropes=pr.ropes||[];
-    if(pr.val==null)pr.val=SIM.HEAVY[pr.type]||0;pr.v0=SIM.HEAVY[pr.type]||0;pr.hitT=0;pr.restT=0;pr.rest=true;pr.load=pr.load||[];
+    pr.v0=pr.val0!=null?pr.val0:SIM.HEAVY[pr.type]||0;if(pr.val==null)pr.val=pr.v0;pr.hitT=0;pr.restT=0;pr.rest=true;pr.load=pr.load||[];   // v0: chips scale with what it was worth when dug up
   }
   return pr.ph;
 }
@@ -223,7 +223,8 @@ function grabMsg(m){
     S.inCart=pr.load.includes(-myId())?pr.id:(S.inCart===pr.id?null:S.inCart);
     if(Array.isArray(m.spill))for(const s of m.spill){const sid=s[0]|0,x=num(s[1],-600,600,0),z=num(s[2],-600,600,0);
       if(sid>=0){const q=PROPS.get(sid);if(q){physOf(q);q.x=x;q.z=z;q.y=groundAt(x,z)+0.3;q.rest=false;q.cartId=null}}
-      else if(-sid===myId()){P.x=x;P.z=z;P.y=groundAt(x,z);S.inCart=null}}
+      else if(-sid===myId()){P.x=x;P.z=z;P.y=groundAt(x,z);S.inCart=null;   // thrown out of it: it costs you some of your knockout time
+        if(S.ko){S.ko=Math.max(1,S.ko-tune('cart.spillKo'));sfx.thud();hurtFx=1;toast('You got tipped out of the wheelbarrow! That hurt.','bad',3000)}}}
     if(m.tip&&!iOwn(pr))toast('The wheelbarrow tipped over!','bad',2500);
   }
 }
@@ -232,19 +233,25 @@ function grabMsg(m){
 function bodyHeld(){return S.ko>0&&(MYBODY.hands.size>0||S.inCart!=null)}
 function stepMyBody(dt){
   if(S.inCart!=null){const c=PROPS.get(S.inCart);if(!c){S.inCart=null;return false}P.x=c.x;P.z=c.z;P.y=groundAt(c.x,c.z)+0.55;
-    if(inCamp(P.x,P.z)){carriedHome();}return true}
+    if(atHome(P.x,P.z)){carriedHome();}return true}
   if(!MYBODY.hands.size){MYBODY.x=P.x;MYBODY.y=P.y;MYBODY.z=P.z;MYBODY.vx=MYBODY.vy=MYBODY.vz=0;return false}
   const B=MYBODY;B.x=P.x;B.y=P.y;B.z=P.z;
   const sub=Math.max(1,Math.ceil(dt/(1/60)));for(let i=0;i<sub;i++)stepThing(B,dt/sub);
   P.x=B.x;P.y=B.y;P.z=B.z;
-  if(inCamp(P.x,P.z))carriedHome();
+  if(atHome(P.x,P.z))carriedHome();
   return true;
+}
+/* home, for a downed friend being carried: inside the camp fence on the lake, or the campfire on any other map
+   (88-zones.js ZONE.fire). JT: the campfire counts as home off the lake. */
+function atHome(x,z){
+  if(inCamp(x,z))return true;
+  const f=typeof ZONE!=='undefined'&&ZONE_H&&ZONE.fire;return!!(f&&Math.hypot(x-f.x,z-f.z)<f.r);
 }
 function carriedHome(){
   if(!S.ko)return;
   const by=[...new Set([...MYBODY.grab,...MYBODY.ropes])].map(pid=>{const R=remotes.get(pid);return R?R.name:null}).filter(Boolean)[0]||'Your crew';
   const carriers=[...new Set([...MYBODY.grab,...MYBODY.ropes])];wsSend({t:'carried',who:carriers});
-  MYBODY.hands.clear();S.inCart=null;revived(by);S.justUp=true;logEv('carriedHome',{by});toast(`${by} got you back inside the fence. You're up.`,'good',3500);
+  MYBODY.hands.clear();S.inCart=null;revived(by);S.justUp=true;logEv('carriedHome',{by});toast(`${by} got you back ${inCamp(P.x,P.z)?'inside the fence':'to the campfire'}. You're up.`,'good',3500);
 }
 
 /* ---- beams and ropes: everyone can see who's holding what ---- */

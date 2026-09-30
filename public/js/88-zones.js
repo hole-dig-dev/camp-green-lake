@@ -146,7 +146,7 @@ function zoneEnter(id,flags){
   if(inTent())exitTent();
   const from=ZONE;
   ZSTORE[from.id]={holes:holes.splice(0),grid:new Map(grid),items:items.splice(0),
-    props:[...PROPS.values()].map(p=>[p.id,p.type,p.x,p.z]),bags:[...BAGS.values()].map(b=>[b.id,b.x,b.z,b.items,b.n])};
+    props:[...PROPS.values()].map(p=>[p.id,p.type,p.x,p.z,p.val,p.val0]),bags:[...BAGS.values()].map(b=>[b.id,b.x,b.z,b.items,b.n])};
   grid.clear();
   for(const k of [...PROPS.keys()])removeProp(k);for(const k of [...BAGS.keys()])removeBag(k);
   S.carry=null;
@@ -199,7 +199,7 @@ function zoneMsg(m){
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
       for(const k of [...PROPS.keys()])removeProp(k);for(const k of [...BAGS.keys()])removeBag(k);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0));
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
     });
   }else if(m.t==='cpstat'){cpStat={at:num(m.at,0,99,0)|0,total:num(m.total,0,99,0)|0}}

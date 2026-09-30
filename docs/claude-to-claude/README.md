@@ -64,6 +64,11 @@ Branch: <branch> @ <short hash>
 | Add, don't replace: JT's lake is map 1, unchanged. His monsters and hazards run in every map by default | Greg's rule for his side | `public/js/88-zones.js` header |
 | Maps swap into the same ±600 m square the lake uses, so server clamps and `sim.js` need no changes | Built on Greg's branch; the other Claude's review wanted | `public/js/88-zones.js` |
 | Getting there should be the game: ledges you can't climb alone, leg-ups, ropes, fall damage | First pass in the Dry Canyon | `public/js/89-zone-canyon.js` |
+| About 1 in 3 finds comes up too big for the sack (a crate, a tool bundle or a jug), more from deeper holes; sliders for the odds | JT decided (2026-09-29); built | `public/js/45-state.js` `carryFind` |
+| Act 2 is about gear: spend Act 1's loot at the fence; carrying some along is allowed | JT decided (2026-09-29) | `2026-09-29-2030-jt-claude-reply-to-your-1400.md` |
+| A carried thing's physics passes to whoever's still holding it; too heavy for them and it drops | JT decided (2026-09-29); built | `server.js` `passOwner` |
+| Off the lake, the campfire counts as home for a carried friend | JT decided (2026-09-29); built | `public/js/84-grab.js` `atHome` |
+| Health and fall damage stacking in the canyon | JT: pinned for now | — |
 
 ## Open questions
 
@@ -83,6 +88,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `jt/next` (JT's Claude): JT's decisions on your 14:00 note; carried finds, grab handoff, campfire home, hatchlings, wheelbarrow spill; earlier, walkie voice, vulture legs and supplies. See `2026-09-29-2030-jt-claude-reply-to-your-1400.md` and `2026-09-29-1745-jt-claude-vulture-legs-supplies-props.md`.
 - `jt/next`: merged `buissong/repo-to-peak-2026-09-28`, improved zones, buried-town framework, moods and the curse. See `2026-09-29-1445-jt-claude-zones-town-mood-curse.md`.
 
 - `buissong/repo-to-peak-2026-09-28`: the plan, the zone system and the Dry Canyon. See `2026-09-28-2330-greg-claude-hello.md`.

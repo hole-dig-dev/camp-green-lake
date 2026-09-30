@@ -144,7 +144,7 @@ function zoneMsg() {
     holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
     got: [...gotSet],
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z })),
+    props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, val: p.val, v0: p.v0 })),
   };
 }
 function zoneSwitch(id, why) {
@@ -161,6 +161,14 @@ function zoneSwitch(id, why) {
   broadcast(zoneMsg());
 }
 /* Like Peak's campfires: the next map only opens once every joined camper is standing at this one's. */
+/* grab physics ownership: when the camper running a thing's physics lets go or leaves, it passes to someone still
+   holding it (hands first, then ropes); nobody left and it's free for the next grabber. The new owner's page picks up
+   from the last state it heard, and the physics does the rest: too heavy for who's left and it sags to the ground. */
+function passOwner(p, leaving) {
+  if (p.owner !== leaving) return;
+  const next = [...(p.grab || []), ...(p.ropes || [])].find(g => g !== leaving && clients.has(g) && clients.get(g).joined);
+  p.owner = next != null ? next : null;
+}
 function checkCampfire() {
   const js = joined(), at = js.filter(c => c.cp).length;
   broadcast({ t: 'cpstat', at, total: js.length });
@@ -417,7 +425,7 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
@@ -538,7 +546,8 @@ wss.on('connection', (ws, req) => {
         // Someone dug up something too heavy for the sack. It sits on the ground until campers carry it to the truck.
         const id = num(m.item, 0, MAX_ITEM, -1) | 0, type = String(m.type);
         if (id < 0 || !(type in SIM.HEAVY) || world.props[id] || Object.keys(world.props).length >= MAX_PROPS) return;
-        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)), val: SIM.HEAVY[type] }; dirty = true;
+        const val = Math.round(num(m.val, 1, SIM.HEAVY[type], SIM.HEAVY[type])); // a carried find brings its own worth (45-state.js carryFind); HEAVY is the cap
+        world.props[id] = { type, x: r2(num(m.x, -595, 595, 0)), z: r2(num(m.z, -595, 595, 0)), val, v0: val }; dirty = true;
         LOG.log('propSpawn', { id: c.id, n: c.n, item: id, type, x: world.props[id].x, z: world.props[id].z });
         broadcast({ t: 'prop', id, ...world.props[id] });
         break;
@@ -565,6 +574,7 @@ wss.on('connection', (ws, req) => {
       case 'prel': case 'pyeet': {
         const id = num(m.id, -1e9, MAX_ITEM, -1e9) | 0, T = grabTarget(id); if (!T) return;
         T.o.grab = (T.o.grab || []).filter(g => g !== c.id); T.o.ropes = (T.o.ropes || []).filter(g => g !== c.id);
+        if (id >= 0 && m.t === 'prel') passOwner(T.o, c.id); // JT: whoever's still holding it takes over (too heavy for them alone and it drops)
         const owner = id >= 0 ? T.o.owner : T.c.id;
         if (m.t === 'pyeet' && owner !== c.id && clients.has(owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(owner), { t: 'pyeet', id, pid: c.id, d }); }
         broadcast({ t: 'pown', id, owner, grab: T.o.grab, ropes: T.o.ropes });
@@ -583,9 +593,9 @@ wss.on('connection', (ws, req) => {
         const x = num(m.x, -595, 595, p.x), z = num(m.z, -595, 595, p.z);
         if (Math.hypot(x - c.x, z - c.z) > 40) return; // the owner is somewhere near their prop
         p.x = r2(x); p.z = r2(z); p.y = r2(num(m.y, -10, 60, p.y || 0));
-        const v0 = SIM.HEAVY[p.type] || 0; if (v0) p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
+        const v0 = p.v0 || SIM.HEAVY[p.type] || 0; if (v0) p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
         if (p.type === 'cart') p.tip = m.tip === true;
-        if (m.rest === true && !(p.grab || []).includes(c.id) && !(p.ropes || []).includes(c.id)) p.owner = null; // settled and let go: the next grabber takes over
+        if (m.rest === true && !(p.grab || []).includes(c.id) && !(p.ropes || []).includes(c.id)) passOwner(p, c.id); // settled and let go: whoever still holds it takes over (or the next grabber)
         for (const lid of p.load || []) if (lid >= 0 && world.props[lid]) { world.props[lid].x = p.x; world.props[lid].z = p.z; } // loot riding in the cart
         dirty = true;
         broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, tip: p.tip, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [] }, c.id);
@@ -965,6 +975,12 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     clearTimeout(joinTimer);
     clients.delete(c.id);
+    for (const [pid, p] of Object.entries(world.props)) { // let go of anything they were holding; what they were running passes on
+      const held = (p.grab || []).includes(c.id) || (p.ropes || []).includes(c.id);
+      if (!held && p.owner !== c.id) continue;
+      p.grab = (p.grab || []).filter(g => g !== c.id); p.ropes = (p.ropes || []).filter(g => g !== c.id); passOwner(p, c.id);
+      broadcast({ t: 'pown', id: +pid, owner: p.owner, grab: p.grab, ropes: p.ropes });
+    }
     if (kbHolder === c.id && !world.kb) {
       // The camper walked off with the gold tube without reporting it: put it back in the ground.
       kbHolder = null;

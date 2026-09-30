@@ -49,6 +49,10 @@ const LOOT={
   pistol:{name:'Kate\'s old pistol',val:75,color:0x2a2a2a},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
   strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
+  // carried finds (45-state.js carryFind): what a find becomes when it's too big for the sack. val is typical; each one's is set when dug
+  crate:{name:'Crate of spiced peaches',val:60,color:0x9a7448,heavy:true,carry:true,note:'Glass jars: it chips if you drop it.'},
+  tools:{name:'Bundle of old tools',val:35,color:0x5a524a,heavy:true,carry:true,note:'Iron: it can take a knock.'},
+  jug:{name:'Big jug of Sploosh',val:120,color:0xe6d8b4,heavy:true,carry:true,note:'Pottery: one bad drop and it cracks.'},
   kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
   suitcase:{name:'Suitcase marked "STANLEY YELNATS"',val:500,color:0x6b3e1f,key:true},
   goldbar:{name:'Gold bar',val:90,color:0xd4af37},   // only in the buried town's vault (89-town.js)

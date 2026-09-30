@@ -168,7 +168,7 @@ function hurt(n,title,text,kind){
   if(GOD)return;
   n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
-  afflict(kind||'injury',n);S.hurtT=0;hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();
+  afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();   // poison hold: a swarm stacks up, one bite still fades
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,kind:kind||'injury',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(S.hp<=0)knockOut(title,text);
 }
@@ -195,7 +195,7 @@ function updateHealth(dt){
     // sunburn: 10:00-17:00, out in the open
     if(day&&h>=10&&h<17&&!inShade())AFF.burn=Math.min(tune('aff.burnMax'),AFF.burn+tune('aff.burn')*(RUN.mood==='heatwave'?2:1)*dt);
     else AFF.burn=Math.max(0,AFF.burn-(inCamp(P.x,P.z)||inTent()?0.25:0.06)*dt);
-    AFF.poison=Math.max(0,AFF.poison-tune('aff.poisonFade')*dt);
+    if(S.poisonHoldT>0)S.poisonHoldT-=dt;else AFF.poison=Math.max(0,AFF.poison-tune('aff.poisonFade')*dt);
     if(day)AFF.hunger=Math.min(tune('aff.hungerMax'),AFF.hunger+tune('aff.hunger')*dt);
     if(S.hurtT>=tune('hp.healDelay'))AFF.injury=Math.max(0,AFF.injury-tune('hp.healRate')*dt);
   }

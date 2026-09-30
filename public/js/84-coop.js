@@ -63,7 +63,8 @@ function propMesh(type){
   else{const b=box(1.2,0.7,0.8,0x5b3a1e);b.position.y=0.35;g.add(b);for(const x of[-0.4,0.4]){const s=box(0.1,0.72,0.82,0xd4af37);s.position.set(x,0.36,0);g.add(s)}}
   scene.add(g);return g;
 }
-function addProp(id,type,x,z){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='cart'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);PROPS.set(id,{id,type,x,z,n:0,g,L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+SIM.HEAVY[type]+' seeds','',type==='cart'?1.2:1.7)})}
+function addProp(id,type,x,z,val,val0){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='cart'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);   // val: a carried find's own worth (45-state.js carryFind); val0: what it was when dug up
+  const v=val!=null?val:SIM.HEAVY[type];PROPS.set(id,{id,type,x,z,n:0,g,val:type==='cart'?undefined:v,val0:type==='cart'?undefined:(val0!=null?val0:v),L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+v+' seeds','',type==='cart'?1.2:1.7)})}
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);

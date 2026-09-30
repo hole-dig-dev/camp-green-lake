@@ -12,10 +12,13 @@
   const inCamp = (x, z) => ZONE_NOW === 'lake' && z > 27 && z < 56 && x > -40 && x < 30;
   const nearCampZone = (x, z) => ZONE_NOW === 'lake' && x > -46 && x < 36 && z > 12 && z < 62;
   const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
-  const HEAVY = { safe: 120, strongbox: 80 };
+  // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
+  // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
+  const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };
   // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
   // One camper pulls at most GRAB.FMAX newtons, so ~71 kg is the most one of you can lift: the safe takes two.
-  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 }, cart: { m: 25, frag: 0 }, body: { m: 70, frag: 0 } };
+  const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 }, cart: { m: 25, frag: 0 }, body: { m: 70, frag: 0 },
+    crate: { m: 30, frag: 0.9 }, tools: { m: 28, frag: 0.2 }, jug: { m: 18, frag: 1.3 } };   // glass jars, iron, pottery
   // the rope (84-grab.js, X): slack up to L m, then it pulls like a pair of hands from wherever you are, up to MAX m away
   const ROPE = { L: 4.5, MAX: 7.5, K: 900 };
   // the crew's wheelbarrow: holds CAP things (loot or a downed friend), parks by the main gate, tips if you hit a bump fast

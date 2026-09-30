@@ -54,8 +54,8 @@ try {
   const p1 = await openPlayer('p1', 'Stanley');
   const p2 = await openPlayer('p2', 'Zero');
   await waitFor(p1, () => remotes.size === 1, 15000, 'p1 to see p2');
-  // no random hazards or curfew police in the middle of a measurement (they do run in the canyon: that's the point, but not here)
-  await p1.evaluate(() => { window.__cgl.runCommand('director off'); window.__cgl.runCommand('time 08:00'); });
+  // no random hazards, roster monsters (the Warden KOs idle campers) or curfew police in the middle of a measurement (they do run in the canyon: that's the point, but not here)
+  await p1.evaluate(() => { window.__cgl.runCommand('director off'); window.__cgl.runCommand('roster off'); window.__cgl.runCommand('time 08:00'); });
 
   // --- the crew moves together ---
   const campBefore = await p1.evaluate(() => ({ bots: bots.filter(b => b.p.g.parent === scene).length, holes: holes.length, items: items.length }));
