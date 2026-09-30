@@ -2,7 +2,7 @@
 /* public/js/81-inventory.js -- the inventory screen (I or Tab; tap the supplies panel / Bag button on touch).
    One place to see everything you're carrying: the finds in your sack, supplies (onions, flashlight,
    water), the gear you've bought, and special items (the KB tube, heavy loot you're hauling).
-   It reuses the Wreck Room store's layout and card styles (.shop-*), so it looks like part of the same
+   It reuses the Supply Depot store's layout and card styles (.shop-*), so it looks like part of the same
    UI, and it only *reads* the existing state (S.sack, S.onions, S.batt, S.up...) and calls the existing
    actions (eatOnion, toggleLight, dropBag): no new save format, nothing new on the wire.
    The game keeps running while it's open, same as the store. */
@@ -34,7 +34,7 @@ function invEntries(){
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
   if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
   if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',art:'gear/medkit',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
-  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Wreck Room sells refills.',
+  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Supply Depot sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
   out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
     meta:`${Math.round(S.water)} / ${waterMax()}`,state:S.water<waterMax()*0.25?'Low':'Water'});
@@ -128,7 +128,7 @@ function renderInvDetail(e){
   if(e.id==='water')row('Water',`${Math.round(S.water)} of ${waterMax()}`);
   if(e.shop){
     const eff=shopEffect(e.shop);if(eff)row(eff.label,S.up[e.shop.id]?eff.to:eff.from);
-    if(!S.up[e.shop.id])row('Where to get it',`Wreck Room store, ${e.shop.cost} seeds`);
+    if(!S.up[e.shop.id])row('Where to get it',`Supply Depot, ${e.shop.cost} seeds`);
   }
   if(acts.children.length)box.appendChild(acts);
 }

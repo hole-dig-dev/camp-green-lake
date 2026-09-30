@@ -36,7 +36,7 @@ function toggleBunk(bi){
 }
 function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold tube to the Warden. Red flags mark the search area.`,'gold',6000)}
 
-/* ---------- Wreck Room store (docs/ui-redesign-spec.md section 2) ---------- */
+/* ---------- Supply Depot store (was the Wreck Room) (docs/ui-redesign-spec.md section 2) ---------- */
 // NOTE: the spec was written pre-split and points at 45-state.js for this; the actual store code
 // (and its `openShop`/`closeShop`/`renderShop`/`SHOP` symbols) lives here, in 50-tents.js -- this
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
