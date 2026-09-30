@@ -147,6 +147,7 @@ function cabin(x,z,w,d,h,wall,roof){
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,w,d);return g;
 }
 const wreckCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
+solid(16,42.3,2.5,0.45);   // the serving-window counter sticks out past the front wall (WreckRoom.glb)
 const wreckSign=sign('WRECK\nROOM',20.2,41.4,Math.PI,2.6,1.1);
 const wardenCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);

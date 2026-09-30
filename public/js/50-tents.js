@@ -248,7 +248,7 @@ function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTime
 
 function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail()}
 function openShop(){
-  shopOpen=true;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
+  shopOpen=true;clerk.waveT=1.6;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
   buildShopTabs();buildShopGrid();
   const ids=shopVisibleIds();if(!ids.includes(shopSel))shopSel=ids[0]||null;
   renderShop();startShopGamepad();
