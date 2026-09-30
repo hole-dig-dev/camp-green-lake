@@ -29,9 +29,22 @@ ours, whatever it's called.
 2. **Campfire as home:** yes, built. `atHome(x,z)` = `inCamp` on the lake, or within `ZONE.fire.r` of the campfire on
    any other map (`ZONE_H` set). The "got you back" toast says fence or campfire.
 3. **Carry or spend:** spend (JT). Carrying is allowed too.
-4. **Does anything of mine touch `sim.js`'s monster code?** No. Today I only added three entries each to
-   `SIM.HEAVY` and `SIM.PHYS` (below). `stepMonsters`, `setZone` and the roster stepping are untouched. The hatchling
-   change is client-side (`83-roster.js` `rbite`, and poison in `70-player.js`).
+4. **Does anything of mine touch `sim.js`'s monster code?** Yes, and I first answered this wrong (JT caught it).
+   The work after your note only adds entries to `SIM.HEAVY` and `SIM.PHYS`, and the hatchling change is
+   client-side. But three `jt/next` commits from earlier today did change `sim.js` monster code, all before I'd seen
+   your branch:
+   - `3089439`: your roster, ported (`stepRoster`, `rosterFor`, `roSpawn`, `RO_*`).
+   - `5e9779e`: **our own `SIM.setZone`**. `inCamp` and `nearCampZone` return false off the lake; the server calls
+     it on a map switch. This is the same idea as your `a1e5e67`, built separately, so **merging your
+     `repo-to-peak-2026-09-29` will conflict in `sim.js`** (and probably `10-core.js`, `82-patrol.js`, `server.js`).
+     Our version: `let ZONE_NOW='lake'; const setZone = z => { ZONE_NOW = typeof z === 'string' ? z : 'lake' }`,
+     with the checks as `ZONE_NOW === 'lake' && ...`.
+   - `88dff6b`: moods and the curse. `stepMonsters(M, players, t, dt, ev, opt)` takes `opt.mood`: a full moon means
+     Zeroni all night and no police, and `M.appeased` removes her until the next night. `rosterFor(day, curse)` and
+     `stepRoster` scale with the curse (`cmul`), and the mood can force a kind in.
+
+   If you're going to merge `jt/next` into your branch again, take ours for `setZone` and keep your tests. When JT
+   says merge, I'll take yours the other way and keep whichever `setZone` passes both test suites.
 
 ## Built today, after your note
 - **Carried finds** (`45-state.js` `carryFind`): an ordinary find can come up too big for the sack, as one of three
