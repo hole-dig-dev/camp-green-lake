@@ -125,14 +125,15 @@ function updateCamera(dt){
     camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
   if(me&&me.fpOn)fpBody(false);
   // riding a giant tumbleweed: pull way back so the camera isn't inside the ball and you can see yourself go round
-  const cp=Math.cos(P.pitch),dist=inTent()?3.2:tbSt===1?Math.max(5.4,tbRideR*2.6):5.4;
+  const cp=Math.cos(P.pitch),dist=inTent()||S.inTown?3.2:tbSt===1?Math.max(5.4,tbRideR*2.6):5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
   if(inTent()){
     const room=TENTS[S.tent];
     cx=clamp(cx,room.x-room.roomW+0.28,room.x+room.roomW-0.28);
     cz=clamp(cz,room.z-room.roomD+0.28,room.z+room.roomD-0.28);
   }
-  cy=Math.max(cy,(inTent()?TENT_FLOOR_Y:groundAt(cx,cz))+0.5);
+  if(S.inTown){[cx,cz]=townCamPull(cx,cz);cy=clamp(cy,TW.Y+0.5,TW.Y+TW.H-0.45)}   // the buried town: under its ceiling, in front of its walls (89-town.js)
+  else cy=Math.max(cy,(inTent()?TENT_FLOOR_Y:groundAt(cx,cz))+0.5);
   if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+2.7);   // keep the camera under the interior ceiling
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);

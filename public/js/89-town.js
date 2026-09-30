@@ -20,10 +20,11 @@ function townFloorAt(){return TW.Y}
 /* ---- the rooms ---- */
 function buildTown(){
   const L=townLay();
-  if(townGroup){scene.remove(townGroup);townGroup.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
+  if(townGroup){scene.remove(townGroup);townProc.traverse(o=>{if(o.geometry)o.geometry.dispose()})}   // the Blender pieces share cached geometry: only the boxes are ours to free
   townGroup=new T.Group();townGroup.visible=!!S.inTown;scene.add(townGroup);TOWNCOL.length=0;TLOOTM.clear();
+  townProc=new T.Group();townGroup.add(townProc);
   const N=TW.N,C=TW.C,H=TW.H,x0=TW.X-N*C/2,z0=TW.Z-N*C/2,th=0.4;
-  const add=(w,h,d,col,x,y,z)=>{const m=box(w,h,d,col);m.castShadow=false;m.receiveShadow=true;m.position.set(x,y,z);townGroup.add(m);return m};
+  const add=(w,h,d,col,x,y,z)=>{const m=box(w,h,d,col);m.castShadow=false;m.receiveShadow=true;m.position.set(x,y,z);townProc.add(m);return m};
   const wall=(x,z,w,d,col,crawl)=>{if(crawl)add(w,H-1.1,d,col,x,TW.Y+1.1+(H-1.1)/2,z);else add(w,H,d,col,x,TW.Y+H/2,z);TOWNCOL.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,crawl:!!crawl})};
   const seg=(x,z,alongX,kind,col)=>{   // one side of a room: solid, a doorway, or a crawlspace
     const gap=2.4,Lg=(C-gap)/2;
@@ -36,9 +37,9 @@ function buildTown(){
     add(C,0.2,C,c.flood?0x2e3a38:0x3f2e20,mx,TW.Y-0.1,mz);
     add(C,0.3,C,0x1e1610,mx,TW.Y+H+0.15,mz);
     for(let k=0;k<3;k++)add(0.25,0.25,C,0x2e2218,mx-C/2+2+k*(C-4)/2,TW.Y+H-0.1,mz);   // ceiling beams
-    if(c.flood){const w=new T.Mesh(new T.BoxGeometry(C-0.4,0.05,C-0.4),new T.MeshBasicMaterial({color:0x1d3f4a,transparent:true,opacity:0.5,depthWrite:false}));w.position.set(mx,TW.Y+0.3,mz);townGroup.add(w)}
+    if(c.flood){const w=new T.Mesh(new T.BoxGeometry(C-0.4,0.05,C-0.4),new T.MeshBasicMaterial({color:0x1d3f4a,transparent:true,opacity:0.5,depthWrite:false}));w.position.set(mx,TW.Y+0.3,mz);w.userData.keep=true;townProc.add(w)}
     if(c.rot)add(5,0.06,5,0x8a6a42,mx,TW.Y+0.02,mz);
-    if(c.well){const w=cyl(1.1,1.1,0.9,10,0x6f6860);w.position.set(mx,TW.Y+0.45,mz);townGroup.add(w)}
+    if(c.well){const w=cyl(1.1,1.1,0.9,10,0x6f6860);w.position.set(mx,TW.Y+0.45,mz);townProc.add(w)}
     if(c.stair)for(let k=0;k<5;k++)add(3,0.4*(k+1),1.2,0x5e4c3a,mx,TW.Y+0.2*(k+1),mz-2+k*1.2);
     if(c.vault){add(2,1.2,0.3,0xd4af37,mx,TW.Y+0.6,mz-C/2+0.6);add(3.2,2.4,0.2,0x3b3f45,mx,TW.Y+1.2,mz-C/2+0.35)}
     if(cx<N-1)seg(x0+(cx+1)*C,mz,false,c.e,col);
@@ -50,6 +51,48 @@ function buildTown(){
   }
   const ow=0x3a2c20;wall(TW.X,z0,N*C,th,ow);wall(TW.X,z0+N*C,N*C,th,ow);wall(x0,TW.Z,th,N*C,ow);wall(x0+N*C,TW.Z,th,N*C,ow);
   for(const[k,b]of BREACH)shaftMark(k,b);
+  townRuins(L);
+}
+
+/* ---- the ruins: Blender pieces (art/blender/town.py -> models/Town*.glb) over the box layout above ----
+   Per cell: a floor, a ceiling, the room's furnishings (TownRoom_<key>, turned a random quarter), and a wall piece on each
+   side matching the maze (solid in three looks, doorway, or crawl gap). Big furniture adds colliders from
+   data/TownColliders.json. The boxes stay as the fallback and hide once every piece has loaded. */
+let townProc=null,TOWN_COLS=null;
+const TOWN_KIT=['TownWall','TownWallB','TownWallC','TownWallDoor','TownWallCrawl','TownFloorPlank','TownFloorStone','TownFloorRot','TownCeiling','TownCeilingCaved'];
+const townHash=(i,k)=>(((i+1)*2654435761^(k+1)*40503)>>>0)/4294967296;
+function townCols(){if(!TOWN_COLS)TOWN_COLS=fetch('data/TownColliders.json').then(r=>r.json());return TOWN_COLS}
+function townColAdd(list,cx,cz,ry){   // [dx,dz,w,d] from the piece's centre, turned by ry (a multiple of 90 degrees)
+  const q=Math.round(ry/(Math.PI/2))&3;
+  for(const[dx,dz,w,d]of list||[]){
+    const x=[dx,dz,-dx,-dz][q],z=[dz,-dx,-dz,dx][q],W=q&1?d:w,D=q&1?w:d;
+    TOWNCOL.push({x0:cx+x-W/2,x1:cx+x+W/2,z0:cz+z-D/2,z1:cz+z+D/2,deco:true});
+  }
+}
+function townRuins(L){
+  const grp=townGroup,N=TW.N,C=TW.C,x0=TW.X-N*C/2,z0=TW.Z-N*C/2,y=TW.Y,P_={};
+  const put=(name,x,z,ry)=>(P_[name]=P_[name]||[]).push({x,y,z,ry:ry||0});
+  const wallPiece=(kind,h)=>kind===1?'TownWallDoor':kind===2?'TownWallCrawl':h<0.6?'TownWall':h<0.8?'TownWallB':'TownWallC';
+  townCols().then(J=>{
+    if(grp!==townGroup)return;   // rebuilt meanwhile (a new day)
+    for(const c of L.cells){
+      const cx=c.i%N,cz=Math.floor(c.i/N),mx=x0+cx*C+C/2,mz=z0+cz*C+C/2,h=townHash(c.i,L.day);
+      put(c.rot?'TownFloorRot':h<0.55?'TownFloorPlank':'TownFloorStone',mx,mz);
+      const caved=!c.stair&&!c.well&&!c.vault&&townHash(c.i,L.day+7)<0.18;put(caved?'TownCeilingCaved':'TownCeiling',mx,mz);
+      if(caved)townColAdd(J.cols.TownCeilingCaved,mx,mz,0);
+      const key=J.rooms[c.name];
+      if(key){const ry=(c.stair||c.well||c.vault)?0:Math.floor(townHash(c.i,L.day+3)*4)*Math.PI/2;put('TownRoom_'+key,mx,mz,ry);townColAdd(J.cols[key],mx,mz,ry)}
+      // the east and south sides of every cell (the outer walls on the grid's edge, too)
+      const e=cx<N-1?c.e:0,s=cz<N-1?c.s:0,he=townHash(c.i,L.day+11),hs=townHash(c.i,L.day+13);
+      const pe=wallPiece(e,he),ps=wallPiece(s,hs),re=Math.PI/2+(he>0.5?Math.PI:0),rs=hs>0.5?Math.PI:0;
+      put(pe,x0+(cx+1)*C,mz,re);put(ps,mx,z0+(cz+1)*C,rs);
+      if(pe==='TownWallC')townColAdd(J.cols.TownWallC,x0+(cx+1)*C,mz,re);if(ps==='TownWallC')townColAdd(J.cols.TownWallC,mx,z0+(cz+1)*C,rs);
+      if(cx===0){const hw=townHash(c.i,L.day+17);put(wallPiece(0,hw),x0,mz,Math.PI/2)}
+      if(cz===0){const hn=townHash(c.i,L.day+19);put(wallPiece(0,hn),mx,z0,0)}
+    }
+    return Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp)));
+  }).then(()=>{if(grp===townGroup&&townProc)for(const o of townProc.children)if(!o.userData.keep)o.visible=false})
+    .catch(e=>console.warn('town ruins',e&&e.message));
 }
 function shaftPos(b){const L=townLay(),i=SIM.townBreachCell(b.x,b.z,L),cc=SIM.townCellCenter(i);return{x:cc.x+2,z:cc.z+2,i}}
 function shaftMark(k,b){
@@ -109,7 +152,7 @@ function climbHelp(b){
 }
 function townSpot(){
   if(!S.inTown)return null;const L=townLay(),i=SIM.townCellAt(P.x,P.z);if(i<0)return null;const c=L.cells[i],cc=SIM.townCellCenter(i);
-  for(const e of TLOOTM.values())if(Math.hypot(P.x-e.L.x,P.z-e.L.z)<1.6)return{id:'townLoot',e};
+  for(const e of TLOOTM.values())if(Math.hypot(P.x-e.L.x,P.z-e.L.z)<2.2)return{id:'townLoot',e};   // 2.2: loot can land in a bin or behind a counter
   for(const[k,b]of BREACH){const p=shaftPos(b);if(Math.hypot(P.x-p.x,P.z-p.z)<1.8)return{id:'townShaft',k,b}}
   if(c.well&&Math.hypot(P.x-cc.x,P.z-cc.z)<2)return{id:'townWell',i};
   if(c.stair&&Math.hypot(P.x-cc.x,P.z-cc.z)<3.2)return{id:'townStair',i};
@@ -159,6 +202,13 @@ function updatePlayerTown(dt){
   animPerson(me,P.anim,dt,P.digPh);
   // a room name when you walk into a new one
   const i=SIM.townCellAt(P.x,P.z);if(i>=0&&i!==townRoom){townRoom=i;const c=townLay().cells[i];toast(c.name+(c.vault?'. Gold glints in the dark.':c.flood?'. The floor is wet.':c.rot?'. The boards creak under you.':''),'',2200)}
+}
+/* the third-person camera down here: pulled in toward you so it never ends up inside or behind a wall */
+function townCamPull(cx,cz){
+  let t=1;const dx=cx-P.x,dz=cz-P.z;
+  for(let k=1;k<=12;k++){const f=k/12,x=P.x+dx*f,z=P.z+dz*f;
+    if(TOWNCOL.some(c=>!c.deco&&!c.crawl&&x>c.x0-0.25&&x<c.x1+0.25&&z>c.z0-0.25&&z<c.z1+0.25)){t=Math.max(0.15,(k-1)/12);break}}
+  return[P.x+dx*t,P.z+dz*t];
 }
 /* every frame, after the sky: it's dark down there */
 function updateTown(dt){
