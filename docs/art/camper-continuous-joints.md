@@ -1,7 +1,7 @@
 The chosen camper now has continuous sleeves and trouser legs that deform across weighted elbows and knees.
 The head, face, torso, wardrobe, hands and sneakers retain their original authored meshes. The sleeve surface
-follows the outside of the old capsule pieces; trouser rings subdivide the original profile. There are no separate
-elbow caps. Twelve bones drive the rig, including the new `shin.L` and `shin.R` bones.
+now tapers smoothly from shoulder to cuff, with no elbow ball or overlapping capsule ridges; trouser rings
+subdivide the original profile. Twelve bones drive the rig, including the new `shin.L` and `shin.R` bones.
 
 ![The actual game camper standing, sitting with bent knees and waving](camper-continuous-joints.png)
 

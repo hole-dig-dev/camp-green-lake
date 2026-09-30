@@ -12,7 +12,7 @@ BONES = ["root", "hips", "spine", "head", "arm.L", "arm.R", "forearm.L", "forear
 
 def continuous_limbs(root, pre):
     """Keep the chosen capsule silhouettes, with connected rings through each bending joint.
-    Sleeve radius follows the outside of the original sleeve/forearm/elbow union; trousers
+    Sleeves taper smoothly without the old elbow ball or capsule seams; trousers
     subdivide the original profile without changing it. Hands and shoes stay separate accessories."""
     def radius(points, z):
         for (ra, za), (rb, zb) in zip(points, points[1:]):
@@ -25,16 +25,17 @@ def continuous_limbs(root, pre):
                  if o.name.startswith(pre + sd + '_')}
         sh, hip = parts['Shoulder'], parts['Hip']
         e, L = ARM['elbow'], ARM['L']
-        rm = (ARM['rt'] + ARM['rb']) / 2
-        top = [(r, z - e) for r, z in profile(e + .14, lambda t: rm + (ARM['rt'] - rm) * t, p=.5, n=12)]
-        low = [(r, z - L) for r, z in profile(L - e, lambda t: ARM['rb'] + (rm - ARM['rb']) * t, p=.5, n=12)]
-        # Their original tops are +.07 and -e+.07, respectively.
-        top = [(r, z - .07) for r, z in top]
-        low = [(r, z + .07) for r, z in low]
+        # One tapered sleeve with rounded shoulder/cuff ends. The elbow uses weights,
+        # so its surface needs neither a ball nor the overlapping capsule end caps.
         zs = sorted(set(round(z, 8) for z in ([.07 - L + L * i / 48 for i in range(49)] +
-                        [z for _, z in top + low] + [-e + d for d in (-.12, -.08, -.04, 0, .04, .08, .12)])))
-        pts = [(max(radius(top, z), radius(low, z),
-                    math.sqrt(max(0, (rm * .98) ** 2 - (z + e) ** 2))), z) for z in zs]
+                        [.07 - ARM['rt'], .07 - L + ARM['rb']] +
+                        [-e + d for d in (-.12, -.08, -.04, 0, .04, .08, .12)])))
+        pts = []
+        for z in zs:
+            d = .07 - z
+            r = ARM['rt'] + (ARM['rb'] - ARM['rt']) * d / L
+            cap = min(1.0, max(0.0, d / ARM['rt']), max(0.0, (L - d) / ARM['rb']))
+            pts.append((r * math.sqrt(max(0.0, 1 - (1 - cap) ** 2)), z))
         pts[0] = (0, zs[0]); pts[-1] = (0, zs[-1])
         new = mk(pre + sd + '_Sleeve_Skin', lathe(pts, seg=14), OR, sh)
         # Free the old names first, then give the continuous mesh its stable runtime name.
