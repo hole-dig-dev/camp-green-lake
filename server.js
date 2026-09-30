@@ -156,7 +156,7 @@ function zoneSwitch(id, why) {
   const z = world.zones[id] || {};
   delete world.zones[id];
   world.zone = id; SIM.setZone(id); ROSTER.mobs = []; JAV.list = []; world.holes = z.holes || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
-  for (const c of clients.values()) c.cp = false;
+  for (const c of clients.values()) { c.cp = false; c.summit = false; }
   dirty = true;
   LOG.log('zone', { from: cur, to: id, why });
   broadcast(zoneMsg());
@@ -185,9 +185,9 @@ function checkCampfire() {
 const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_GATE_PARK = { x: 25.4, z: 39, h: -Math.PI / 2 }, TRUCK_SEATS = ['drive', 'shotgun', 'tail0', 'tail1'];
 const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, seats: {} };
 const truckSeatOf = id => TRUCK_SEATS.find(k => TRUCK.seats[k] === id) || null;
-const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake';
+const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake' && !TRUCK.wreck;
 let truckWasOn = false;
-const truckMsg = park => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn(), park: !!park } });
+const truckMsg = park => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn(), park: !!park, wreck: !!TRUCK.wreck } });
 // whose page runs its physics: the driver, or with nobody driving the camper with the lowest id (87-truck.js truckOwner)
 function truckOwner() { if (TRUCK.seats.drive != null && clients.has(TRUCK.seats.drive)) return TRUCK.seats.drive; let lo = null; for (const c of joined()) if (lo == null || c.id < lo) lo = c.id; return lo; }
 const TRUCK_RAM_SPEED = 4, truckRamAt = {};   // creatures in its way at this speed get knocked (per creature, once a second)
@@ -202,8 +202,17 @@ function truckRams(now, jev) {
   for (const m of ROSTER.mobs || []) if (hit('r' + m.id, m.x, m.z, 0.5)) SIM.rosterSwat(ROSTER, { id: d, x: m.x - Math.sin(fa) * 1, z: m.z - Math.cos(fa) * 1, fa }, rev);
   if (rev.length) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
 }
-function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
+function truckPark() { TRUCK.wreck = 0; Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
 function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUCK.seats[k]; broadcast(truckMsg()); }
+/* The end of Act 1: the whole crew on top of the wall past the trench (88-north.js). Like the campfire: everyone joined
+   (and not down in the buried town) has to be up there. */
+function checkSummit() {
+  if ((world.zone || 'lake') !== 'lake') return;
+  const js = joined().filter(c => !c.town), at = js.filter(c => c.summit).length;
+  broadcast({ t: 'sumstat', at, total: js.length });
+  const next = ZONE_ORDER[ZONE_ORDER.indexOf('lake') + 1];
+  if (js.length && at === js.length && next) { LOG.log('summit', { n: js.length }); for (const c of js) c.summit = false; zoneSwitch(next, 'the crew climbed the north wall'); }
+}
 function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
@@ -658,6 +667,10 @@ wss.on('connection', (ws, req) => {
           broadcast(truckMsg()); return;
         }
         if (op === 'flip') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 6) send(clients.get(o), { t: 'truck', flip: 1 }); return; } // heave it back upright (the owner's page does it)
+        if (op === 'wreck') { // it came down in the trench (88-north.js): wrecked till dawn
+          if (truckOwner() !== c.id || TRUCK.z > -505 || TRUCK.wreck) return;
+          TRUCK.wreck = world.run.day; TRUCK.seats = {}; LOG.log('truckWreck', { x: r1(TRUCK.x), z: r1(TRUCK.z) }); broadcast(truckMsg()); return;
+        }
         if (op === 'push') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 5) send(clients.get(o), { t: 'truck', push: [num(m.dx, -1, 1, 0), num(m.dz, -1, 1, 0)] }); return; }
         if (op === 'pos') { // from whoever runs its physics (the driver, else the lowest id): where it is, how it's tipped, how fast
           if (truckOwner() !== c.id) return;
@@ -669,13 +682,6 @@ wss.on('connection', (ws, req) => {
           broadcast({ t: 'truck', pos: q }, c.id); return;
         }
         if (TRUCK.seats.drive !== c.id) return;
-        if (op === 'gate') { // out through the service gate: the escape to the next map
-          const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
-          if (!next || TRUCK.x < 30.5 || Math.hypot(TRUCK.x - 30, TRUCK.z - 39) < 15) return; // outside the east fence, well clear of the gate
-          LOG.log('escape', { id: c.id, n: c.n, aboard: Object.keys(TRUCK.seats).length });
-          broadcast({ t: 'truck', escaped: c.n });
-          truckPark(); zoneSwitch(next, 'escape in Mr. Sir\'s pickup, driven by ' + c.n);
-        }
         return;
       }
       case 'breach': { // an 8 ft hole broke through into the buried town (89-town.js). Must be a real, deep hole near you.
@@ -848,6 +854,11 @@ wss.on('connection', (ws, req) => {
         // Host console "zone <name>": move the whole crew to another map (for testing, until the escape starts it).
         if (!c.host || typeof m.zone !== 'string') return;
         zoneSwitch(m.zone, 'console by ' + c.n);
+        break;
+      case 'summit':
+        // A camper got to (or left) the top of the wall at the lake's north edge (public/js/88-north.js): the end of Act 1.
+        c.summit = m.on === true && (world.zone || 'lake') === 'lake';
+        checkSummit();
         break;
       case 'cp':
         // A camper walked into (or out of) the current map's campfire circle.
@@ -1053,7 +1064,7 @@ wss.on('connection', (ws, req) => {
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
     truckLeave(c.id);
-    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); }
+    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); else checkSummit(); }
   });
 });
 
@@ -1157,6 +1168,7 @@ function endOfDay() {
   if (world.run.bank >= q.quota) {
     LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
     world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
+    if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
     world.run.curse = Math.max(0, (world.run.curse || 0) - tuneS('curse.quota', 10)); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
     broadcast({ ...runInfo(), t: 'quota', met: true });
   } else {

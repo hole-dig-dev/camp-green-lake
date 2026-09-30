@@ -29,10 +29,32 @@ function nearCampNoDig(x,z){return !ZONE_H&&Math.hypot(Math.max(-40-x,0,x-30),Ma
 let ZONE_H=null,ZONE_TINT=null,ZONE_MAP=null,ZONE_STEP=0;
 let HELLO_LATER=null;   // a hello naming a map whose script hasn't loaded yet waits here (65-net.js, replayed by 88-zones.js)
 const ZONE_MAX_Y=200;   // highest a camper can stand in any map (the canyon floor climbs); server.js clamps the same
+/* ---------- the end of Act 1, toward Big Thumb (north, -z): the trench, the ramps and the wall (JT, 2026-09-30) ----------
+   A trench runs the whole width of the lake's north edge: sheer both sides, so there's no way round it on foot or by truck
+   -- only a jump in Mr. Sir's pickup off the ramp (87-truck.js; land short and it's wrecked till dawn). A few dirt slopes
+   on the camp side let anyone who falls in walk back out. Past it, flat land to the wall: three rock ledges, each too
+   tall to walk up (a leg-up from a crouching friend, a hand from a friend on the ledge above, or your rope ladder).
+   Get the whole crew up top and Act 1 is won (88-zones.js summit, server.js). */
+const NORTH={trench:[-514,-522],depth:5,ramp:{x:120,w:5,len:12,h:3.2},exits:[-300,0,300],exitW:6,wall:-575,tier:4,tierH:2,tiers:3};
+function northH(x,z,h){
+  const N=NORTH,[t0,t1]=N.trench;if(z>-495)return h;
+  if(z<t0+14)h*=Math.max(0,(z-(t0))/14);                                   // the land flattens out toward the trench and beyond it
+  if(z<=t0&&z>=t1){let d=-N.depth;                                        // the trench: sheer sides, a dirt slope out at each exit
+    for(const ex of N.exits)if(Math.abs(x-ex)<N.exitW/2)d=Math.max(d,-N.depth*(t0-z)/(t0-t1)*1.0-0.0);
+    return d}
+  const R=N.ramp;
+  if(Math.abs(x-R.x)<R.w/2){   // the two jump ramps, rising toward the trench from either side
+    if(z<=t0+R.len&&z>t0)return R.h*(1-(z-t0)/R.len);
+    if(z<t1&&z>=t1-R.len)return R.h*(1-(t1-z)/R.len);
+  }
+  if(z<=N.wall){const k=Math.min(N.tiers,Math.floor((N.wall-z)/N.tier)+1);return k*N.tierH}   // the wall's ledges, then the top
+  return h;
+}
 function baseH(x,z){
   if(ZONE_H)return ZONE_H(x,z);
   let h=(vnoise(x*0.07+11,z*0.07-3)-0.5)*0.6+(vnoise(x*0.31,z*0.31)-0.5)*0.12;
   if(inCamp(x,z))h*=0.25;
+  h=northH(x,z,h);
   const e=Math.max(Math.abs(x),Math.abs(z));
   if(e>EDGE){const t=Math.min(1,(e-EDGE)/5);h+=t*t*OUTER_Y}
   return h;
