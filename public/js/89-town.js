@@ -1,104 +1,124 @@
 'use strict';
-/* public/js/89-town.js -- the buried town of Green Lake: the framework (after Greg's branch, claude/intense-change-1-test-2026-09-27-1829).
-   Rules and layout are in public/sim.js (TOWN, townLayout): a 6 x 6 maze of dark rooms, new every day, deep under the lake
-   (it's built off the lake map at x 2000, the way the tent rooms sit underground, so nothing on the lake reaches you).
+/* public/js/89-town.js -- the buried town of Green Lake (after Greg's branch, claude/intense-change-1-test-2026-09-27-1829).
+   The layout is in public/sim.js (TOWN, townLayout): Main Street, a buried street cavern with three big buildings on each
+   side, and seven more buildings off it, joined by timber-shored tunnels. The town is the same every day; only the loot
+   is new. It's built off the lake map at x 2000, the way the tent rooms sit underground, so nothing on the lake reaches you.
    Getting in:  dig an 8 ft hole (long shovel) inside the old town (SIM.OLD_TOWN, the cracked ground with old timbers
                 sticking out), or with some luck anywhere else. The floor gives way: stand in the hole and press F.
-   Down there:  it's dark (bring the flashlight), doorways join the rooms, 1 in 5 is a crawlspace (crouch, C). Finds lie
-                around (F picks them up); Kate's vault has gold bars. Everyone who breaks through shares the same town.
-   Getting out: climb a shaft (F under it) or an old well. You can't alone: a friend down here crouching next to you boosts
+   Down there:  it's dark (bring the flashlight). Some tunnels are crawlspaces (crouch, C). Finds lie around (F picks them
+                up); Kate's vault has gold bars. Everyone who breaks through shares the same town.
+   Getting out: climb a shaft (F under it) or the old well. You can't alone: a friend down here crouching next to you boosts
                 you, someone up top holding F at the hole lowers a hand, or you stake your rope ladder in it for good.
-                The collapsed stairwell you can just walk out of; it comes up at the edge of the old town.
-   Not yet (framework): the lizard queen and Trout Walker's mob, rotten floors and flooded cellars (marked, not live),
-   heavy loot down here, a town minimap. */
-let TLAY=null,TLAY_DAY=-1,townGroup=null,townRoom=-1;
-const TOWNCOL=[],TLOOTM=new Map(),TGOT=new Set(),BREACH=new Map(),breachDisc=new Map();
+                The collapsed stairwell at the west end of Main Street you can just walk up; it comes out at the old town.
+   The pieces (street, buildings, door plugs, tunnel timber and debris) are Blender models from art/blender/town.py; the
+   tunnels' cave walls are dug here along each tunnel's path. Where you can walk: Main Street, inside the buildings, through
+   their open doors and along the tunnels, minus the furniture (public/data/TownColliders.json).
+   Not yet: the lizard queen and Trout Walker's mob, heavy loot down here, a town minimap. */
+let TLAY=null,TLAY_DAY=-1,townGroup=null,townRoom=null;
+const TLOOTM=new Map(),TGOT=new Set(),BREACH=new Map(),breachDisc=new Map();
 const TW=SIM.TOWN;
+const TOWN_DW=1.8;   // door width in the Blender buildings (art/blender/town.py DW)
 function townLay(){const d=RUN.day||1;if(TLAY_DAY!==d){TLAY_DAY=d;TLAY=SIM.townLayout(d);TGOT.clear();if(townGroup)buildTown()}return TLAY}
 function townFloorAt(){return TW.Y}
+const tx=x=>TW.X+x,tz=z=>TW.Z+z;
 
-/* ---- the rooms ---- */
-function buildTown(){
-  const L=townLay();
-  if(townGroup){scene.remove(townGroup);townProc.traverse(o=>{if(o.geometry)o.geometry.dispose()})}   // the Blender pieces share cached geometry: only the boxes are ours to free
-  townGroup=new T.Group();townGroup.visible=!!S.inTown;scene.add(townGroup);TOWNCOL.length=0;TLOOTM.clear();
-  townProc=new T.Group();townGroup.add(townProc);
-  const N=TW.N,C=TW.C,H=TW.H,x0=TW.X-N*C/2,z0=TW.Z-N*C/2,th=0.4;
-  const add=(w,h,d,col,x,y,z)=>{const m=box(w,h,d,col);m.castShadow=false;m.receiveShadow=true;m.position.set(x,y,z);townProc.add(m);return m};
-  const wall=(x,z,w,d,col,crawl)=>{if(crawl)add(w,H-1.1,d,col,x,TW.Y+1.1+(H-1.1)/2,z);else add(w,H,d,col,x,TW.Y+H/2,z);TOWNCOL.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,crawl:!!crawl})};
-  const seg=(x,z,alongX,kind,col)=>{   // one side of a room: solid, a doorway, or a crawlspace
-    const gap=2.4,Lg=(C-gap)/2;
-    if(kind===0){alongX?wall(x,z,C,th,col):wall(x,z,th,C,col);return}
-    for(const s of[-1,1]){const o=s*(gap/2+Lg/2);alongX?wall(x+o,z,Lg,th,col):wall(x,z+o,th,Lg,col)}
-    if(kind===2)alongX?wall(x,z,gap,th,col,true):wall(x,z,th,gap,col,true);
-  };
-  for(const c of L.cells){
-    const cx=c.i%N,cz=Math.floor(c.i/N),mx=x0+cx*C+C/2,mz=z0+cz*C+C/2,col=[0x6a4e38,0x5e4c3a,0x4e3c2c][c.i%3];
-    add(C,0.2,C,c.flood?0x2e3a38:0x3f2e20,mx,TW.Y-0.1,mz);
-    add(C,0.3,C,0x1e1610,mx,TW.Y+H+0.15,mz);
-    for(let k=0;k<3;k++)add(0.25,0.25,C,0x2e2218,mx-C/2+2+k*(C-4)/2,TW.Y+H-0.1,mz);   // ceiling beams
-    if(c.flood){const w=new T.Mesh(new T.BoxGeometry(C-0.4,0.05,C-0.4),new T.MeshBasicMaterial({color:0x1d3f4a,transparent:true,opacity:0.5,depthWrite:false}));w.position.set(mx,TW.Y+0.3,mz);w.userData.keep=true;townProc.add(w)}
-    if(c.rot)add(5,0.06,5,0x8a6a42,mx,TW.Y+0.02,mz);
-    if(c.well){const w=cyl(1.1,1.1,0.9,10,0x6f6860);w.position.set(mx,TW.Y+0.45,mz);townProc.add(w)}
-    if(c.stair)for(let k=0;k<5;k++)add(3,0.4*(k+1),1.2,0x5e4c3a,mx,TW.Y+0.2*(k+1),mz-2+k*1.2);
-    if(c.vault){add(2,1.2,0.3,0xd4af37,mx,TW.Y+0.6,mz-C/2+0.6);add(3.2,2.4,0.2,0x3b3f45,mx,TW.Y+1.2,mz-C/2+0.35)}
-    if(cx<N-1)seg(x0+(cx+1)*C,mz,false,c.e,col);
-    if(cz<N-1)seg(mx,z0+(cz+1)*C,true,c.s,col);
-    // a bit of the old town in each room: a table or a crate or two
-    const r=((c.i*2654435761)>>>0)/4294967296;
-    if(!c.stair&&!c.well){add(1.6,0.8,0.9,0x5a4028,mx+(r-0.5)*6,TW.Y+0.4,mz+((r*7)%1-0.5)*6);if(r>0.5)add(0.9,0.9,0.9,0x6b4e30,mx-(r-0.3)*5,TW.Y+0.45,mz+3)}
-    for(const Lt of c.loot){if(TGOT.has(Lt.id))continue;const m=itemMesh(Lt.type);m.scale.multiplyScalar(1.6);m.position.set(Lt.x,TW.Y+0.25,Lt.z);townGroup.add(m);TLOOTM.set(Lt.id,{L:Lt,m})}
+/* ---- where you can walk (world coordinates) ---- */
+const TWALK={rects:[],caps:[],obst:[],ceil:[]};   // rects: {x0,x1,z0,z1,h,name}; caps: {ax,az,bx,bz,r,crawl,h}; obst: rects
+function townWalkBuild(L,J){
+  const W=TWALK;W.rects=[];W.caps=[];W.obst=[];
+  const S_=TW.STREET,m=0.3;
+  W.rects.push({x0:tx(S_.x0)+m,x1:tx(S_.x1)-m,z0:tz(S_.z0)+m,z1:tz(S_.z1)-m,h:S_.h,name:'Main Street'});
+  for(const b of L.bldgs){
+    const q=Math.abs(Math.sin(b.ry))>0.5,w=(q?b.D:b.W)/2-0.15-m,d=(q?b.W:b.D)/2-0.15-m;
+    W.rects.push({x0:tx(b.x)-w,x1:tx(b.x)+w,z0:tz(b.z)-d,z1:tz(b.z)+d,h:TW.H,name:b.name,b});
+    for(const[side,v]of Object.entries(b.doors)){if(!v)continue;const D=SIM.townDoor(b,side),hw=TOWN_DW/2-m;   // through the open doorway
+      W.rects.push(D.nx?{x0:tx(D.x)-1.2,x1:tx(D.x)+1.2,z0:tz(D.z)-hw,z1:tz(D.z)+hw,h:2.4}:{x0:tx(D.x)-hw,x1:tx(D.x)+hw,z0:tz(D.z)-1.2,z1:tz(D.z)+1.2,h:2.4})}
+    townColAdd(J.cols[b.key],tx(b.x),tz(b.z),b.ry);
   }
-  const ow=0x3a2c20;wall(TW.X,z0,N*C,th,ow);wall(TW.X,z0+N*C,N*C,th,ow);wall(x0,TW.Z,th,N*C,ow);wall(x0+N*C,TW.Z,th,N*C,ow);
-  for(const[k,b]of BREACH)shaftMark(k,b);
-  townRuins(L);
+  townColAdd(J.cols.street,tx(0),tz(0),0);
+  for(const t of L.tunnels)for(const sg of townSamples(t))W.caps.push({ax:tx(sg[0][0]),az:tz(sg[0][1]),bx:tx(sg[1][0]),bz:tz(sg[1][1]),r:TW.TUN_R-m,crawl:sg[2],h:sg[2]?1.2:TW.TUN_H});
 }
-
-/* ---- the ruins: Blender pieces (art/blender/town.py -> models/Town*.glb) over the box layout above ----
-   Per cell: a floor, a ceiling, the room's furnishings (TownRoom_<key>, turned a random quarter), and a wall piece on each
-   side matching the maze (solid in three looks, doorway, or crawl gap). Big furniture adds colliders from
-   data/TownColliders.json. The boxes stay as the fallback and hide once every piece has loaded. */
-let townProc=null,TOWN_COLS=null;
-const TOWN_KIT=['TownWall','TownWallB','TownWallC','TownWallDoor','TownWallCrawl','TownFloorPlank','TownFloorStone','TownFloorRot','TownCeiling','TownCeilingCaved'];
-const townHash=(i,k)=>(((i+1)*2654435761^(k+1)*40503)>>>0)/4294967296;
-function townCols(){if(!TOWN_COLS)TOWN_COLS=fetch('data/TownColliders.json').then(r=>r.json());return TOWN_COLS}
 function townColAdd(list,cx,cz,ry){   // [dx,dz,w,d] from the piece's centre, turned by ry (a multiple of 90 degrees)
   const q=Math.round(ry/(Math.PI/2))&3;
   for(const[dx,dz,w,d]of list||[]){
     const x=[dx,dz,-dx,-dz][q],z=[dz,-dx,-dz,dx][q],W=q&1?d:w,D=q&1?w:d;
-    TOWNCOL.push({x0:cx+x-W/2,x1:cx+x+W/2,z0:cz+z-D/2,z1:cz+z+D/2,deco:true});
+    TWALK.obst.push({x0:cx+x-W/2,x1:cx+x+W/2,z0:cz+z-D/2,z1:cz+z+D/2});
   }
 }
-function townRuins(L){
-  const grp=townGroup,N=TW.N,C=TW.C,x0=TW.X-N*C/2,z0=TW.Z-N*C/2,y=TW.Y,P_={};
-  const put=(name,x,z,ry)=>(P_[name]=P_[name]||[]).push({x,y,z,ry:ry||0});
-  const wallPiece=(kind,h)=>kind===1?'TownWallDoor':kind===2?'TownWallCrawl':h<0.6?'TownWall':h<0.8?'TownWallB':'TownWallC';
-  townCols().then(J=>{
-    if(grp!==townGroup)return;   // rebuilt meanwhile (a new day)
-    for(const c of L.cells){
-      const cx=c.i%N,cz=Math.floor(c.i/N),mx=x0+cx*C+C/2,mz=z0+cz*C+C/2,h=townHash(c.i,L.day);
-      put(c.rot?'TownFloorRot':h<0.55?'TownFloorPlank':'TownFloorStone',mx,mz);
-      const caved=!c.stair&&!c.well&&!c.vault&&townHash(c.i,L.day+7)<0.18;put(caved?'TownCeilingCaved':'TownCeiling',mx,mz);
-      if(caved)townColAdd(J.cols.TownCeilingCaved,mx,mz,0);
-      const key=J.rooms[c.name];
-      if(key){const ry=(c.stair||c.well||c.vault)?0:Math.floor(townHash(c.i,L.day+3)*4)*Math.PI/2;put('TownRoom_'+key,mx,mz,ry);townColAdd(J.cols[key],mx,mz,ry)}
-      // the east and south sides of every cell (the outer walls on the grid's edge, too)
-      const e=cx<N-1?c.e:0,s=cz<N-1?c.s:0,he=townHash(c.i,L.day+11),hs=townHash(c.i,L.day+13);
-      const pe=wallPiece(e,he),ps=wallPiece(s,hs),re=Math.PI/2+(he>0.5?Math.PI:0),rs=hs>0.5?Math.PI:0;
-      put(pe,x0+(cx+1)*C,mz,re);put(ps,mx,z0+(cz+1)*C,rs);
-      if(pe==='TownWallC')townColAdd(J.cols.TownWallC,x0+(cx+1)*C,mz,re);if(ps==='TownWallC')townColAdd(J.cols.TownWallC,mx,z0+(cz+1)*C,rs);
-      if(cx===0){const hw=townHash(c.i,L.day+17);put(wallPiece(0,hw),x0,mz,Math.PI/2)}
-      if(cz===0){const hn=townHash(c.i,L.day+19);put(wallPiece(0,hn),mx,z0,0)}
-    }
-    return Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp)));
-  }).then(()=>{if(grp===townGroup&&townProc)for(const o of townProc.children)if(!o.userData.keep)o.visible=false})
-    .catch(e=>console.warn('town ruins',e&&e.message));
+const inR=(r,x,z,m=0)=>x>r.x0-m&&x<r.x1+m&&z>r.z0-m&&z<r.z1+m;
+function segD(x,z,c){const dx=c.bx-c.ax,dz=c.bz-c.az,L=dx*dx+dz*dz;let t=L?((x-c.ax)*dx+(z-c.az)*dz)/L:0;t=t<0?0:t>1?1:t;return Math.hypot(x-c.ax-t*dx,z-c.az-t*dz)}
+/* where you are: a room ({name,h}), or null if that's solid ground. crouch lets you into crawlspaces */
+function townWhere(x,z,crouch){
+  for(const r of TWALK.rects)if(inR(r,x,z))return r;
+  let best=null;for(const c of TWALK.caps)if((!c.crawl||crouch)&&segD(x,z,c)<c.r){if(!c.crawl)return{name:'tunnel',h:c.h};best={name:'crawl',h:c.h}}
+  return best;
 }
-function shaftPos(b){const L=townLay(),i=SIM.townBreachCell(b.x,b.z,L),cc=SIM.townCellCenter(i);return{x:cc.x+2,z:cc.z+2,i}}
+function townWalk(x,z,crouch){return!!townWhere(x,z,crouch)&&!TWALK.obst.some(o=>inR(o,x,z,0.3))}
+function townCeil(x,z){const w=townWhere(x,z,true);return w?w.h:2.4}
+
+/* ---- the tunnels: a path sampled every ~0.7 m, and which samples are the crawlspace ---- */
+function townSamples(t){
+  const P=t.pts,out=[];let L=0;const seg=[];
+  for(let i=1;i<P.length;i++){const l=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);seg.push(l);L+=l}
+  const n=Math.max(2,Math.ceil(L/0.7)),pts=[];for(let k=0;k<=n;k++)pts.push(SIM.townAlong(P,k/n));
+  for(let k=0;k<n;k++){const f=(k+0.5)/n;out.push([pts[k],pts[k+1],!!(t.crawl&&f>t.crawl[0]&&f<t.crawl[1])])}
+  return out;
+}
+const TUN_MAT=new T.MeshStandardMaterial({vertexColors:true,roughness:1,side:T.DoubleSide});
+function tunnelMesh(t){   // a rough arched cave along the path: rings of 9 points, jittered, lower through a crawlspace
+  const S=townSamples(t),n=S.length+1,R=TW.TUN_R,H=TW.TUN_H,NR=9,pos=[],col=[],idx=[];
+  const hash=(a,b)=>{const v=Math.sin(a*127.1+b*311.7+t.id*74.7)*43758.5453;return v-Math.floor(v)};
+  for(let k=0;k<n;k++){
+    const p=k<S.length?S[k][0]:S[S.length-1][1],q=S[Math.min(k,S.length-1)],dx=q[1][0]-q[0][0],dz=q[1][1]-q[0][1],l=Math.hypot(dx,dz)||1;
+    const nx=-dz/l,nz=dx/l,f=k/(n-1),cr=t.crawl?Math.max(0,1-Math.max(0,Math.max(t.crawl[0]-f,f-t.crawl[1]))*30):0,h=H*(1-0.52*Math.min(1,cr));
+    for(let j=0;j<NR;j++){
+      const a=Math.PI*j/(NR-1),end=j===0||j===NR-1,w=R*(1.06+(end?0:(hash(k,j)-0.5)*0.35)),v=end?-0.05:Math.pow(Math.sin(a),0.6)*h*(1+(hash(j,k)-0.5)*0.18);
+      pos.push(tx(p[0])+nx*Math.cos(a)*w,TW.Y+v,tz(p[1])+nz*Math.cos(a)*w);
+      const c=0.34+hash(k*3,j)*0.1+(v>h*0.8?-0.05:0);col.push(c*1.25,c*0.95,c*0.7);
+    }
+  }
+  for(let k=0;k<n-1;k++)for(let j=0;j<NR-1;j++){const a=k*NR+j,b=a+NR;idx.push(a,b,a+1,a+1,b,b+1)}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.setIndex(idx);g.computeVertexNormals();
+  const m=new T.Mesh(g,TUN_MAT);m.receiveShadow=true;return m;
+}
+
+/* ---- building it ---- */
+let TOWN_COLS=null;
+function townCols(){if(!TOWN_COLS)TOWN_COLS=fetch('data/TownColliders.json').then(r=>r.json());return TOWN_COLS}
+function buildTown(){
+  const L=townLay();
+  if(townGroup){scene.remove(townGroup);townGroup.traverse(o=>{if(o.geometry&&o.userData.own)o.geometry.dispose()})}   // Blender pieces share cached geometry: only free our own
+  const grp=townGroup=new T.Group();grp.visible=!!S.inTown;scene.add(grp);TLOOTM.clear();
+  const own=m=>{m.userData.own=true;grp.add(m);return m};
+  const ground=own(new T.Mesh(new T.PlaneGeometry(150,130),new T.MeshStandardMaterial({color:0x3a2c1e,roughness:1})));ground.rotation.x=-Math.PI/2;ground.position.set(tx(0),TW.Y-0.01,tz(0));
+  for(const t of L.tunnels)own(tunnelMesh(t));
+  for(const Lt of L.loot){if(TGOT.has(Lt.id))continue;const m=itemMesh(Lt.type);m.scale.multiplyScalar(1.6);m.position.set(tx(Lt.x),TW.Y+0.25,tz(Lt.z));grp.add(m);TLOOTM.set(Lt.id,{L:{...Lt,x:tx(Lt.x),z:tz(Lt.z)},m})}
+  for(const[k,b]of BREACH)shaftMark(k,b);
+  const P_={},put=(name,x,z,ry)=>(P_[name]=P_[name]||[]).push({x:tx(x),y:TW.Y,z:tz(z),ry:ry||0});
+  put('TownStreet',0,0,0);
+  for(const b of L.bldgs){
+    put('TownBldg_'+b.key,b.x,b.z,b.ry);
+    for(const side of['N','S','E','W']){if(b.doors[side])continue;const D=SIM.townDoor(b,side);put('TownDoorPlug',D.x,D.z,Math.atan2(-D.nx,-D.nz))}
+  }
+  if(!L.tunnels.some(t=>t.edge===TOWN_STREET_EDGE))put('TownMouthPlug',TW.STREET.x1+0.4,0,-Math.PI/2);
+  for(const t of L.tunnels){   // timber sets every 3 m (not in the crawlspace: that part came down), debris now and then
+    const S=townSamples(t);let acc=1.5;
+    S.forEach(([a,b,crawl],k)=>{const l=Math.hypot(b[0]-a[0],b[1]-a[1]);acc+=l;
+      if(k<3||k>S.length-4)return;
+      if(acc>=3&&!crawl){acc=0;put('TownShoring',a[0],a[1],Math.atan2(-(b[0]-a[0]),-(b[1]-a[1])))}
+      const h=Math.abs(Math.sin(k*12.9898+t.id*78.233)*43758.5)%1;
+      if(h<0.07){const s=h<0.035?1:-1,nx=-(b[1]-a[1])/l,nz=(b[0]-a[0])/l;put('TownJunk'+'ABC'[k%3],a[0]+nx*0.75*s,a[1]+nz*0.75*s,k)}
+    });
+  }
+  townCols().then(J=>{if(grp!==townGroup)return;townWalkBuild(L,J);return Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp)))})
+    .catch(e=>console.warn('town',e&&e.message));
+}
+const TOWN_STREET_EDGE=SIM.TOWN_EDGES.findIndex(e=>e[0]==='street');
+function shaftPos(b){const L=townLay(),p=SIM.townBreachSpot(b.x,b.z,L);return{x:tx(p[0]),z:tz(p[1])}}
 function shaftMark(k,b){
   if(!townGroup)return;const p=shaftPos(b);
   const s=new T.Mesh(new T.CylinderGeometry(0.9,0.9,TW.H,10,1,true),new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.16,depthWrite:false,side:T.DoubleSide}));
-  s.position.set(p.x,TW.Y+TW.H/2,p.z);s.name='shaft'+k;townGroup.add(s);
+  s.position.set(p.x,TW.Y+TW.H/2,p.z);s.name='shaft'+k;s.userData.own=true;townGroup.add(s);
   if(b.ladder){const l=box(0.5,TW.H,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2,p.z);townGroup.add(l)}
 }
 
@@ -133,13 +153,13 @@ function enterTown(k){
   if(!townGroup)buildTown();
   const p=shaftPos(b);S.inTown=true;S.townBreach=k;P.x=p.x;P.z=p.z;P.y=TW.Y;P.vy=0;
   if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false)}S.carry=null;
-  townGroup.visible=true;townRoom=-1;camera.far=70;camera.updateProjectionMatrix();
+  townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();
   hurt(4,'Fall','You dropped into the buried town.');sfx.thud();logEv('townIn',{k});
   toast('You drop into the dark: the buried town of Green Lake. Grab what you can, then find a way out. A shaft or a well needs help to climb (a friend boosting you, a hand from up top, or a staked rope ladder). The collapsed stairwell you can walk out of.','gold',9000);
 }
 function exitTown(x,z,why){
   S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;
-  P.x=x;P.z=z;P.y=groundAt(x,z);P.vy=0;townRoom=-1;camera.far=3000;camera.updateProjectionMatrix();
+  P.x=x;P.z=z;P.y=groundAt(x,z);P.vy=0;townRoom=null;camera.far=3000;camera.updateProjectionMatrix();
   streamChunks(P.x,P.z,999);farU.uFocus.value.set(P.x,P.z);logEv('townOut',{why});
   if(why)toast(why,'good',3500);
 }
@@ -151,11 +171,11 @@ function climbHelp(b){
   return null;
 }
 function townSpot(){
-  if(!S.inTown)return null;const L=townLay(),i=SIM.townCellAt(P.x,P.z);if(i<0)return null;const c=L.cells[i],cc=SIM.townCellCenter(i);
-  for(const e of TLOOTM.values())if(Math.hypot(P.x-e.L.x,P.z-e.L.z)<2.2)return{id:'townLoot',e};   // 2.2: loot can land in a bin or behind a counter
+  if(!S.inTown)return null;const L=townLay();
+  for(const e of TLOOTM.values())if(Math.hypot(P.x-e.L.x,P.z-e.L.z)<2)return{id:'townLoot',e};
   for(const[k,b]of BREACH){const p=shaftPos(b);if(Math.hypot(P.x-p.x,P.z-p.z)<1.8)return{id:'townShaft',k,b}}
-  if(c.well&&Math.hypot(P.x-cc.x,P.z-cc.z)<2)return{id:'townWell',i};
-  if(c.stair&&Math.hypot(P.x-cc.x,P.z-cc.z)<3.2)return{id:'townStair',i};
+  const w=L.bldgs[L.well];if(Math.hypot(P.x-tx(w.x),P.z-tz(w.z))<2.2)return{id:'townWell',i:w.i};
+  if(Math.hypot(P.x-tx(L.stair.x),P.z-tz(L.stair.z))<3.2)return{id:'townStair'};
   return null;
 }
 function townUse(s){
@@ -193,21 +213,23 @@ function updatePlayerTown(dt){
   if(ml>0.1){
     mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:sprint?6.5:4.3)*Math.min(1,ml);
     let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
-    for(const c of TOWNCOL){if(c.crawl&&P.crouch)continue;if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
+    if(!townWalk(nx,nz,P.crouch)){if(townWalk(nx,P.z,P.crouch))nz=P.z;else if(townWalk(P.x,nz,P.crouch))nx=P.x;else{nx=P.x;nz=P.z}}   // slide along walls and furniture
     P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;if(sprint)drainStam(tune('stam.sprint')*dt);
   }
   P.y=TW.Y;P.vy=0;P.grounded=true;
   me.g.position.set(P.x,P.y,P.z);me.g.scale.y=lerp(me.g.scale.y,P.crouch?0.7:1,Math.min(1,dt*10));
   let dr=P.fa-me.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));me.g.rotation.y+=dr*Math.min(1,dt*14);
   animPerson(me,P.anim,dt,P.digPh);
-  // a room name when you walk into a new one
-  const i=SIM.townCellAt(P.x,P.z);if(i>=0&&i!==townRoom){townRoom=i;const c=townLay().cells[i];toast(c.name+(c.vault?'. Gold glints in the dark.':c.flood?'. The floor is wet.':c.rot?'. The boards creak under you.':''),'',2200)}
+  // a name when you walk into a new place
+  const w=townWhere(P.x,P.z,true),nm=w?w.name:null;
+  if(nm&&nm!==townRoom){townRoom=nm;const b=w.b;
+    if(nm==='crawl')toast('The roof came down here. Crouch (C) to crawl through.','',2400);
+    else if(nm!=='tunnel')toast(nm+(b&&b.key==='vault'?'. Gold glints in the dark.':b&&b.key==='well'?'. Daylight, far up the shaft.':nm==='Main Street'?'. The old town\'s street, buried under the lake.':''),'',2400)}
 }
-/* the third-person camera down here: pulled in toward you so it never ends up inside or behind a wall */
+/* the third-person camera down here: pulled in toward you so it never ends up in the earth or furniture */
 function townCamPull(cx,cz){
   let t=1;const dx=cx-P.x,dz=cz-P.z;
-  for(let k=1;k<=12;k++){const f=k/12,x=P.x+dx*f,z=P.z+dz*f;
-    if(TOWNCOL.some(c=>!c.deco&&!c.crawl&&x>c.x0-0.25&&x<c.x1+0.25&&z>c.z0-0.25&&z<c.z1+0.25)){t=Math.max(0.15,(k-1)/12);break}}
+  for(let k=1;k<=12;k++){const f=k/12;if(!townWhere(P.x+dx*f,P.z+dz*f,true)){t=Math.max(0.12,(k-1)/12);break}}
   return[P.x+dx*t,P.z+dz*t];
 }
 /* every frame, after the sky: it's dark down there */
