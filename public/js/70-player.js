@@ -44,6 +44,7 @@ function updatePlayer(dt){
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
   if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
+  if(S.sit!=null){sitStep(dt);return}   // sitting on a bench or stool (86-sit.js)
   if(S.inTruck){truckPlayer(dt);return}   // driving or riding Mr. Sir's pickup (87-truck.js)
   if(S.inTown)return updatePlayerTown(dt);   // down in the buried town (89-town.js)
   if(inTent())return updatePlayerTent(dt);

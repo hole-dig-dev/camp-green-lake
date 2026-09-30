@@ -37,7 +37,7 @@ function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
   const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;
-  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,8191,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,4,0)|0,dph:0,hp:num(m.hp,0,100,100)};
+  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,8191,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,10,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
@@ -107,7 +107,7 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,ZONE_MAX_Y,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,4,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,ZONE_MAX_Y,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'truck':truckMsg(m);break;   // Mr. Sir's pickup (87-truck.js)
     case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
@@ -197,6 +197,7 @@ function updateRemotes(dt){
     if(dx*dx+dz*dz>100){g.position.set(R.tx,R.ty,R.tz)}else{g.position.x+=dx*k;g.position.z+=dz*k;g.position.y+=(R.ty-g.position.y)*k}
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
     R.dph=(R.dph+dt/0.42)%1;
+    if(truckRemoteSeat(id,R,dt))continue;   // sitting in Mr. Sir's pickup (87-truck.js)
     if(R.anim===3&&R.room!=null){   // lying down inside a tent = asleep in a bunk: snap onto the nearest one in that room
       let bk=null,bd=9;for(const u of BUNKS)if(u.tent===R.room){const d=(u.x-R.tx)**2+(u.z-R.tz)**2;if(d<bd){bd=d;bk=u}}
       if(bk){animPerson(R.p,0,dt);sleepPose(R.p,bk);continue}

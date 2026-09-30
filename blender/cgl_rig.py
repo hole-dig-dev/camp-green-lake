@@ -365,9 +365,22 @@ def anim_radio(rig):
     return make_action(rig, "Radio", out, loop=True)
 
 
+SIT_LEG = 1.35   # thighs forward from hanging straight down (radians): sitting on a seat or an edge
+
+
+def anim_sit(rig):
+    """Sitting: in a truck seat, or on the end of the pickup's bed with the legs hanging over the dropped tailgate.
+    Thighs forward, legs swinging slowly out of step, hands resting forward. Looping. The game puts the hips on the
+    seat (public/js/87-truck.js)."""
+    def p(sw):
+        return {"leg.L": (SIT_LEG + 0.12 * sw, 0, -0.06), "leg.R": (SIT_LEG - 0.12 * sw, 0, 0.06),
+                "arm.L": (0.5, 0, -0.12), "arm.R": (0.5, 0, 0.12), "spine": (-0.05, 0, 0), "head": (0.06, 0, 0)}
+    return make_action(rig, "Sit", [(1, p(1)), (30, p(-1)), (60, p(1))])
+
+
 ANIMS = {"Idle": anim_idle, "Walk": anim_walk, "Run": anim_run, "Dig": anim_dig, "Jump": anim_jump,
          "KO": anim_ko, "Drink": anim_drink, "WipeSweat": anim_wipe, "Dance": anim_dance, "Wave": anim_wave,
-         "Radio": anim_radio}
+         "Radio": anim_radio, "Sit": anim_sit}
 
 
 GLB_PATH = r"C:\Users\jthol\Projects\camp-green-lake\public\models\camper.glb"

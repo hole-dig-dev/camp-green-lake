@@ -83,8 +83,8 @@ const BODY_KEYS=Object.keys(BODY_TYPES);
 /* cowboy hats are staff-only (Mr. Sir + the Warden) */
 const HAT_ROLL=['bucket','bucket','bucket','desert','desert','desert','none','none'];
 const HAT_NODE={bucket:'Bucket',desert:'DesertCap',cowboy:'Cowboy'};
-/* animPerson modes -> clips. 0-6 are the game's existing modes; 7 jump, 8 dance, 9 wave are local-only */
-const MODE_CLIP=['Idle','Walk','Dig','KO','Run','Drink','WipeSweat','Jump','Dance','Wave'];
+/* animPerson modes -> clips. 0-6 are the game's existing modes; 7 jump, 8 dance, 9 wave, 10 sit are local-only */
+const MODE_CLIP=['Idle','Walk','Dig','KO','Run','Drink','WipeSweat','Jump','Dance','Wave','Sit'];   // 10: sitting (a seat in Mr. Sir's pickup, 87-truck.js)
 const CLIP_ONCE={KO:1,Jump:1,Drink:1,WipeSweat:1,Wave:1};
 function strHash(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0}
 /* same name + color -> same camper on every client */
@@ -178,7 +178,7 @@ function animModel(p,mode,dt,digPhase,speed){
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
-  new T.GLTFLoader().load('models/camper.glb?v=2',g=>{
+  new T.GLTFLoader().load('models/camper.glb?v=3',g=>{
     MODEL.scene=g.scene;
     /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
        so the model's orange matches the rest of the camp */
