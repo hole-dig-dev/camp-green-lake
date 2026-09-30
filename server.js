@@ -425,7 +425,7 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
-      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
+      props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
@@ -595,10 +595,11 @@ wss.on('connection', (ws, req) => {
         p.x = r2(x); p.z = r2(z); p.y = r2(num(m.y, -10, 60, p.y || 0));
         const v0 = p.v0 || SIM.HEAVY[p.type] || 0; if (v0) p.val = Math.min(p.val == null ? v0 : p.val, num(m.val, 0, v0, v0) | 0); // value only ever goes down
         if (p.type === 'cart') p.tip = m.tip === true;
+        if (Array.isArray(m.q) && m.q.length === 4) p.q = m.q.map(v => Math.round(num(v, -1, 1, 0) * 1000) / 1000); // loot's orientation (84-rigid.js)
         if (m.rest === true && !(p.grab || []).includes(c.id) && !(p.ropes || []).includes(c.id)) passOwner(p, c.id); // settled and let go: whoever still holds it takes over (or the next grabber)
         for (const lid of p.load || []) if (lid >= 0 && world.props[lid]) { world.props[lid].x = p.x; world.props[lid].z = p.z; } // loot riding in the cart
         dirty = true;
-        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, tip: p.tip, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [] }, c.id);
+        broadcast({ t: 'pst', id, x: p.x, y: p.y, z: p.z, vx: num(m.vx, -40, 40, 0), vy: num(m.vy, -40, 40, 0), vz: num(m.vz, -40, 40, 0), val: p.val, rest: m.rest === true, tip: p.tip, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [] }, c.id);
         if (Math.hypot(p.x - SIM.SELL.x, p.z - SIM.SELL.z) < SIM.SELL.r) {
           const sell = p.type === 'cart' ? (p.load || []).filter(l => l >= 0 && world.props[l]) : [id];
           for (const sid of sell) {

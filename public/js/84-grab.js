@@ -81,7 +81,9 @@ function releaseGrab(throwIt,silent){
 }
 function yeetThing(t,d,n){
   const m=massOf(t),k=Math.min(1,(tuneGrab('fmax')*n/9.82)/m),th=SIM.GRAB.THROW*tune('grab.throw');   // heavy things barely leave your hands
-  t.vx+=d[0]*th*k;t.vy+=(d[1]*th+2.5)*k;t.vz+=d[2]*th*k;t.rest=false;t.restT=0;
+  const dvx=d[0]*th*k,dvy=(d[1]*th+2.5)*k,dvz=d[2]*th*k;
+  t.vx+=dvx;t.vy+=dvy;t.vz+=dvz;t.rest=false;t.restT=0;
+  if(isRigid(t))rigidKick(t,dvx,dvy,dvz);   // loot with a shape also tumbles (84-rigid.js)
 }
 /* ---- the rope ---- */
 function tieRope(){
@@ -151,7 +153,7 @@ function stepThing(t,dt){
   t.restT=moving?0:t.restT+dt;
   const wasRest=t.rest;t.rest=!held&&t.restT>0.6;
   if(t.body)return;   // a body's position goes out with the downed camper's own 'pos'
-  if(online()&&(now-(t.sentT||0)>100&&(!t.rest||!wasRest))){t.sentT=now;
+  if(online()&&((t.rest&&!wasRest)||(!t.rest&&now-(t.sentT||0)>100))){t.sentT=now;   // the settling update always goes out
     wsSend({t:'pst',id:t.id,x:+t.x.toFixed(2),y:+t.y.toFixed(2),z:+t.z.toFixed(2),vx:+t.vx.toFixed(2),vy:+t.vy.toFixed(2),vz:+t.vz.toFixed(2),val:t.val,rest:t.rest,tip:!!t.tip})}
   if(!online()&&Math.hypot(t.x-SIM.SELL.x,t.z-SIM.SELL.z)<SIM.SELL.r){
     if(cart){for(const l of [...(t.load||[])]){const q=PROPS.get(l);if(q){const v=q.val;propSold(l,v,[myId()]);payTeam(v)}}t.load=[]}
@@ -186,6 +188,8 @@ function loadIntoCart(){
   sfx.clank();toast(`In the wheelbarrow: ${tName(t||{type:'safe'})}. Grab the wheelbarrow (R) and push.`,'good',3000);
 }
 
+/* a heard orientation (loot with a shape, 84-rigid.js): the one we ease towards, and where we'd start from if we took over */
+function propQ(pr,a){const q=new T.Quaternion(+a[0]||0,+a[1]||0,+a[2]||0,+a[3]||1).normalize();pr.qNet=q;(pr.q||(pr.q=new T.Quaternion())).copy(q)}
 /* ---- network ---- */
 function grabMsg(m){
   const id=num(m.id,-1e9,1e5,-1e9)|0;
@@ -211,7 +215,7 @@ function grabMsg(m){
     if(iOwn(pr))return;
     pr.x=num(m.x,-600,600,pr.x);pr.y=num(m.y,-10,60,pr.y);pr.z=num(m.z,-600,600,pr.z);pr.vx=num(m.vx,-40,40,0);pr.vy=num(m.vy,-40,40,0);pr.vz=num(m.vz,-40,40,0);
     const v=num(m.val,0,1e4,pr.val)|0;if(v<pr.val){const loss=pr.val-v;pr.val=v;if(pr.L)say(pr.L,`-${loss}`,1400);sfx.thud()}
-    pr.rest=m.rest===true;pr.tip=m.tip===true;if(m.owner!==undefined)pr.owner=m.owner;if(Array.isArray(m.grab))pr.grab=m.grab.slice(0,8);if(Array.isArray(m.ropes))pr.ropes=m.ropes.slice(0,8);pr.netT=performance.now();
+    pr.rest=m.rest===true;pr.tip=m.tip===true;if(m.owner!==undefined)pr.owner=m.owner;if(Array.isArray(m.q))propQ(pr,m.q);if(Array.isArray(m.grab))pr.grab=m.grab.slice(0,8);if(Array.isArray(m.ropes))pr.ropes=m.ropes.slice(0,8);pr.netT=performance.now();
   }
   else if(m.t==='phand'){if(iOwn(pr)&&Array.isArray(m.h))pr.hands.set(m.rope?'r'+m.pid:m.pid,{h:m.h.map(v=>+v||0),t:performance.now(),rope:!!m.rope})}
   else if(m.t==='pyeet'){if(iOwn(pr)){pr.hands.delete(m.pid);yeetThing(pr,Array.isArray(m.d)?m.d:[0,0,0],1+pr.grab.length)}}
@@ -301,18 +305,21 @@ function updateGrab(dt){
   for(const pr of [...PROPS.values()]){
     const ph=physOf(pr);
     if(pr.cartId!=null){const c=PROPS.get(pr.cartId);if(c){const slot=c.load.indexOf(pr.id),a=(c.yaw||0);pr.x=c.x+Math.sin(a+1.6)*(slot-1)*0.3;pr.z=c.z+Math.cos(a+1.6)*(slot-1)*0.3;pr.y=c.y+0.45+slot*0.05;pr.vx=pr.vy=pr.vz=0;pr.rest=true;
-      pr.g.position.set(pr.x,pr.y,pr.z);pr.g.rotation.y=a;continue}else pr.cartId=null}
-    if(iOwn(pr)&&(!pr.rest||pr.hands.size))for(let i=0;i<sub&&PROPS.has(pr.id);i++)stepThing(pr,sdt);
+      pr.g.position.set(pr.x,pr.y,pr.z);pr.g.rotation.set(0,a,0);if(pr.q){pr.q.copy(pr.g.quaternion);pr.qNet=null;pr.rp=null}continue}else pr.cartId=null}   // riding upright; its shape rebuilds once it's out
+    const rig=isRigid(pr);if(rig&&!iOwn(pr))pr.rOwn=false;
+    if(iOwn(pr)&&(!pr.rest||pr.hands.size))for(let i=0;i<sub&&PROPS.has(pr.id);i++)(rig?stepRigid:stepThing)(pr,sdt);
     if(!PROPS.has(pr.id))continue;
     let tx=pr.x,ty=pr.y,tz=pr.z;
-    if(!iOwn(pr)&&!pr.rest&&pr.netT){const a=Math.min(0.15,(performance.now()-pr.netT)/1000);tx+=pr.vx*a;tz+=pr.vz*a;ty=Math.max(groundAt(tx,tz),ty+pr.vy*a)}
+    if(!iOwn(pr)&&!pr.rest&&pr.netT){const a=Math.min(0.15,(performance.now()-pr.netT)/1000);tx+=pr.vx*a;tz+=pr.vz*a;ty=rig?ty+pr.vy*a:Math.max(groundAt(tx,tz),ty+pr.vy*a)}   // (a tipped-over thing's y sits below the ground by design: 84-rigid.js)
     const g=pr.g,k=iOwn(pr)?1:Math.min(1,dt*12);
-    g.position.x+=(tx-g.position.x)*k;g.position.z+=(tz-g.position.z)*k;g.position.y+=(ty-g.position.y)*k;
+    if(rig)rigidDraw(pr,tx,ty,tz,k);   // turned and tipped as its shape says (84-rigid.js)
+    else{g.position.x+=(tx-g.position.x)*k;g.position.z+=(tz-g.position.z)*k;g.position.y+=(ty-g.position.y)*k}
     if(isCart(pr)){if(!iOwn(pr)&&Math.hypot(pr.vx,pr.vz)>0.3)pr.yaw=Math.atan2(pr.vx,pr.vz);g.rotation.y+=(((pr.yaw||0)-g.rotation.y+Math.PI*3)%(Math.PI*2)-Math.PI)*Math.min(1,dt*6);g.rotation.z+=((pr.tip?1.35:0)-g.rotation.z)*Math.min(1,dt*8)}
-    else{const tilt=pr.rest?0:clamp(Math.hypot(pr.vx,pr.vz)*0.05,0,0.25);g.rotation.z+=(Math.sin(performance.now()/260+pr.id)*tilt-g.rotation.z)*Math.min(1,dt*6)}
+    else if(!rig){const tilt=pr.rest?0:clamp(Math.hypot(pr.vx,pr.vz)*0.05,0,0.25);g.rotation.z+=(Math.sin(performance.now()/260+pr.id)*tilt-g.rotation.z)*Math.min(1,dt*6)}
     if(pr.L){const txt=isCart(pr)?`Wheelbarrow${pr.load.length?` · ${pr.load.length}/3`:''}${pr.tip?' · tipped over':''}`:`${LOOT[pr.type].name} · ${pr.val} seeds`;if(pr.shownTxt!==txt){pr.shownTxt=txt;pr.L.n.textContent=txt}}
-    bi=drawHolders(pr,g.position.x,g.position.y+ph.h/2,g.position.z,bi);
-    for(const pid of pr.ropes){const hp=holderPos(pid);if(hp)drawRope(ri++,hp[0],hp[1]+1.0,hp[2],g.position.x,g.position.y+ph.h/2,g.position.z)}
+    const cy=rig?pr.y+rigBox(pr).hy:g.position.y+ph.h/2,cx=rig?pr.x:g.position.x,cz=rig?pr.z:g.position.z;   // beams and ropes go to its middle
+    bi=drawHolders(pr,cx,cy,cz,bi);
+    for(const pid of pr.ropes){const hp=holderPos(pid);if(hp)drawRope(ri++,hp[0],hp[1]+1.0,hp[2],cx,cy,cz)}
   }
   // bodies: beams and ropes to downed friends (and to me, while I'm down)
   for(const b of BODIES.values()){const t=targetOf(b.id);if(!t){BODIES.delete(b.pid);continue}
