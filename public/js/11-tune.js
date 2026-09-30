@@ -54,6 +54,7 @@ const TUNE_DEFS=[
   {key:'grab.throw',tab:'Environment',label:'Throw strength (heavy loot, bodies)',def:1,kind:'mul',range:4,unit:'×'},
   {key:'stam.rope',tab:'Grab',label:'Pulling a taut rope costs (stamina)',def:5,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'grab.cartTip',tab:'Grab',label:'Wheelbarrow tips over above (speed)',def:1,kind:'mul',range:3,unit:'×'},
+  {key:'grab.stiff',tab:'Grab',label:'Grip stiffness: how closely loot follows your hands (N per m)',def:4500,kind:'mul',range:3,unit:''},
   {key:'grab.fragile',tab:'Grab',label:'How much bumps chip off the value',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   // ---- other maps (88-zones.js, 89-zone-canyon.js)
   {key:'zone.fallSafe',tab:'Maps',label:'Falls start to hurt above (landing speed)',def:11,kind:'mul',range:2,unit:' m/s'},

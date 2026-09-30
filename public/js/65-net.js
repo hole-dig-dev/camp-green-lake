@@ -71,7 +71,7 @@ function onMsg(m){
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
-      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null}}
+      if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null;if(Array.isArray(p.q))propQ(pr,p.q)}}
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
       if(m.won)wonAlready(cleanName(m.won)||'A camper');
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
