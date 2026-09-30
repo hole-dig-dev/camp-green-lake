@@ -137,6 +137,8 @@ try {
   await shot(p1, 'canyon-campfire-waiting-1280.png');
   await p2.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x - 1; P.z = f.z + 1; P.y = groundAt(P.x, P.z); });
   await waitFor(p1, () => cpStat && cpStat.at === 2, 10000, 'the campfire to count 2 of 2');
+  // the line on screen is rewritten on the next HUD refresh, not the instant the count arrives: give it a moment
+  await waitFor(p1, () => /whole crew made it/i.test(document.querySelector('#zoneLine').textContent), 5000, 'the campfire line to say the crew made it').catch(() => {});
   const line2 = await p1.evaluate(() => document.querySelector('#zoneLine').textContent);
   check('the whole crew at the campfire', /whole crew made it/i.test(line2), { line2 });
   await p1.evaluate(() => { P.yaw = 0; P.pitch = -0.08; });
