@@ -93,8 +93,37 @@ function updatePlayer(dt){
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
   if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
 }
+/* first person with a real body (JT: "just drop in the third person animation shown through 1st person"): you look out
+   of your own camper's eyes, so digging, the walkie and the tonic are the very same Blender clips friends see. Only
+   what hangs off the head bone (head, face, hat, hair, shades) is hidden; the camera sits just in front of the eyes. */
+const FP_EYE_FWD=0.12;   // m in front of the eyes: clear of the (hidden) face, and the neck when you look down
+const fpV=new T.Vector3();
+function fpBody(on){
+  if(!me||!me.model)return;me.g.visible=true;
+  const h=me.fpHead||(me.fpHead=me.model.getObjectByName('head'));if(!h)return;
+  if(on!==!!me.fpOn){me.fpOn=on;for(const o of h.children){if(on)o.userData.fpWas=o.visible;else if(o.userData.fpWas!==undefined){o.visible=o.userData.fpWas;delete o.userData.fpWas}}}
+  if(on)for(const o of h.children)o.visible=false;   // (again each frame: a level-up hat swap mustn't pop one back in front of your eyes)
+}
+function fpEye(v){
+  const h=me.fpHead;
+  if(!me.fpEyeL){   // the eyes' middle, in the head bone's own frame (measured once)
+    const c=new T.Vector3(),t=new T.Vector3();let n=0;
+    for(const o of h.children)if(/_Eye-?1$/.test(o.name)&&o.geometry){o.geometry.computeBoundingBox();o.geometry.boundingBox.getCenter(t).applyMatrix4(o.matrix);c.add(t);n++}
+    me.fpEyeL=n?c.divideScalar(n):new T.Vector3(0,0.3,0.2);
+  }
+  me.model.updateMatrixWorld(true);h.localToWorld(v.copy(me.fpEyeL));
+  return v.set(v.x-Math.sin(P.yaw)*FP_EYE_FWD,v.y,v.z-Math.cos(P.yaw)*FP_EYE_FWD);
+}
 function updateCamera(dt){
-  if(FP){camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
+  if(FP){
+    if(me&&me.model){fpBody(true);P.fa=P.yaw+Math.PI;   // the body faces where you look
+      // the eyes ride the animation, but only fp.bob of the way: all the head's dip into a scoop is a lot to look through
+      const e=fpEye(fpV),still=P.anim===0&&!P.crouch&&P.grounded;if(still)me.fpEyeH=lerp(me.fpEyeH??(e.y-P.y),e.y-P.y,Math.min(1,dt*4));
+      const k=tune('fp.bob'),h=me.fpEyeH??1.55,bx=P.x-Math.sin(P.yaw)*FP_EYE_FWD,bz=P.z-Math.cos(P.yaw)*FP_EYE_FWD,by=P.y+(P.crouch?h*0.66:h);
+      camera.position.set(lerp(bx,e.x,k),lerp(by,e.y,k),lerp(bz,e.z,k))}
+    else camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);   // (the box camper, before the model loads)
+    camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
+  if(me&&me.fpOn)fpBody(false);
   // riding a giant tumbleweed: pull way back so the camera isn't inside the ball and you can see yourself go round
   const cp=Math.cos(P.pitch),dist=inTent()?3.2:tbSt===1?Math.max(5.4,tbRideR*2.6):5.4;
   let cx=P.x+Math.sin(P.yaw)*dist*cp,cz=P.z+Math.cos(P.yaw)*dist*cp,cy=P.y+1.6+Math.sin(P.pitch)*dist;
