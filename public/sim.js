@@ -600,46 +600,111 @@
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
   /* ---- the buried town of Green Lake (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
-     A maze of dark rooms deep under the lake, a new layout every day. You get in by digging an 8 ft hole that breaks
-     through (always inside OLD_TOWN on the lake, sometimes elsewhere), and out by climbing a shaft or an old well
-     (you need help: a friend boosting you, a hand from the top, or a staked rope ladder) or walking up the collapsed
-     stairwell. It lives off the lake map (x 2000), like the tent rooms live underground, so nothing on the lake can
-     reach you down there. */
-  const TOWN = { X: 2000, Z: 0, N: 6, C: 14, Y: -30, H: 4 };
+     The old town, a hundred-odd years under the lake bed. You get in by digging an 8 ft hole that breaks through (always
+     inside OLD_TOWN on the lake, sometimes elsewhere), and out by climbing a shaft or the old well (you need help: a friend
+     boosting you, a hand from the top, or a staked rope ladder) or walking up the collapsed stairwell at the west end of
+     Main Street. It lives off the lake map (x 2000), like the tent rooms live underground, so nothing on the lake reaches you.
+     Layout (JT, 2026-09-30: "6 buildings on Main, and interweaving tunnels for buildings off Main Street"):
+       Main Street  a buried street cavern along x (-34..34, z -7.5..7.5), three big buildings on each side facing it
+       off Main     seven more buildings out in the earth (TOWN_SPOTS N1-N3, S1-S3, E), reached by timber-shored tunnels
+                    from the backs and sides of the Main Street buildings and from each other (TOWN_EDGES, drawn so they
+                    never cross). The town is the same every day (JT: "no reshuffle"): TOWN_SEED picks once which building
+                    stands where, which tunnels are open (always enough to reach every building) and which are crawlspaces
+                    (crouch, C). Doors with no tunnel are boarded up or caved in. Only the loot is new each day.
+     Coordinates here are town-relative: add TOWN.X / TOWN.Z. Buildings turn by ry (three.js Y rotation); their front
+     door is local -z. */
+  const TOWN_SEED = 1882;   // the one fixed layout; change it to rebuild the town differently (tests/town-layout.mjs checks any seed)
+  const TOWN = { X: 2000, Z: 0, Y: -30, H: 3.6, STREET: { x0: -34, x1: 34, z0: -7.5, z1: 7.5, h: 5.5 }, TUN_R: 1.3, TUN_H: 2.6 };
   const OLD_TOWN = { x: -230, z: -250, r: 70 };   // where the old town sits under the lake: every 8 ft hole in here breaks through
-  const TOWN_ROOMS = ['Schoolhouse', "Sheriff's office", 'Jail', 'General store', 'Church', "Sam's boat shed", 'Saloon', 'Post office', "Kate's house", 'Barbershop', 'Stable', 'Bank', 'Onion cellar', "Doctor's office", 'Hotel'];
+  // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
+  const TOWN_BLDGS = [
+    ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
+    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['sheriff', "Sheriff's office", 'M'], ['jail', 'Jail', 'M'],
+    ['post', 'Post office', 'M'], ['boatshed', "Sam's boat shed", 'M'], ['doctor', "Doctor's office", 'M'], ['barber', 'Barbershop', 'S'],
+    ['kate', "Kate's house", 'S'], ['cellar', 'Onion cellar', 'S'], ['vault', "Kate's vault", 'S'], ['well', 'Old well', 'S']];
+  const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
+  const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
   const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
-  const townCellAt = (x, z) => { const cx = Math.floor((x - TOWN.X) / TOWN.C + TOWN.N / 2), cz = Math.floor((z - TOWN.Z) / TOWN.C + TOWN.N / 2); return cx >= 0 && cz >= 0 && cx < TOWN.N && cz < TOWN.N ? cz * TOWN.N + cx : -1; };
-  const townCellCenter = i => ({ x: TOWN.X + ((i % TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C, z: TOWN.Z + (Math.floor(i / TOWN.N) - TOWN.N / 2 + 0.5) * TOWN.C });
-  const inTownXZ = x => x > TOWN.X - TOWN.N * TOWN.C;
-  function townLayout(day) {
-    const r = roRnd(day * 71 + 13), N = TOWN.N, cells = [];
-    for (let i = 0; i < N * N; i++) cells.push({ i, e: 0, s: 0, name: TOWN_ROOMS[Math.floor(r() * TOWN_ROOMS.length)], flood: false, rot: false, loot: [] });
-    // doors: a random maze that reaches every room, plus some extra doors; 1 in 5 is a crawlspace (crouch to get through)
-    const seen = new Set([0]), stack = [0];
-    while (stack.length) {
-      const i = stack[stack.length - 1], cx = i % N, cz = Math.floor(i / N), nb = [];
-      if (cx < N - 1 && !seen.has(i + 1)) nb.push([i + 1, 'e', i]); if (cx > 0 && !seen.has(i - 1)) nb.push([i - 1, 'e', i - 1]);
-      if (cz < N - 1 && !seen.has(i + N)) nb.push([i + N, 's', i]); if (cz > 0 && !seen.has(i - N)) nb.push([i - N, 's', i - N]);
-      if (!nb.length) { stack.pop(); continue; }
-      const [j, side, owner] = nb[Math.floor(r() * nb.length)]; cells[owner][side] = r() < 0.2 ? 2 : 1; seen.add(j); stack.push(j);
+  const PI = Math.PI;
+  // where buildings stand: the six on Main Street (always the big ones, fronts on the street) and the seven off it
+  const TOWN_SPOTS = {
+    MW: [-22, 13.5, 0, 1], MM: [0, 13.5, 0, 1], ME: [22, 13.5, 0, 1], SW: [-22, -13.5, PI, 1], SM: [0, -13.5, PI, 1], SE: [22, -13.5, PI, 1],
+    N1: [-26, 40, 0], N2: [0, 43, 0], N3: [26, 40, 0], S1: [-26, -40, PI], S2: [0, -43, PI], S3: [26, -40, PI], E: [49, 0, PI / 2] };
+  // who stands where (JT: the town doesn't reshuffle). Stable, doctor, barbershop and post office are built (art/blender/town.py)
+  // but not placed; swap one in here.
+  const TOWN_PLAN = { MW: 'saloon', MM: 'store', ME: 'hotel', SW: 'church', SM: 'school', SE: 'bank',
+    N1: 'sheriff', N2: 'jail', N3: 'boatshed', S1: 'kate', S2: 'well', S3: 'cellar', E: 'vault' };
+  // the tunnels that can be dug: [from spot, its wall (world side), to spot or 'street', its side, waypoints between]
+  const northEdges = [
+    ['MW', 'N', 'N1', 'S', [[-22, 23], [-25, 28]]], ['MM', 'N', 'N2', 'S', [[0, 24], [1, 30]]], ['ME', 'N', 'N3', 'S', [[22, 23], [25, 28]]],
+    ['MW', 'W', 'N1', 'W', [[-33, 13.5], [-37, 22], [-37, 34], [-36.5, 40]]], ['ME', 'E', 'N3', 'E', [[33, 13.5], [37, 22], [37, 34], [36.5, 40]]],
+    ['N1', 'E', 'N2', 'W', [[-13, 41.5]]], ['N2', 'E', 'N3', 'W', [[13, 41.5]]], ['MW', 'E', 'MM', 'W', []], ['MM', 'E', 'ME', 'W', []],
+    ['N1', 'N', 'N2', 'N', [[-24, 51], [-13, 53], [-3, 52]]]];
+  const flipSpot = s => ({ MW: 'SW', MM: 'SM', ME: 'SE', N1: 'S1', N2: 'S2', N3: 'S3' })[s] || s, flipSide = d => ({ N: 'S', S: 'N' })[d] || d;
+  const TOWN_EDGES = [...northEdges, ...northEdges.map(([a, da, b, db, w]) => [flipSpot(a), flipSide(da), flipSpot(b), flipSide(db), w.map(([x, z]) => [x, -z])]),
+    ['street', 'E', 'E', 'W', [[38, 0.6]]], ['E', 'N', 'N3', 'N', [[50, 14], [51, 30], [45, 47], [32, 51]]], ['E', 'S', 'S3', 'S', [[50, -14], [51, -30], [45, -47], [32, -51]]]];
+  const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
+  const SIDE_N = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0] };
+  // a building's door on one world side: where it is and which way it faces (out of the building)
+  function townDoor(b, side) {
+    for (const [lx, lz] of [[0, -b.D / 2], [0, b.D / 2], [-b.W / 2, 0], [b.W / 2, 0]]) {
+      const [x, z] = rotY(lx, lz, b.ry), len = Math.hypot(x, z), nx = Math.round(x / len), nz = Math.round(z / len);
+      if (nx === SIDE_N[side][0] && nz === SIDE_N[side][1]) return { x: b.x + x, z: b.z + z, nx, nz };
     }
-    for (const c of cells) { const cx = c.i % N, cz = Math.floor(c.i / N); if (cx < N - 1 && !c.e && r() < 0.22) c.e = 1; if (cz < N - 1 && !c.s && r() < 0.22) c.s = 1; }
-    const order = cells.map(c => c.i).sort(() => r() - 0.5);
-    const vault = order[0], stair = order[1], wells = [order[2], order[3]];
-    cells[vault].name = "Kate's vault"; cells[vault].vault = true; cells[stair].stair = true; cells[stair].name = 'Collapsed stairwell';
-    for (const w of wells) { cells[w].well = true; cells[w].name = 'Old well'; }
-    for (const i of order.slice(4, 9)) cells[i].flood = true;   // (framework: flooded cellars and rotten floors are marked, not playable yet)
-    for (const i of order.slice(9, 14)) cells[i].rot = true;
-    let id = 0;
-    for (const c of cells) {
-      const n = c.vault ? 4 : Math.floor(r() * 3), cc = townCellCenter(c.i);
-      for (let k = 0; k < n; k++) c.loot.push({ id: id++, type: c.vault ? 'goldbar' : TOWN_LOOT[Math.floor(r() * TOWN_LOOT.length)], x: cc.x + (r() - 0.5) * (TOWN.C - 4), z: cc.z + (r() - 0.5) * (TOWN.C - 4) });
-    }
-    return { day, cells, vault, stair, wells };
+    return null;
   }
-  // which room a breach from hole (x,z) drops you into (same answer everywhere)
-  const townBreachCell = (x, z, lay) => { const cand = lay.cells.filter(c => !c.vault && !c.stair && !c.well && !c.flood); return cand[Math.abs(Math.floor(x * 7.3 + z * 3.1)) % cand.length].i; };
+  const edgeNode = s => (s === 'street' || TOWN_SPOTS[s][3]) ? 'root' : s;
+  function townLayout(day, seed = TOWN_SEED) {
+    const r = roRnd(seed), shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const bldgs = [], at = {}, byKey = k => TOWN_BLDGS.find(b => b[0] === k);
+    const place = (spot, [key, name, size]) => { const [x, z, ry, main] = TOWN_SPOTS[spot], [W, D] = TOWN_SIZE[size];
+      const b = { i: bldgs.length, key, name, spot, x, z, ry, W, D, main: !!main, doors: {} }; bldgs.push(b); at[spot] = b; };
+    for (const [spot, key] of Object.entries(TOWN_PLAN)) place(spot, byKey(key));
+    for (const b of bldgs) if (b.main) b.doors[b.z > 0 ? 'S' : 'N'] = 'street';
+    // tunnels: enough to reach everything (a random spanning tree), then about 4 in 10 of the rest for loops
+    const parent = {}, find = n => parent[n] === undefined || parent[n] === n ? n : (parent[n] = find(parent[n]));
+    const order = shuf(TOWN_EDGES.map((e, k) => k)), used = [];
+    for (const k of order) { const [a, , b] = TOWN_EDGES[k], A = find(edgeNode(a)), B = find(edgeNode(b)); if (A !== B) { parent[A] = B; used.push(k); } }
+    for (const k of order) if (!used.includes(k) && r() < 0.4) used.push(k);
+    const tunnels = [];
+    for (const k of used.sort((p, q) => p - q)) {
+      const [a, da, b, db, way] = TOWN_EDGES[k];
+      const A = a === 'street' ? { x: TOWN.STREET.x1, z: 0, nx: 1, nz: 0 } : townDoor(at[a], da), B = townDoor(at[b], db);
+      const jit = way.map(([x, z]) => [x + (r() - 0.5) * 1.2, z + (r() - 0.5) * 1.2]);
+      const pts = [[A.x, A.z], [A.x + A.nx * 2, A.z + A.nz * 2], ...jit, [B.x + B.nx * 2, B.z + B.nz * 2], [B.x, B.z]];
+      const t = { id: tunnels.length, edge: k, pts, crawl: r() < 0.25 ? [0.42, 0.58] : null };
+      tunnels.push(t);
+      if (a !== 'street') at[a].doors[da] = 't' + t.id; at[b].doors[db] = 't' + t.id;
+    }
+    const rl = roRnd(day * 71 + 13);   // the loot is new every day
+    // loot: in each building's clear cross (the furniture keeps out of it), in some tunnels, and a couple on the street
+    const loot = []; let id = 0;
+    for (const b of bldgs) {
+      const n = b.key === 'vault' ? 4 : b.key === 'well' ? 1 : Math.floor(rl() * 3);
+      for (let k = 0; k < n; k++) {
+        const along = rl() < 0.5, u = (rl() - 0.5) * 1.6, v = (rl() - 0.5) * ((along ? b.W : b.D) - 2.4);
+        const [dx, dz] = rotY(along ? v : u, along ? u : v, b.ry);
+        loot.push({ id: id++, type: b.key === 'vault' ? 'goldbar' : TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: b.x + dx, z: b.z + dz, b: b.i });
+      }
+    }
+    for (const t of tunnels) if (rl() < 0.4) { const p = townAlong(t.pts, 0.25 + rl() * 0.12); loot.push({ id: id++, type: TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: p[0], z: p[1] }); }
+    for (let k = 0; k < 2; k++) loot.push({ id: id++, type: TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: (rl() - 0.5) * 50, z: (rl() - 0.5) * 7 });
+    const well = bldgs.find(b => b.key === 'well'), vault = bldgs.find(b => b.key === 'vault');
+    return { day, bldgs, tunnels, loot, stair: { x: TOWN.STREET.x0 + 3, z: 0 }, well: well.i, vault: vault.i };
+  }
+  // the point a fraction t of the way along a tunnel's path
+  function townAlong(pts, t) {
+    let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    let d = t * L;
+    for (let i = 1; i < pts.length; i++) { const s = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d <= s) { const f = s ? d / s : 0; return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f]; } d -= s; }
+    return pts[pts.length - 1];
+  }
+  // where a breach from hole (x,z) drops you (same answer everywhere): on Main Street or in a building, never the vault or well
+  function townBreachSpot(x, z, lay) {
+    const cand = [[-24, 0], [-8, 0], [8, 0], [24, 0], ...lay.bldgs.filter(b => b.key !== 'vault' && b.key !== 'well').map(b => [b.x + 0.6, b.z + 0.6])];
+    return cand[Math.abs(Math.floor(x * 7.3 + z * 3.1)) % cand.length];
+  }
+  const inTownXZ = x => x > TOWN.X - 70;
   // does an 8 ft hole at (x,z) break through? Always in the old town; now and then anywhere else (seeded by spot + day)
   const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < OLD_TOWN.r || roRnd(Math.floor(x * 10) * 7919 + Math.floor(z * 10) * 104729 + day * 31)() < 0.1;
 
@@ -669,7 +734,7 @@
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,
-    TOWN, OLD_TOWN, townLayout, townCellAt, townCellCenter, inTownXZ, townBreachCell, townBreaks,
+    TOWN, OLD_TOWN, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

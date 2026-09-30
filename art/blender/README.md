@@ -10,7 +10,7 @@ lights and floor.
 | `props.blend` | signs, furniture, supplies, carried loot, Mr. Sir's truck, rocks, boulders, tumbleweed | `signs.py`, `signs_export.py`, `furniture.py`, `supplies.py`, `carryloot.py`, `rocks.py` |
 | `finds.blend` | the dig-up finds, including the five-way variant scenes (`Can_1`..`Can_5`, `KB_v01`..`KB_v10`, ...) the final finds were picked from | `finds.py`, `finds2.py`, `finds3.py`, `heavy.py`, `kb.py`, `kbfinal.py` |
 | `creatures.blend` | lizard, javelina, mountain lion, vulture (rigged, with clips), plus their first-round variants (`Liz_1`..) | `creatures.py`, `beasts.py`, `rig.py`, `vulture.py` |
-| `town.blend` | the buried town's ruins: wall, floor and ceiling kit sized to the game's grid, plus the furnishings of each room type (`TownRoom_*`); colliders go to `glb/TownColliders.json` -> `public/data/`. `town_preview.py` renders a lit 2 x 2 block for review | `town.py`, `town_preview.py` |
+| `town.blend` | the buried town: `TownStreet` (Main Street), `TownBldg_<key>` for 17 buildings at their real sizes with a doorway on every side, `TownDoorPlug`, `TownMouthPlug`, `TownShoring` and `TownJunkA/B/C` for the tunnels (whose cave walls the game digs along each path); colliders go to `glb/TownColliders.json` -> `public/data/` | `town.py` |
 | `characters.blend` | `Camper`: the player/crew/staff camper (from JT's PC, rigged by `/blender/cgl_rig.py`, exported to `public/models/camper.glb`); `ARCHIVED_Camper_minipc`: the superseded minipc camper | `/blender/cgl_rig.py` |
 
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
