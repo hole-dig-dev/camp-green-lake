@@ -14,6 +14,7 @@ function saveSession(newDay){
 setInterval(saveSession,2000);addEventListener('pagehide',()=>saveSession());
 function loadSession(){try{const o=JSON.parse(sessionStorage.getItem('cgl-session')||'null');if(o&&o.S&&Date.now()-o.at<30*60*1000)return o}catch(e){}return null}
 function startGame(resume){
+  if(SETTINGS.voiceOn&&!VOX.enabled)setVoiceEnabled(true).then(()=>{if(!VOX.enabled)rememberVoice()});   // voice was on last time: back on (mic denied now: remembered as off)
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
