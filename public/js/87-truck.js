@@ -3,18 +3,23 @@
    (Vehicles tab, veh.drivable; off by default).
    F by the driver's door (the cab's left side) to drive; F by the bed or the tailgate to ride in the back (up to 4);
    F again to get out. W/S gas and brake/reverse, A/D steer, Space handbrake.
-   Drive it out through the service gate in the east fence and that's the escape: the whole crew moves on to the next
-   map, the same as everyone reaching the campfire (server.js 'truck', op 'gate').
+   With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
+   out through the gate, swing round outside and drive off. Once it's out through the gate and ESCAPE_R away, that's
+   the escape: the whole crew moves on to the next map, the same as everyone reaching the campfire (server.js 'truck',
+   op 'gate'). With the flag off it's parked by Mr. Sir as always.
    The driver's page runs the physics and sends where it is ~12 times a second; everyone else eases toward that. Solo,
    the page does all of it. The pickup parks back by the main gate when the flag goes off or the crew changes map.
    Sizes are the Blender model's (art/blender/heavy.py MrSirTruck): cab at the front (local +z), bed behind it. */
-const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};
+const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Mr. Sir, tailgate toward him (flag off)
+const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the service gate, nose into camp (flag on)
+const ESCAPE_R=18;                                            // out through the gate and this far from it: gone
+const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
 const TRUCK_SEAT=[0.38,0.45],TRUCK_DOOR=[1.45,0.45];          // the driver sits on the truck's left (local +x)
 const TRUCK_BED=[[0.4,-0.8],[-0.4,-0.8],[0.4,-1.8],[-0.4,-1.8]],TRUCK_BED_Y=0.82;
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,driver:null,riders:[],on:false,
-  root:null,col:null,sendT:0,tgt:null,escaped:false,prevH:TRUCK_PARK.h,outAt:0};
+  root:null,col:null,sendT:0,tgt:null,escaped:false,outGate:false,prevH:TRUCK_PARK.h,outAt:0,wasOn:false};
 const truckMe=()=>online()?net.id:'me';
 const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
 /* local truck coordinates -> world */
@@ -59,12 +64,12 @@ function truckOut(){
 function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
   if(seat){S.inTruck=seat;TRUCK.prevH=TRUCK.h;P.moving=false;digHeld=false;
-    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Out through the service gate (east fence) is the way out of here.':'You\'re riding in the back. F to hop out.','',4500);sfx.thud();return}
+    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, swing round and drive: that\'s the way out of here.':'You\'re riding in the back. F to hop out.','',4500);sfx.thud();return}
   const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();if(me)me.g.visible=true;
   const p=was==='drive'?truckAt(TRUCK_DOOR[0]+0.2,TRUCK_DOOR[1]):truckAt(0,-3.4);
   P.x=p.x;P.z=p.z;P.y=groundAt(p.x,p.z);P.vy=0;
 }
-function truckLeaveLocal(){if(S.inTruck){S.inTruck=null;if(me)me.g.visible=true}Object.assign(TRUCK,TRUCK_PARK,{v:0,steer:0,driver:null,riders:[],tgt:null,escaped:false});truckPose()}
+function truckLeaveLocal(){if(S.inTruck){S.inTruck=null;if(me)me.g.visible=true}Object.assign(TRUCK,truckPark(),{v:0,steer:0,driver:null,riders:[],tgt:null,escaped:false,outGate:false});truckPose()}
 
 /* ---- the driver: a simple bicycle model on the ground, bumping off anything solid ---- */
 function truckDrive(dt){
@@ -85,8 +90,10 @@ function truckDrive(dt){
   if(hit){T.x=ox;T.z=oz;T.h=oh;if(Math.abs(T.v)>2.5){sfx.thud();noise(0.25,300,0.4,0.3,'lowpass')}T.v*=-0.25}
   truckPose();
   T.sendT-=dt;if(online()&&T.sendT<=0){T.sendT=TRUCK_SEND;wsSend({t:'truck',op:'pos',x:+T.x.toFixed(2),z:+T.z.toFixed(2),h:+T.h.toFixed(3),v:+T.v.toFixed(1)})}
-  // out through the service gate: the escape
-  if(!T.escaped&&T.x>FENCE_X1+1.5&&T.z>EAST_GATE_Z0&&T.z<EAST_GATE_Z1){T.escaped=true;
+  // out through the service gate (forwards or backwards), then away from it: the escape
+  if(T.x>FENCE_X1+1&&T.z>EAST_GATE_Z0&&T.z<EAST_GATE_Z1)T.outGate=true;
+  if(T.x<FENCE_X1-1)T.outGate=false;   // drove back in
+  if(!T.escaped&&T.outGate&&Math.hypot(T.x-FENCE_X1,T.z-(EAST_GATE_Z0+EAST_GATE_Z1)/2)>ESCAPE_R){T.escaped=true;
     if(online())wsSend({t:'truck',op:'gate'});
     else{const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];if(next){toast('You floor it out the service gate. Camp Green Lake is behind you.','gold',5000);zoneFade(()=>zoneEnter(next))}}}
 }
@@ -109,8 +116,9 @@ function truckCamera(dt){
 
 /* ---- every frame: everyone else's view of it, and the people in it ---- */
 function updateTruck(dt){
-  const T=TRUCK;
-  if(S.inTruck&&!truckOn())truckOut();
+  const T=TRUCK,on=truckOn();
+  if(S.inTruck&&!on)truckOut();
+  if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
   if(T.driver!==truckMe()&&T.tgt){   // ease toward the driver's last word, carried on by its speed in between
     const[tx,tz,th,tv]=T.tgt,k=Math.min(1,dt*8);T.tgt[0]+=Math.sin(th)*tv*dt;T.tgt[1]+=Math.cos(th)*tv*dt;
     T.x+=(tx-T.x)*k;T.z+=(tz-T.z)*k;let dh=th-T.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));T.h+=dh*k;truckPose();
