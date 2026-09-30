@@ -182,7 +182,10 @@ function connect(){
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}onMsg(m)};
   ws.onclose=()=>{for(const id of [...remotes.keys()])removeRemote(id);$('#lobby').textContent='Reconnecting to camp…';clearTimeout(net.lostT);net.lostT=setTimeout(()=>{if(S.started)toast('Lost connection to camp. Reconnecting…','bad',2500)},3000);setTimeout(connect,net.retry);net.retry=Math.min(net.retry*2,15000)};
 }
-connect();
+// connect once every script has run: the browser can handle a socket message between two script files, and the
+// server's hello uses functions from later files (84-coop.js setHat, 89-town.js townHello...). Connecting here, mid-
+// load, let a fast hello arrive first and die half-way through ("townHello is not defined": nobody could join).
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',connect,{once:true});else connect();
 function updateRemotes(dt){
   for(const[id,R]of remotes){
     if(PARTY.on&&id!==PARTY.targetId)continue;
