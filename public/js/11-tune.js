@@ -16,7 +16,7 @@ const TUNE_DEFS=[
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
   {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
   {key:'veh.accel',tab:'Vehicles',label:'Acceleration',def:6,kind:'mul',range:3,unit:' m/s²'},
-  {key:'veh.steer',tab:'Vehicles',label:'Steering lock',def:0.55,kind:'mul',range:2,fmt:v=>tuneDeg(v)},
+  {key:'veh.steer',tab:'Vehicles',label:'Steering lock (sharper = tighter turns)',def:0.7,kind:'mul',range:2,fmt:v=>tuneDeg(v)},
   // ---- finds: the item that pops out of your hole
   {key:'loot.carryOdds',tab:'Finds',label:'Finds too big for the sack (carried): chance in a shallow hole',def:0.33,kind:'lin',span:0.33,min:0,max:1,unit:'%',pct:true},
   {key:'loot.carryDeep',tab:'Finds',label:'…extra chance at the deepest (a 5 ft hole)',def:0.25,kind:'lin',span:0.25,min:0,max:1,unit:'%',pct:true},

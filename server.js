@@ -179,13 +179,15 @@ function checkCampfire() {
 }
 
 /* Mr. Sir's pickup (public/js/87-truck.js): drivable while the F2 flag veh.drivable is on. One driver runs its physics
-   and sends where it is; up to four ride in the back. Driving it out through the service gate is the escape: the whole
-   crew moves on to the next map (like everyone reaching the campfire). */
-const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_RIDERS = 4;
+   and sends where it is; up to four ride in the back. With the flag on it waits just inside the service gate, nose in;
+   backing it out through the gate and driving off is the escape: the whole crew moves on to the next map (like
+   everyone reaching the campfire). With the flag off it's parked by Mr. Sir. */
+const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_GATE_PARK = { x: 25.4, z: 39, h: -Math.PI / 2 }, TRUCK_RIDERS = 4;
 const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, driver: null, riders: [] };
 const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake';
+let truckWasOn = false;
 const truckMsg = () => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, driver: TRUCK.driver, riders: TRUCK.riders, on: truckOn() } });
-function truckPark() { Object.assign(TRUCK, TRUCK_PARK, { driver: null, riders: [] }); broadcast(truckMsg()); }
+function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { driver: null, riders: [] }); broadcast(truckMsg()); }
 function truckLeave(id) {
   if (TRUCK.driver !== id && !TRUCK.riders.includes(id)) return;
   if (TRUCK.driver === id) TRUCK.driver = null;
@@ -277,6 +279,7 @@ const TUNE_FILE = path.join(DATA_DIR, 'tune.json'), TUNE_MAX_BYTES = 16384, TUNE
 // the server's copy of the tester's sliders (the few rules the server runs: roster, events, the curse)
 let TUNE_S = {};
 try { TUNE_S = JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')) || {}; } catch (e) { /* none saved yet */ }
+truckWasOn = truckOn(); if (truckWasOn) Object.assign(TRUCK, TRUCK_GATE_PARK); // the pickup's flag was on at startup: it waits by the service gate
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -311,7 +314,7 @@ function saveTune(req, res) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
       if (err) { res.writeHead(500); return res.end('save failed'); }
-      TUNE_S = clean; if (!truckOn() && (TRUCK.driver != null || TRUCK.riders.length)) truckPark(); else broadcast(truckMsg());
+      TUNE_S = clean; if (truckOn() !== truckWasOn) { truckWasOn = truckOn(); truckPark(); } else broadcast(truckMsg()); // the flag moved: to its spot by the service gate, or back by Mr. Sir
       fs.rename(TUNE_FILE + '.tmp', TUNE_FILE, () => { securityHeaders(res, false); res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); });
     });
   });
@@ -649,7 +652,7 @@ wss.on('connection', (ws, req) => {
         }
         if (op === 'gate') { // out through the service gate: the escape to the next map
           const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
-          if (!next || TRUCK.x < 30.5 || TRUCK.z < 35 || TRUCK.z > 43) return;
+          if (!next || TRUCK.x < 30.5 || Math.hypot(TRUCK.x - 30, TRUCK.z - 39) < 15) return; // outside the east fence, well clear of the gate
           LOG.log('escape', { id: c.id, n: c.n, riders: TRUCK.riders.length });
           broadcast({ t: 'truck', escaped: c.n });
           truckPark(); zoneSwitch(next, 'escape in Mr. Sir\'s pickup, driven by ' + c.n);
