@@ -3,7 +3,7 @@
    (Vehicles tab, veh.drivable; off by default).
    Four seats (JT): F at the left door to drive, F at the right door to ride shotgun, F at the back to sit on the edge
    of the dropped tailgate (two spots). F again to get out. Up front you're out of sight, "in the truck" (JT: no heads
-   through the roof); on the tailgate your legs hang down past its edge (the camper's SitEdge clip,
+   through the roof); on the tailgate you sit on the gate with your legs straight out past its end (SitEdge clip,
    blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
    With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
    out through the gate, swing round outside and drive off. Once it's out through the gate and ESCAPE_R away, that's
@@ -19,12 +19,13 @@ const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
 /* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face
    (0 forward, PI backward), where you stand to get in, where you step out; hide: in the cab, out of sight; clip: the
-   animPerson mode you sit with. The tailgate is dropped flat at z -2.3..-2.8, top 0.81 (art/blender/heavy.py). */
+   animPerson mode you sit with. The tailgate is dropped flat at z -2.3..-2.8, top 0.81 (art/blender/heavy.py); its
+   seats sit a thigh's thickness (~0.09) above that so the legs rest on it, not in it. */
 const TRUCK_SEATS={
   drive:  {at:[0.38,0.3],y:0.9,face:0,hide:true,door:[1.45,0.35],out:[1.75,0.35],label:'Drive Mr. Sir\'s pickup'},
   shotgun:{at:[-0.38,0.3],y:0.9,face:0,hide:true,door:[-1.45,0.35],out:[-1.75,0.35],label:'Ride shotgun'},
-  tail0:  {at:[0.42,-2.86],y:0.83,face:Math.PI,clip:11,door:[0,-3.4],out:[0.6,-3.9],label:'Sit on the tailgate'},
-  tail1:  {at:[-0.42,-2.86],y:0.83,face:Math.PI,clip:11,door:[0,-3.4],out:[-0.6,-3.9],label:'Sit on the tailgate'}};
+  tail0:  {at:[0.42,-2.55],y:0.9,face:Math.PI,clip:11,door:[0,-3.4],out:[0.6,-3.9],label:'Sit on the tailgate'},
+  tail1:  {at:[-0.42,-2.55],y:0.9,face:Math.PI,clip:11,door:[0,-3.4],out:[-0.6,-3.9],label:'Sit on the tailgate'}};
 const TRUCK_SEAT_KEYS=Object.keys(TRUCK_SEATS);
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,seats:{},on:false,

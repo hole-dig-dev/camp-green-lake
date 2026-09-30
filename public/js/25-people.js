@@ -178,7 +178,7 @@ function animModel(p,mode,dt,digPhase,speed){
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
-  new T.GLTFLoader().load('models/camper.glb?v=4',g=>{
+  new T.GLTFLoader().load('models/camper.glb?v=5',g=>{
     MODEL.scene=g.scene;
     /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
        so the model's orange matches the rest of the camp */

@@ -378,14 +378,14 @@ def anim_sit(rig):
     return make_action(rig, "Sit", [(1, p(1)), (30, p(-1)), (60, p(1))])
 
 
-SIT_EDGE_LEG = 0.85   # sitting on an edge (the pickup's dropped tailgate): legs hang down past it, only a little forward
+SIT_EDGE_LEG = 1.5   # sitting on the pickup's dropped tailgate: legs straight out past its end (JT: 'straight out is ok')
 
 
 def anim_sit_edge(rig):
-    """Sitting right on an edge with the legs dangling over it: thighs only a little forward, swinging out of step.
-    Looping. The game puts the hips just past the edge so the legs clear it (public/js/87-truck.js tailgate seats)."""
+    """Sitting on the pickup's dropped tailgate with the legs straight out past its end, swinging a little out of step.
+    Looping. The game sits the hips on the gate, raised by a thigh's thickness (public/js/87-truck.js tailgate seats)."""
     def p(sw):
-        return {"leg.L": (SIT_EDGE_LEG + 0.18 * sw, 0, -0.05), "leg.R": (SIT_EDGE_LEG - 0.18 * sw, 0, 0.05),
+        return {"leg.L": (SIT_EDGE_LEG - 0.07 * (sw + 1), 0, -0.05), "leg.R": (SIT_EDGE_LEG - 0.07 * (1 - sw), 0, 0.05),
                 "arm.L": (0.25, 0, -0.3), "arm.R": (0.25, 0, 0.3), "spine": (0.08, 0, 0), "head": (0.04, 0, 0)}
     return make_action(rig, "SitEdge", [(1, p(1)), (36, p(-1)), (72, p(1))])
 
