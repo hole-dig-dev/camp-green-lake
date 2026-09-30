@@ -231,7 +231,8 @@ function sendFile(res, file, type, headOnly) {
 const STATIC_DIRS = { js: { ext: '.js', type: 'text/javascript; charset=utf-8' }, css: { ext: '.css', type: 'text/css; charset=utf-8' },
   icons: { ext: '.png', type: 'image/png' },          // inventory art, e.g. public/icons/loot/cap.png (same traversal checks)
   models: { ext: '.glb', type: 'model/gltf-binary' }, // the Blender camp and creatures (public/models/*.glb)
-  audio: { ext: '.mp3', type: 'audio/mpeg' } };       // licensed ambience and Foley (public/audio/*.mp3)
+  audio: { ext: '.mp3', type: 'audio/mpeg' },         // licensed ambience and Foley (public/audio/*.mp3)
+  data: { ext: '.json', type: 'application/json' } }; // data exported with the models, e.g. public/data/TownColliders.json (art/blender/town.py)
 function sendStatic(res, subdir, rawName) {
   const dir = STATIC_DIRS[subdir];
   let name;
@@ -308,7 +309,7 @@ const server = http.createServer((req, res) => {
     const tunePost = DEV_MODE && req.method === 'POST' && url0 === '/tune';
     if (req.method !== 'GET' && req.method !== 'HEAD' && !tunePost) { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
-    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/[\w.-]+\.glb|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
+    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
@@ -341,6 +342,7 @@ const server = http.createServer((req, res) => {
     if (url.startsWith('/icons/')) return sendStatic(res, 'icons', url.slice('/icons/'.length));
     if (url.startsWith('/models/')) return sendStatic(res, 'models', url.slice('/models/'.length));
     if (url.startsWith('/audio/')) return sendStatic(res, 'audio', url.slice('/audio/'.length));
+    if (url.startsWith('/data/')) return sendStatic(res, 'data', url.slice('/data/'.length));
     securityHeaders(res, false);
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');

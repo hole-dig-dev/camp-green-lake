@@ -1,6 +1,6 @@
 # Camp Green Lake Blender art
 
-The 3D assets live in five `.blend` files, grouped so an edit only touches (and commits) its own group. **One scene
+The 3D assets live in six `.blend` files, grouped so an edit only touches (and commits) its own group. **One scene
 per asset.** In each scene the `<Name>.Asset` collection is the model and `<Name>.Studio` is the preview camera,
 lights and floor.
 
@@ -10,12 +10,13 @@ lights and floor.
 | `props.blend` | signs, furniture, supplies, carried loot, Mr. Sir's truck, rocks, boulders, tumbleweed | `signs.py`, `signs_export.py`, `furniture.py`, `supplies.py`, `carryloot.py`, `rocks.py` |
 | `finds.blend` | the dig-up finds, including the five-way variant scenes (`Can_1`..`Can_5`, `KB_v01`..`KB_v10`, ...) the final finds were picked from | `finds.py`, `finds2.py`, `finds3.py`, `heavy.py`, `kb.py`, `kbfinal.py` |
 | `creatures.blend` | lizard, javelina, mountain lion, vulture (rigged, with clips), plus their first-round variants (`Liz_1`..) | `creatures.py`, `beasts.py`, `rig.py`, `vulture.py` |
+| `town.blend` | the buried town's ruins: wall, floor and ceiling kit sized to the game's grid, plus the furnishings of each room type (`TownRoom_*`); colliders go to `glb/TownColliders.json` -> `public/data/`. `town_preview.py` renders a lit 2 x 2 block for review | `town.py`, `town_preview.py` |
 | `characters.blend` | `Camper`: the player/crew/staff camper (from JT's PC, rigged by `/blender/cgl_rig.py`, exported to `public/models/camper.glb`); `ARCHIVED_Camper_minipc`: the superseded minipc camper | `/blender/cgl_rig.py` |
 
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
 it. The files are saved **compressed** (Blender keeps compression on every later save): the old single
-`camp-green-lake-art.blend` was 53 MB uncompressed and grew the repo by that much on every commit; the five together are
-about 5 MB. Split on 2026-09-30; every scene's meshes were checked against the old file.
+`camp-green-lake-art.blend` was 53 MB uncompressed and grew the repo by that much on every commit; the files together are
+about 6 MB. Split on 2026-09-30; every scene's meshes were checked against the old file.
 
 Built live in Blender through the blender-mcp socket (`bx.py` runs a Python file inside the running
 Blender). `cgl_blender.py` is the shared toolkit (palette, materials, bevelled boxes/cylinders, 3D
