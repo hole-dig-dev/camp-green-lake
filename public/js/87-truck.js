@@ -6,15 +6,14 @@
    through the roof); on the tailgate you sit on the gate with your legs straight out past its end (SitEdge clip,
    blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
    With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
-   out through the gate, swing round outside and drive off. Once it's out through the gate and ESCAPE_R away, that's
-   the escape: the whole crew moves on to the next map, the same as everyone reaching the campfire (server.js 'truck',
-   op 'gate'). With the flag off it's parked by Mr. Sir as always.
+   out through the gate, swing round outside and drive off: north toward Big Thumb, up the ramp and over the trench
+   (10-core.js NORTH). Come down in the trench and it's wrecked till dawn. Past it, the crew climbs the wall on foot
+   to win Act 1 (88-north.js). With the flag off it's parked by Mr. Sir as always.
    The driver's page runs the physics and sends where it is ~12 times a second; everyone else eases toward that. Solo,
    the page does all of it. The pickup parks back by the main gate when the flag goes off or the crew changes map.
    Sizes are the Blender model's (art/blender/heavy.py MrSirTruck): cab at the front (local +z), bed behind it. */
 const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Mr. Sir, tailgate toward him (flag off)
 const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the service gate, nose into camp (flag on)
-const ESCAPE_R=18;                                            // out through the gate and this far from it: gone
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
 /* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face
@@ -31,7 +30,7 @@ const TRUCK_SEND=1/12;                                        // the driver send
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,vx:0,vz:0,vy:0,q:new THREE.Quaternion(),w:new THREE.Vector3(),air:false,flipped:false,flipT:0,bog:0,lift:0,hitCool:{},seats:{},on:false,
   root:null,col:null,sendT:0,tgt:null,escaped:false,outGate:false,prevH:TRUCK_PARK.h,outAt:0,wasOn:false};
 const truckMe=()=>online()?net.id:'me';
-const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
+const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5&&!TRUCK.wreck)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
 /* local truck coordinates -> world */
 function truckAt(lx,lz,T=TRUCK){const c=Math.cos(T.h),s=Math.sin(T.h);return{x:T.x+lx*c+lz*s,z:T.z-lx*s+lz*c}}
 
@@ -60,6 +59,7 @@ function truckSeatOf(id){for(const k of TRUCK_SEAT_KEYS)if(TRUCK.seats[k]===id)r
 function truckSeat(){return truckSeatOf(truckMe())}
 function truckSpot(){
   if(S.inTruck)return{id:'truck',label:'Get out of the truck',use:()=>truckOut()};
+  if(TRUCK.wreck)return Math.hypot(P.x-TRUCK.x,P.z-TRUCK.z)<5?{id:'truck',label:'Wrecked in the trench. Hauled back by morning.',use:()=>{}}:null;
   if(!truckOn()||S.inTown||inTent()||S.ko||S.carry!=null)return null;
   if(TRUCK.flipped){   // on its side or roof and stopped: heave it back onto its wheels (JT: the same button as getting in)
     if(TRUCK.flipT>0||Math.hypot(TRUCK.vx,TRUCK.vz)>1.5||Math.hypot(P.x-TRUCK.x,P.z-TRUCK.z)>4.5)return null;
@@ -83,7 +83,7 @@ function truckOut(){
 function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
   if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;TRUCK.pY=TRUCK.pVy=TRUCK.pVx=TRUCK.pVz=undefined;P.moving=false;digHeld=false;if(was)return;
-    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, swing round and drive: that\'s the way out of here.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
+    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, then north toward Big Thumb: jump the trench off the ramp.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
   const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;if(me)me.g.visible=true;
   const o=TRUCK_SEATS[was].out,p=truckAt(o[0],o[1]);
   P.x=p.x;P.z=p.z;P.y=groundAt(p.x,p.z);P.vy=0;
@@ -213,7 +213,7 @@ function truckPhys(dt){
   if(landV>7){sfx.thud();truckHurtIn((landV-7)*4)}
   K.v=K.vx*Math.sin(K.h)+K.vz*Math.cos(K.h);
   truckDraw();truckSend(dt,drive);
-  if(drive)truckEscape();
+  truckWreckCheck(dt);
 }
 function truckSend(dt,drive){
   const K=TRUCK;if(!online())return;
@@ -222,13 +222,13 @@ function truckSend(dt,drive){
   wsSend({t:'truck',op:'pos',x:+K.x.toFixed(2),z:+K.z.toFixed(2),h:+K.h.toFixed(3),v:+K.v.toFixed(1),y:+K.y.toFixed(2),
     qx:+K.q.x.toFixed(4),qy:+K.q.y.toFixed(4),qz:+K.q.z.toFixed(4),qw:+K.q.w.toFixed(4),vx:+K.vx.toFixed(1),vz:+K.vz.toFixed(1)});
 }
-function truckEscape(){   // out through the service gate (forwards or backwards), then away from it: the escape
-  const K=TRUCK;
-  if(K.x>FENCE_X1+1&&K.z>EAST_GATE_Z0&&K.z<EAST_GATE_Z1)K.outGate=true;
-  if(K.x<FENCE_X1-1)K.outGate=false;   // drove back in
-  if(!K.escaped&&K.outGate&&Math.hypot(K.x-FENCE_X1,K.z-(EAST_GATE_Z0+EAST_GATE_Z1)/2)>ESCAPE_R){K.escaped=true;
-    if(online())wsSend({t:'truck',op:'gate'});
-    else{const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];if(next){toast('You floor it out the service gate. Camp Green Lake is behind you.','gold',5000);zoneFade(()=>zoneEnter(next))}}}
+/* came down in the trench and stopped there: wrecked till dawn (the server's word online; the page's solo) */
+function truckWreckCheck(dt){
+  const K=TRUCK,[t0,t1]=NORTH.trench;
+  const down=K.z<t0+1&&K.z>t1-1&&K.y<-1&&Math.hypot(K.vx,K.vz)<1.2;   // in the trench, a metre or more below its rim, stopped
+  K.downT=down?(K.downT||0)+dt:0;if(K.downT<1.5||K.wreck)return;
+  logEv('truckWreck',{x:+K.x.toFixed(1)});
+  if(online())wsSend({t:'truck',op:'wreck'});else{K.wreck=RUN.day||1;K.seats={};truckSeated();toast('Mr. Sir\'s pickup is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000)}
 }
 /* heaving it back onto its wheels (anyone, F by it once it's stopped): turned back to its heading, then set down */
 function truckFlipStart(){
@@ -306,7 +306,8 @@ function truckCamera(dt){
 function updateTruck(dt){
   const T=TRUCK,on=truckOn();
   if(S.inTruck&&!on)truckOut();
-  if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
+  if(!online()&&T.wreck&&(RUN.day||1)!==T.wreck){T.wreck=0;truckLeaveLocal()}   // solo: hauled back overnight
+  if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck&&!T.wreck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
   if(on&&truckOwner()===truckMe())truckPhys(dt);
   else if(T.tgt){   // ease toward the owner's last word, carried on by its speed in between
     const g=T.tgt,k=Math.min(1,dt*8);g.x+=g.vx*dt;g.z+=g.vz*dt;
@@ -350,7 +351,8 @@ function truckMsg(m){
   if(m.st){const s=m.st,me_=truckMe(),wasDriver=truckDriver()===me_,seats={};
     if(s.seats&&typeof s.seats==='object')for(const k of TRUCK_SEAT_KEYS)if(s.seats[k]!=null)seats[k]=s.seats[k];
     if(!S.inTruck&&Date.now()-TRUCK.outAt<1500&&seats[TRUCK.outSeat]===me_)delete seats[TRUCK.outSeat];   // the seat I just got out of: old news
-    TRUCK.on=!!s.on;TRUCK.seats=seats;
+    if(s.wreck&&!TRUCK.wreck)toast('Mr. Sir\'s pickup is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000);
+    TRUCK.on=!!s.on;TRUCK.seats=seats;TRUCK.wreck=s.wreck?1:0;
     if(truckDriver()!==me_){if(s.park){TRUCK.x=num(s.x,-600,600,TRUCK.x);TRUCK.z=num(s.z,-600,600,TRUCK.z);TRUCK.h=num(s.h,-100,100,TRUCK.h);TRUCK.tgt=null;truckPose()}}
     else if(!wasDriver){TRUCK.escaped=false}
     truckSeated()}
@@ -359,7 +361,6 @@ function truckMsg(m){
     TRUCK.tgt={x:num(q[0],-600,600,TRUCK.x),z:num(q[1],-600,600,TRUCK.z),h:num(q[2],-100,100,TRUCK.h),v:num(q[3],-40,40,0),y:num(q[4],-50,200,TRUCK.y),q:qq,vx:num(q[9],-60,60,0),vz:num(q[10],-60,60,0)}}
   if(m.push&&truckOwner()===truckMe())truckShove(num(m.push[0],-1,1,0),num(m.push[1],-1,1,0));
   if(m.flip&&truckOwner()===truckMe())truckFlipStart();
-  if(m.escaped)toast(`${String(m.escaped).slice(0,24)} drives Mr. Sir's pickup out through the service gate. Everyone's out of camp!`,'gold',6000);
 }
 function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 
