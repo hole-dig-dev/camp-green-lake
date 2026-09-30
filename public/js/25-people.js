@@ -113,7 +113,17 @@ function upgradePerson(p){
     const mn=n.material&&n.material.name;
     if(mn&&tint[mn]!=null){if(!mats[mn]){mats[mn]=n.material.clone();mats[mn].color.setHex(tint[mn])}n.material=mats[mn]}
     if(/_(Torso|Zipper|Patch|Neck)$/.test(nm))torso.push(n);
-    if(/_[LR]_(Sleeve|Elbow|Forearm|Leg)$/.test(nm))n.scale.set(bt.limb,1,bt.limb);
+    if(/_[LR]_(Sleeve|Elbow|Forearm|Leg)$/.test(nm)){
+      // A skinned limb's vertices are sized in bind space; scaling its object would move it off the joint.
+      if(n.isSkinnedMesh&&bt.limb!==1){
+        const bn=(nm.endsWith('_Leg')?'leg':'arm')+(nm.includes('_L_')?'L':'R');
+        const i=n.skeleton.bones.findIndex(b=>b.name===bn),inv=n.skeleton.boneInverses[i];
+        const radial=n.bindMatrixInverse.clone().multiply(inv.clone().invert())
+          .multiply(new T.Matrix4().makeScale(bt.limb,1,bt.limb)).multiply(inv).multiply(n.bindMatrix);
+        n.geometry=n.geometry.clone().applyMatrix4(radial);
+      }
+      else if(!n.isSkinnedMesh)n.scale.set(bt.limb,1,bt.limb);
+    }
   });
   /* body width: scale the torso pieces in spine space, then push shoulders/hips out to match (after each mixer update) */
   const spine=m.getObjectByName('spine');
@@ -178,7 +188,7 @@ function animModel(p,mode,dt,digPhase,speed){
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
-  new T.GLTFLoader().load('models/camper.glb?v=5',g=>{
+  new T.GLTFLoader().load('models/camper.glb?v=6',g=>{
     MODEL.scene=g.scene;
     /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
        so the model's orange matches the rest of the camp */
@@ -216,4 +226,3 @@ function updateLabels(now){
     L.el.style.display='';L.el.style.transform=`translate(-50%,-100%) translate(${((projV.x+1)/2*w).toFixed(1)}px,${((1-projV.y)/2*h).toFixed(1)}px)`;
   }
 }
-
