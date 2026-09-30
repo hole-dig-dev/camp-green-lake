@@ -70,7 +70,7 @@ function heldPose(p,dt){
   const h=p.held,on=!!(h&&h.t>0);
   p.heldW=clamp((p.heldW||0)+(on?dt:-dt)/HELD_BLEND,0,1);
   if(h){h.age+=dt;if(h.t!==Infinity)h.t-=dt}
-  if(!on&&p.heldW<=0){p.held=null;dropHeldMesh(p);return}
+  if(!on&&p.heldW<=0){p.held=null;dropHeldMesh(p);if(p===me)heldFP(null);return}
   const k=(h||{}).k||(p.heldMeshObj&&p.heldMeshObj.userData.k);if(!k)return;
   const clip=HELD_POSE[k];
   if(clip&&p.model){
@@ -80,6 +80,7 @@ function heldPose(p,dt){
       for(const bn in P2.q)if(B[bn])B[bn].quaternion.slerp(P2.q[bn],w)}
   }
   const m=heldMesh(p,k);if(m){m.visible=p.heldW>(clip?0.45:0.05);if(m.visible)heldAim(p,m,k)}   // in hand once the arm is most of the way up
+  if(p===me)heldFP(k,m);
 }
 
 /* ---- mine: the walkie while talking; friends: from their pos flag ---- */
@@ -113,3 +114,34 @@ function squelch(open,vol){
 }
 /* a tonic or first-aid kit: in your hand for a moment, and friends see it too */
 function showSupply(k){holdProp(me,k,HOLD_SECS[k]);wsSend({t:'emote',k})}
+
+/* ---- first person: your own walkie / tonic / kit, in the corner of your view ----
+   With the real first-person body (70-player.js fpBody) these are held at your mouth or your side, i.e. behind or
+   beside the camera, so you'd never see them. JT: "should be able to see at least a piece of these". So in first
+   person, and only for you, a copy of the prop (with your fist on the walkie and the bottle) sits in the corner of
+   the view and slides in and out with the arm; friends still see it in your hand at your mouth. */
+const FPH={g:null,k:null,hand:null,parts:{}};
+const FPH_POSE={   // where it sits, m from the eye (x right, y up, -z ahead); r: its turn (x, y, z); hand: your fist on it
+  walkie:{p:[-0.26,-0.19,-0.46],r:[0.12,0.55,0.18],hand:true},
+  tonic:{p:[0.12,-0.15,-0.42],r:[0.1,-0.35,-0.15],tip:0.5,hand:true},  // tip: how far it tilts towards you as you drink
+  medkit:{p:[-0.28,-0.2,-0.6],r:[0.45,0.5,0.05]},                     // hung by its handle: the lid and handle peek up from the bottom
+};
+function heldFP(k,m){
+  const on=FP&&me.model&&me.fpOn&&k&&FPH_POSE[k]&&HELD_PARTS[k];
+  if(m&&FP&&me.fpOn)m.visible=false;   // the one at your mouth would only clip the camera
+  if(!on){if(FPH.g)FPH.g.visible=false;return}
+  if(!FPH.g){FPH.g=new T.Group();camera.add(FPH.g)}
+  if(FPH.k!==k){   // build this prop's first-person copy (and your fist)
+    FPH.g.clear();FPH.k=k;
+    const inner=new T.Group();for(const pt of HELD_PARTS[k]){const mm=new T.Mesh(pt.geometry,pt.material);inner.add(mm)}
+    inner.position.y=-HELD_GRIP[k];inner.scale.setScalar(HELD_SIZE[k]);const holder=new T.Group();holder.add(inner);FPH.g.add(holder);FPH.holder=holder;
+    const hm=FPH_POSE[k].hand&&me.model.getObjectByName('CGLCamper_L_Hand');
+    if(hm){const h=new T.Mesh(hm.geometry,hm.material);const ws=new T.Vector3();hm.getWorldScale(ws);h.scale.setScalar(ws.x);
+      h.rotation.set(0,0,Math.PI/2);h.position.set(-0.02,-0.01,0.035);holder.add(h)}   // fingers across the front, just below the grip
+  }
+  const P0=FPH_POSE[k],w=sm(me.heldW||0),h=me.held;
+  const tip=P0.tip&&h?Math.sin(clamp(h.age/(HOLD_SECS[k]||1),0,1)*Math.PI)*P0.tip:0;   // the tonic tips up and back down
+  FPH.g.visible=w>0.02;
+  FPH.holder.position.set(P0.p[0],P0.p[1]-(1-w)*0.35,P0.p[2]);   // slides up into view with the arm
+  FPH.holder.rotation.set(P0.r[0]+tip,P0.r[1],P0.r[2]);
+}
