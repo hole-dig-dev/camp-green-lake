@@ -28,7 +28,7 @@ const TRUCK_SEATS={
   tail1:  {at:[-0.42,-2.55],y:0.9,face:Math.PI,clip:11,door:[0,-3.4],out:[-0.6,-3.9],label:'Sit on the tailgate'}};
 const TRUCK_SEAT_KEYS=Object.keys(TRUCK_SEATS);
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
-const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,vx:0,vz:0,vy:0,pr:0,rr:0,wz:0,air:false,bog:0,lift:0,hitCool:{},seats:{},on:false,
+const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,vx:0,vz:0,vy:0,q:new THREE.Quaternion(),w:new THREE.Vector3(),air:false,flipped:false,flipT:0,bog:0,lift:0,hitCool:{},seats:{},on:false,
   root:null,col:null,sendT:0,tgt:null,escaped:false,outGate:false,prevH:TRUCK_PARK.h,outAt:0,wasOn:false};
 const truckMe=()=>online()?net.id:'me';
 const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
@@ -43,12 +43,12 @@ TRUCK.col={x0:0,x1:0,z0:0,z1:0};colliders.push(TRUCK.col);
 function truckPose(){
   const T=TRUCK,g=(lx,lz)=>{const p=truckAt(lx,lz);return groundAt(p.x,p.z)};
   const fl=g(TRUCK_TRACK,TRUCK_AXLE_F),fr=g(-TRUCK_TRACK,TRUCK_AXLE_F),rl=g(TRUCK_TRACK,TRUCK_AXLE_R),rr=g(-TRUCK_TRACK,TRUCK_AXLE_R);
-  T.y=(fl+fr+rl+rr)/4;T.pitch=-Math.atan2((fl+fr)/2-(rl+rr)/2,TRUCK_AXLE_F-TRUCK_AXLE_R);T.roll=Math.atan2((fl+rl)/2-(fr+rr)/2,TRUCK_TRACK*2);
-  T.vx=T.vz=T.vy=T.pr=T.rr=T.wz=0;T.air=false;truckDraw();
+  T.y=(fl+fr+rl+rr)/4;const pitch=-Math.atan2((fl+fr)/2-(rl+rr)/2,TRUCK_AXLE_F-TRUCK_AXLE_R),roll=Math.atan2((fl+rl)/2-(fr+rr)/2,TRUCK_TRACK*2);
+  T.q.setFromEuler(new THREE.Euler(pitch,T.h,roll,'YXZ'));T.vx=T.vz=T.vy=0;T.w.set(0,0,0);T.air=false;T.flipped=false;truckDraw();
 }
 /* the model and the moving collider box, from x/y/z/h/pitch/roll */
 function truckDraw(){
-  const T=TRUCK;T.root.position.set(T.x,T.y,T.z);T.root.rotation.set(T.pitch,T.h,T.roll,'YXZ');
+  const T=TRUCK;T.root.position.set(T.x,T.y,T.z);T.root.quaternion.copy(T.q);
   const c=Math.abs(Math.cos(T.h)),s=Math.abs(Math.sin(T.h)),hx=(TRUCK_W*c+TRUCK_L*s)/2,hz=(TRUCK_W*s+TRUCK_L*c)/2;
   Object.assign(T.col,{x0:T.x-hx,x1:T.x+hx,z0:T.z-hz,z1:T.z+hz});
 }
@@ -61,10 +61,15 @@ function truckSeat(){return truckSeatOf(truckMe())}
 function truckSpot(){
   if(S.inTruck)return{id:'truck',label:'Get out of the truck',use:()=>truckOut()};
   if(!truckOn()||S.inTown||inTent()||S.ko||S.carry!=null)return null;
+  if(TRUCK.flipped){   // on its side or roof and stopped: heave it back onto its wheels (JT: the same button as getting in)
+    if(TRUCK.flipT>0||Math.hypot(TRUCK.vx,TRUCK.vz)>1.5||Math.hypot(P.x-TRUCK.x,P.z-TRUCK.z)>4.5)return null;
+    return{id:'truck',label:'Flip the pickup back upright',use:truckFlip};
+  }
   let best=null,bd=1.7;
   for(const k of TRUCK_SEAT_KEYS){const q=TRUCK_SEATS[k];if(TRUCK.seats[k]!=null)continue;const d=truckAt(q.door[0],q.door[1]),dd=Math.hypot(P.x-d.x,P.z-d.z);if(dd<bd){bd=dd;best=k}}
   return best?{id:'truck',label:TRUCK_SEATS[best].label,use:()=>truckIn(best)}:null;
 }
+function truckFlip(){if(online()&&truckOwner()!==truckMe())wsSend({t:'truck',op:'flip'});else truckFlipStart()}
 function truckIn(seat){
   if(online()){wsSend({t:'truck',op:'in',seat});return}
   TRUCK.seats[seat]='me';truckSeated();
@@ -100,10 +105,18 @@ function truckSit(p,seat,dt){const q=TRUCK_SEATS[seat],w=truckAt(q.at[0],q.at[1]
    elements: twisters, tumbleweeds, vultures, boulders and creatures can get them, and a hard jolt throws them off. */
 const TRUCK_WHEELS=[[TRUCK_TRACK,TRUCK_AXLE_F],[-TRUCK_TRACK,TRUCK_AXLE_F],[TRUCK_TRACK,TRUCK_AXLE_R],[-TRUCK_TRACK,TRUCK_AXLE_R]];
 const TRUCK_G=16;                 // gravity, the same as a camper's jump arc
-const TRUCK_SUB=4;                // physics substeps a frame (stiff springs)
-const TRUCK_SPRING=9,TRUCK_DAMP=0.9;   // suspension: natural frequency (rad/s x the wheel's share of the weight) and damping ratio
-const TRUCK_GRIP=7;               // sideways slip dies away this fast (1/s) with wheels on the ground
+const TRUCK_SUB=8;                // physics substeps a frame (stiff springs and body contacts)
+const TRUCK_SPRING=9,TRUCK_DAMP=0.9;   // suspension: natural frequency (rad/s) and damping ratio
+const TRUCK_MU=1.3;               // tyre grip (x the wheel's load); the body sliding on its side or roof grips less
+const TRUCK_COM=0.7;              // centre of weight above the ground under it; tyre forces act lower (TRUCK_TYRE_Y) so it
+const TRUCK_TYRE_Y=0.35;          // takes a hard turn at speed or a twister to roll it, not an ordinary corner
 const TRUCK_BOG_DEPTH=0.55,TRUCK_STUCK_DEPTH=1.1;   // a wheel's ground this far below the others': in a hole; this far: stuck in it
+const TRUCK_FLIP_UP=0.35;         // its up points this far off the sky and it's over: nobody drives, everyone out
+const TRUCK_FLIP_TIME=1.3;        // seconds to heave it back on its wheels
+/* the body's corners and roof line, for when it's on its side or roof (origin on the ground under the middle) */
+const TRUCK_BODY=[];for(const x of[-0.95,0.95])for(const z of[-2.55,2.55])for(const y of[0.45,z>0?1.9:1.35])TRUCK_BODY.push([x,y,z]);
+for(const x of[-0.9,0.9])TRUCK_BODY.push([x,1.9,0.5],[x,1.9,-0.6],[x,1.35,-1.4]);
+for(const x of[-1.0,1.0])for(const z of[TRUCK_AXLE_F,TRUCK_AXLE_R])TRUCK_BODY.push([x,0.15,z],[x,0.62,z]);   // the tyres' outer faces: what it rests on when it's on its side
 const truckMass=()=>tune('veh.mass');
 function truckOwner(){
   const d=truckDriver();if(d!=null)return d;if(!online())return'me';
@@ -112,77 +125,126 @@ function truckOwner(){
 function truckHurtIn(n){   // a hard landing or a big knock hurts whoever's on the tailgate (the cab is safe: hurt() skips it)
   if(S.inTruck&&n>2)hurt(Math.min(40,n),'Truck','Thrown about on Mr. Sir\'s pickup.');
 }
+const _tq=new THREE.Quaternion(),_ta=new THREE.Vector3(),_tb=new THREE.Vector3(),_tc=new THREE.Vector3(),_tr=new THREE.Vector3(),_tf=new THREE.Vector3();
+const truckUp=()=>_ta.set(0,1,0).applyQuaternion(TRUCK.q).y;   // 1 on its wheels, 0 on its side, -1 on its roof
+/* its heading from where its nose points (or where it pointed, if the nose is straight up or down) */
+function truckYaw(){const f=_ta.set(0,0,1).applyQuaternion(TRUCK.q);if(Math.hypot(f.x,f.z)>0.2)TRUCK.h=Math.atan2(f.x,f.z)}
+/* a rigid body: the centre of weight moves, it turns any way, springy wheels while it's upright, the body's corners
+   and roof when it isn't. Forces go in at points, so it pitches, rolls, tips and tumbles on its own. */
 function truckPhys(dt){
-  const T=TRUCK,M=truckMass(),drive=truckDriver()===truckMe()&&S.inTruck==='drive',key=k=>drive&&!uiOpen()&&!!KEYS[k];
+  const K=TRUCK,M=truckMass(),drive=truckDriver()===truckMe()&&S.inTruck==='drive'&&!K.flipped,key=k=>drive&&!uiOpen()&&!!KEYS[k];
+  if(K.flipT>0){truckFlipStep(dt);return}
   const gas=key('w')||key('arrowup'),rev=key('s')||key('arrowdown'),hb=key(' '),st=(key('a')||key('arrowleft')?1:0)-(key('d')||key('arrowright')?1:0);
   const vmax=tune('veh.speed'),acc=tune('veh.accel');
-  T.steer+=(st*tune('veh.steer')-T.steer)*Math.min(1,dt*(st?3:5));
-  const kS=(M/4)*TRUCK_SPRING*TRUCK_SPRING,cS=2*TRUCK_DAMP*Math.sqrt(kS*M/4),sag=M*TRUCK_G/(4*kS);
-  const Ip=M*(TRUCK_L*TRUCK_L)/14,Ir=M*(TRUCK_W*TRUCK_W)/10;
-  const hz=truckHazards(dt);   // wind, tumbleweeds, boulders: extra acceleration (and lift) this frame
+  K.steer+=(st*tune('veh.steer')-K.steer)*Math.min(1,dt*(st?3:5));
+  const kS=(M/4)*TRUCK_SPRING*TRUCK_SPRING,cS=2*TRUCK_DAMP*Math.sqrt(kS*M/4),sag=M*TRUCK_G/(4*kS),kB=M*TRUCK_G/0.06,cB=2*1.3*Math.sqrt(kB*M/4);   // body contacts: stiff and dead (a truck landing on its roof doesn't bounce)
+  const I=[M/12*(1.8*1.8+TRUCK_L*TRUCK_L),M/12*(TRUCK_W*TRUCK_W+TRUCK_L*TRUCK_L),M/12*(TRUCK_W*TRUCK_W+1.8*1.8)];
+  const hz=truckHazards(dt);
   const sd=dt/TRUCK_SUB;let landV=0;
+  // centre of weight, from the origin on the ground under the middle
+  const com=_tc.set(0,TRUCK_COM,0).applyQuaternion(K.q).add(_tb.set(K.x,K.y,K.z));
+  const v=new THREE.Vector3(K.vx,K.vy,K.vz),w=K.w,F=new THREE.Vector3(),Tq=new THREE.Vector3();
+  const force=(r,fx,fy,fz)=>{F.x+=fx;F.y+=fy;F.z+=fz;Tq.x+=r.y*fz-r.z*fy;Tq.y+=r.z*fx-r.x*fz;Tq.z+=r.x*fy-r.y*fx};
+  const ptVel=r=>_tf.set(v.x+w.y*r.z-w.z*r.y,v.y+w.z*r.x-w.x*r.z,v.z+w.x*r.y-w.y*r.x);
+  let upright=truckUp(),touchW=0,stuck=0,inHole=0;
   for(let k=0;k<TRUCK_SUB;k++){
-    // ---- the four wheels: springs push the body up where it's low; which wheels touch; holes
-    let F=0,Tp=0,Tr=0,touch=0;const gs=[];
-    for(const[lx,lz]of TRUCK_WHEELS){const p=truckAt(lx,lz);gs.push(groundAt(p.x,p.z))}
-    const gm=(gs[0]+gs[1]+gs[2]+gs[3])/4;let inHole=0,stuck=0;
-    TRUCK_WHEELS.forEach(([lx,lz],i)=>{
-      const others=(gm*4-gs[i])/3,depth=others-gs[i];if(depth>TRUCK_BOG_DEPTH)inHole++;if(depth>TRUCK_STUCK_DEPTH)stuck++;
-      const g=Math.max(gs[i],others-0.45);   // a wheel drops into a hole only so far: it's wider than the tyre, the rim catches
-      const hy=T.y-Math.sin(T.pitch)*lz+Math.sin(T.roll)*lx,vyW=T.vy-Math.cos(T.pitch)*T.pr*lz+Math.cos(T.roll)*T.rr*lx;
-      const comp=g+sag-hy;if(comp<=0)return;touch++;
-      let f=kS*Math.min(comp,0.35)-cS*vyW;if(comp>0.35)f+=kS*8*(comp-0.35)-cS*3*vyW;   // bump stop
-      if(vyW<-6)landV=Math.max(landV,-vyW);
-      f=Math.max(0,f);F+=f;Tp+=-f*lz;Tr+=f*lx;
-    });
-    T.bog=stuck?1:inHole?0.4:0;
-    T.vy+=(F/M-TRUCK_G+hz.lift)*sd;T.pr+=(Tp/Ip)*sd;T.rr+=(Tr/Ir)*sd;
-    T.pr*=Math.exp(-2*sd);T.rr*=Math.exp(-2*sd);
-    T.y+=T.vy*sd;T.pitch=clamp(T.pitch+T.pr*sd,-1.2,1.2);T.roll=clamp(T.roll+T.rr*sd,-1.2,1.2);
-    const lowest=Math.min(...TRUCK_WHEELS.map(([lx,lz],i)=>T.y-Math.sin(T.pitch)*lz+Math.sin(T.roll)*lx-gs[i]));
-    if(lowest<-0.6){T.y-=lowest+0.6;T.vy=Math.max(T.vy,0)}   // never through the ground
-    // ---- driving: along the heading (engine, brakes, the slope), grip across it, steering with wheels down
-    const fx=Math.sin(T.h),fz=Math.cos(T.h),lx=Math.cos(T.h),lz=-Math.sin(T.h);
-    let vl=T.vx*fx+T.vz*fz,vs=T.vx*lx+T.vz*lz;
-    const ground=touch>0,traction=ground?touch/4:0;
-    if(ground){
-      if(gas)vl+=(vl<0?acc*2.2:acc)*traction*(stuck?0.1:1)*sd;
-      else if(rev)vl-=(vl>0?acc*2.2:acc*0.7)*traction*(stuck?0.9:1)*sd;
-      else vl-=Math.sign(vl)*Math.min(Math.abs(vl),2.2*sd);
-      if(hb||!drive)vl-=Math.sign(vl)*Math.min(Math.abs(vl),(drive?16:9)*sd);   // handbrake; parked, nobody at the wheel: the brake's on
-      vl+=TRUCK_G*Math.sin(T.pitch)*0.7*sd;                          // rolls back down a slope
-      if(T.bog)vl*=Math.exp(-(stuck?6:1.5)*sd);                        // a wheel in a hole drags
-      vs*=Math.exp(-TRUCK_GRIP*traction*sd);
-      vl=clamp(vl,-vmax*0.35,vmax);
-      T.wz+=(vl/TRUCK_WB*Math.tan(T.steer)-T.wz)*Math.min(1,traction*10*sd);   // grounded: the wheels set the turn
+    F.set(0,-M*TRUCK_G,0);Tq.set(0,0,0);
+    const fwd=_ta.set(0,0,1).applyQuaternion(K.q).clone(),left=_tb.set(1,0,0).applyQuaternion(K.q).clone();
+    upright=truckUp();touchW=0;stuck=0;inHole=0;
+    // ---- wheels (only while it's more or less on them): suspension, then the tyres
+    if(upright>0.3){
+      const gs=TRUCK_WHEELS.map(([lx,lz])=>{const p=truckAt(lx,lz);return groundAt(p.x,p.z)}),gm=(gs[0]+gs[1]+gs[2]+gs[3])/4;
+      TRUCK_WHEELS.forEach(([lx,lz],i)=>{
+        const r=_tr.set(lx,-TRUCK_COM,lz).applyQuaternion(K.q).clone(),wp=r.clone().add(com);
+        const others=(gm*4-gs[i])/3,depth=others-gs[i];if(depth>TRUCK_BOG_DEPTH)inHole++;if(depth>TRUCK_STUCK_DEPTH)stuck++;
+        const g=Math.max(gs[i],others-0.45);   // the tyre's wider than most holes: the rim catches
+        const comp=g+sag-wp.y;if(comp<=0)return;
+        const pv=ptVel(r);let N=kS*Math.min(comp,0.35)-cS*pv.y;if(comp>0.35)N+=kS*8*(comp-0.35);N=Math.max(0,N)*upright;
+        if(-pv.y>6)landV=Math.max(landV,-pv.y);
+        touchW++;force(r,0,N,0);
+        // tyres: along the wheel (engine, brakes) and across it (grip), limited by the load on it
+        let fw=fwd.clone();if(lz>0&&K.steer)fw=fwd.clone().multiplyScalar(Math.cos(K.steer)).addScaledVector(left,Math.sin(K.steer));
+        fw.y=0;fw.normalize();const lw=new THREE.Vector3(fw.z,0,-fw.x);
+        const vl=pv.x*fw.x+pv.z*fw.z,vs=pv.x*lw.x+pv.z*lw.z,share=M/4/sd,lim=TRUCK_MU*N;
+        let Fl=0;const Fs=clamp(-vs*share*0.3,-lim,lim);
+        if(gas&&vl<vmax)Fl=(vl<-0.3?-Math.sign(vl)*lim:M*acc/4*(stuck?0.1:1));
+        else if(rev&&vl>-vmax*0.35)Fl=(vl>0.3?-lim*0.9:-M*acc*0.7/4*(stuck?0.9:1));
+        else{const brake=hb||!drive?lim*0.9:M*2.2/4;Fl=-Math.sign(vl)*Math.min(Math.abs(vl)*share*0.3,brake)}
+        if(depth>TRUCK_BOG_DEPTH)Fl-=Math.sign(vl)*Math.min(Math.abs(vl)*share*0.3,M/4*(depth>TRUCK_STUCK_DEPTH?10:3));   // a wheel in a hole drags
+        const tot=Math.hypot(Fl,Fs),sc=tot>lim?lim/tot:1;
+        const ra=r.clone();ra.y=r.y*TRUCK_TYRE_Y/TRUCK_COM;   // tyre forces act low: less tipping from ordinary driving
+        force(ra,(fw.x*Fl+lw.x*Fs)*sc,0,(fw.z*Fl+lw.z*Fs)*sc);
+      });
     }
-    T.vx=fx*vl+lx*vs+hz.ax*sd;T.vz=fz*vl+lz*vs+hz.az*sd;T.wz+=hz.spin*sd;
-    const ox=T.x,oz=T.z,oh=T.h;
-    T.h+=T.wz*sd;T.x+=T.vx*sd;T.z+=T.vz*sd;
-    // ---- bump: a corner or side point inside something solid (or off the map) knocks it back
-    let hit=Math.abs(T.x)>EDGE-3||Math.abs(T.z)>EDGE-3;
-    if(!hit&&T.y<groundAt(T.x,T.z)+3)for(const[px,pz]of[[1,2.6],[-1,2.6],[1,-2.6],[-1,-2.6],[1,0],[-1,0],[0,2.7],[0,-2.7]]){const p=truckAt(px,pz);
-      if(colliders.some(c=>c!==T.col&&p.x>c.x0&&p.x<c.x1&&p.z>c.z0&&p.z<c.z1)){hit=true;break}}
-    if(hit){T.x=ox;T.z=oz;T.h=oh;const sp=Math.hypot(T.vx,T.vz);if(sp>2.5&&k===0){sfx.thud();noise(0.25,300,0.4,0.3,'lowpass');truckHurtIn((sp-6)*3)}T.vx*=-0.25;T.vz*=-0.25;T.wz*=-0.3}
+    // ---- the body's corners and roof: when it's tipped, on its side, on its roof, or bottomed out in a hole
+    let bodyTouch=0;
+    for(const[bx,by,bz]of TRUCK_BODY){
+      const r=_tr.set(bx,by-TRUCK_COM,bz).applyQuaternion(K.q).clone(),wp=r.clone().add(com),g=groundAt(wp.x,wp.z),pen=g-wp.y;if(pen<=0)continue;bodyTouch++;
+      const pv=ptVel(r),N=Math.max(0,kB*Math.min(pen,0.3)-cB*pv.y);if(-pv.y>6)landV=Math.max(landV,-pv.y);
+      const ht=Math.hypot(pv.x,pv.z),fr=ht>1e-4?Math.min(0.9*N,ht*M/8/sd*0.3)/ht:0;
+      force(r,-pv.x*fr,N,-pv.z*fr);
+    }
+    // ---- wind, shoves and lift (per unit mass), and a tumble while a twister has it
+    F.x+=hz.ax*M;F.z+=hz.az*M;F.y+=hz.lift*M;Tq.y+=hz.spin*I[1]*0.2;
+    if(hz.lift>0){Tq.x+=hz.tumble[0]*I[0];Tq.z+=hz.tumble[1]*I[2]}
+    // ---- integrate: the centre of weight, then the turn (torque into the body's frame and back)
+    v.addScaledVector(F,sd/M);
+    const tl=Tq.clone().applyQuaternion(_tq.copy(K.q).invert());tl.set(tl.x/I[0],tl.y/I[1],tl.z/I[2]).applyQuaternion(K.q);
+    w.addScaledVector(tl,sd);w.multiplyScalar(Math.exp(-(bodyTouch&&upright<0.6?4:touchW?1.2:0.25)*sd));   // scraping along on its side or roof soaks up the tumble
+    const ox=com.x,oz=com.z;
+    com.addScaledVector(v,sd);
+    const wl=w.length();if(wl>1e-6){_tq.setFromAxisAngle(_ta.copy(w).divideScalar(wl),wl*sd);K.q.premultiply(_tq).normalize()}
+    // never through the ground: lift the whole body clear of its lowest point
+    let low=0;for(const[bx,by,bz]of TRUCK_BODY){const r=_tr.set(bx,by-TRUCK_COM,bz).applyQuaternion(K.q),pen=groundAt(com.x+r.x,com.z+r.z)-(com.y+r.y);if(pen>low)low=pen}
+    if(low>0.35){com.y+=low-0.35;if(v.y<0)v.y=0}
+    // bump: anything solid (or the map edge) at its sides and ends knocks it back
+    const hx=com.x,hzz=com.z;let hit=Math.abs(hx)>EDGE-3||Math.abs(hzz)>EDGE-3;
+    if(!hit&&com.y<groundAt(hx,hzz)+3.5){const c=Math.cos(K.h),s_=Math.sin(K.h);
+      for(const[px,pz]of[[1,2.6],[-1,2.6],[1,-2.6],[-1,-2.6],[1,0],[-1,0],[0,2.7],[0,-2.7]]){const X=hx+px*c+pz*s_,Z=hzz-px*s_+pz*c;
+        if(colliders.some(cc=>cc!==K.col&&X>cc.x0&&X<cc.x1&&Z>cc.z0&&Z<cc.z1)){hit=true;break}}}
+    if(hit){com.x=ox;com.z=oz;const sp=Math.hypot(v.x,v.z);if(sp>2.5&&k===0){sfx.thud();noise(0.25,300,0.4,0.3,'lowpass');truckHurtIn((sp-6)*3)}v.x*=-0.25;v.z*=-0.25;w.y*=-0.3}   // knocked back sideways; how it's tipped isn't undone
+    // back to the origin under the middle (what the rest of the game uses)
+    const o=_tr.set(0,-TRUCK_COM,0).applyQuaternion(K.q);K.x=com.x+o.x;K.y=com.y+o.y;K.z=com.z+o.z;truckYaw();
   }
-  T.air=T.y>groundAt(T.x,T.z)+0.6;
-  if(landV>7){sfx.thud();truckHurtIn((landV-7)*4);if(S.inTruck&&!TRUCK_SEATS[S.inTruck].hide)truckEject(T.vx,4,T.vz)}
-  T.v=T.vx*Math.sin(T.h)+T.vz*Math.cos(T.h);
-  truckDraw();
-  if(online()){const moving=Math.hypot(T.vx,T.vz)>0.05||Math.abs(T.vy)>0.05||T.air||drive;
-    T.sendT-=dt;if(moving&&T.sendT<=0){T.sendT=TRUCK_SEND;
-      wsSend({t:'truck',op:'pos',x:+T.x.toFixed(2),z:+T.z.toFixed(2),h:+T.h.toFixed(3),v:+T.v.toFixed(1),y:+T.y.toFixed(2),p:+T.pitch.toFixed(3),r:+T.roll.toFixed(3),vx:+T.vx.toFixed(1),vz:+T.vz.toFixed(1)})}}
-  if(drive){   // out through the service gate (forwards or backwards), then away from it: the escape
-    if(T.x>FENCE_X1+1&&T.z>EAST_GATE_Z0&&T.z<EAST_GATE_Z1)T.outGate=true;
-    if(T.x<FENCE_X1-1)T.outGate=false;   // drove back in
-    if(!T.escaped&&T.outGate&&Math.hypot(T.x-FENCE_X1,T.z-(EAST_GATE_Z0+EAST_GATE_Z1)/2)>ESCAPE_R){T.escaped=true;
-      if(online())wsSend({t:'truck',op:'gate'});
-      else{const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];if(next){toast('You floor it out the service gate. Camp Green Lake is behind you.','gold',5000);zoneFade(()=>zoneEnter(next))}}}
-  }
+  K.vx=v.x;K.vy=v.y;K.vz=v.z;K.bog=stuck?1:inHole?0.4:0;
+  K.air=touchW===0&&K.y>groundAt(K.x,K.z)+0.6;
+  // on its side or roof: nobody drives it; everyone gets out (heave it back upright with F: truckFlipSpot)
+  const was=K.flipped;K.flipped=truckUp()<TRUCK_FLIP_UP;if(K.flipped&&!was)logEv('truckFlip',{x:+K.x.toFixed(1),z:+K.z.toFixed(1)});
+  if(landV>7){sfx.thud();truckHurtIn((landV-7)*4)}
+  K.v=K.vx*Math.sin(K.h)+K.vz*Math.cos(K.h);
+  truckDraw();truckSend(dt,drive);
+  if(drive)truckEscape();
+}
+function truckSend(dt,drive){
+  const K=TRUCK;if(!online())return;
+  const moving=Math.hypot(K.vx,K.vz)>0.05||Math.abs(K.vy)>0.05||K.air||drive||K.flipT>0||K.w.lengthSq()>1e-3;
+  K.sendT-=dt;if(!moving||K.sendT>0)return;K.sendT=TRUCK_SEND;
+  wsSend({t:'truck',op:'pos',x:+K.x.toFixed(2),z:+K.z.toFixed(2),h:+K.h.toFixed(3),v:+K.v.toFixed(1),y:+K.y.toFixed(2),
+    qx:+K.q.x.toFixed(4),qy:+K.q.y.toFixed(4),qz:+K.q.z.toFixed(4),qw:+K.q.w.toFixed(4),vx:+K.vx.toFixed(1),vz:+K.vz.toFixed(1)});
+}
+function truckEscape(){   // out through the service gate (forwards or backwards), then away from it: the escape
+  const K=TRUCK;
+  if(K.x>FENCE_X1+1&&K.z>EAST_GATE_Z0&&K.z<EAST_GATE_Z1)K.outGate=true;
+  if(K.x<FENCE_X1-1)K.outGate=false;   // drove back in
+  if(!K.escaped&&K.outGate&&Math.hypot(K.x-FENCE_X1,K.z-(EAST_GATE_Z0+EAST_GATE_Z1)/2)>ESCAPE_R){K.escaped=true;
+    if(online())wsSend({t:'truck',op:'gate'});
+    else{const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];if(next){toast('You floor it out the service gate. Camp Green Lake is behind you.','gold',5000);zoneFade(()=>zoneEnter(next))}}}
+}
+/* heaving it back onto its wheels (anyone, F by it once it's stopped): turned back to its heading, then set down */
+function truckFlipStart(){
+  const K=TRUCK;if(K.flipT>0)return;truckYaw();
+  K.flipQ0=K.q.clone();K.flipQ1=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),K.h);K.flipY0=K.y;K.flipT=TRUCK_FLIP_TIME;
+  K.vx=K.vy=K.vz=0;K.w.set(0,0,0);sfx.thud();logEv('truckUnflip',{x:+K.x.toFixed(1),z:+K.z.toFixed(1)});
+}
+function truckFlipStep(dt){
+  const K=TRUCK;K.flipT=Math.max(0,K.flipT-dt);const u=1-K.flipT/TRUCK_FLIP_TIME,e=u*u*(3-2*u);
+  K.q.copy(K.flipQ0).slerp(K.flipQ1,e);K.y=lerp(K.flipY0,groundAt(K.x,K.z),e)+Math.sin(Math.PI*u)*0.9;
+  if(K.flipT<=0){K.flipped=false;truckPose()}else truckDraw();
+  truckSend(dt,false);
 }
 /* what the weather and the rocks do to it this frame: horizontal acceleration, spin, and lift (all per unit mass) */
 function truckHazards(dt){
-  const T=TRUCK,M=truckMass(),out={ax:0,az:0,spin:0,lift:0};
+  const T=TRUCK,M=truckMass(),out={ax:0,az:0,spin:0,lift:0,tumble:[0,0]};
   // twisters: the same wind as on campers (72-twisters.js), divided by the weight; lift only in the core of a strong one
   for(const tw of TW_LIVE.values()){
     const ts=(tw.s||0)*tune('env.twStrength'),d=Math.hypot(tw.x-T.x,tw.z-T.z),pr=tuneOr('env.twReach',TW_PULL_R)*ts;
@@ -194,8 +256,9 @@ function truckHazards(dt){
     if(T.liftCool<=0&&d<sr*0.6&&ts>=tune('veh.twLift')){
       if(!T.lift){T.lift=1;T.liftT=0;logEv('truckLift',{x:+T.x.toFixed(1),z:+T.z.toFixed(1),s:+ts.toFixed(2)})}
       T.liftT+=dt;out.spin+=6*ts;
-      if(T.liftT<2.5&&T.y<groundAt(T.x,T.z)+9)out.lift+=TRUCK_G*(1.25+ts)*(1-d/(sr*0.6));
-      else{T.liftCool=4;out.ax-=dx*14/dt*0.05;out.az-=dz*14/dt*0.05}
+      if(T.liftT<2.5&&T.y<groundAt(T.x,T.z)+9){out.lift+=TRUCK_G*(1.25+ts)*(1-d/(sr*0.6));   // up, and tumbling end over end and side over side
+        if(!T.tumble)T.tumble=[(Math.random()<0.5?-1:1)*(2+Math.random()*3)*ts,(Math.random()<0.5?-1:1)*(3+Math.random()*4)*ts];out.tumble=T.tumble}
+      else{T.tumble=null;T.liftCool=4;T.vx-=dx*10*ts;T.vz-=dz*10*ts;T.vy+=2}   // done: flung out of the side
     }
   }
   T.liftCool=Math.max(0,(T.liftCool||0)-dt);if(T.lift&&!T.air&&out.lift===0&&T.liftT>0.3)T.lift=0;
@@ -221,6 +284,7 @@ function truckEject(vx,vy,vz){
 /* every frame from updatePlayer while you're in it (in place of walking) */
 function truckPlayer(dt){
   const T=TRUCK;
+  if(T.flipped){if(TRUCK_SEATS[S.inTruck].hide){truckOut();toast('The pickup\'s over. You climb out. F by it to heave it back on its wheels.','',3500)}else truckEject(T.vx,3,T.vz);return}
   if(!TRUCK_SEATS[S.inTruck].hide){   // on the tailgate: a hard jolt, a hard landing or leaving the ground throws you off
     const vy=dt>0?(T.y-(T.pY??T.y))/dt:0,dv=Math.hypot(T.vx-(T.pVx??T.vx),T.vz-(T.pVz??T.vz)),hard=(T.pVy??0)<-7&&vy>-1;
     T.pY=T.y;T.pVy=vy;T.pVx=T.vx;T.pVz=T.vz;
@@ -246,7 +310,7 @@ function updateTruck(dt){
   if(on&&truckOwner()===truckMe())truckPhys(dt);
   else if(T.tgt){   // ease toward the owner's last word, carried on by its speed in between
     const g=T.tgt,k=Math.min(1,dt*8);g.x+=g.vx*dt;g.z+=g.vz*dt;
-    T.x+=(g.x-T.x)*k;T.z+=(g.z-T.z)*k;T.y+=(g.y-T.y)*k;T.pitch+=(g.p-T.pitch)*k;T.roll+=(g.r-T.roll)*k;
+    T.x+=(g.x-T.x)*k;T.z+=(g.z-T.z)*k;T.y+=(g.y-T.y)*k;T.q.slerp(g.q,k);T.flipped=truckUp()<TRUCK_FLIP_UP;
     let dh=g.h-T.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));T.h+=dh*k;T.vx=g.vx;T.vz=g.vz;T.v=g.v;truckDraw();
   }
   truckRunOver(dt);
@@ -291,8 +355,10 @@ function truckMsg(m){
     else if(!wasDriver){TRUCK.escaped=false}
     truckSeated()}
   if(Array.isArray(m.pos)&&truckOwner()!==truckMe()){const q=m.pos;
-    TRUCK.tgt={x:num(q[0],-600,600,TRUCK.x),z:num(q[1],-600,600,TRUCK.z),h:num(q[2],-100,100,TRUCK.h),v:num(q[3],-40,40,0),y:num(q[4],-50,200,TRUCK.y),p:num(q[5],-2,2,0),r:num(q[6],-2,2,0),vx:num(q[7],-60,60,0),vz:num(q[8],-60,60,0)}}
+    const qq=new THREE.Quaternion(num(q[5],-1,1,0),num(q[6],-1,1,0),num(q[7],-1,1,0),num(q[8],-1,1,1));if(qq.lengthSq()<0.5)qq.set(0,0,0,1);qq.normalize();
+    TRUCK.tgt={x:num(q[0],-600,600,TRUCK.x),z:num(q[1],-600,600,TRUCK.z),h:num(q[2],-100,100,TRUCK.h),v:num(q[3],-40,40,0),y:num(q[4],-50,200,TRUCK.y),q:qq,vx:num(q[9],-60,60,0),vz:num(q[10],-60,60,0)}}
   if(m.push&&truckOwner()===truckMe())truckShove(num(m.push[0],-1,1,0),num(m.push[1],-1,1,0));
+  if(m.flip&&truckOwner()===truckMe())truckFlipStart();
   if(m.escaped)toast(`${String(m.escaped).slice(0,24)} drives Mr. Sir's pickup out through the service gate. Everyone's out of camp!`,'gold',6000);
 }
 function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}

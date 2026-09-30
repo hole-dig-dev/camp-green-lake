@@ -657,13 +657,15 @@ wss.on('connection', (ws, req) => {
           LOG.log('truck', { id: c.id, n: c.n, seat: k });
           broadcast(truckMsg()); return;
         }
+        if (op === 'flip') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 6) send(clients.get(o), { t: 'truck', flip: 1 }); return; } // heave it back upright (the owner's page does it)
         if (op === 'push') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 5) send(clients.get(o), { t: 'truck', push: [num(m.dx, -1, 1, 0), num(m.dz, -1, 1, 0)] }); return; }
         if (op === 'pos') { // from whoever runs its physics (the driver, else the lowest id): where it is, how it's tipped, how fast
           if (truckOwner() !== c.id) return;
           TRUCK.x = num(m.x, -600, 600, TRUCK.x); TRUCK.z = num(m.z, -600, 600, TRUCK.z); TRUCK.h = num(m.h, -100, 100, TRUCK.h);
           TRUCK.vx = num(m.vx, -60, 60, 0); TRUCK.vz = num(m.vz, -60, 60, 0);
+          const qn = k => Math.round(num(m[k], -1, 1, k === 'qw' ? 1 : 0) * 10000) / 10000; // its full turn (a quaternion): it can be on its side or roof
           const q = [r1(TRUCK.x), r1(TRUCK.z), Math.round(TRUCK.h * 1000) / 1000, r1(num(m.v, -40, 40, 0)), Math.round(num(m.y, -50, 200, 0) * 100) / 100,
-            Math.round(num(m.p, -2, 2, 0) * 1000) / 1000, Math.round(num(m.r, -2, 2, 0) * 1000) / 1000, r1(TRUCK.vx), r1(TRUCK.vz)];
+            qn('qx'), qn('qy'), qn('qz'), qn('qw'), r1(TRUCK.vx), r1(TRUCK.vz)];
           broadcast({ t: 'truck', pos: q }, c.id); return;
         }
         if (TRUCK.seats.drive !== c.id) return;
