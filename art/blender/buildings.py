@@ -57,17 +57,97 @@ def tent(name,W,D,H,crew=False):
 tent('TentSmall',6.0,7.2,3.0)
 tent('TentCrew',7.2,10.4,3.5,crew=True)
 
+# ---- the Wreck Room's serving window: a concession stand cut into the front wall, clerk inside (public/js/30-npcs.js) ----
+# The front wall gets a 2.2 m opening over a plank counter at 0.95 m (chest height for a camper), a booth behind it
+# with stocked shelves, and a top-hinged shutter propped up as an awning. Game side: the store spot is in front of the
+# counter, and the clerk stands in the booth at Blender (0, SHOP_CLERK_Y).
+SHOP_W,SHOP_Z0,SHOP_Z1,SHOP_BOOTH,SHOP_CLERK_Y=2.2,0.95,2.3,1.9,-1.85   # clerk: game z 45-1.85 = 43.15 (CLERK_AT)
+def shop_front(r,walls,W,D,H,WALL,TRIM,ROOF):
+    fy=-D/2-0.02
+    def cutter(nm,size,loc):   # boolean operand: kept out of the Asset collection so the export skips it
+        bpy.ops.mesh.primitive_cube_add(size=1,location=loc);c=bpy.context.active_object;c.name=nm;c.scale=size
+        for cl in list(c.users_collection):cl.objects.unlink(c)
+        bpy.context.window.scene.collection.objects.link(c);c.hide_render=True;c.display_type='WIRE'
+        m=walls.modifiers.new(nm,'BOOLEAN');m.operation='DIFFERENCE';m.object=c;m.solver='EXACT';return c
+    cutter('cut_window',(SHOP_W,0.6,SHOP_Z1-SHOP_Z0),(0,-D/2,(SHOP_Z0+SHOP_Z1)/2))
+    cutter('cut_booth',(SHOP_W+0.8,SHOP_BOOTH,2.45),(0,-D/2+0.1+SHOP_BOOTH/2,0.3+2.45/2-0.01))
+    PLANKD=('booth_plank',(0x6a,0x50,0x36),0.9);SHELF=('shelf',(0x8a,0x6a,0x46),0.9)
+    by=-D/2+0.1+SHOP_BOOTH   # back wall of the booth
+    # booth lining: floorboards, plank back wall and sides, ceiling, a bare bulb
+    box('booth_floor',(SHOP_W+0.8,SHOP_BOOTH,0.04),(0,by-SHOP_BOOTH/2,0.32),PLANKD,bevel=0,parent=r)
+    box('booth_back',(SHOP_W+0.8,0.03,2.45),(0,by-0.02,0.3+1.22),PLANKD,bevel=0,parent=r)
+    for s_ in (-1,1):box(f'booth_side{s_}',(0.03,SHOP_BOOTH,2.45),(s_*(SHOP_W/2+0.38),by-SHOP_BOOTH/2,0.3+1.22),PLANKD,bevel=0,parent=r)
+    box('booth_ceiling',(SHOP_W+0.8,SHOP_BOOTH,0.03),(0,by-SHOP_BOOTH/2,0.3+2.43),PLANKD,bevel=0,parent=r)
+    tube('bulb_cord',(0,by-0.9,2.72),(0,by-0.9,2.35),0.006,('cord',(0x20,0x1c,0x18),0.8),r)
+    cyl('bulb',0.045,0.1,(0,by-0.9,2.3),('bulb',(0xff,0xe8,0xa0),0.3),verts=10,bevel=0.02,parent=r)
+    # shelves on the back wall, stocked with what the store sells
+    for k,z in enumerate((0.9,1.4,1.9)):
+        box(f'shelf{k}',(SHOP_W+0.6,0.34,0.04),(0,by-0.2,z),SHELF,bevel=0.004,parent=r)
+    JUG=('water_jug',(0x5a,0x8a,0xb8),0.35);CAN=('can_red',(0xb8,0x3a,0x2a),0.5,0.4);CAN2=('can_grn',(0x4a,0x7a,0x3a),0.5,0.4)
+    SACK=('onion_sack',(0xc8,0xa8,0x6a),0.95);ONION=('onion',(0xc8,0x8a,0x4a),0.6);BATT=('batt_box',(0xe0,0x8a,0x1e),0.7)
+    TONIC=('tonic',(0x7a,0x4a,0x22),0.3);KIT=('kit',(0xd8,0xd4,0xc8),0.6);CROSS=('kit_cross',(0xc0,0x28,0x20),0.6)
+    for i,x in enumerate((-1.2,-0.95,-0.7)):   # top shelf: water jugs
+        cyl(f'jug{i}',0.1,0.26,(x,by-0.2,1.92+0.13),JUG,verts=12,bevel=0.02,parent=r);cyl(f'jugcap{i}',0.035,0.04,(x,by-0.2,2.2),('cap',(0xe8,0xe8,0xe0),0.6),verts=8,bevel=0,parent=r)
+    for i in range(6):cyl(f'can{i}',0.045,0.11,(-0.35+i*0.1,by-0.2,1.92+0.055),CAN if i%2 else CAN2,verts=10,bevel=0.004,parent=r)
+    for i in range(3):box(f'kit{i}',(0.22,0.14,0.12),(0.55+i*0.26,by-0.2,1.92+0.06),KIT,bevel=0.01,parent=r);box(f'kitx{i}',(0.07,0.005,0.07),(0.55+i*0.26,by-0.2-0.071,1.92+0.06),CROSS,bevel=0,parent=r)
+    for i in range(7):box(f'batt{i}',(0.09,0.05,0.13),(-1.2+i*0.11,by-0.2,1.42+0.065),BATT,bevel=0.004,parent=r)   # middle shelf: batteries, tonic
+    for i in range(5):cyl(f'tonic{i}',0.035,0.12,(-0.25+i*0.1,by-0.2,1.42+0.06),TONIC,verts=10,bevel=0.004,parent=r);cyl(f'cork{i}',0.02,0.03,(-0.25+i*0.1,by-0.2,1.42+0.135),('cork',(0xb8,0x8a,0x58),0.95),verts=6,bevel=0,parent=r)
+    for i in range(2):   # walkies
+        box(f'walkie{i}',(0.07,0.04,0.13),(0.5+i*0.13,by-0.2,1.42+0.065),('walkie',(0x2a,0x2c,0x2e),0.6),bevel=0.01,parent=r)
+        tube(f'ant{i}',(0.52+i*0.13,by-0.2,1.49),(0.52+i*0.13,by-0.2,1.58),0.006,('walkie',(0x2a,0x2c,0x2e),0.6),r)
+    for i,x in enumerate((-1.1,-0.6)):   # bottom shelf: onion sacks
+        cyl(f'sack{i}',0.2,0.3,(x,by-0.2,0.92+0.15),SACK,verts=12,r2=0.12,bevel=0.05,parent=r)
+        for j in range(3):bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05,segments=10,ring_count=6,location=(x-0.05+j*0.05,by-0.3,0.92+0.31));o=bpy.context.active_object;o.name=f'onion{i}{j}';_finish(o,ONION,0,r)
+    for i in range(3):   # shovels leaning in the corner (the long-handled one for sale among them)
+        x=1.15-i*0.14;tube(f'shovel{i}',(x,by-0.12,0.35),(x-0.08,by-0.3,1.75+i*0.12),0.018,('handle',(0x8a,0x62,0x3a),0.9),r)
+        box(f'blade{i}',(0.2,0.03,0.26),(x+0.01,by-0.1,0.48),('steel','steel',0.5,0.6),bevel=0.01,parent=r)
+    # the counter: plank top across the opening, out past the wall, on two brackets; a bell and the cash tin on it
+    box('counter',(SHOP_W+0.3,0.62,0.06),(0,fy-0.08,SHOP_Z0),TRIM,bevel=0.01,parent=r)
+    for s_ in (-1,1):
+        mesh_obj(f'bracket{s_}',[(s_*0.95,fy,SHOP_Z0-0.03),(s_*0.95,fy-0.36,SHOP_Z0-0.03),(s_*0.95,fy,SHOP_Z0-0.4)],[(0,1,2)],TRIM,parent=r).modifiers.new('solid','SOLIDIFY').thickness=0.05
+    for s_ in (-1,1):box(f'jamb{s_}',(0.1,0.1,SHOP_Z1-SHOP_Z0+0.1),(s_*(SHOP_W/2+0.05),fy-0.03,(SHOP_Z0+SHOP_Z1)/2),TRIM,bevel=0.01,parent=r)
+    box('header',(SHOP_W+0.3,0.12,0.12),(0,fy-0.03,SHOP_Z1+0.05),TRIM,bevel=0.01,parent=r)
+    cyl('bell_base',0.05,0.015,(0.7,fy-0.2,SHOP_Z0+0.035),('brass','brass',0.4,0.8),verts=12,bevel=0.003,parent=r)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.045,segments=12,ring_count=6,location=(0.7,fy-0.2,SHOP_Z0+0.045));o=bpy.context.active_object;o.name='bell';o.scale=(1,1,0.8);_finish(o,('brass','brass',0.4,0.8),0,r)
+    box('cashtin',(0.26,0.18,0.1),(-0.75,fy+0.05,SHOP_Z0+0.08),('cashtin',(0x3a,0x5a,0x4a),0.5,0.4),bevel=0.01,parent=r)
+    cyl('seedjar',0.07,0.18,(-0.35,fy-0.15,SHOP_Z0+0.12),('jarglass',(0xc8,0xe0,0xd0),0.1),verts=12,bevel=0.01,parent=r)
+    cyl('seeds',0.064,0.12,(-0.35,fy-0.15,SHOP_Z0+0.09),('seeds',(0x3a,0x34,0x2a),0.9),verts=12,bevel=0,parent=r)
+    # the shutter, hinged at the top and propped up as an awning on two sticks
+    a=math.radians(105);L=SHOP_Z1-SHOP_Z0+0.2;hz=SHOP_Z1+0.1
+    box('shutter',(SHOP_W+0.3,0.05,L),(0,fy-0.04-L/2*math.sin(a),hz-L/2*math.cos(a)),('shutter_store',(0x6d,0x5a,0x44),0.85),rot=(-a,0,0),bevel=0.01,parent=r)
+    for k in range(4):box(f'shutterbatten{k}',(SHOP_W+0.32,0.02,0.07),(0,fy-0.04-(0.15+k*0.35)*math.sin(a)+0.03*math.cos(a),hz-(0.15+k*0.35)*math.cos(a)+0.03*math.sin(a)),TRIM,rot=(-a,0,0),bevel=0,parent=r)
+    ex,ez=fy-0.04-L*math.sin(a),hz-L*math.cos(a)
+    for s_ in (-1,1):tube(f'prop{s_}',(s_*1.15,fy-0.33,SHOP_Z0+0.03),(s_*1.15,ex+0.1,ez-0.02),0.022,TRIM,r)
+    # menu board on the left, painted in chalk
+    CHALK=('chalk',(0xe8,0xe4,0xd8),0.9);BOARD=('chalkboard',(0x2a,0x3a,0x30),0.95)
+    box('menuframe',(1.45,0.06,1.15),(-2.25,fy-0.03,1.85),TRIM,bevel=0.01,parent=r);box('menu',(1.3,0.05,1.0),(-2.25,fy-0.06,1.85),BOARD,bevel=0,parent=r)
+    text('menu_t','SUPPLIES',(-2.25,fy-0.09,2.18),0.2,CHALK,parent=r)
+    for k,t in enumerate(('WATER  ONIONS','BATTERIES  TONIC','SHOVELS  WALKIES')):text(f'menu{k}',t,(-2.25,fy-0.09,1.95-k*0.19),0.13,CHALK,parent=r)
+    text('menu_s','SEEDS ONLY',(-2.25,fy-0.09,1.44),0.12,('chalk_red',(0xd8,0x6a,0x50),0.9),parent=r)
+    # right: the old window, with an OPEN card hung in it
+    wx,wz=2.25,1.9
+    box('winframeR',(1.15,0.08,0.95),(wx,fy-0.02,wz),TRIM,bevel=0.01,parent=r)
+    box('glassR',(0.95,0.04,0.75),(wx,fy-0.05,wz),('glass',(0x2f,0x3a,0x44),0.15,0.2),bevel=0,parent=r)
+    box('sillR',(1.3,0.18,0.07),(wx,fy-0.1,wz-0.5),TRIM,bevel=0.01,parent=r)
+    box('opencard',(0.5,0.02,0.22),(wx,fy-0.08,wz-0.05),('card',(0xe2,0xcc,0x98),0.95),bevel=0.004,parent=r)
+    text('opentxt','OPEN',(wx,fy-0.1,wz-0.05),0.14,('ink_red',(0xa0,0x28,0x1c),0.8),parent=r)
+    tube('cardstring',(wx-0.2,fy-0.08,wz+0.07),(wx,fy-0.08,wz+0.3),0.004,('cord',(0x20,0x1c,0x18),0.8),r);tube('cardstring2',(wx+0.2,fy-0.08,wz+0.07),(wx,fy-0.08,wz+0.3),0.004,('cord',(0x20,0x1c,0x18),0.8),r)
+
 # ================= cabins: board-and-batten walls, gable roof with overhang, framed windows, porch =================
-def cabin(name,W,D,H,wall,roof,warden=False):
+def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
     scene(name);r=root(name)
     WALL=('wall_'+name,wall,0.9);TRIM=('trim',(0x4a,0x35,0x25),0.85);ROOF=('roof_'+name,roof,0.9)
     box('foundation',(W+0.2,D+0.2,0.3),(0,0,0.15),('concrete','concrete',0.95),bevel=0.02,parent=r)
-    box('walls',(W,D,H),(0,0,0.3+H/2),WALL,bevel=0.01,parent=r)
+    walls=box('walls',(W,D,H),(0,0,0.3+H/2),WALL,bevel=0.01,parent=r)
     # battens every 0.45 m on all four walls
     for y,rx in ((-D/2-0.012,0),(D/2+0.012,0)):
         for k in range(int(W/0.45)+1):
             x=-W/2+0.1+k*0.45
             if x>W/2-0.05:break
+            if shop and y<0 and abs(x)<SHOP_W/2+0.1:   # the serving window: batten below the counter and above the opening only
+                box(f'batten{y}{k}lo',(0.05,0.03,SHOP_Z0-0.32),(x,y,(0.3+SHOP_Z0-0.02)/2),WALL,bevel=0,parent=r)
+                box(f'batten{y}{k}hi',(0.05,0.03,0.3+H-SHOP_Z1-0.02),(x,y,(SHOP_Z1+0.02+0.3+H)/2),WALL,bevel=0,parent=r)
+                continue
             box(f'batten{y}{k}',(0.05,0.03,H),(x,y,0.3+H/2),WALL,bevel=0,parent=r)
     for x in (-W/2-0.012,W/2+0.012):
         for k in range(int(D/0.45)+1):
@@ -86,19 +166,21 @@ def cabin(name,W,D,H,wall,roof,warden=False):
         g=mesh_obj(f'gable{x}',[(x,-D/2,top),(x,D/2,top),(x,0,top+rise)],[(0,1,2) if x>0 else (2,1,0)],WALL,parent=r)
         g.modifiers.new('solid','SOLIDIFY').thickness=0.08
     box('ridgecap',(W+0.95,0.22,0.1),(0,0,top+rise+0.06),TRIM,bevel=0.02,parent=r)
-    # front (-Y): door + two windows with frames, sills and shutters
+    # front (-Y): door + two windows with frames, sills and shutters (the Wreck Room: a serving window instead, below)
     fy=-D/2-0.02
-    box('doorframe',(1.3,0.08,2.25),(0,fy-0.02,0.3+1.12),TRIM,bevel=0.01,parent=r)
-    box('door',(1.05,0.06,2.05),(0,fy-0.05,0.3+1.03),('door',(0x5a,0x3f,0x28),0.85),bevel=0.01,parent=r)
-    for zz in (0.55,1.5):box(f'doorpanel{zz}',(0.8,0.02,0.6),(0,fy-0.085,0.3+zz),('door_panel',(0x4a,0x33,0x22),0.85),bevel=0.005,parent=r)
-    cyl('knob',0.04,0.05,(0.38,fy-0.11,0.3+1.0),('brass','brass',0.4,0.8),verts=8,rot=(math.pi/2,0,0),bevel=0,parent=r)
-    for s in (-1,1):
-        wx=s*W*0.3;wz=0.3+1.6
-        box(f'winframe{s}',(1.15,0.08,0.95),(wx,fy-0.02,wz),TRIM,bevel=0.01,parent=r)
-        box(f'glass{s}',(0.95,0.04,0.75),(wx,fy-0.05,wz),('glass',(0x2f,0x3a,0x44),0.15,0.2),bevel=0,parent=r)
-        box(f'mullionV{s}',(0.05,0.03,0.75),(wx,fy-0.07,wz),TRIM,bevel=0,parent=r);box(f'mullionH{s}',(0.95,0.03,0.05),(wx,fy-0.07,wz),TRIM,bevel=0,parent=r)
-        box(f'sill{s}',(1.3,0.18,0.07),(wx,fy-0.1,wz-0.5),TRIM,bevel=0.01,parent=r)
-        for t in (-1,1):box(f'shutter{s}{t}',(0.45,0.05,0.95),(wx+t*0.82,fy-0.04,wz),('shutter_'+name,roof,0.85),bevel=0.01,parent=r)
+    if shop:shop_front(r,walls,W,D,H,WALL,TRIM,ROOF)
+    else:
+     box('doorframe',(1.3,0.08,2.25),(0,fy-0.02,0.3+1.12),TRIM,bevel=0.01,parent=r)
+     box('door',(1.05,0.06,2.05),(0,fy-0.05,0.3+1.03),('door',(0x5a,0x3f,0x28),0.85),bevel=0.01,parent=r)
+     for zz in (0.55,1.5):box(f'doorpanel{zz}',(0.8,0.02,0.6),(0,fy-0.085,0.3+zz),('door_panel',(0x4a,0x33,0x22),0.85),bevel=0.005,parent=r)
+     cyl('knob',0.04,0.05,(0.38,fy-0.11,0.3+1.0),('brass','brass',0.4,0.8),verts=8,rot=(math.pi/2,0,0),bevel=0,parent=r)
+     for s in (-1,1):
+         wx=s*W*0.3;wz=0.3+1.6
+         box(f'winframe{s}',(1.15,0.08,0.95),(wx,fy-0.02,wz),TRIM,bevel=0.01,parent=r)
+         box(f'glass{s}',(0.95,0.04,0.75),(wx,fy-0.05,wz),('glass',(0x2f,0x3a,0x44),0.15,0.2),bevel=0,parent=r)
+         box(f'mullionV{s}',(0.05,0.03,0.75),(wx,fy-0.07,wz),TRIM,bevel=0,parent=r);box(f'mullionH{s}',(0.95,0.03,0.05),(wx,fy-0.07,wz),TRIM,bevel=0,parent=r)
+         box(f'sill{s}',(1.3,0.18,0.07),(wx,fy-0.1,wz-0.5),TRIM,bevel=0.01,parent=r)
+         for t in (-1,1):box(f'shutter{s}{t}',(0.45,0.05,0.95),(wx+t*0.82,fy-0.04,wz),('shutter_'+name,roof,0.85),bevel=0.01,parent=r)
     # side windows
     for x in (-W/2-0.02,W/2+0.02):
         box(f'swin{x}',(0.08,0.95,0.8),(x,0.4,0.3+1.6),TRIM,bevel=0.01,parent=r);box(f'sglass{x}',(0.1,0.78,0.62),(x,0.4,0.3+1.6),('glass',(0x2f,0x3a,0x44),0.15,0.2),bevel=0,parent=r)
@@ -126,9 +208,9 @@ def cabin(name,W,D,H,wall,roof,warden=False):
         # Wreck Room: stovepipe, a bench and crates by the door, the swinging sign's spot
         cyl('stovepipe',0.12,1.6,(W*0.3,D*0.2,top+rise*0.6+0.4),('steel','steel',0.5,0.6),verts=10,bevel=0,parent=r)
         cyl('stovecap',0.2,0.16,(W*0.3,D*0.2,top+rise*0.6+1.25),('steel','steel',0.5,0.6),verts=10,r2=0.05,bevel=0,parent=r)
-        box('stoop',(2.2,1.0,0.18),(0,-D/2-0.5,0.09),('step',(0x87,0x72,0x57),0.9),bevel=0.015,parent=r)
+        if not shop:box('stoop',(2.2,1.0,0.18),(0,-D/2-0.5,0.09),('step',(0x87,0x72,0x57),0.9),bevel=0.015,parent=r)
     studio(elev=18,azim=-33,lens=40);frame(margin=1.08);print(name,tris());render()
-cabin('WreckRoom',7,5,3.2,(0x9b,0x7b,0x58),(0x6d,0x5a,0x44))
+cabin('WreckRoom',7,5,3.2,(0x9b,0x7b,0x58),(0x6d,0x5a,0x44),shop=True)
 cabin('WardenHouse',8,6,3.4,(0xb0,0x76,0x50),(0x5a,0x3a,0x2a),warden=True)
 
 # ================= watchtower (2.1 m leg square, deck at 7.25, cab rail 8.08, roof 8.94, lamp 8.55) =================

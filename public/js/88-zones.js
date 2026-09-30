@@ -96,7 +96,7 @@ function parkSweep(){for(const o of [...scene.children])if(!keepInScene(o)&&near
 function parkLake(on){
   if(on){
     park(FAR_TERRAIN);
-    for(const b of bots)park(b.p.g);park(sir.g);park(warden.g);
+    for(const b of bots)park(b.p.g);park(sir.g);park(warden.g);park(clerk.g);
     for(const r of TERRAIN_ROCKS)park(r.m);
     parkSweep();
     const set=new Set(PARKED);

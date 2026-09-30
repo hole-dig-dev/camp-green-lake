@@ -14,7 +14,8 @@ The build scripts recreate their scenes from scratch:
 | `fence.py` | FencePost, FenceSpan (2.5 m, chain-link texture, barbed-wire arm) |
 | `signs.py` | SignCampEntrance, SignWreckRoom, SignLizardWarning, SignDirections |
 | `furniture.py` | BunkBed, Cot, Footlocker, CardTable, Stool, WardenDesk, SupplyCrate, WaterDrum, Bench |
-| `buildings.py` | TentSmall, TentCrew, WreckRoom, WardenHouse, Watchtower, WaterTower |
+| `buildings.py` | TentSmall, TentCrew, WreckRoom (serving window + booth, `shop_front`), WardenHouse, Watchtower, WaterTower |
+| `wreckroom.py` | Rebuilds only WreckRoom from `buildings.py` and exports `glb/WreckRoom.glb` |
 | `beasts.py` + `rig.py` | Lizard, Javelina, Lion: modelled, then rigged, animated and exported to `glb/Creature*.glb` |
 | `carryloot.py` | LootCrate, LootTools, LootJug: carried finds (the middle loot tier, too big for the sack), grabbed and hauled like the safe |
 | `supplies.py` | SupplyWalkie, SupplyTonic, SupplyMedkit: the Wreck Room supplies, matched to their painted store icons, stood on their base with the grip height recorded for the game's hand props (`public/js/86-walkie.js`) |

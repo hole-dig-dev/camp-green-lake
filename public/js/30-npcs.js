@@ -7,6 +7,20 @@ const sirL=makeLabel(sir.g,'Mr. Sir','npc');
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
 warden.g.position.set(-34,baseH(-34,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
 const wardenL=makeLabel(warden.g,'The Warden','npc');
+/* Mr. Pendanski works the Wreck Room's serving window (the booth behind the counter, art/blender/buildings.py
+   shop_front). He turns to whoever's in front of the window and waves when you open the store. */
+const CLERK_AT={x:16,z:43.15,ry:Math.PI};
+const clerk=makePerson({suit:0x7d8a5c,shirt:0xe8e0cc,skin:0xd6a077,hat:'none',hair:0x3b2618,shovel:false,body:'average',band:0x5a4a32});
+clerk.g.position.set(CLERK_AT.x,baseH(CLERK_AT.x,45)+0.3,CLERK_AT.z);clerk.g.rotation.y=CLERK_AT.ry;scene.add(clerk.g);
+const clerkL=makeLabel(clerk.g,'Mr. Pendanski','npc');
+clerk.waveT=0;
+function updateClerk(dt){
+  if(!clerk.g.parent)return;   // parked off the lake (88-zones.js)
+  let ry=CLERK_AT.ry;const dx=P.x-CLERK_AT.x,dz=P.z-CLERK_AT.z;
+  if(S.started&&dz<0&&dx*dx+dz*dz<81){const a=Math.atan2(dx,dz)-CLERK_AT.ry;ry+=clamp(Math.atan2(Math.sin(a),Math.cos(a)),-1,1)}   // up to ~57 deg either way
+  let d=ry-clerk.g.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));clerk.g.rotation.y+=d*Math.min(1,dt*4);
+  clerk.waveT=Math.max(0,clerk.waveT-dt);animPerson(clerk,clerk.waveT>0?9:0,dt);
+}
 const SPOTS=[
   {id:'sir',x:1.4,z:32.6,r:3.6},
   {id:'store',x:16,z:41.2,r:3.4},

@@ -69,7 +69,7 @@ function updateHUD(){
   else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Open the Wreck Room store':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Buy from Mr. Pendanski at the Wreck Room window':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
 }
