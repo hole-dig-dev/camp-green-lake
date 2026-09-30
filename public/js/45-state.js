@@ -125,7 +125,9 @@ function foundItem(it,h){
 
 /* ---------- interactions ---------- */
 function nearSpot(){
+  {const t=truckSpot();if(t&&S.inTruck)return t}   // in Mr. Sir's pickup: F only gets you out (87-truck.js)
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
+  {const t=truckSpot();if(t)return t}
   if(S.inTown)return townSpot();   // the buried town's own spots (89-town.js)
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)

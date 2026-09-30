@@ -160,6 +160,7 @@ function zoneSwitch(id, why) {
   dirty = true;
   LOG.log('zone', { from: cur, to: id, why });
   broadcast(zoneMsg());
+  if (typeof truckPark === 'function') truckPark();   // back in its spot by the main gate (and nobody's in it)
 }
 /* Like Peak's campfires: the next map only opens once every joined camper is standing at this one's. */
 /* grab physics ownership: when the camper running a thing's physics lets go or leaves, it passes to someone still
@@ -177,6 +178,19 @@ function checkCampfire() {
   if (js.length && at === js.length && next) zoneSwitch(next, 'campfire');
 }
 
+/* Mr. Sir's pickup (public/js/87-truck.js): drivable while the F2 flag veh.drivable is on. One driver runs its physics
+   and sends where it is; up to four ride in the back. Driving it out through the service gate is the escape: the whole
+   crew moves on to the next map (like everyone reaching the campfire). */
+const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_RIDERS = 4;
+const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, driver: null, riders: [] };
+const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake';
+const truckMsg = () => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, driver: TRUCK.driver, riders: TRUCK.riders, on: truckOn() } });
+function truckPark() { Object.assign(TRUCK, TRUCK_PARK, { driver: null, riders: [] }); broadcast(truckMsg()); }
+function truckLeave(id) {
+  if (TRUCK.driver !== id && !TRUCK.riders.includes(id)) return;
+  if (TRUCK.driver === id) TRUCK.driver = null;
+  TRUCK.riders = TRUCK.riders.filter(r => r !== id); broadcast(truckMsg());
+}
 function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
@@ -297,7 +311,7 @@ function saveTune(req, res) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
       if (err) { res.writeHead(500); return res.end('save failed'); }
-      TUNE_S = clean;
+      TUNE_S = clean; if (!truckOn() && (TRUCK.driver != null || TRUCK.riders.length)) truckPark(); else broadcast(truckMsg());
       fs.rename(TUNE_FILE + '.tmp', TUNE_FILE, () => { securityHeaders(res, false); res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); });
     });
   });
@@ -434,6 +448,7 @@ wss.on('connection', (ws, req) => {
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
+      truck: truckMsg().st, // Mr. Sir's pickup (87-truck.js)
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
       rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.curse || 0), // and the day's roster
     });
@@ -615,6 +630,31 @@ wss.on('connection', (ws, req) => {
           if (sell.length) { broadcast(runInfo()); if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
         }
         break;
+      }
+      case 'truck': { // Mr. Sir's pickup (87-truck.js): get in/out, the driver's position, driving out the service gate
+        const op = m.op;
+        if (op === 'out') { truckLeave(c.id); return; }
+        if (!truckOn()) { if (TRUCK.driver || TRUCK.riders.length) truckPark(); return; }
+        if (op === 'in') {
+          if (Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) > 6 || TRUCK.driver === c.id || TRUCK.riders.includes(c.id)) return;
+          if (m.seat === 'drive') { if (TRUCK.driver != null && clients.has(TRUCK.driver)) return; TRUCK.driver = c.id; }
+          else { if (TRUCK.riders.length >= TRUCK_RIDERS) return; TRUCK.riders.push(c.id); }
+          LOG.log('truck', { id: c.id, n: c.n, seat: m.seat === 'drive' ? 'drive' : 'bed' });
+          broadcast(truckMsg()); return;
+        }
+        if (TRUCK.driver !== c.id) return;
+        if (op === 'pos') {
+          TRUCK.x = num(m.x, -600, 600, TRUCK.x); TRUCK.z = num(m.z, -600, 600, TRUCK.z); TRUCK.h = num(m.h, -100, 100, TRUCK.h);
+          broadcast({ t: 'truck', pos: [r1(TRUCK.x), r1(TRUCK.z), Math.round(TRUCK.h * 1000) / 1000, Math.round(num(m.v, -30, 30, 0) * 10) / 10] }, c.id); return;
+        }
+        if (op === 'gate') { // out through the service gate: the escape to the next map
+          const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
+          if (!next || TRUCK.x < 30.5 || TRUCK.z < 35 || TRUCK.z > 43) return;
+          LOG.log('escape', { id: c.id, n: c.n, riders: TRUCK.riders.length });
+          broadcast({ t: 'truck', escaped: c.n });
+          truckPark(); zoneSwitch(next, 'escape in Mr. Sir\'s pickup, driven by ' + c.n);
+        }
+        return;
       }
       case 'breach': { // an 8 ft hole broke through into the buried town (89-town.js). Must be a real, deep hole near you.
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), k = x + '|' + z;
@@ -990,6 +1030,7 @@ wss.on('connection', (ws, req) => {
       kbHolder = null;
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
+    truckLeave(c.id);
     if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); }
   });
 });

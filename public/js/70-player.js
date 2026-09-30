@@ -44,6 +44,7 @@ function updatePlayer(dt){
   if(tbSt){tbStep(dt);return}   // a giant tumbleweed has you: same idea, its own local ride/thrown/down/up state
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
   if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
+  if(S.inTruck){truckPlayer(dt);return}   // driving or riding Mr. Sir's pickup (87-truck.js)
   if(S.inTown)return updatePlayerTown(dt);   // down in the buried town (89-town.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
@@ -115,6 +116,7 @@ function fpEye(v){
   return v.set(v.x-Math.sin(P.yaw)*FP_EYE_FWD,v.y,v.z-Math.cos(P.yaw)*FP_EYE_FWD);
 }
 function updateCamera(dt){
+  if(S.inTruck==='drive'&&!FP){if(me&&me.fpOn)fpBody(false);truckCamera(dt);return}   // chase camera behind the pickup (87-truck.js)
   if(FP){
     if(me&&me.model){fpBody(true);P.fa=P.yaw+Math.PI;   // the body faces where you look
       // the eyes ride the animation, but only fp.bob of the way: all the head's dip into a scoop is a lot to look through

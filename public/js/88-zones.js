@@ -139,7 +139,8 @@ function zoneSeed(id){let h=2166136261;for(const ch of id+'|'+(net.day||1))h=Mat
 
 /* Move this client into map `id`. flags: that map's shared state from the server (ropes already dropped). */
 function zoneEnter(id,flags){
-  SIM.setZone(id);if(S.inTown)exitTown(0,39,'');if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false);S.inCart=null}   // camp box, grabs and ropes don't cross maps
+  SIM.setZone(id);if(S.inTown)exitTown(0,39,'');if(typeof truckLeaveLocal==='function')truckLeaveLocal();   // everyone out of the pickup; it's back by the gate
+  if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false);S.inCart=null}   // camp box, grabs and ropes don't cross maps
   const Z=ZONES[id];
   if(!Z){console.warn('No map called',id);return false}
   if(Z===ZONE){setZoneFlags(flags);return false}
