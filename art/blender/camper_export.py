@@ -7,5 +7,5 @@ bpy.context.window.scene=bpy.data.scenes['Camper']
 src=open(R+'cgl_rig.py').read().replace(r'C:\Users\jthol\Projects\camp-green-lake\blender\cgl_helpers.py',R+'cgl_helpers.py')
 exec(src)
 export_camper(os.path.join(REPO,'public','models','camper.glb'))
-bpy.ops.wm.save_mainfile()
+bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath, compress=True)
 print('clips',sorted(a.name for a in bpy.data.actions if a.name in ANIMS))

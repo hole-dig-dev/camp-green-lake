@@ -7,7 +7,69 @@ exec(open(r"C:\Users\jthol\Projects\camp-green-lake\blender\cgl_helpers.py").rea
 FPS = 30
 LIFT = LEG["H"] - 0.1          # camper root height (torso bottom above the ground)
 
-BONES = ["root", "hips", "spine", "head", "arm.L", "arm.R", "forearm.L", "forearm.R", "leg.L", "leg.R"]
+BONES = ["root", "hips", "spine", "head", "arm.L", "arm.R", "forearm.L", "forearm.R", "leg.L", "leg.R", "shin.L", "shin.R"]
+
+
+def continuous_limbs(root, pre):
+    """Keep the chosen capsule silhouettes, with connected rings through each bending joint.
+    Sleeve radius follows the outside of the original sleeve/forearm/elbow union; trousers
+    subdivide the original profile without changing it. Hands and shoes stay separate accessories."""
+    def radius(points, z):
+        for (ra, za), (rb, zb) in zip(points, points[1:]):
+            if za <= z <= zb:
+                return ra + (rb - ra) * (z - za) / (zb - za)
+        return 0.0
+
+    for sd in ('L', 'R'):
+        parts = {o.name[len(pre + sd + '_'):]: o for o in root.children_recursive
+                 if o.name.startswith(pre + sd + '_')}
+        sh, hip = parts['Shoulder'], parts['Hip']
+        e, L = ARM['elbow'], ARM['L']
+        rm = (ARM['rt'] + ARM['rb']) / 2
+        top = [(r, z - e) for r, z in profile(e + .14, lambda t: rm + (ARM['rt'] - rm) * t, p=.5, n=12)]
+        low = [(r, z - L) for r, z in profile(L - e, lambda t: ARM['rb'] + (rm - ARM['rb']) * t, p=.5, n=12)]
+        # Their original tops are +.07 and -e+.07, respectively.
+        top = [(r, z - .07) for r, z in top]
+        low = [(r, z + .07) for r, z in low]
+        zs = sorted(set(round(z, 8) for z in ([.07 - L + L * i / 48 for i in range(49)] +
+                        [z for _, z in top + low] + [-e + d for d in (-.12, -.08, -.04, 0, .04, .08, .12)])))
+        pts = [(max(radius(top, z), radius(low, z),
+                    math.sqrt(max(0, (rm * .98) ** 2 - (z + e) ** 2))), z) for z in zs]
+        pts[0] = (0, zs[0]); pts[-1] = (0, zs[-1])
+        new = mk(pre + sd + '_Sleeve_Skin', lathe(pts, seg=14), OR, sh)
+        # Free the old names first, then give the continuous mesh its stable runtime name.
+        for key in ('Sleeve', 'Elbow', 'Forearm'):
+            bpy.data.objects.remove(parts[key], do_unlink=True)
+        new.name = pre + sd + '_Sleeve'
+
+        length = LEG['H'] - (LEG['st'] + LEG['sh']) * .6 + .05
+        old = profile(length, lambda t: LEG['rb'] + (LEG['rt'] - LEG['rb']) * t, p=.5, n=12)
+        zs = sorted(set(round(z, 8) for z in ([z for _, z in old] + [length * i / 48 for i in range(49)])))
+        pts = [(radius(old, z), z - length) for z in zs]
+        pts[0] = (0, -length); pts[-1] = (0, 0)
+        new = mk(pre + sd + '_Leg_Skin', lathe(pts, seg=14), OR, hip, (0, 0, .05))
+        bpy.data.objects.remove(parts['Leg'], do_unlink=True)
+        new.name = pre + sd + '_Leg'
+
+
+def skin_limb(obj, rig, upper, lower, width):
+    """Linear blend skinning across a band around the elbow/knee; no disconnected joint caps."""
+    mw = obj.matrix_world.copy()
+    obj.parent = rig; obj.parent_type = 'OBJECT'
+    obj.matrix_world = mw
+    bpy.context.view_layer.update()
+    to_rig = rig.matrix_world.inverted() @ obj.matrix_world
+    joint = rig.data.bones[lower].head_local
+    axis = (rig.data.bones[upper].tail_local - rig.data.bones[upper].head_local).normalized()
+    groups = [obj.vertex_groups.new(name=n) for n in (upper, lower)]
+    for v in obj.data.vertices:
+        t = max(0.0, min(1.0, .5 + (to_rig @ v.co - joint).dot(axis) / (2 * width)))
+        t = t * t * (3 - 2 * t)
+        for g, w in zip(groups, (1 - t, t)):
+            if w > 0:
+                g.add([v.index], w, 'REPLACE')
+    modifier = obj.modifiers.new('Continuous joint skin', 'ARMATURE')
+    modifier.object = rig
 
 
 def _ctx():
@@ -31,6 +93,8 @@ def _bone_part(short):
         side = short[0]
         if any(k in short for k in ("Forearm", "Elbow", "Hand", "Shovel")):
             return "forearm." + side
+        if any(k in short for k in ("Shoe", "Sole")):
+            return "shin." + side
         return ("arm." if "Sleeve" in short else "leg.") + side
     if short in ("Torso", "Zipper", "Patch", "Neck"):
         return "spine"
@@ -50,7 +114,7 @@ def shovel(pre, parent):
 
 
 def rig_camper(name, x=0.0, face_name="Original", hat=None, with_shovel=True, wardrobe=False):
-    """Build a camper, add an armature, and hang every part on a bone (rigid parenting, no skin weights).
+    """Build the chosen camper, skin continuous sleeves/trousers, and attach rigid accessories.
     Bone convention: every bone's local +X rotation = swing/lean FORWARD. Pose-bone location Y = along the bone.
     wardrobe=True adds every hat + hair + shades (named <name>_<Piece>_...) so the game can toggle them."""
     r = camper(name, x, face_name, hat)
@@ -62,6 +126,7 @@ def rig_camper(name, x=0.0, face_name="Original", hat=None, with_shovel=True, wa
             fn(pre + hn + "_", r)
         hair(pre + "Hair_", r)
         shades(pre + "Shades_", r, next(o for o in r.children if o.name == pre + "Head"))
+    continuous_limbs(r, pre)
     arm_d = bpy.data.armatures.new(name + "_RigData")
     rig = bpy.data.objects.new(name + "_Rig", arm_d)
     COL.objects.link(rig)
@@ -92,12 +157,21 @@ def rig_camper(name, x=0.0, face_name="Original", hat=None, with_shovel=True, wa
         bone("arm." + sd, sh, elbow, "spine")
         bone("forearm." + sd, elbow, sh + dirv * 0.8, "arm." + sd)
         hip = Vector((s * LEG["hipx"], 0, LIFT + 0.1))
-        bone("leg." + sd, hip, Vector((hip.x, 0, 0.06)), "hips")
+        knee = Vector((hip.x, 0, (hip.z + .06) / 2))
+        bone("leg." + sd, hip, knee, "hips")
+        bone("shin." + sd, knee, Vector((hip.x, 0, .06)), "leg." + sd)
     _mode(rig, 'OBJECT')
 
     bpy.context.view_layer.update()
     parts = [o for o in r.children_recursive if o.type == 'MESH']
     for o in parts:
+        short = o.name[len(pre):]
+        if short in ('L_Sleeve', 'R_Sleeve', 'L_Leg', 'R_Leg'):
+            sd = short[0]
+            arm = 'Sleeve' in short
+            skin_limb(o, rig, ('arm.' if arm else 'leg.') + sd,
+                      ('forearm.' if arm else 'shin.') + sd, .10 if arm else .12)
+            continue
         mw = o.matrix_world.copy()
         o.parent = rig
         o.parent_type = 'BONE'
@@ -182,13 +256,18 @@ def anim_idle(rig):
 
 
 def _gait(rig, name, n, leg, arm, lean, bob):
-    def p(sw, b):
+    def p(sw, b, left=0, right=0):
         return {"leg.L": (sw * leg, 0, 0), "leg.R": (-sw * leg, 0, 0),
+                "shin.L": (-left, 0, 0), "shin.R": (-right, 0, 0),
                 "arm.L": (-sw * arm, 0, -0.05), "arm.R": (sw * arm, 0, 0.05),
+                "forearm.L": (.30 if name == 'Walk' else .95, 0, 0),
+                "forearm.R": (.30 if name == 'Walk' else .95, 0, 0),
                 "spine": (lean, sw * 0.08, 0), "head": (-lean * 0.5, -sw * 0.06, 0), "bob": b}
     q = n // 4
-    return make_action(rig, name, [(1, p(1, -bob)), (1 + q, p(0, bob)), (1 + 2 * q, p(-1, -bob)),
-                                   (1 + 3 * q, p(0, bob)), (1 + n, p(1, -bob))])
+    bend = .75 if name == 'Walk' else 1.3
+    return make_action(rig, name, [(1, p(1, -bob, .12, .08)), (1 + q, p(0, bob, .08, bend)),
+                                   (1 + 2 * q, p(-1, -bob, .08, .12)),
+                                   (1 + 3 * q, p(0, bob, bend, .08)), (1 + n, p(1, -bob, .12, .08))])
 
 
 def anim_walk(rig):
@@ -205,12 +284,15 @@ def anim_dig(rig, frames=36):
         keys.append((1 + round(ph * frames), {
             "spine": (lean, -twist, 0), "head": (-lean * 0.4, twist * 0.3, 0),
             "arm.R": (-ar, 0, -0.25), "arm.L": (-al, 0, 0.35),
+            "forearm.L": (.22 + lean * .35, 0, 0), "forearm.R": (.15 + lean * .25, 0, 0),
+            "shin.L": (-lean * .45, 0, 0), "shin.R": (-lean * .30, 0, 0),
             "leg.L": (lean * 0.5, 0, 0), "leg.R": (-lean * 0.3, 0, 0)}))
     return make_action(rig, "Dig", keys)
 
 
 def anim_jump(rig):
     up = {"arm.L": (2.0, 0, -0.75), "arm.R": (2.0, 0, 0.75), "leg.L": (0.35, 0, -0.08), "leg.R": (-0.15, 0, 0.08),
+          "shin.L": (-.85, 0, 0), "shin.R": (-.65, 0, 0), "forearm.L": (.45, 0, 0), "forearm.R": (.45, 0, 0),
           "spine": (-0.08, 0, 0), "head": (-0.15, 0, 0)}
     return make_action(rig, "Jump", [
         (1,  {"spine": (0.15, 0, 0), "arm.L": (-0.4, 0, 0), "arm.R": (-0.4, 0, 0)}),
@@ -374,6 +456,8 @@ def anim_sit(rig):
     seat (public/js/87-truck.js)."""
     def p(sw):
         return {"leg.L": (SIT_LEG + 0.12 * sw, 0, -0.06), "leg.R": (SIT_LEG - 0.12 * sw, 0, 0.06),
+                "shin.L": (-SIT_LEG - .06 * sw, 0, 0), "shin.R": (-SIT_LEG + .06 * sw, 0, 0),
+                "forearm.L": (.35, 0, 0), "forearm.R": (.35, 0, 0),
                 "arm.L": (0.5, 0, -0.12), "arm.R": (0.5, 0, 0.12), "spine": (-0.05, 0, 0), "head": (0.06, 0, 0)}
     return make_action(rig, "Sit", [(1, p(1)), (30, p(-1)), (60, p(1))])
 

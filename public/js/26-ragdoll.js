@@ -3,7 +3,7 @@
    around (a twister throw, a tumbleweed fling, a vulture drop, a bonk, a hard fall, a knockout), the animation lets go
    and physics takes the body: arms and legs flop, it tumbles, lands in a heap, and blends back into the animation when
    you get up.
-   How: a small Verlet skeleton (13 points: pelvis, chest, head, shoulders, elbows, hands, hip joints, feet) held
+   How: a small Verlet skeleton (15 points: pelvis, chest, head, shoulders, elbows, hands, hip joints, knees, feet) held
    together by distance constraints (a stiff torso box, softer neck and limbs), with gravity and the ground (holes and
    all), then the camper's bones are pointed along it each frame, after the animation mixer (so it overrides the clip).
    The game still decides where YOU are: while a twister or vulture has you, the pelvis is pinned to your position
@@ -12,10 +12,10 @@
      ragdollOn(p, {vx,vy,vz, spin, flail})   start (or keep) p's ragdoll, with a kick
      ragdollPin(p, x,y,z, k)                 pull the pelvis toward (x,y,z) this frame: k 1 = locked, 0.05 = a nudge
      ragdollOff(p)                           let go: the body blends back into its animation over RAG_BLEND s
-   The rig has no knees or hands, so legs are one piece and hands are the forearm tips. */
+   Knees drive the skinned trouser joints; hands are the forearm tips. */
 const RAG_G=16,RAG_ITER=6;
-const RAG_BONES=['hips','spine','head','armL','forearmL','armR','forearmR','legL','legR'];
-const RP={pelvis:0,chest:1,head:2,shL:3,elL:4,hdL:5,shR:6,elR:7,hdR:8,hipL:9,ftL:10,hipR:11,ftR:12};
+const RAG_BONES=['hips','spine','head','armL','forearmL','armR','forearmR','legL','legR','shinL','shinR'];
+const RP={pelvis:0,chest:1,head:2,shL:3,elL:4,hdL:5,shR:6,elR:7,hdR:8,hipL:9,ftL:10,hipR:11,ftR:12,knL:13,knR:14};
 const _rv=new T.Vector3(),_rv2=new T.Vector3(),_rv3=new T.Vector3(),_rq=new T.Quaternion(),_rq2=new T.Quaternion(),_rm=new T.Matrix4(),_Y=new T.Vector3(0,1,0);
 let RAG_REST=null;   // bone name -> rest local quaternion (from the model as loaded)
 function ragRest(){if(!RAG_REST&&MODEL.scene){RAG_REST={};for(const n of RAG_BONES){const b=MODEL.scene.getObjectByName(n);if(b)RAG_REST[n]=b.quaternion.clone()}}return RAG_REST}
@@ -33,9 +33,10 @@ function ragBuild(p){
   const head=wpos(B.head,new T.Vector3()),headTop=head.clone().add(wdirY(B.head,up*0.9,_rv));
   const hdL=elL.clone().add(wdirY(B['forearmL'],up*0.95,_rv)),hdR=elR.clone().add(wdirY(B['forearmR'],up*0.95,_rv));
   const hipL=wpos(B['legL'],new T.Vector3()),hipR=wpos(B['legR'],new T.Vector3());
-  const legLen=Math.max(0.3,hipL.y-p.g.position.y);
-  const ftL=hipL.clone().add(wdirY(B['legL'],legLen,_rv)),ftR=hipR.clone().add(wdirY(B['legR'],legLen,_rv));
-  for(const v of[pel,chest,headTop,shL,elL,hdL,shR,elR,hdR,hipL,ftL,hipR,ftR])add(v);
+  const knL=wpos(B.shinL,new T.Vector3()),knR=wpos(B.shinR,new T.Vector3());
+  const lower=hipL.distanceTo(knL),legLen=lower*2;
+  const ftL=knL.clone().add(wdirY(B.shinL,lower,_rv)),ftR=knR.clone().add(wdirY(B.shinR,lower,_rv));
+  for(const v of[pel,chest,headTop,shL,elL,hdL,shR,elR,hdR,hipL,ftL,hipR,ftR,knL,knR])add(v);
   const L=[],link=(a,b,stiff,min)=>{const A=pts[a],Bp=pts[b];L.push([a,b,Math.hypot(A.x-Bp.x,A.y-Bp.y,A.z-Bp.z),stiff==null?1:stiff,min||0])};
   const R=RP;
   // torso: a stiff box
@@ -43,12 +44,12 @@ function ragBuild(p){
   link(R.hipL,R.hipR);link(R.pelvis,R.hipL);link(R.pelvis,R.hipR);link(R.chest,R.hipL);link(R.chest,R.hipR);link(R.shL,R.hipR,0.8);link(R.shR,R.hipL,0.8);
   // neck: stiff-ish, the head can nod a bit
   link(R.chest,R.head);link(R.shL,R.head,0.5);link(R.shR,R.head,0.5);
-  // limbs (floppy): upper arm, forearm, legs; "min" keeps an elbow from folding into itself
+  // Each leg has a thigh and shin; minimum distances keep the joints from folding into themselves.
   link(R.shL,R.elL);link(R.elL,R.hdL);link(R.shR,R.elR);link(R.elR,R.hdR);
-  link(R.hipL,R.ftL);link(R.hipR,R.ftR);
+  link(R.hipL,R.knL);link(R.knL,R.ftL);link(R.hipR,R.knR);link(R.knR,R.ftR);
   L.push([R.shL,R.hdL,up*1.0,1,1]);L.push([R.shR,R.hdR,up*1.0,1,1]);   // inequality: hand at least this far from the shoulder
   L.push([R.ftL,R.ftR,0.18,1,1]);                                       // feet don't pass through each other
-  L.push([R.pelvis,R.ftL,legLen*0.8,1,1]);L.push([R.pelvis,R.ftR,legLen*0.8,1,1]);   // legs don't fold up into the belly
+  L.push([R.hipL,R.ftL,legLen*0.5,1,1]);L.push([R.hipR,R.ftR,legLen*0.5,1,1]);   // allow bent knees without doubling back
   // ...or swing all the way up alongside the body (they'd vanish inside the torso): a foot stays well away from the chest
   {const ch=pts[R.chest],fl=pts[R.ftL],fr=pts[R.ftR];L.push([R.chest,R.ftL,Math.hypot(ch.x-fl.x,ch.y-fl.y,ch.z-fl.z)*0.8,1,1]);L.push([R.chest,R.ftR,Math.hypot(ch.x-fr.x,ch.y-fr.y,ch.z-fr.z)*0.8,1,1])}
   {const hd=pts[R.head],fl=pts[R.ftL];L.push([R.head,R.ftL,Math.hypot(hd.x-fl.x,hd.y-fl.y,hd.z-fl.z)*0.75,1,1]);L.push([R.head,R.ftR,Math.hypot(hd.x-fl.x,hd.y-fl.y,hd.z-fl.z)*0.75,1,1])}
@@ -121,9 +122,10 @@ function ragApply(p){
   const dir=(a,b)=>new T.Vector3(P0[b].x-P0[a].x,P0[b].y-P0[a].y,P0[b].z-P0[a].z);
   aimBone(B.head,Rq.head,dir(RP.chest,RP.head));
   aimBone(B['armL'],Rq['armL'],dir(RP.shL,RP.elL));aimBone(B['armR'],Rq['armR'],dir(RP.shR,RP.elR));
-  aimBone(B['legL'],Rq['legL'],dir(RP.hipL,RP.ftL));aimBone(B['legR'],Rq['legR'],dir(RP.hipR,RP.ftR));
+  aimBone(B['legL'],Rq['legL'],dir(RP.hipL,RP.knL));aimBone(B['legR'],Rq['legR'],dir(RP.hipR,RP.knR));
   p.model.updateMatrixWorld(true);
   aimBone(B['forearmL'],Rq['forearmL'],dir(RP.elL,RP.hdL));aimBone(B['forearmR'],Rq['forearmR'],dir(RP.elR,RP.hdR));
+  aimBone(B.shinL,Rq.shinL,dir(RP.knL,RP.ftL));aimBone(B.shinR,Rq.shinR,dir(RP.knR,RP.ftR));
   // remember the pose, for blending back into the animation
   p.ragQ=p.ragQ||{};for(const n of RAG_BONES){(p.ragQ[n]=p.ragQ[n]||new T.Quaternion()).copy(B[n].quaternion)}
   p.ragHipP=(p.ragHipP||new T.Vector3()).copy(B.hips.position);
