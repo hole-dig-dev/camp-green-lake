@@ -173,7 +173,7 @@ function underThreatNow(){
   return S.started&&!S.ko&&!twSt&&!inTent()&&!inCamp(P.x,P.z)&&S.hp<HP_MAX*tune('vulture.thresh')&&nightF()<VULTURE_NIGHT_CUTOFF&&vulturesEnabled&&vCool<=0;
 }
 function vCancelCheck(){
-  return !vulturesEnabled||S.ko||twSt||inTent()||inCamp(P.x,P.z)||S.hp>=HP_MAX*tune('vulture.clear')||nightF()>=VULTURE_NIGHT_CUTOFF;
+  return !vulturesEnabled||S.ko||twSt||inTent()||(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)||inCamp(P.x,P.z)||S.hp>=HP_MAX*tune('vulture.clear')||nightF()>=VULTURE_NIGHT_CUTOFF;
 }
 function vCancelToIdle(){vSt=0;vStT=0;vGraceT=0;vShadow.material.opacity=0;vPoolFree('me')}
 function startWarn(){

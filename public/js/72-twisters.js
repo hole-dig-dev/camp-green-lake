@@ -126,6 +126,7 @@ function updateTwisters(dt){
    just in. Cross into TW_SUCK_R and twStart() takes over instead of a plain shove. */
 function twPush(tw,d,dt){
   if(inTent())return;   // inside a tent: sheltered, even though your x/z is still technically "out there"
+  if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab: it's the truck the wind has to shift (87-truck.js)
   if(holeDepthHere()>TW_SAFE_DEPTH)return;   // down in a deep hole: the wind goes over your head
   if(twSt)return;                            // already caught by a twister (suck/air/down/up) - let that play out
   if(tbSt)return;                            // already stuck to a tumbleweed - one hazard at a time

@@ -187,8 +187,22 @@ const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, seats: {} };
 const truckSeatOf = id => TRUCK_SEATS.find(k => TRUCK.seats[k] === id) || null;
 const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake';
 let truckWasOn = false;
-const truckMsg = () => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn() } });
-function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {} }); broadcast(truckMsg()); }
+const truckMsg = park => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn(), park: !!park } });
+// whose page runs its physics: the driver, or with nobody driving the camper with the lowest id (87-truck.js truckOwner)
+function truckOwner() { if (TRUCK.seats.drive != null && clients.has(TRUCK.seats.drive)) return TRUCK.seats.drive; let lo = null; for (const c of joined()) if (lo == null || c.id < lo) lo = c.id; return lo; }
+const TRUCK_RAM_SPEED = 4, truckRamAt = {};   // creatures in its way at this speed get knocked (per creature, once a second)
+function truckRams(now, jev) {
+  const d = TRUCK.seats.drive, sp = Math.hypot(TRUCK.vx || 0, TRUCK.vz || 0);
+  if (d == null || sp < TRUCK_RAM_SPEED || !truckOn()) return;
+  const hit = (k, x, z, r) => { const dx = x - TRUCK.x, dz = z - TRUCK.z, c = Math.cos(TRUCK.h), s = Math.sin(TRUCK.h);
+    if (Math.abs(dx * c - dz * s) > 1 + r || Math.abs(dx * s + dz * c) > 2.6 + r || (truckRamAt[k] || 0) > now) return false; truckRamAt[k] = now + 1000; return true; };
+  JAV.list.forEach((j, i) => { if (j && !j.state && hit('j' + i, j.x, j.z, 0.6)) SIM.whackJavelina(JAV, i, TRUCK.x, TRUCK.z, jev, d); });
+  if (LION.active && hit('lion', LION.x, LION.z, 0.8)) { SIM.lionSwat(LION); SIM.lionSwat(LION); lionEvQ.push({ k: 'swat', id: d }); }
+  const rev = [], fa = TRUCK.h;
+  for (const m of ROSTER.mobs || []) if (hit('r' + m.id, m.x, m.z, 0.5)) SIM.rosterSwat(ROSTER, { id: d, x: m.x - Math.sin(fa) * 1, z: m.z - Math.cos(fa) * 1, fa }, rev);
+  if (rev.length) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
+}
+function truckPark() { Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
 function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUCK.seats[k]; broadcast(truckMsg()); }
 function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
@@ -448,7 +462,7 @@ wss.on('connection', (ws, req) => {
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
-      truck: truckMsg().st, // Mr. Sir's pickup (87-truck.js)
+      truck: truckMsg(true).st, // Mr. Sir's pickup (87-truck.js)
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
       rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.curse || 0), // and the day's roster
     });
@@ -643,11 +657,16 @@ wss.on('connection', (ws, req) => {
           LOG.log('truck', { id: c.id, n: c.n, seat: k });
           broadcast(truckMsg()); return;
         }
-        if (TRUCK.seats.drive !== c.id) return;
-        if (op === 'pos') {
+        if (op === 'push') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 5) send(clients.get(o), { t: 'truck', push: [num(m.dx, -1, 1, 0), num(m.dz, -1, 1, 0)] }); return; }
+        if (op === 'pos') { // from whoever runs its physics (the driver, else the lowest id): where it is, how it's tipped, how fast
+          if (truckOwner() !== c.id) return;
           TRUCK.x = num(m.x, -600, 600, TRUCK.x); TRUCK.z = num(m.z, -600, 600, TRUCK.z); TRUCK.h = num(m.h, -100, 100, TRUCK.h);
-          broadcast({ t: 'truck', pos: [r1(TRUCK.x), r1(TRUCK.z), Math.round(TRUCK.h * 1000) / 1000, Math.round(num(m.v, -30, 30, 0) * 10) / 10] }, c.id); return;
+          TRUCK.vx = num(m.vx, -60, 60, 0); TRUCK.vz = num(m.vz, -60, 60, 0);
+          const q = [r1(TRUCK.x), r1(TRUCK.z), Math.round(TRUCK.h * 1000) / 1000, r1(num(m.v, -40, 40, 0)), Math.round(num(m.y, -50, 200, 0) * 100) / 100,
+            Math.round(num(m.p, -2, 2, 0) * 1000) / 1000, Math.round(num(m.r, -2, 2, 0) * 1000) / 1000, r1(TRUCK.vx), r1(TRUCK.vz)];
+          broadcast({ t: 'truck', pos: q }, c.id); return;
         }
+        if (TRUCK.seats.drive !== c.id) return;
         if (op === 'gate') { // out through the service gate: the escape to the next map
           const next = ZONE_ORDER[ZONE_ORDER.indexOf(world.zone || 'lake') + 1];
           if (!next || TRUCK.x < 30.5 || Math.hypot(TRUCK.x - 30, TRUCK.z - 39) < 15) return; // outside the east fence, well clear of the gate
@@ -1107,7 +1126,7 @@ function tickRoster(t, dt, players) {
 }
 function tickJavelinas(t, dt, players) {
   JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
-  const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev);
+  const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev); truckRams(Date.now(), jev); // Mr. Sir's pickup running into things
   for (const e of jev) {
     if (e.k === 'javBite') LOG.log('javBite', { id: e.id, dmg: e.dmg });
     else if (e.k === 'javSpawn' || e.k === 'javLeave' || e.k === 'javGone') LOG.log(e.k, { n: e.n, x: e.x != null ? r1(e.x) : undefined, z: e.z != null ? r1(e.z) : undefined });
@@ -1119,7 +1138,8 @@ function tickJavelinas(t, dt, players) {
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 let policeOn = false, zerOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
-  return joined().filter(c => !c.town).map(c => ({   // campers down in the buried town (89-town.js) are out of reach of the lake
+  const cab = [TRUCK.seats.drive, TRUCK.seats.shotgun];   // inside Mr. Sir's pickup's cab (87-truck.js): out of reach too
+  return joined().filter(c => !c.town && !cab.includes(c.id)).map(c => ({   // campers down in the buried town (89-town.js) are out of reach of the lake
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, hp: c.hp,
     hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
     dn: !!(c.f & 2) || now - c.dnAt < 2000,
