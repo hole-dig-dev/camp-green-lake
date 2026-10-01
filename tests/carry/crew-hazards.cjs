@@ -18,6 +18,7 @@ check('tumbleweed: Squid gets bowled over, gets up, bucket kept',w.seen.includes
 await setup('Magnet',-80,-120);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Magnet'),g=b.p.g.position;for(let k=0;k<3;k++)spawnEnv('landslide',{x:g.x,z:g.z,a:0})});
 w=await watch('Magnet',30,'boulder');s=await st('Magnet');
 check('landslide: a boulder knocks Magnet flying, no harm, bucket kept',w.seen.includes('tossed')&&s.bucket===3,JSON.stringify(w)+' '+JSON.stringify(s));
+await p.evaluate(()=>{tbWeeds.length=0;lsBoulders.length=0;twSpawned.length=0});   // the weather from the steps above is still about: clear it for the animals
 // 4. a lizard
 await setup('Armpit',100,-60);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Armpit'),g=b.p.g.position,L=lizards[0];L.x=g.x+3;L.z=g.z;P.x=g.x+40});
 w=await watch('Armpit',20,'lizard');s=await st('Armpit');
