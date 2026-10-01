@@ -30,7 +30,9 @@
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
   const RO_LAKE_ONLY = ['sir', 'warden'];
-  const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
+  // gold dig (Greg, 2026-09-30): a 5 ft hole is now ~250 real shovelfuls, about one a day alone, so the quota starts low
+  // (finding a paystreak is what makes day 1) and climbs as screens, spades and crews make the work faster. Was (60 + 40 * day).
+  const quotaFor = (day, n) => Math.round((8 + 12 * day) * (1 + 0.6 * Math.max(0, n - 1)));
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
   const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };

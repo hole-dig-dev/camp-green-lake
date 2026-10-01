@@ -64,6 +64,7 @@ const TUNE_DEFS=[
   // ---- stamina and afflictions (70-player.js)
   {key:'stam.sprint',tab:'Stamina',label:'Sprinting costs',def:14,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'stam.carry',tab:'Stamina',label:'Hauling costs (while moving)',def:4,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'stam.dig',tab:'Stamina',label:'Each shovelful costs (no stamina back while you keep digging)',def:6,kind:'mul',range:4,zero:true,unit:''},
   {key:'stam.jump',tab:'Stamina',label:'A jump costs',def:5,kind:'mul',range:4,zero:true,unit:''},
   {key:'stam.regen',tab:'Stamina',label:'Recovery standing still',def:20,kind:'mul',range:4,unit:'/s'},
   {key:'stam.regenMove',tab:'Stamina',label:'Recovery while walking',def:10,kind:'mul',range:4,zero:true,unit:'/s'},
@@ -94,7 +95,13 @@ const TUNE_DEFS=[
   {key:'move.crouch',tab:'Player',label:'Crouching speed',def:2,kind:'mul',range:2,unit:' m/s'},
   {key:'move.jump',tab:'Player',label:'Jump (take-off speed; 5.6 is about 1 m)',def:5.6,kind:'mul',range:1.6,unit:' m/s'},
   {key:'fp.bob',tab:'Player',label:'First person: how much your view follows your head (0 steady, 1 all of it)',def:0.5,kind:'lin',span:0.5,min:0,max:1,unit:''},
-  {key:'dig.time',tab:'Player',label:'Time per shovel scoop',def:0.42,kind:'mul',range:3,unit:' s'},
+  {key:'dig.time',tab:'Player',label:'Time per shovelful (dig in, lift, throw)',def:1.6,kind:'mul',range:3,unit:' s'},   // gold dig: was 0.42
+  // gold in every shovelful (48-gold.js)
+  {key:'gold.base',tab:'Gold',label:'Chance of gold in a shovelful from barren ground',def:0.006,kind:'mul',range:4,zero:true,unit:''},
+  {key:'gold.rich',tab:'Gold',label:'Extra chance on a paystreak (at full depth)',def:0.16,kind:'mul',range:4,zero:true,unit:''},
+  {key:'gold.spot',tab:'Gold',label:'Share of the gold you spot by hand (no screen)',def:0.35,kind:'mul',range:2.5,zero:true,unit:''},
+  {key:'gold.value',tab:'Gold',label:'Seeds Mr. Sir pays per flake',def:2,kind:'mul',range:4,unit:''},
+  {key:'dig.shovelful',tab:'Player',label:'Dirt per shovelful (a 5 ft hole is ~2500 L)',def:10,kind:'mul',range:4,unit:' L'},
   {key:'dig.depth',tab:'Player',label:'How deep each scoop goes',def:1,kind:'mul',range:3,unit:'×'},
   // ---- ragdolls (26-ragdoll.js) and what throws you around
   {key:'rag.flop',tab:'Ragdoll',label:'How floppy arms and legs are',def:1,kind:'mul',range:3,unit:'×'},

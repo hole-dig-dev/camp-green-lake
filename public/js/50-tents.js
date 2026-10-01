@@ -42,7 +42,8 @@ function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
 // (S.up[id], S.onions, S.batt) are unchanged from before.
 const SHOP=[
-  {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel'},
+  {id:'screen',name:'Sifting screen',desc:'Shake every shovelful through it and you catch all the gold, not just the flecks you happen to see (about a third).',cost:40,cat:'dig',icon:'sack'},
+  {id:'spade',name:'Big-blade spade',desc:'Each shovelful holds half as much dirt again, so a hole goes faster.',cost:45,cat:'dig',icon:'shovel'},
   {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long'},
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
   {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
@@ -68,7 +69,8 @@ const shopGp={dir:null,t:0,a:false,b:false};
    so level bonuses and current counts stay accurate, per the spec's "reflect displayed totals". */
 function shopEffect(it){
   switch(it.id){
-    case 'spade': return {label:'Scoop depth',from:'0.088 m / scoop',to:'0.15 m / scoop',note:'About 70% deeper per scoop.'};
+    case 'spade': return {label:'Dirt per shovelful',from:'10 L',to:'15 L',note:'A hole takes a third fewer shovelfuls.'};
+    case 'screen': return {label:'Gold you catch',from:'about 1 in 3 flecks',to:'every fleck and nugget',note:'The gold was always in the dirt. Now you see it.'};
     case 'long': return {label:'Max hole depth',from:'5 ft',to:'8 ft'};
     case 'detector': return {label:'Detection range',from:'No detector',to:'7 m range'};
     case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+' (current max)',to:(160+bonus)+' (with canteen)'}}

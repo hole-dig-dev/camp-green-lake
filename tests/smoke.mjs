@@ -254,9 +254,13 @@ async function main() {
     // risks over/undershooting a 1.1m target).
     await page1.evaluate(() => { window.__cgl.runCommand('tp 0 120'); window.__cgl.runCommand('time 13:00'); });
     await page1.waitForTimeout(200);
+    // real shovelfuls (gold dig) take 1.6 s and move ~6 mm of depth each: too little for a few headless frames to show,
+    // so this check digs with the old fast numbers through the F2 sliders, then puts them back
+    await page1.evaluate(() => { TUNE_OVR['dig.time'] = { v: 0.42 }; TUNE_OVR['dig.shovelful'] = { v: 150 }; });
     await page1.keyboard.down('e');
     await page1.waitForTimeout(3000); // several scoops' worth, generous for a slow software-rendered frame rate
     await page1.keyboard.up('e');
+    await page1.evaluate(() => { delete TUNE_OVR['dig.time']; delete TUNE_OVR['dig.shovelful']; });
     await page1.evaluate(() => window.__cgl.runCommand('tp 0 121.1'));
     await waitFor(page1, () => document.querySelector('#depth').textContent !== '0.0 ft', 5000, 'depth readout to reflect the just-dug hole');
     const depthText = await page1.$eval('#depth', el => el.textContent);

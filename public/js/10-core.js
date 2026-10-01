@@ -16,7 +16,8 @@ function vnoise(x,z){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,sx=
 
 /* ---------- world constants ---------- */
 const HALF=600, EDGE=HALF-5, RES=0.4, N=Math.round(HALF*2/RES)+1;
-const HOLE_R=1.25, MR=1.15, CELL=4, OUTER_Y=3.2;
+const HOLE_R=0.85, MR=1.9,   // a hole is five feet across, as in the book (rim ~1.7 m, flat floor ~1.2 m); the spoil pile beside it (gold dig, 2026-09-30)
+      CELL=4, OUTER_Y=3.2;
 const FIVE_FT=1.5, EIGHT_FT=2.6, FT=5/1.5;
 function inCamp(x,z){return !ZONE_H&&z>27&&z<56&&x>-40&&x<30}   // lake only: other maps (88-zones.js) have no camp
 function nearCampZone(x,z){return !ZONE_H&&x>-46&&x<36&&z>12&&z<62}

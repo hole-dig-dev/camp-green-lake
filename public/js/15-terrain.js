@@ -7,19 +7,22 @@ const gkey=(cx,cz)=>(cx+64)*512+(cz+64);
 const cellOf=v=>Math.floor((v+HALF)/CELL);
 function addHole(h){
   const a=hash2(Math.round(h.x*10)+7,Math.round(h.z*10)-3)*Math.PI*2;
-  h.r=h.r||HOLE_R;h.mx=h.x+Math.cos(a)*(h.r+1.0);h.mz=h.z+Math.sin(a)*(h.r+1.0);
+  h.r=h.r||HOLE_R;h.mx=h.x+Math.cos(a)*(h.r+1.3);h.mz=h.z+Math.sin(a)*(h.r+1.3);
   holes.push(h);const k=gkey(cellOf(h.x),cellOf(h.z));let L=grid.get(k);if(!L){L=[];grid.set(k,L)}L.push(h);return h;
 }
 function forNearHoles(x,z,fn){const cx=cellOf(x),cz=cellOf(z);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=grid.get(gkey(cx+i,cz+j));if(L)for(const h of L)fn(h)}}
 /* skip (optional): holes whose dug-out bowl to leave out -- their spoil mound still counts. The hole liners use
    it to draw one hole's own bowl and let a shader decide where a deeper neighbour takes over (46-holes.js). */
+/* the spoil pile holds the dirt that came out of the hole, fluffed up a quarter by digging: hole volume ~ pi (0.86 r)^2 d,
+   a raised-cosine pile of radius MR holds pi MR^2 H (1/2 - 2/pi^2), so its peak is H = SPOIL_K d (about 0.9 m, waist high, for 5 ft) */
+const SPOIL_K=1.25*(0.86*HOLE_R)**2/(MR*MR*(0.5-2/(Math.PI*Math.PI)));
 function surfaceAt(x,z,b,skip){
   let dep=0,mound=0;
   forNearHoles(x,z,h=>{
     if(h.d<=0)return;
     const dx=x-h.x,dz=z-h.z,d2=dx*dx+dz*dz;
     if(d2<h.r*h.r&&!(skip&&skip(h))){const t=Math.sqrt(d2)/h.r;const p=t<0.72?1:1-sm((t-0.72)/0.28);const v=h.d*p;if(v>dep)dep=v}
-    if(!h.noMound){const ex=x-h.mx,ez=z-h.mz,e2=ex*ex+ez*ez;if(e2<MR*MR){const t=Math.sqrt(e2)/MR;mound+=Math.min(h.d,FIVE_FT)*0.3*(0.5+0.5*Math.cos(Math.PI*t))}}
+    if(!h.noMound){const ex=x-h.mx,ez=z-h.mz,e2=ex*ex+ez*ez;if(e2<MR*MR){const t=Math.sqrt(e2)/MR;mound+=Math.min(h.d,EIGHT_FT)*SPOIL_K*(h.r/HOLE_R)**2*(0.5+0.5*Math.cos(Math.PI*t))}}
   });
   return dep>0.001?b-dep:b+mound;
 }

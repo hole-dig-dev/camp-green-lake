@@ -49,11 +49,11 @@ function updateHUD(){
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
-  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
+  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=(S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty'))+(S.gold?` · ${S.gold} gold`:'');   // the gold pouch (48-gold.js)
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
   hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
   hw.battRow.hidden=!(S.light||S.batt<30);
-  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
+  const tools=[S.up.spade?'Big-blade spade':'Rusty shovel',S.up.screen?'Sifting screen':'',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
     const label=t==='onion'?'Onion breath':t,icon=TOOL_ICON[t];
     const s=document.createElement('span');s.setAttribute('title',label);

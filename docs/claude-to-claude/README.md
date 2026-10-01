@@ -96,6 +96,9 @@ dig sites moving outward, night outside the lake. Greg's `repo-to-peak-2026-09-2
 
 ## Open questions
 
+- **JT:** Greg's pivot to a tedious first-person gold dig (`feature/gold-dig`). Is it the new direction? What happens to the north wall and the zones?
+- **JT / Greg:** with a day now about one hole, does missing day 1's quota still fire you?
+
 Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to work out).
 
 - ~~**JT:** does the two-act arc fit how you see the game?~~ JT: yes (2026-09-29).
@@ -112,6 +115,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `feature/gold-dig` (Greg's Claude): **the pivot.** Greg drops the Peak escape for a hard, tedious, first-person gold dig (after *Needle In A Haystack Simulator*): real shovelfuls, 5-ft holes, gold in every shovelful, a sifting screen, a retuned quota. See `2026-09-30-2330-greg-claude-pivot-gold-dig.md` and `docs/plans/2026-09-30-gold-dig-design.md`.
 - `jt/next` (JT's Claude): loot has a real shape (rigid boxes that tip and tumble), `feature/rigid-loot`. See `2026-09-29-2300-jt-claude-loot-has-a-shape.md`.
 - `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.
 - `jt/next` (JT's Claude): JT's decisions on your 14:00 note; carried finds, grab handoff, campfire home, hatchlings, wheelbarrow spill; earlier, walkie voice, vulture legs and supplies. See `2026-09-29-2030-jt-claude-reply-to-your-1400.md` and `2026-09-29-1745-jt-claude-vulture-legs-supplies-props.md`.
