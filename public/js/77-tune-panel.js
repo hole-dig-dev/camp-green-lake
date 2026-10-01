@@ -17,6 +17,12 @@ function tuneFmt(d,v){
   return s.replace(/\.?0+$/,'')+d.unit;
 }
 function tuneRow(d){
+  if(d.kind==='action'){   // a button
+    const row=document.createElement('div');row.className='tune-row tune-action';
+    row.innerHTML='<label></label><button type="button" class="ui-button ui-button--sm"></button>';
+    row.querySelector('label').textContent=d.label;const b=row.querySelector('button');b.textContent='Do it';
+    b.onclick=()=>{const r=d.run();if(r)toast(String(r),'',2200)};return row;
+  }
   if(d.kind==='flag'){   // an on/off switch
     const row=document.createElement('div');row.className='tune-row tune-flag'+(d.key in TUNE_OVR?' changed':'');
     row.innerHTML='<label><input type="checkbox"> <span></span></label><output></output><button type="button" title="Back to default">↺</button><small></small>';

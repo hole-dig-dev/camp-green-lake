@@ -8,12 +8,22 @@
                  zero:true lets the far-left notch mean 0 (off).
      kind 'lin': a plain number from def-span to def+span, clamped to [min,max]. int:true rounds it to whole numbers.
      kind 'flag': an on/off switch (1/0), shown as a checkbox.
+     kind 'action': a button that runs d.run() (no value; nothing to save).
      fmt: optional v=>text for how the value reads (e.g. an angle in radians shown as degrees).
    Saved overrides remember the default they were set against. When a default changes in code, the old override
    is dropped, so baking a value in can never leave a stale slider behind. */
 const TUNE_DEFS=[
+  // ---- your flashlight (L) and your friends' (84-coop.js); underground, how far you can see with it on (89-town.js)
+  {key:'light.power',tab:'Flashlight',label:'Brightness',def:2.4,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'light.reach',tab:'Flashlight',label:'How far the beam reaches',def:42,kind:'mul',range:3,unit:' m'},
+  {key:'light.width',tab:'Flashlight',label:'How wide the circle is',def:0.42,kind:'mul',range:2.5,fmt:v=>tuneDeg(Math.min(v,1.4)*2)+' wide'},
+  {key:'light.soft',tab:'Flashlight',label:'Soft edge (0 hard, 1 all blur)',def:0.45,kind:'lin',span:0.45,min:0,max:1,unit:''},
+  {key:'light.falloff',tab:'Flashlight',label:'Fades with distance (0 none, 2 real)',def:1.2,kind:'lin',span:1.2,min:0,max:3,unit:''},
+  {key:'light.drain',tab:'Flashlight',label:'Battery drain (a full battery lasts 100/this seconds)',def:0.6,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'light.townSee',tab:'Flashlight',label:'Underground: how far you see with it on (off: 12 m)',def:26,kind:'mul',range:3,unit:' m'},
   // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
+  {key:'veh.respawn',tab:'Vehicles',label:'Put Mr. Sir\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
   {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
   {key:'veh.accel',tab:'Vehicles',label:'Acceleration',def:6,kind:'mul',range:3,unit:' m/s²'},
   {key:'veh.steer',tab:'Vehicles',label:'Steering lock (sharper = tighter turns)',def:0.7,kind:'mul',range:2,fmt:v=>tuneDeg(v)},
@@ -168,7 +178,7 @@ const TUNE_DEFS=[
   {key:'curfew.copCatch',tab:'Curfew',label:'Catch distance',def:SIM.CURFEW_DEF.copCatch,kind:'mul',range:3,unit:' m'},
 ];
 function tuneDeg(rad){return Math.round(rad*180/Math.PI)+'°'}
-const TUNE_BY=Object.fromEntries(TUNE_DEFS.map(d=>[d.key,d]));
+const TUNE_BY=Object.fromEntries(TUNE_DEFS.filter(d=>d.kind!=='action').map(d=>[d.key,d]));
 const TUNE_KEY='cgl-tune';
 let TUNE_OVR={};   // key -> {v, def}: only the knobs the tester has moved
 function tune(key){const o=TUNE_OVR[key];return o?o.v:TUNE_BY[key].def}
