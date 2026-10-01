@@ -1,0 +1,202 @@
+[
+  {
+    "id": 1,
+    "slug": "01-sunbreak-bucket",
+    "name": "Sunbreak Bucket",
+    "description": "Canvas bucket with a proper crown and a thick, gently flared brim.",
+    "group": "Everyday",
+    "file": "../models/hats/01-sunbreak-bucket.glb",
+    "frontMinHeight": 0.491,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 2,
+    "slug": "02-trail-boonie",
+    "name": "Trail Boonie",
+    "description": "Low olive field hat, broad soft brim, brass eyelets and a cord band.",
+    "group": "Everyday",
+    "file": "../models/hats/02-trail-boonie.glb",
+    "frontMinHeight": 0.494,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 3,
+    "slug": "03-blue-hour-cap",
+    "name": "Blue Hour Cap",
+    "description": "Faded blue baseball cap with an elevated curved visor and cream stitching.",
+    "group": "Everyday",
+    "file": "../models/hats/03-blue-hour-cap.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 4,
+    "slug": "04-dust-road-trucker",
+    "name": "Dust Road Trucker",
+    "description": "Rust visor and front, cream crown, chunky contrasting trim.",
+    "group": "Everyday",
+    "file": "../models/hats/04-dust-road-trucker.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 5,
+    "slug": "05-switchback-five-panel",
+    "name": "Switchback Five Panel",
+    "description": "Compact sage cap with a flat visor and raised front patch.",
+    "group": "Everyday",
+    "file": "../models/hats/05-switchback-five-panel.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 6,
+    "slug": "06-pine-ranger",
+    "name": "Pine Ranger",
+    "description": "Tall forest crown, crisp brim and a warm brass diamond badge.",
+    "group": "Trail",
+    "file": "../models/hats/06-pine-ranger.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 7,
+    "slug": "07-dry-creek-cowboy",
+    "name": "Dry Creek Cowboy",
+    "description": "Sculpted leather-brown crown and visibly rolled western brim.",
+    "group": "Trail",
+    "file": "../models/hats/07-dry-creek-cowboy.glb",
+    "frontMinHeight": 0.498,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 8,
+    "slug": "08-high-noon-straw",
+    "name": "High Noon Straw",
+    "description": "Pale woven western hat with a dark band and warm raised edges.",
+    "group": "Trail",
+    "file": "../models/hats/08-high-noon-straw.glb",
+    "frontMinHeight": 0.498,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 9,
+    "slug": "09-dune-pith",
+    "name": "Dune Pith",
+    "description": "Domed cream expedition helmet with a separate brim and crown ridge.",
+    "group": "Trail",
+    "file": "../models/hats/09-dune-pith.glb",
+    "frontMinHeight": 0.498,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 10,
+    "slug": "10-neck-shade-cap",
+    "name": "Neck Shade Cap",
+    "description": "Stone canvas cap with a high visor and an actual draped neck flap.",
+    "group": "Trail",
+    "file": "../models/hats/10-neck-shade-cap.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 11,
+    "slug": "11-shift-hardhat",
+    "name": "Shift Hardhat",
+    "description": "Rounded safety-orange shell with ribs, thick rim and a work badge.",
+    "group": "Work",
+    "file": "../models/hats/11-shift-hardhat.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 12,
+    "slug": "12-night-shift-miner",
+    "name": "Night Shift Miner",
+    "description": "Blue work helmet with a real metal lamp housing above the eyes.",
+    "group": "Work",
+    "file": "../models/hats/12-night-shift-miner.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 13,
+    "slug": "13-golden-hour-knit",
+    "name": "Golden Hour Knit",
+    "description": "Mustard beanie with a thick folded cuff and raised knit ribs.",
+    "group": "Cold",
+    "file": "../models/hats/13-golden-hour-knit.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 14,
+    "slug": "14-campfire-slouch",
+    "name": "Campfire Slouch",
+    "description": "Soft berry knit with a folded cuff and a relaxed sideways crown.",
+    "group": "Cold",
+    "file": "../models/hats/14-campfire-slouch.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 15,
+    "slug": "15-harbor-docker",
+    "name": "Harbor Docker",
+    "description": "Short charcoal watch cap with a substantial cuff and a tiny stitched label.",
+    "group": "Cold",
+    "file": "../models/hats/15-harbor-docker.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 16,
+    "slug": "16-embers-beret",
+    "name": "Embers Beret",
+    "description": "Asymmetric rust-red wool crown over a narrow dark leather band.",
+    "group": "Character",
+    "file": "../models/hats/16-embers-beret.glb",
+    "frontMinHeight": 0.512,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 17,
+    "slug": "17-frostline-trapper",
+    "name": "Frostline Trapper",
+    "description": "Deep forest cap, upturned fur front and side ear flaps with a clear face.",
+    "group": "Cold",
+    "file": "../models/hats/17-frostline-trapper.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 18,
+    "slug": "18-sky-road-aviator",
+    "name": "Sky Road Aviator",
+    "description": "Leather flight cap with raised goggles and side protection.",
+    "group": "Character",
+    "file": "../models/hats/18-sky-road-aviator.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 19,
+    "slug": "19-storm-slicker",
+    "name": "Storm Slicker",
+    "description": "Navy waxed rain hat with a broad rolled brim and bright lining.",
+    "group": "Weather",
+    "file": "../models/hats/19-storm-slicker.glb",
+    "frontMinHeight": 0.487,
+    "eyeLine": 0.392
+  },
+  {
+    "id": 20,
+    "slug": "20-lake-captain",
+    "name": "Lake Captain",
+    "description": "Cream skipper cap, navy visor, gold rope trim and a raised front badge.",
+    "group": "Character",
+    "file": "../models/hats/20-lake-captain.glb",
+    "frontMinHeight": 0.505,
+    "eyeLine": 0.392
+  }
+]

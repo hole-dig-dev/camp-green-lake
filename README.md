@@ -9,6 +9,9 @@ The version with Act 1 and Act 2 is kept on the `archive/acts-era` branch (tag `
 **Updated character models and animations:** [Claude's character handoff](CHARACTER-HANDOFF.md) lists the approved
 Blender/GLB assets, continuous elbow/knee skinning, shared player/NPC integration and physics validation steps.
 
+**Twenty new hat candidates:** open `/hat-lab/` on your game server to compare them on the approved camper.
+[Hat library and Blender source](docs/art/hats-20.md).
+
 Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, one buried prize, and a group of friends arguing about where to dig.
 
 ## Play

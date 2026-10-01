@@ -274,6 +274,14 @@ const STATIC_DIRS = { js: { ext: '.js', type: 'text/javascript; charset=utf-8' }
   models: { ext: '.glb', type: 'model/gltf-binary' }, // the Blender camp and creatures (public/models/*.glb)
   audio: { ext: '.mp3', type: 'audio/mpeg' },         // licensed ambience and Foley (public/audio/*.mp3)
   data: { ext: '.json', type: 'application/json' } }; // data exported with the models, e.g. public/data/TownColliders.json (art/blender/town.py)
+// The hat comparison studio has a small explicit file list; it cannot browse arbitrary public files.
+const HAT_LAB_FILES = Object.fromEntries([
+  ['index.html','text/html; charset=utf-8'],['style.css','text/css; charset=utf-8'],
+  ['viewer.js','text/javascript; charset=utf-8'],['manifest.json','application/json'],
+  ['vendor/three.min.js','text/javascript; charset=utf-8'],['vendor/GLTFLoader.js','text/javascript; charset=utf-8'],
+  ...['all-20','hats-1-5','hats-6-10','hats-11-15','hats-16-20'].map(n=>['previews/'+n+'.png','image/png'])
+].map(([file,type])=>['/hat-lab/'+file,{file,type}]));
+HAT_LAB_FILES['/hat-lab/']=HAT_LAB_FILES['/hat-lab/index.html'];
 function sendStatic(res, subdir, rawName) {
   const dir = STATIC_DIRS[subdir];
   let name;
@@ -351,7 +359,7 @@ const server = http.createServer((req, res) => {
     const tunePost = DEV_MODE && req.method === 'POST' && url0 === '/tune';
     if (req.method !== 'GET' && req.method !== 'HEAD' && !tunePost) { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
-    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js';
+    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/(?:hats\/)?[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js' || Object.hasOwn(HAT_LAB_FILES,url0);
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
@@ -375,6 +383,8 @@ const server = http.createServer((req, res) => {
     if (url === '/tune') { if (!DEV_MODE) { res.writeHead(404); return res.end('not found'); } return tunePost ? saveTune(req, res) : sendTune(res); }
     if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
+    if (url === '/hat-lab') { res.writeHead(302,{location:'/hat-lab/'}); return res.end(); }
+    if (Object.hasOwn(HAT_LAB_FILES,url)) { const f=HAT_LAB_FILES[url]; return sendFile(res,'hat-lab/'+f.file,f.type,req.method==='HEAD'); }
     if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');
     if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
     if (url === '/director.js') return sendFile(res, 'director.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
