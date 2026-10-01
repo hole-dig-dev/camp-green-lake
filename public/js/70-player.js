@@ -54,6 +54,7 @@ function updatePlayer(dt){
   let iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
   if(touch.id!==null){ix=touch.ix;iz=touch.iz}
   if(uiOpen()){ix=0;iz=0}
+  if(climbing()&&climbStep(dt,ix,iz))return;   // hanging on a wall (88-climb.js)
   const sprint=KEYS['shift']&&S.water>0&&S.carry==null&&(S.stam>2||GOD);   // stamina (updateHealth below): no sprinting on empty
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
@@ -71,7 +72,7 @@ function updatePlayer(dt){
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
       if(trap&&groundAt(nx,nz)-P.y>0.6){nx=P.x;nz=P.z}
-      if(ZONE_STEP||northClimb(P.x,P.z)){const q=zoneStep(P.x,P.z,nx,nz,P.y);nx=q[0];nz=q[1]}   // other maps, and the trench and wall at the lake's north edge: ledges too tall to walk up (88-zones.js, 88-north.js)
+      if(ZONE_STEP||northClimb(P.x,P.z)){const q=zoneStep(P.x,P.z,nx,nz,P.y);nx=q[0];nz=q[1];if(climbTry(mx,mz))return}   // climbTry: Space held in the air against a ledge catches it (88-climb.js). Other maps, and the trench and wall at the lake's north edge: ledges too tall to walk up (88-zones.js, 88-north.js)
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
       if(sprint)drainStam(tune('stam.sprint')*dt);
       if(S.carry!=null){drainStam(tune('stam.carry')*dt);if(S.stam<=0&&!GOD){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500);logEv('carryDrop',{why:'stamina'})}}

@@ -250,7 +250,7 @@ function updateZones(dt){
   {const fs=tuneOr('zone.fallSafe',FALL_SAFE);if(P.grounded&&lastVy<-fs&&!(typeof twSt!=='undefined'&&twSt))hurt((-lastVy-fs)*tuneOr('zone.fallDmg',FALL_DMG),'Fall','You fell off a ledge.')}
   lastVy=P.vy;
   // walking into a ledge you can't climb: say how, now and then
-  if(ledgeHitT>0){ledgeHitT-=dt;ledgeTipT+=dt;if(ledgeTipT>1.2){ledgeTipT=-25;toast(online()?'Too tall to climb. A friend crouches (C) against the wall and you jump off them, or find a way round.':'Too tall to climb alone. Look for a way round: a cairn marks it.','',5200)}}
+  if(ledgeHitT>0){ledgeHitT-=dt;ledgeTipT+=dt;if(ledgeTipT>1.2){ledgeTipT=-25;toast(climbHere()?'Too tall to walk up. Jump at it and keep Space held to climb (it costs stamina), or a friend crouches (C) and you jump off them.':online()?'Too tall to climb. A friend crouches (C) against the wall and you jump off them, or find a way round.':'Too tall to climb alone. Look for a way round: a cairn marks it.','',5200)}}
   // the campfire
   const f=ZONE.fire;let txt='';
   if(f){

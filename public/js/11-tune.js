@@ -88,6 +88,16 @@ const TUNE_DEFS=[
   {key:'zone.stepRise',tab:'Maps',label:'Tallest step you walk up without jumping',def:0.55,kind:'mul',range:2,unit:' m'},
   {key:'zone.fireR',tab:'Maps',label:'Campfire: how close counts as at the fire (also "home" for a carried friend)',def:1,kind:'mul',range:3,unit:'×'},
   {key:'zone.ropeSlow',tab:'Maps',label:'Climbing a dropped rope: walking speed',def:0.35,kind:'mul',range:3,unit:'×'},
+  // Peak-style climbing (88-climb.js): jump at a ledge with Space held to catch it
+  {key:'climb.on',tab:'Climbing',label:'Climbing walls in the other maps (canyon and on)',def:1,kind:'flag'},
+  {key:'climb.north',tab:'Climbing',label:'Climbing on the lake\'s north wall (off: it needs a friend or a rope ladder)',def:0,kind:'flag'},
+  {key:'climb.up',tab:'Climbing',label:'Climbing speed up or down',def:1.1,kind:'mul',range:3,unit:' m/s'},
+  {key:'climb.side',tab:'Climbing',label:'Shuffling sideways along a wall',def:0.9,kind:'mul',range:3,unit:' m/s'},
+  {key:'climb.hold',tab:'Climbing',label:'Just hanging on costs',def:4,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'climb.move',tab:'Climbing',label:'Climbing costs',def:9,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'climb.lunge',tab:'Climbing',label:'A lunge (Shift) takes you up',def:1,kind:'mul',range:2,unit:' m'},
+  {key:'climb.lungeCost',tab:'Climbing',label:'A lunge costs',def:16,kind:'mul',range:3,zero:true,unit:''},
+  {key:'climb.min',tab:'Climbing',label:'Stamina needed to catch hold',def:8,kind:'mul',range:4,zero:true,unit:''},
   // ---- you: moving and digging (70-player.js, 45-state.js)
   {key:'move.walk',tab:'Player',label:'Walking speed',def:4.3,kind:'mul',range:2,unit:' m/s'},
   {key:'move.sprint',tab:'Player',label:'Sprinting speed',def:7.2,kind:'mul',range:2,unit:' m/s'},
