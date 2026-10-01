@@ -31,11 +31,54 @@ quota, getting fired, heat, water, lizards, curfew, the Warden.
 | The haystack | The lake bed's dirt. Every shovelful is one "piece of hay", and most of it is just sand. |
 | The needle | JT's existing big prizes: the suitcase marked STANLEY YELNATS (2.3 m down, wins the game) and Kate's KB tube. |
 | Coins from lesser finds | Gold flakes and nuggets in the dirt, plus JT's existing buried finds. All sold to Mr. Sir toward the quota. |
-| Gloves, rake, vacuum, conveyor | The tool ladder: bare hands, sifting screen, big-blade spade, long-handled shovel, metal detector. Later: gold pan or rocker box, wheelbarrow runs, auger, conveyor sifter (see "Next"). |
+| Gloves, rake, vacuum, conveyor | The tool ladder: bare hands, gold pan, bucket, shovel, then screen, spade, long shovel, detector; later wheelbarrow loads, a rocker box, a conveyor (see "The ladder"). |
 | Slow by hand at first | One 5-ft hole takes most of a day alone, and bare hands miss two thirds of the gold. |
 | No way to lose | Kept from JT's game: the daily quota (miss it and you're fired), heat, thirst, lizards, curfew, the Warden. |
 
-## Built in this first slice
+## Greg's decisions (2026-09-30, later the same night)
+Greg reshaped the start of the game, Needle In A Haystack style:
+- **You start with bare hands.** No shovel, no pan. You scrape up dirt with your hands and pick through it for what you
+  can see (the odd visible nugget, old junk). Greg: "you have to earn your way to get da pan", and "we have to earn
+  shovel".
+- **Panning comes before digging,** at **the water truck** in camp (Greg: "a"). Dirt is carried there from the lake
+  bed and washed for the fine gold you can't see.
+- **The quota starts tiny and grows every day** (Greg: "b"), so the crew is always racing it.
+- **Tools are shared crew objects,** and **they cost more the bigger the crew** (Greg: "b but with more players the cost
+  of the tools increases").
+- **One crew wallet** (Greg: "a"). Everything anyone sells goes into it. It pays the Warden's quota at curfew **and**
+  buys tools, so every purchase is a crew argument: quota or tools?
+
+### The ladder
+| Step | Tool | What it does | Cost (1 camper) |
+|---|---|---|---|
+| 0 | Bare hands | 1.5 L handfuls (1.1 s, 2 stamina), down to ~45 cm. Visible gold and junk only. | — |
+| 1 | Gold pan | Carries 4 L. Wash it at the water truck (8 s a pan-load) for the fine gold. | 25 |
+| 2 | Bucket | Carries 20 L to the truck: five pan-loads a trip (still washed with the pan). | 40 |
+| 3 | Shovel | 10 L shovelfuls, down to 5 ft, where the gold is richer and the old finds are buried. | 80 |
+| 4+ | Sifting screen, big-blade spade, long shovel, detector (Supply Depot, as before) | | 40-110 |
+| later | Wheelbarrow loads, rocker box, sluice/conveyor, machines | Not built yet. | |
+
+Each extra camper makes digging gear half as dear again (`SIM.toolCost`, and the Supply Depot's dig category).
+
+## Built in step 1 (bare hands, the pan, the wallet)
+- **The crew wallet:** `S.seeds` *is* the crew's money now (`RUN.bank`, the server's `world.run.bank`).
+  - Every "seeds += n" in JT's game (a finished hole, blackjack, the KB reward, the Supply Depot) changes the crew
+    wallet. It's sent to the server as a `wallet` delta.
+  - Selling pays the wallet once. Before, it also paid the seller's own pocket.
+  - At curfew the Warden takes her quota out of the wallet and the rest stays. If there isn't enough, you're fired.
+- **The quota** is `(3 + 3 x day)` per camper with JT's crew scaling. Day 1 alone is 6.
+- **Tools** (`public/js/49-tools.js`, `SIM.TOOLS`):
+  - Each purchase is one real object on the ground in front of the Supply Depot window.
+  - F picks one up, one of each kind at a time. Z puts the last one down.
+  - Leaving the game drops yours where you stood, and being fired sends them all back.
+  - Whoever holds the shovel shows it in their hands; everyone else has empty hands.
+- **Carrying dirt:** with a pan or bucket, what you scrape or dig goes into it (`S.load`) instead of the pile, while
+  there's room.
+- **Panning:** F at the water truck's tap, with a pan, washes it a pan-load at a time. The fine gold (`fineGold`:
+  1.5 seeds a litre of paystreak dirt at full depth, much less near the surface) goes into your pouch.
+- **The HUD** shows your tools, your gold pouch and the dirt you're carrying. The top box reads "Wallet / quota".
+
+## Built in the first slice (the shovel)
 1. **First person by default.** V still switches to third person. You see your own camper's dig animation.
 2. **Real shovelfuls.**
    - A shovelful is 10 litres of dirt (F2 > Player, `dig.shovelful`) and takes 1.6 s to dig, lift and throw (`dig.time`).
@@ -61,7 +104,7 @@ quota, getting fired, heat, water, lizards, curfew, the Warden.
    - **The sifting screen** (Supply Depot, 40 seeds) catches all of it.
    - **The pouch** shows next to the sack on the HUD, and Mr. Sir buys it toward the team quota.
 6. **The spade** is now a big blade: shovelfuls are 50% bigger, so a hole takes a third fewer.
-7. **The quota is retuned for real digging:** `(8 + 12 x day)` per camper, scaled for the crew as before. It was
+7. **The quota is retuned for real digging** (since changed again, see above): `(8 + 12 x day)` per camper, scaled for the crew as before. It was
    `(60 + 40 x day)`. Day 1 alone is 20 seeds. Bare hands on a paystreak make about 15-20 per hole, so day 1 means
    finding good ground. A screen roughly quintuples that.
 
@@ -89,6 +132,9 @@ In order of how much they change the feel:
    town breach.
 
 ## Tests
+- `tests/tools.mjs` (new, two browsers, 14 checks): bare hands to start; a handful is ~1 mm and hands stop at ~45 cm; one
+  wallet both campers see; crew pricing; buying a pan; one holder at a time; scraping into the pan; washing it at the
+  truck; Z; the Warden taking her quota at curfew and leaving the rest.
 - `tests/gold.mjs` (new, browser, 14 checks):
   - you start in first person
   - one shovelful is a real shovelful (~6 mm), and a hole is about 252 of them

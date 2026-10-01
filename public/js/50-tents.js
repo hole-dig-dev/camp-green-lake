@@ -42,8 +42,12 @@ function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
 // (S.up[id], S.onions, S.batt) are unchanged from before.
 const SHOP=[
+  // the crew's tools (49-tools.js): real objects bought from the crew wallet; each one appears on the ground out front
+  {id:'pan',tool:true,name:'Gold pan',desc:'Scrape or dig dirt into it (4 L), carry it to the water truck and wash it (F) for the fine gold your eyes can\'t see. The first step up from bare hands.',cost:25,cat:'dig',icon:'sack'},
+  {id:'bucket',tool:true,name:'Bucket',desc:'Carries 20 L of dirt to the water truck: five pan-loads a trip instead of one. You still need a pan to wash it.',cost:40,cat:'dig',icon:'sack'},
+  {id:'shovel',tool:true,name:'Shovel',desc:'Real digging: 10 L a shovelful instead of a handful, and down to 5 feet, where the gold is richer and the old finds are buried.',cost:80,cat:'dig',icon:'shovel'},
   {id:'screen',name:'Sifting screen',desc:'Shake every shovelful through it and you catch all the gold, not just the flecks you happen to see (about a third).',cost:40,cat:'dig',icon:'sack'},
-  {id:'spade',name:'Big-blade spade',desc:'Each shovelful holds half as much dirt again, so a hole goes faster.',cost:45,cat:'dig',icon:'shovel'},
+  {id:'spade',name:'Big-blade spade',desc:'Each shovelful holds half as much dirt again, so a hole goes faster. (For whoever holds a shovel.)',cost:45,cat:'dig',icon:'shovel'},
   {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long'},
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
   {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
@@ -55,6 +59,9 @@ const SHOP=[
   {id:'walkie',name:'Walkie-talkie',desc:'Your voice (P) and chat (Enter) reach anyone else with a walkie-talkie, anywhere on the lake, even in a tent. You hold it up to talk, so everyone can see who\'s on the radio.',cost:60,cat:'survival',icon:'ping'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
+// digging gear costs more the bigger the crew (Greg): half as much again for each extra camper, like the tools
+const shopCrewN=()=>(typeof remotes==='undefined'?0:remotes.size)+1;
+for(const it of SHOP)if(it.cat==='dig'){const base=it.cost;Object.defineProperty(it,'cost',{get(){return it.tool?SIM.toolCost(it.id,shopCrewN()):Math.round(base*(1+0.5*Math.max(0,shopCrewN()-1)))},enumerable:true})}
 // painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
 // and inventory cards in place of the SVG line icons, which stay as the fallback for anything without art
 const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds','tonic','medkit','walkie']);
@@ -193,6 +200,7 @@ function hideShopConfirm(){
    when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
+  if(it.tool){hideShopConfirm();if(buyTool(it.id))$('#shopFeedback').textContent=`${it.name} paid for from the crew wallet. It's on the ground out front.`;renderShop();return}   // a crew tool: the server takes the seeds and puts it out front (49-tools.js)
   S.seeds-=it.cost;
   if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
   sfx.coin();hideShopConfirm();it.justBought=performance.now();

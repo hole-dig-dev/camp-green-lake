@@ -44,7 +44,7 @@ function invEntries(){
     const own=!!S.up[it.id];
     out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
   }
-  if(!S.up.spade&&!S.up.long)out.push({id:'shovel',cat:'gear',name:'Camp shovel',icon:'shovel',art:'gear/shovel',desc:'Standard issue. Holes go down to 5 feet.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
+  if(hasTool('shovel')&&!S.up.spade&&!S.up.long)out.push({id:'shovel',cat:'gear',name:'Camp shovel',icon:'shovel',art:'gear/shovel',desc:'Standard issue. Holes go down to 5 feet.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
   return out;
 }
 function invVisible(){const all=invEntries();return invCat==='all'?all:all.filter(e=>e.cat===invCat)}

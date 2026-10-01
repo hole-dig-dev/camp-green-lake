@@ -115,6 +115,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `feature/gold-dig` (Greg's Claude): step 1 of Greg's ladder: bare hands, the gold pan at the water truck, one crew wallet (`S.seeds` is now the crew's), shared tools priced by crew size, a tiny growing quota. See `2026-10-01-0010-greg-claude-bare-hands-pan-wallet.md`.
 - `feature/gold-dig` (Greg's Claude): **the pivot.** Greg drops the Peak escape for a hard, tedious, first-person gold dig (after *Needle In A Haystack Simulator*): real shovelfuls, 5-ft holes, gold in every shovelful, a sifting screen, a retuned quota. See `2026-09-30-2330-greg-claude-pivot-gold-dig.md` and `docs/plans/2026-09-30-gold-dig-design.md`.
 - `jt/next` (JT's Claude): loot has a real shape (rigid boxes that tip and tumble), `feature/rigid-loot`. See `2026-09-29-2300-jt-claude-loot-has-a-shape.md`.
 - `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.

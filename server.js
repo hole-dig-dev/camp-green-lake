@@ -213,8 +213,18 @@ function checkSummit() {
   const next = ZONE_ORDER[ZONE_ORDER.indexOf('lake') + 1];
   if (js.length && at === js.length && next) { LOG.log('summit', { n: js.length }); for (const c of js) c.summit = false; zoneSwitch(next, 'the crew climbed the north wall'); }
 }
+/* ---- the gold dig (Greg's Claude, 2026-09-30): the crew wallet and the crew's tools ----
+   world.run.bank is the crew wallet: selling fills it, the Warden takes her quota out of it at curfew, tools and the
+   Supply Depot are paid from it, and the client's seeds counter (S.seeds) shows it. Tools are real objects: buying one
+   puts it on the counter at the Supply Depot window; whoever picks it up holds it until they put it down or leave. */
+const TOOL_SPOT = { x: 15.5, z: 38.6 };    // on the ground in front of the Supply Depot window (30-npcs.js 'store' spot), where a bought tool appears
+const MAX_TOOLS = 60, WALLET_RATE = 12, WALLET_WINDOW_MS = 5000, MAX_WALLET_D = 900;
+const toolList = () => Object.entries(world.tools || {}).map(([id, t]) => ({ id: +id, k: t.k, x: t.x, z: t.z, h: t.h || 0 }));
+const crewSize = () => Math.max(1, joined().length);
+function toolsChanged() { dirty = true; broadcast({ t: 'tools', tools: toolList() }); }
+function dropTools(c, x, z) { let n = 0; for (const t of Object.values(world.tools || {})) if (t.h === c.id) { t.h = 0; t.x = r1(x); t.z = r1(z); n++; } return n; }
 function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
-function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
+function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {}, tools: {}, toolSeq: 1 }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -225,6 +235,7 @@ if (!world.director || typeof world.director !== 'object') world.director = { on
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
+if (!world.tools || typeof world.tools !== 'object') { world.tools = {}; world.toolSeq = 1; }   // the crew's tools (public/js/49-tools.js)
 LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
 SIM.setZone(world.zone || 'lake');
@@ -465,6 +476,7 @@ wss.on('connection', (ws, req) => {
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
+      tools: toolList(),   // the crew's tools: where they lie, who holds them (49-tools.js)
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
@@ -581,6 +593,37 @@ wss.on('connection', (ws, req) => {
         world.run.bank += v * payMult(); dirty = true;
         LOG.log('sell', { id: c.id, n: c.n, v });
         broadcast(runInfo());
+        break;
+      }
+      case 'wallet': {
+        // A change to the crew wallet from a camper's own game: the bonus for a finished hole, a blackjack hand at X-Ray's,
+        // a Supply Depot purchase, the Warden's KB reward (49-tools.js walletAdd). Client-reported, like 'sell'.
+        if (!withinRate(c.walletTimes || (c.walletTimes = []), WALLET_RATE, WALLET_WINDOW_MS)) return;
+        const d = Math.round(num(m.d, -MAX_WALLET_D, MAX_WALLET_D, 0)); if (!d) return;
+        world.run.bank = Math.max(0, world.run.bank + d); dirty = true;
+        broadcast(runInfo());
+        break;
+      }
+      case 'buyTool': {
+        const k = String(m.k); if (!SIM.TOOLS[k] || Object.keys(world.tools).length >= MAX_TOOLS) return;
+        const cost = SIM.toolCost(k, crewSize());
+        if (world.run.bank < cost) { send(c, { t: 'toolNo', k, cost, bank: world.run.bank }); return; }
+        world.run.bank -= cost; const id = world.toolSeq++ || 1;
+        world.tools[id] = { k, x: r1(TOOL_SPOT.x + (Math.random() - 0.5) * 1.6), z: r1(TOOL_SPOT.z + (Math.random() - 0.5) * 0.8), h: 0 };
+        LOG.log('buyTool', { id: c.id, n: c.n, k, cost });
+        broadcast({ t: 'toolBought', k, n: c.n, cost }); toolsChanged(); broadcast(runInfo());
+        break;
+      }
+      case 'toolTake': {
+        const t = world.tools[num(m.id, 0, 1e6, -1) | 0]; if (!t || t.h) return;
+        if (!c.host && Math.hypot(t.x - c.x, t.z - c.z) > 4) return;   // within reach (the host's console 'tool' command reaches anywhere)
+        if (Object.values(world.tools).some(o => o.h === c.id && o.k === t.k)) return;   // one of each kind in your hands
+        t.h = c.id; toolsChanged();
+        break;
+      }
+      case 'toolDrop': {
+        const t = world.tools[num(m.id, 0, 1e6, -1) | 0]; if (!t || t.h !== c.id) return;
+        t.h = 0; t.x = r1(num(m.x, -595, 595, c.x)); t.z = r1(num(m.z, -595, 595, c.z)); toolsChanged();
         break;
       }
       case 'prop': {
@@ -1053,6 +1096,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     clearTimeout(joinTimer);
     clients.delete(c.id);
+    if (dropTools(c, c.x || TOOL_SPOT.x, c.z || TOOL_SPOT.z)) toolsChanged();   // they leave their tools where they stood
     for (const [pid, p] of Object.entries(world.props)) { // let go of anything they were holding; what they were running passes on
       const held = (p.grab || []).includes(c.id) || (p.ropes || []).includes(c.id);
       if (!held && p.owner !== c.id) continue;
@@ -1168,7 +1212,7 @@ function endOfDay() {
   if (world.run.bank < q.quota && played < 180) { LOG.log('grace', {}); broadcast({ t: 'grace' }); return; } // the crew only just got here: no check today
   if (world.run.bank >= q.quota) {
     LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
-    world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
+    world.run.day++; world.run.bank -= q.quota; world.run.peak = joined().length; dirty = true;   // the Warden takes her quota; the rest stays in the crew wallet (gold dig)
     if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
     world.run.curse = Math.max(0, (world.run.curse || 0) - tuneS('curse.quota', 10)); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
     broadcast({ ...runInfo(), t: 'quota', met: true });
@@ -1178,6 +1222,7 @@ function endOfDay() {
     LOG.log('fired', { bank: got, quota: q.quota });
     const wasZone = world.zone || 'lake';
     world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() }); ensureCart();
+    broadcast({ t: 'tools', tools: [] });   // every tool goes back to the Supply Depot's stores: start again with bare hands
     gotSet = new Set(); kbHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota: q.quota });
     if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp

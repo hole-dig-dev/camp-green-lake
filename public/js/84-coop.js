@@ -29,21 +29,21 @@ function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.string
 function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{v*=RUN.mood==='digday'?2:1;setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
 function setRun(m){
   const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
-  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
+  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('The crew wallet has enough for the Warden\'s quota. She takes it at curfew: spend carefully until then.','gold',5500);sfx.gold()}
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
-function quotaMet(){toast(`QUOTA MET. The Warden keeps the crew for day ${RUN.day}. New quota: ${RUN.quota} seeds. +20 seeds, +100 XP`,'gold',7000);S.seeds+=20;addXP(100)}
+function quotaMet(){toast(`QUOTA PAID. The Warden took her seeds out of the crew wallet and keeps you for day ${RUN.day}. Tomorrow she wants ${RUN.quota}. +100 XP`,'gold',7000);addXP(100)}
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
   $('#firedText').textContent=`The crew sold ${bank} of the ${quota} seeds the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
   // a new run: seeds and gear are gone, your level stays
-  Object.assign(S,{seeds:20,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  Object.assign(S,{sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null,gold:0,load:{L:0,g:0}});saveSession();   // (the crew wallet, S.seeds, is the server's: it starts the new run at 0)
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run')}catch(e){}location.reload()};
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.curse=Math.max(0,(RUN.curse||0)-tune('curse.quota'));RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
+  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank-=RUN.quota;RUN.curse=Math.max(0,(RUN.curse||0)-tune('curse.quota'));RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
   else if(played<180)graceDay();
   else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;RUN.curse=0;RUN.mood='normal';saveRun();fired(b,q)}
 }
@@ -69,7 +69,7 @@ function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
+  if(mine){addXP(50);sfx.coin();countUp('hauls',3,'hauler')}   // (the server paid it into the crew wallet)
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}

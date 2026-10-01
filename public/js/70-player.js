@@ -60,11 +60,11 @@ function updatePlayer(dt){
   const digging=digHeld&&!uiOpen()&&S.carry==null;
   P.moving=false;
   if(digging){
-    P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=tune('dig.time');P.digPh=(P.digT%iv)/iv;
+    P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=digTime();P.digPh=(P.digT%iv)/iv;
     if(P.digT>=iv){P.digT-=iv;scoop()}
     P.anim=2;
   }else{
-    P.digT=tune('dig.time')*0.85;   // start a dig and the first shovelful comes out straight away (each one takes dig.time)
+    P.digT=digTime()*0.85;   // start a dig and the first shovelful comes out straight away (each one takes dig.time)
     if(ml>0.1){
       mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(S.carry!=null)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;

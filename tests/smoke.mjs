@@ -256,6 +256,9 @@ async function main() {
     await page1.waitForTimeout(200);
     // real shovelfuls (gold dig) take 1.6 s and move ~6 mm of depth each: too little for a few headless frames to show,
     // so this check digs with the old fast numbers through the F2 sliders, then puts them back
+    // the gold dig starts with bare hands: give this camper a shovel (the host's free 'tool' command) before the dig check
+    await page1.evaluate(() => window.__cgl.runCommand('tool shovel'));
+    await waitFor(page1, () => !!hasTool('shovel'), 15000, 'a shovel in hand');
     await page1.evaluate(() => { TUNE_OVR['dig.time'] = { v: 0.42 }; TUNE_OVR['dig.shovelful'] = { v: 150 }; });
     await page1.keyboard.down('e');
     await page1.waitForTimeout(3000); // several scoops' worth, generous for a slow software-rendered frame rate

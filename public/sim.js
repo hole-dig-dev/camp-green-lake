@@ -30,9 +30,14 @@
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
   const RO_LAKE_ONLY = ['sir', 'warden'];
-  // gold dig (Greg, 2026-09-30): a 5 ft hole is now ~250 real shovelfuls, about one a day alone, so the quota starts low
-  // (finding a paystreak is what makes day 1) and climbs as screens, spades and crews make the work faster. Was (60 + 40 * day).
-  const quotaFor = (day, n) => Math.round((8 + 12 * day) * (1 + 0.6 * Math.max(0, n - 1)));
+  // gold dig (Greg, 2026-09-30): the crew starts with bare hands and has to earn every tool, so the Warden's quota starts
+  // tiny and grows every day: always a race (Greg: "b"). It's paid out of the crew wallet at curfew. Was (60 + 40 * day).
+  const quotaFor = (day, n) => Math.round((3 + 3 * day) * (1 + 0.6 * Math.max(0, n - 1)));
+  // the crew's tools (public/js/49-tools.js): real objects, one per purchase, held by whoever picked them up. Bought from
+  // the crew wallet at the Supply Depot; each extra camper makes them half as dear again (Greg), so a big crew can't rush
+  // the ladder. L: litres of dirt it carries (a container).
+  const TOOLS = { pan: { name: 'Gold pan', cost: 25, L: 4 }, bucket: { name: 'Bucket', cost: 40, L: 20 }, shovel: { name: 'Shovel', cost: 80 } };
+  const toolCost = (k, n) => Math.round(TOOLS[k].cost * (1 + 0.5 * Math.max(0, (n || 1) - 1)));
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
   const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };
@@ -736,7 +741,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { TOOLS, toolCost, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

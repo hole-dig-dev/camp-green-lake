@@ -18,7 +18,7 @@ function startGame(resume){
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
-    S.seeds=num(r.seeds,0,1e6,20)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;S.gold=num(r.gold,0,1e6,0)|0;
+    S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;S.gold=num(r.gold,0,1e6,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
     S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope','screen'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;

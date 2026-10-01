@@ -64,6 +64,7 @@ const TUNE_DEFS=[
   // ---- stamina and afflictions (70-player.js)
   {key:'stam.sprint',tab:'Stamina',label:'Sprinting costs',def:14,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'stam.carry',tab:'Stamina',label:'Hauling costs (while moving)',def:4,kind:'mul',range:4,zero:true,unit:'/s'},
+  {key:'stam.hand',tab:'Stamina',label:'Each handful costs (bare hands)',def:2,kind:'mul',range:4,zero:true,unit:''},
   {key:'stam.dig',tab:'Stamina',label:'Each shovelful costs (no stamina back while you keep digging)',def:6,kind:'mul',range:4,zero:true,unit:''},
   {key:'stam.jump',tab:'Stamina',label:'A jump costs',def:5,kind:'mul',range:4,zero:true,unit:''},
   {key:'stam.regen',tab:'Stamina',label:'Recovery standing still',def:20,kind:'mul',range:4,unit:'/s'},
@@ -100,7 +101,12 @@ const TUNE_DEFS=[
   {key:'gold.base',tab:'Gold',label:'Chance of gold in a shovelful from barren ground',def:0.006,kind:'mul',range:4,zero:true,unit:''},
   {key:'gold.rich',tab:'Gold',label:'Extra chance on a paystreak (at full depth)',def:0.16,kind:'mul',range:4,zero:true,unit:''},
   {key:'gold.spot',tab:'Gold',label:'Share of the gold you spot by hand (no screen)',def:0.35,kind:'mul',range:2.5,zero:true,unit:''},
-  {key:'gold.value',tab:'Gold',label:'Seeds Mr. Sir pays per flake',def:2,kind:'mul',range:4,unit:''},
+  {key:'gold.value',tab:'Gold',label:'Seeds Mr. Sir pays for a visible flake',def:2,kind:'mul',range:4,unit:''},
+  {key:'dig.handful',tab:'Player',label:'Dirt per double handful (no shovel)',def:1.5,kind:'mul',range:4,unit:' L'},
+  {key:'dig.handTime',tab:'Player',label:'Time per handful (scrape up, pick through)',def:1.1,kind:'mul',range:3,unit:' s'},
+  {key:'gold.fine',tab:'Gold',label:'Fine gold in a litre of paystreak dirt (panned out at the water truck)',def:1.5,kind:'mul',range:4,zero:true,unit:' seeds'},
+  {key:'gold.panTime',tab:'Gold',label:'Washing one pan-load at the water truck',def:8,kind:'mul',range:3,unit:' s'},
+  {key:'gold.handJunk',tab:'Gold',label:'Chance a handful turns up old junk (bare hands)',def:0.012,kind:'mul',range:4,zero:true,unit:''},
   {key:'dig.shovelful',tab:'Player',label:'Dirt per shovelful (a 5 ft hole is ~2500 L)',def:10,kind:'mul',range:4,unit:' L'},
   {key:'dig.depth',tab:'Player',label:'How deep each scoop goes',def:1,kind:'mul',range:3,unit:'×'},
   // ---- ragdolls (26-ragdoll.js) and what throws you around

@@ -68,6 +68,7 @@ function onMsg(m){
       if(typeof zoneEnter==='function')zoneEnter(typeof m.zone==='string'?m.zone:'lake',m.zflags);   // which map the crew is in (88-zones.js); before the holes below, which are that map's
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
+      setTools(m.tools||[]);   // the crew's tools (49-tools.js)
       if(m.kb)reveal(cleanName(m.kb)||'A camper');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
@@ -124,7 +125,7 @@ function onMsg(m){
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
-    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;const sc=num(m.sc,0,1e6,0)|0;if(sc>S.seeds){S.seeds=sc;toast('Welcome back. Your '+sc+' seeds were saved.','good',4000)}P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
+    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
@@ -132,6 +133,7 @@ function onMsg(m){
     case 'curse':curseNote(num(m.d,-100,100,0),num(m.curse,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
     case 'quota':setRun(m);quotaMet();break;
     case 'grace':graceDay();break;
+    case 'tools':case 'toolBought':case 'toolNo':toolsMsg(m);break;   // the crew's tools (49-tools.js)
     case 'fired':fired(num(m.bank,0,1e7,0)|0,num(m.quota,0,1e7,0)|0);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);lionFromServer(m);break;
