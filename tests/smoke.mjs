@@ -252,12 +252,12 @@ async function main() {
     // yaw 0 here (no mouse look), so "in front" is straight toward -z; teleport onto that exact
     // spot afterward rather than trying to walk it (which, at software-rendered frame rates,
     // risks over/undershooting a 1.1m target).
-    await page1.evaluate(() => { window.__cgl.runCommand('tp 0 -120'); window.__cgl.runCommand('time 13:00'); });
+    await page1.evaluate(() => { window.__cgl.runCommand('tp 0 120'); window.__cgl.runCommand('time 13:00'); });
     await page1.waitForTimeout(200);
     await page1.keyboard.down('e');
     await page1.waitForTimeout(3000); // several scoops' worth, generous for a slow software-rendered frame rate
     await page1.keyboard.up('e');
-    await page1.evaluate(() => window.__cgl.runCommand('tp 0 -121.1'));
+    await page1.evaluate(() => window.__cgl.runCommand('tp 0 121.1'));
     await waitFor(page1, () => document.querySelector('#depth').textContent !== '0.0 ft', 5000, 'depth readout to reflect the just-dug hole');
     const depthText = await page1.$eval('#depth', el => el.textContent);
     record('digging on the lake bed changes hole depth', true, depthText);
