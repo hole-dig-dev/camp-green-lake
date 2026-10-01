@@ -545,7 +545,7 @@ wss.on('connection', (ws, req) => {
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;

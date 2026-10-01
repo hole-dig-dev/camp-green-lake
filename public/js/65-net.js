@@ -107,7 +107,7 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tx=num(m.x,-HALF-20,HALF+20,R.tx);R.ty=num(m.y,-5,ZONE_MAX_Y,R.ty);R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'truck':truckMsg(m);break;
     case 'sumstat':northMsg(m);break;   // the crew on top of the north wall (88-north.js)   // Mr. Sir's pickup (87-truck.js)
@@ -193,7 +193,7 @@ function updateRemotes(dt){
   for(const[id,R]of remotes){
     if(PARTY.on&&id!==PARTY.targetId)continue;
     const g=R.p.g,k=Math.min(1,dt*10);
-    g.visible=R.room===S.tent;
+    g.visible=R.room===S.tent&&!!R.tn===!!S.inTown;   // the buried town only sees the buried town
     const dx=R.tx-g.position.x,dz=R.tz-g.position.z;
     if(dx*dx+dz*dz>100){g.position.set(R.tx,R.ty,R.tz)}else{g.position.x+=dx*k;g.position.z+=dz*k;g.position.y+=(R.ty-g.position.y)*k}
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
