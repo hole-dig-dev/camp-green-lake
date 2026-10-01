@@ -254,7 +254,56 @@ function pollShopGamepad(){
 function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
 function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
 
-function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail();
+/* ---- Me | The crew (JT 2026-10-01): the crew side is a table, one column for each of the D Tent crew, one row for each
+   upgrade (sim.js CREW_SHOP). Paid from your own gold; the server keeps who has what for the whole camp ('crewBuy').
+   First click on a price asks "Sure?", the second buys. ---- */
+let shopMode='me',crewConfirm=null,crewConfirmT=0;const crewPending=new Map();
+function setShopMode(m){shopMode=m;$('#shopModeMe').setAttribute('aria-selected',String(m==='me'));$('#shopModeCrew').setAttribute('aria-selected',String(m==='crew'));
+  $('#shopMe').hidden=m!=='me';$('#crewShop').hidden=m!=='crew';crewConfirm=null;if(m==='crew')renderCrewShop()}
+$('#shopModeMe').onclick=()=>setShopMode('me');$('#shopModeCrew').onclick=()=>setShopMode('crew');
+function crewItemState(n,it){const up=CREW_UP[n]||{};
+  if(up[it.id]||SIM.CREW_SHOP.some(o=>o.needs===it.id&&up[o.id]))return{k:'owned'};
+  if(it.needs&&!up[it.needs])return{k:'locked',need:SIM.CREW_SHOP.find(o=>o.id===it.needs).name};
+  if(S.seeds<it.cost)return{k:'short',need:it.cost-S.seeds};return{k:'buy'}}
+function renderCrewShop(){
+  if(shopMode!=='crew'||!shopOpen)return;
+  const grid=$('#crewGrid');grid.textContent='';
+  const head=document.createElement('div');head.className='crew-h';head.textContent='Upgrade';grid.appendChild(head);
+  for(const n of SIM.CREW){const b=bots.find(o=>o.d.n===n),h=document.createElement('div');h.className='crew-h';h.textContent=n;
+    const sm=document.createElement('small');sm.textContent=b?`bucket ${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:'';h.appendChild(sm);grid.appendChild(h)}
+  for(const it of SIM.CREW_SHOP){
+    const c=document.createElement('div');c.className='crew-item';const t=document.createElement('b');t.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc;const p=document.createElement('em');p.textContent=it.cost+' gold';c.append(t,d,p);grid.appendChild(c);
+    for(const n of SIM.CREW){const st=crewItemState(n,it),cell=document.createElement('div');cell.className='crew-cell';const btn=document.createElement('button');btn.type='button';btn.className='crew-buy';
+      const key=n+'|'+it.id;btn.dataset.key=key;btn.setAttribute('aria-label',`${it.name} for ${n}`);
+      if(st.k==='owned'){btn.textContent='✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
+      else if(st.k==='locked'){btn.textContent=`Needs ${st.need}`;btn.disabled=true}
+      else if(st.k==='short'){btn.textContent=`Need ${st.need} more`;btn.disabled=true}
+      else if(crewConfirm===key&&performance.now()-crewConfirmT<4000){btn.textContent=`Sure? ${it.cost}`;btn.classList.add('is-confirm');btn.onclick=()=>crewBuy(n,it)}
+      else{btn.textContent=`Buy · ${it.cost}`;btn.onclick=()=>{crewConfirm=key;crewConfirmT=performance.now();renderCrewShop();const q=$(`.crew-buy[data-key="${CSS.escape(key)}"]`);if(q)q.focus()}}
+      cell.appendChild(btn);grid.appendChild(cell)}
+  }
+}
+function crewBuy(n,it){
+  crewConfirm=null;if(crewItemState(n,it).k!=='buy'){renderCrewShop();return}
+  S.seeds-=it.cost;sfx.coin();clerk.waveT=1.6;addXP(it.cost/5);logEv('crewBuy',{crew:n,item:it.id,cost:it.cost});
+  (CREW_UP[n]=CREW_UP[n]||{})[it.id]=true;   // straight away on your screen; the server's 'crew' confirms it
+  if(online()){crewPending.set(n+'|'+it.id,it.cost);wsSend({t:'crewBuy',n,id:it.id})}
+  else try{localStorage.setItem('cgl-crew',JSON.stringify(CREW_UP))}catch(e){}
+  $('#crewFeedback').textContent=`${it.name} for ${n}. ${S.seeds} gold left.`;toast(`You bought ${n} a ${it.name.toLowerCase()}.`,'good',2500);
+  animateShopSeeds();renderShop();
+}
+/* the server's word on the crew's kit (on joining, and after anyone buys something) */
+function crewMsg(m){
+  const up=m.up&&typeof m.up==='object'?m.up:{};for(const k of Object.keys(CREW_UP))delete CREW_UP[k];
+  for(const n of SIM.CREW)if(up[n]&&typeof up[n]==='object'){CREW_UP[n]={};for(const it of SIM.CREW_SHOP)if(up[n][it.id]===true)CREW_UP[n][it.id]=true}
+  const key=m.n+'|'+m.id;
+  if(m.refund&&crewPending.has(key)){S.seeds+=crewPending.get(key);crewPending.delete(key);toast(`Someone already bought ${m.n} that. Your gold's back.`,'',3000)}
+  else if(m.byId===myId())crewPending.delete(key);   // my own purchase, confirmed
+  else if(m.by&&m.n&&S.started){const it=SIM.CREW_SHOP.find(o=>o.id===m.id);if(it)toast(`${m.by} bought ${m.n} a ${it.name.toLowerCase()}.`,'gold',3000)}
+  if(shopOpen)renderShop();
+}
+try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
+function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail();renderCrewShop();
   const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
 /* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
    his window instead (sim.js SELL, 84-grab.js). */

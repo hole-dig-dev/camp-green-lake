@@ -154,7 +154,7 @@ function updateLizards(dt,t){
     let dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
     // a crew member out on the lake is fair game too (30-npcs.js crewKO), when he's nearer than you
-    let cb=null;{let cd=L.mode==='chase'?11:6.5;for(const b of bots){if(!OUTDOOR.has(b.state)||b.state==='siftq'||b.state==='sifting')continue;const g=b.p.g.position;if(inCamp(g.x,g.z))continue;const d=Math.hypot(g.x-L.x,g.z-L.z);if(d<cd&&(!alive||d<dp)){cd=d;cb=b}}}
+    let cb=null;{let cd=L.mode==='chase'?11:6.5;for(const b of bots){if(!OUTDOOR.has(b.state)||b.state==='siftq'||b.state==='sifting'||crewHas(b,'onions'))continue;const g=b.p.g.position;if(inCamp(g.x,g.z))continue;const d=Math.hypot(g.x-L.x,g.z-L.z);if(d<cd&&(!alive||d<dp)){cd=d;cb=b}}}
     if(cb&&!(alive&&S.onionT>0&&dp<7)){const g=cb.p.g.position,d=Math.hypot(g.x-L.x,g.z-L.z);L.mode='chase';
       const dx=g.x-L.x,dz=g.z-L.z;if(d>0.05){const s2=Math.min(d,4.7*dt);L.x+=dx/d*s2;L.z+=dz/d*s2;L.yaw=Math.atan2(dx,dz)}
       if(d<0.75){crewKO(cb,'liz');L.mode='wander'}

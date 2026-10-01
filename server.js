@@ -115,7 +115,7 @@ const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lio
 const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
 const MAX_DEPOSIT = 100000;                  // gold per crew-bank deposit; trims a hacked client's ceiling
 const MAX_CREW_DEPOSIT = 600;                // one D Tent crew bucket (5 holes, a nugget on a dig day: ~200)
-const CREW_NAMES = ['X-Ray', 'Armpit', 'Squid', 'Zigzag', 'Magnet', 'Zero']; // public/js/30-npcs.js BOTDEF
+const CREW_NAMES = SIM.CREW; // the D Tent crew (public/js/30-npcs.js BOTDEF)
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
 const ipHttpWindow = new Map(); // ip -> recent HTTP request timestamps
@@ -227,6 +227,7 @@ if (!world.director || typeof world.director !== 'object') world.director = { on
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
+if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew's upgrades: { name: { id: true } } (sim.js CREW_SHOP)
 LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
 SIM.setZone(world.zone || 'lake');
@@ -516,6 +517,7 @@ wss.on('connection', (ws, req) => {
       c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       send(c, { t: 'curfew', v: SIM.CURFEW });
+      send(c, { t: 'crew', up: world.crew });
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
       if (!c.joined) {
@@ -624,6 +626,16 @@ wss.on('connection', (ws, req) => {
         const owner = id >= 0 ? T.o.owner : T.c.id;
         if (m.t === 'pyeet' && owner !== c.id && clients.has(owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(owner), { t: 'pyeet', id, pid: c.id, d }); }
         broadcast({ t: 'pown', id, owner, grab: T.o.grab, ropes: T.o.ropes });
+        break;
+      }
+      case 'crewBuy': { // an upgrade for one of the crew (the store's "The crew" side), paid from the buyer's own gold on their screen
+        if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
+        const n = CREW_NAMES.includes(m.n) ? m.n : null, it = SIM.CREW_SHOP.find(i => i.id === m.id); if (!n || !it) return;
+        const up = world.crew[n] = world.crew[n] || {};
+        if (up[it.id] || (it.needs && !up[it.needs])) { send(c, { t: 'crew', up: world.crew, refund: it.cost, n, id: it.id }); return; } // someone beat you to it: your gold back
+        up[it.id] = true; dirty = true;
+        LOG.log('crewBuy', { id: c.id, n: c.n, crew: n, item: it.id, cost: it.cost });
+        broadcast({ t: 'crew', up: world.crew, by: c.n, byId: c.id, n, id: it.id });
         break;
       }
       case 'pfree': { // wriggled out of everyone's hands (public/js/84-grab.js stepMeHeld): only when you're on your feet
