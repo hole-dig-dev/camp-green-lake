@@ -100,12 +100,19 @@ function updatePlayer(dt){
 /* first person with a real body (JT: "just drop in the third person animation shown through 1st person"): you look out
    of your own camper's eyes, so digging, the walkie and the tonic are the very same Blender clips friends see. Only
    what hangs off the head bone (head, face, hat, hair, shades) is hidden; the camera sits just in front of the eyes. */
-const FP_EYE_FWD=0.12;   // m in front of the eyes: clear of the (hidden) face, and the neck when you look down
+const FP_EYE_FWD=0.2;   // m in front of the eyes: clear of the (hidden) face and the shoulders, even leaning into a sprint
+/* JT 2026-10-01: "the player's body should be invisible from first person, other than hands." Everything of yours but
+   your hands and the shovel in them goes to a layer the camera doesn't draw but the sun's shadow camera does: you see
+   your hands working (the same clips friends see), and your shadow stays whole. Third person puts it all back. */
+const FP_HIDE_LAYER=3;
+sun.shadow.camera.layers.enable(FP_HIDE_LAYER);
 const fpV=new T.Vector3();
 function fpBody(on){
   if(!me||!me.model)return;me.g.visible=true;
   const h=me.fpHead||(me.fpHead=me.model.getObjectByName('head'));if(!h)return;
-  if(on!==!!me.fpOn){me.fpOn=on;for(const o of h.children){if(on)o.userData.fpWas=o.visible;else if(o.userData.fpWas!==undefined){o.visible=o.userData.fpWas;delete o.userData.fpWas}}}
+  if(on!==!!me.fpOn){me.fpOn=on;for(const o of h.children){if(on)o.userData.fpWas=o.visible;else if(o.userData.fpWas!==undefined){o.visible=o.userData.fpWas;delete o.userData.fpWas}}
+    if(!me.fpHide){me.fpHide=[];me.model.traverse(o=>{if(o.isMesh&&!/_[LR]_Hand$|_R_Shovel/.test(o.name))me.fpHide.push(o)})}
+    for(const o of me.fpHide)o.layers.set(on?FP_HIDE_LAYER:0)}
   if(on)for(const o of h.children)o.visible=false;   // (again each frame: a level-up hat swap mustn't pop one back in front of your eyes)
 }
 function fpEye(v){

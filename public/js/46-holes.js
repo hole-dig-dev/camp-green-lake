@@ -168,12 +168,13 @@ function launch(c,sx,sy,sz,tx,tz,T_,s,delay,frag){
 }
 function throwClods(h,n){
   // from the side of the hole nearest the digger (you, or whoever's at this hole), at the bottom where the blade bites
-  const dx=P.x-h.x,dz=P.z-h.z,dl=Math.hypot(dx,dz)||1,ox=h.x+dx/dl*h.r*0.35,oz=h.z+dz/dl*h.r*0.35;
+  // first person (JT 2026-10-01: the body's out of the way, so were the clods in your face): from the far side of the hole, half the size
+  const fp=FP&&Math.hypot(P.x-h.x,P.z-h.z)<h.r+2,dx=P.x-h.x,dz=P.z-h.z,dl=Math.hypot(dx,dz)||1,side=fp?-0.3:0.35,ox=h.x+dx/dl*h.r*side,oz=h.z+dz/dl*h.r*side;
   for(let k=0;k<n+1;k++){
     const c=clodSlot(),sx=ox+(Math.random()-0.5)*0.3,sz=oz+(Math.random()-0.5)*0.3;
     // aim at the upper half of the spoil pile, so clods land on its crest and read as joining it
     const a=Math.random()*6.283,r=Math.sqrt(Math.random())*MR*0.45,tx=h.mx+Math.cos(a)*r,tz=h.mz+Math.sin(a)*r;
-    launch(c,sx,groundAt(sx,sz)+0.2,sz,tx,tz,CLOD_T*(0.85+Math.random()*0.3),0.07+Math.random()*0.07,CLOD_DELAY+k*0.05,false);
+    launch(c,sx,groundAt(sx,sz)+0.2,sz,tx,tz,CLOD_T*(0.85+Math.random()*0.3),(0.07+Math.random()*0.07)*(fp?0.5:1),CLOD_DELAY+k*0.05,false);
     c.hx=h.mx;c.hz=h.mz;   // the pile's crest: crumbs roll away from it
   }
 }
