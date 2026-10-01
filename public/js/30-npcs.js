@@ -172,6 +172,57 @@ function crewHeldStep(b,dt){
     say(b.L,pick(['Ow.','Thanks a lot.','I\'m telling the Warden.','My back...']),2200);
     b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
 }
+/* ---- the crew out in the weather (JT 2026-10-01): twisters, tumbleweeds and boulders throw them about (a ragdoll,
+   26-ragdoll.js) but never hurt them: they lie there a moment, get up and carry on, bucket and all. The animals are
+   another matter: a lizard, javelina, the lion or a snake/scorpion/hatchling that gets to one knocks him out. His
+   bucket spills, and he wakes up in the nurse's office (back at camp) and has to walk out again. A slowdown, nothing
+   worse. Like the rest of the crew, all of this happens on your screen only. ---- */
+const CREW_NURSE={x:-1.5,z:33};   // where they come round, just inside the gate
+const CREW_HOLD=new Set(['held','flung','tossed','down','ko']);
+function crewToss(b,vx,vy,vz,why){
+  if(!OUTDOOR.has(b.state))return;
+  leaveSiftQ(b);b.preToss=b.state;b.state='tossed';b.v={x:vx,y:vy,z:vz};b.t=0;b.handAt=null;
+  if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!']}[why]||['WHOA!']),2200);
+  logEv('crewToss',{n:b.d.n,why});
+}
+function crewKO(b,why){
+  if(!OUTDOOR.has(b.state)&&b.state!=='tossed'&&b.state!=='down')return;
+  leaveSiftQ(b);b.state='ko';b.t=2.6;b.v={x:0,y:0,z:0};b.handAt=null;
+  const had=b.bucket||0;b.bucket=0;b.errand=null;   // the bucket spills: that sand's gone
+  if(nearCam(b.p.g.position.x,b.p.g.position.z,45)){sfx.thud();say(b.L,{liz:'It BIT me!',jav:'Pig! PIG!',lion:'*whimper*',bite:'Something bit me!'}[why]||'Ow!',2600)}
+  logEv('crewKO',{n:b.d.n,why,sand:had});
+}
+/* what's about to hit him: called every frame for a crew member out on the lake */
+function crewHazards(b){
+  const g=b.p.g.position;
+  for(const tw of TW_LIVE.values()){if(tw.x==null)continue;const dx=g.x-tw.x,dz=g.z-tw.z,d=Math.hypot(dx,dz),r=TW_SUCK_R*(tw.s||1)+1;
+    if(d<r){const a=Math.atan2(dz,dx)+1.2;crewToss(b,Math.cos(a)*9,11+Math.random()*4,Math.sin(a)*9,'tw');return}}
+  for(const w of tbWeeds){if(w.dead||w.x==null)continue;const d=Math.hypot(g.x-w.x,g.z-w.z);
+    if(d<w.r+0.8&&g.y+1.6>w.y-w.r&&g.y<w.y+w.r){crewToss(b,(w.vx||0)*0.9,7,(w.vz||0)*0.9,'tb');return}}
+  for(const o of lsBoulders){if(o.settledT>=LS_SETTLE_TIME)continue;const sp=Math.hypot(o.vx,o.vz);if(sp<LS_HURT_SPEED)continue;
+    const d=Math.hypot(g.x-o.x,g.z-o.z);if(d<o.r+0.55&&Math.abs(g.y+0.9-o.y)<o.r+1.2){crewToss(b,o.vx*0.8+(g.x-o.x)/(d||1)*3,6,o.vz*0.8+(g.z-o.z)/(d||1)*3,'ls');return}}
+  if(inCamp(g.x,g.z))return;   // the animals don't come inside the fence
+  for(const j of JAVV)if(j[3]===0&&Math.hypot(g.x-j[0],g.z-j[1])<1.0){crewKO(b,'jav');return}
+  if(LIONV.active&&LIONV.hp>0&&Math.hypot(g.x-LIONV.x,g.z-LIONV.z)<1.6){crewKO(b,'lion');return}
+  for(const v of ROV.values())if(['hatch','snake','scorp'].includes(v.k)&&v.g&&Math.hypot(g.x-v.g.position.x,g.z-v.g.position.z)<0.9){crewKO(b,'bite');return}
+}
+/* thrown, lying there, knocked out: the body's a ragdoll (26-ragdoll.js crewRag) and this moves it */
+function crewHurtStep(b,dt){
+  const g=b.p.g.position;
+  if(b.state==='tossed'){b.v.y-=16*dt;g.x+=b.v.x*dt;g.y+=b.v.y*dt;g.z+=b.v.z*dt;b.v.x*=1-0.3*dt;b.v.z*=1-0.3*dt;
+    g.x=clamp(g.x,-EDGE+2,EDGE-2);g.z=clamp(g.z,-EDGE+2,EDGE-2);const gy=groundAt(g.x,g.z);
+    if(g.y<=gy&&b.v.y<0){g.y=gy;if(nearCam(g.x,g.z,30))sfx.thud();b.state='down';b.t=1.6+Math.random()}return}
+  if(b.state==='down'){g.y=groundAt(g.x,g.z);if((b.t-=dt)<=0){b.state='return';b.tx=b.hole.x;b.tz=b.hole.z;say(b.L,pick(['I\'m okay.','Ugh.','Where\'s my bucket? Oh. Here.']),2000)}return}
+  if(b.state==='ko'){g.y=groundAt(g.x,g.z);if((b.t-=dt)<=0){   // off to the nurse, and back out
+    g.set(CREW_NURSE.x,groundAt(CREW_NURSE.x,CREW_NURSE.z),CREW_NURSE.z);if(b.p.rag){b.p.rag=null;b.p.ragBlend=0}
+    b.state='gatebackout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Back from the nurse. Lost my whole bucket.','The nurse says I\'m fine. My bucket isn\'t.','Okay. Starting that bucket over.']),3000)}}
+}
+/* the ragdoll pose for a crew member this frame (26-ragdoll.js), or null for his animation */
+function crewRag(b){
+  if(b.state==='tossed'||b.state==='flung')return{pin:0.15,flail:1.2};
+  if(b.state==='down'||b.state==='ko')return{pin:0.03,flail:0};
+  return null;
+}
 function updateBots(dt,now){
   if(PARTY.on)return;
   if(ZONE_H)return;   // the crew stays behind at camp while you're in another map (88-zones.js)
@@ -190,6 +241,8 @@ function updateBots(dt,now){
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
     if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
+    if(b.state==='tossed'||b.state==='down'||b.state==='ko'){g.visible=true;animPerson(b.p,b.state==='tossed'?7:3,dt);crewHurtStep(b,dt);continue}
+    if(OUTDOOR.has(b.state)&&!siren)crewHazards(b);
     if(SIFTQ.includes(b)&&b.state!=='siftq'&&b.state!=='sifting')leaveSiftQ(b);   // sent off by something else (the party, a sinkhole rescue)
     if(OUTDOOR.has(b.state))crewHands(b);
     if(siren){

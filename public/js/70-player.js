@@ -151,8 +151,15 @@ function updateLizards(dt,t){
   const px=P.x,pz=P.z,alive=S.started&&!S.ko;
   for(const L of lizards){
     const tx=L.home.x+Math.cos(t*L.w+L.ph)*5,tz=L.home.z+Math.sin(t*L.w*1.37+L.ph)*5;
-    const dp=Math.hypot(px-L.x,pz-L.z);
+    let dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
+    // a crew member out on the lake is fair game too (30-npcs.js crewKO), when he's nearer than you
+    let cb=null;{let cd=L.mode==='chase'?11:6.5;for(const b of bots){if(!OUTDOOR.has(b.state)||b.state==='siftq'||b.state==='sifting')continue;const g=b.p.g.position;if(inCamp(g.x,g.z))continue;const d=Math.hypot(g.x-L.x,g.z-L.z);if(d<cd&&(!alive||d<dp)){cd=d;cb=b}}}
+    if(cb&&!(alive&&S.onionT>0&&dp<7)){const g=cb.p.g.position,d=Math.hypot(g.x-L.x,g.z-L.z);L.mode='chase';
+      const dx=g.x-L.x,dz=g.z-L.z;if(d>0.05){const s2=Math.min(d,4.7*dt);L.x+=dx/d*s2;L.z+=dz/d*s2;L.yaw=Math.atan2(dx,dz)}
+      if(d<0.75){crewKO(cb,'liz');L.mode='wander'}
+      const g2=L.m.g;g2.position.set(L.x,groundAt(L.x,L.z)+0.02,L.z);g2.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);let dr=L.yaw-g2.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g2.rotation.y+=dr*Math.min(1,dt*10);
+      L.m.tail.rotation.y=Math.sin(t*14+L.ph)*0.5;if(L.m.rig&&g2.visible)creatureAnim(L.m.rig,'Run',dt,1.3);continue}
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
     // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
     else if(alive&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
