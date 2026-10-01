@@ -616,6 +616,7 @@
   const TOWN_SEED = 1882;   // the one fixed layout; change it to rebuild the town differently (tests/town-layout.mjs checks any seed)
   const TOWN = { X: 2000, Z: 0, Y: -30, H: 3.6, STREET: { x0: -34, x1: 34, z0: -7.5, z1: 7.5, h: 5.5 }, TUN_R: 1.3, TUN_H: 2.6 };
   const OLD_TOWN = { x: -230, z: -250, r: 70 };
+  const TOWN_BREAK_DEPTH = 1.45;   // JT: much easier -- an ordinary 5 ft hole (no long shovel) at the spot breaks through
   const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Warden's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
@@ -737,7 +738,7 @@
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,
-    TOWN, OLD_TOWN, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
+    TOWN, OLD_TOWN, TOWN_BREAK_DEPTH, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);

@@ -88,7 +88,7 @@ function scoop(){
   }
   const step=(S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   h.d=Math.min(maxD,h.d+step);
-  touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 8 ft in the old town: the floor gives way (89-town.js)
+  touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
   for(const it of items){
@@ -132,7 +132,7 @@ function nearSpot(){
   if(S.inTown)return townSpot();   // the buried town's own spots (89-town.js)
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)
-  {const br=breachNear(1.6);if(br&&holeDepthHere()>1.8)return{id:'townDown',k:br.k}}   // standing in a hole that broke through
+  {const br=breachNear(2.6);if(br)return{id:'townDown',k:br.k}}   // next to (or in) a hole that broke through: F to climb down (89-town.js)
   if(GRAB_ST.id!=null){const c=cartNear();if(c&&c.id!==GRAB_ST.id)return{id:'cartLoad',cart:c}}   // F: into the wheelbarrow (84-grab.js)
   if(S.carry!=null&&PROPS.has(S.carry))return{id:'drop',pr:PROPS.get(S.carry)};
   if(!inTent()){

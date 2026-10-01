@@ -17,7 +17,7 @@ for k in range(3):box(f'fold{k}',(W,0.0015,0.0006),(0,-D/2+D*(k+1)/4,0.0023),STA
 def t(n,s,x,y,size,m=INK):text(n,s,(x,y,0.0026),size,m,rot=(0,0,0),extrude=0.0004,parent=r)
 t('t1','OLD TOWN',-0.06,0.075,0.022)
 t('t2','X -230   Y 250',-0.06,0.035,0.02)
-t('t3','DIG 8 FT. FLOOR GIVES.',-0.06,-0.0,0.012)
+t('t3','DIG 5 FT. FLOOR GIVES.',-0.06,-0.0,0.012)
 t('t4','DON\'T TELL MR. SIR',-0.06,-0.08,0.011)
 # the sketch: the old street and its buildings, the X where to dig
 box('street',(0.008,0.12,0.0005),(0.085,-0.01,0.0025),INK,bevel=0,parent=r)
