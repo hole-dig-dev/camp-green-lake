@@ -17,6 +17,8 @@ lights and floor.
 
 | `glasses.blend` | Twenty eyewear pairs, with fit references excluded from eyewear-only exports in `public/models/glasses/` | `glasses_options.py` |
 
+| `clothes.blend` | Twenty modular torso/arms/legs sets copied from the approved continuous skins, with physical garment details; clothing-only skinned exports in `public/models/clothes/` | `clothes_options.py` |
+
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
 it. The files are saved **compressed** (Blender keeps compression on every later save): the old single
 `camp-green-lake-art.blend` was 53 MB uncompressed and grew the repo by that much on every commit; the files together are

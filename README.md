@@ -19,6 +19,9 @@ to compare face details on the unchanged head and try combinations with the appr
 **Twenty glasses:** open `/glasses-lab/` to compare regular glasses, sunglasses and crazy frames on the same head,
 with the approved faces and hats. [Eyewear library and Blender source](docs/art/glasses-20.md).
 
+**Twenty mixable outfits:** open `/clothes-lab/` to choose torso, arms and legs independently, play the current
+animations, and combine clothes with faces, hats and glasses. [Clothing library and Blender source](docs/art/clothes-20.md).
+
 Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, one buried prize, and a group of friends arguing about where to dig.
 
 ## Play
