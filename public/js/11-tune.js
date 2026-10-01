@@ -21,6 +21,8 @@ const TUNE_DEFS=[
   {key:'light.falloff',tab:'Flashlight',label:'Fades with distance (0 none, 2 real)',def:1.2,kind:'lin',span:1.2,min:0,max:3,unit:''},
   {key:'light.drain',tab:'Flashlight',label:'Battery drain (a full battery lasts 100/this seconds)',def:0.6,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'light.townSee',tab:'Flashlight',label:'Underground: how far you see with it on (off: 12 m)',def:26,kind:'mul',range:3,unit:' m'},
+  // ---- gear: ideas to try (86-backsack.js)
+  {key:'gear.backsack',tab:'Gear',label:'Clear backsack instead of a bucket (worn on your back, the sand rises as you dig)',def:0,kind:'flag'},
   // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
   {key:'veh.respawn',tab:'Vehicles',label:'Put Mr. Sir\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
