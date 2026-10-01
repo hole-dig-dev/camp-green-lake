@@ -229,7 +229,8 @@ if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
 if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew's upgrades: { name: { id: true } } (sim.js CREW_SHOP)
 { const was = { 'X-Ray': 'Jim Bob', Armpit: 'Randy', Squid: 'Stan', Zigzag: 'Pete', Magnet: 'Larry', Zero: 'Zach' }; // JT 2026-10-01 renamed the crew: their kit goes with them
-  for (const [o, n] of Object.entries(was)) if (world.crew[o]) { world.crew[n] = Object.assign(world.crew[n] || {}, world.crew[o]); delete world.crew[o]; } }
+  for (const [o, n] of Object.entries(was)) if (world.crew[o]) { world.crew[n] = Object.assign(world.crew[n] || {}, world.crew[o]); delete world.crew[o]; }
+  for (const n of Object.keys(world.crew)) if (Object.keys(world.crew[n]).length && world.crew[n].hired === undefined) world.crew[n].hired = true; } // kit bought before hiring existed: he's on the crew
 LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
 SIM.setZone(world.zone || 'lake');
@@ -660,8 +661,17 @@ wss.on('connection', (ws, req) => {
       }
       case 'crewBuy': { // an upgrade for one of the crew (the store's "The crew" side), paid from the buyer's own gold on their screen
         if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
-        const n = CREW_NAMES.includes(m.n) ? m.n : null, it = SIM.CREW_SHOP.find(i => i.id === m.id); if (!n || !it) return;
-        const up = world.crew[n] = world.crew[n] || {};
+        if (m.id === 'hire') { // taking him on: the price goes up with each one already hired (sim.js crewHirePrice)
+          const n = CREW_NAMES.includes(m.n) ? m.n : null; if (!n) return;
+          const hired = CREW_NAMES.filter(k => world.crew[k] && world.crew[k].hired).length, cost = SIM.crewHirePrice(hired);
+          if (world.crew[n] && world.crew[n].hired) { send(c, { t: 'crew', up: world.crew, refund: num(m.cost, 0, 1000, cost) | 0, n, id: 'hire' }); return; }
+          world.crew[n] = Object.assign(world.crew[n] || {}, { hired: true }); dirty = true;
+          LOG.log('crewHire', { id: c.id, n: c.n, crew: n, cost });
+          broadcast({ t: 'crew', up: world.crew, by: c.n, byId: c.id, n, id: 'hire' });
+          break;
+        }
+        const n = CREW_NAMES.includes(m.n) && world.crew[m.n] && world.crew[m.n].hired ? m.n : null, it = SIM.CREW_SHOP.find(i => i.id === m.id); if (!n || !it) return;
+        const up = world.crew[n];
         if (up[it.id] || (it.needs && !up[it.needs])) { send(c, { t: 'crew', up: world.crew, refund: it.cost, n, id: it.id }); return; } // someone beat you to it: your gold back
         up[it.id] = true; dirty = true;
         LOG.log('crewBuy', { id: c.id, n: c.n, crew: n, item: it.id, cost: it.cost });

@@ -150,7 +150,8 @@ function popOutOfSinkhole(sh,by){
    fallback resolves in a bounded, predictable time -- worse than a friend, never a softlock. b.sinkOverride, set
    here, tells updateBots() (30-npcs.js) to leave this bot alone while it's set; updateSoloRescues() below drives it. */
 function startSoloRescue(sh){
-  const zero=bots.find(b=>b.d.n==='Zach')||bots[0];if(!zero||zero.sinkOverride)return;
+  const hired=bots.filter(b=>crewHired(b)),zero=hired.find(b=>b.d.n==='Zach')||hired[0]||bots.find(b=>b.d.n==='Zach');if(!zero||zero.sinkOverride)return;   // Zach comes even if he's not on the crew yet: never a softlock
+  zero.p.g.visible=true;zero.L.el.style.display='';
   const a=Math.atan2(sh.x,sh.z-39)||0.001;   // roughly "away from camp", so he visibly walks in from outside
   const sx=sh.x+Math.sin(a)*(sh.r+SINK_SOLO_APPROACH_R),sz=sh.z+Math.cos(a)*(sh.r+SINK_SOLO_APPROACH_R);
   zero.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};

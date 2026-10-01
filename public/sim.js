@@ -11,10 +11,11 @@
      time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
   const CREW = ['Jim Bob', 'Randy', 'Stan', 'Pete', 'Larry', 'Zach'];
   const CREW_SHOP = [
-    { id: 'bucket', name: 'Bucket', desc: 'Without one he just digs. With one, he carries 5 holes of sand to the sifter and his gold goes in the crew bank.', cost: 30 },
+    { id: 'shovel', name: 'Camp shovel', desc: 'He shows up with bare hands. A shovel: three times faster, and 5 ft holes.', cost: 25 },
+    { id: 'bucket', name: 'Bucket', desc: 'He carries 5 holes of sand to the sifter, instead of washing one in his pan.', cost: 30 },
     { id: 'bucket2', name: 'Big bucket', desc: 'Holds 10 holes of sand before he goes to sift, instead of 5.', cost: 60, needs: 'bucket' },
     { id: 'bucket3', name: 'Huge bucket', desc: 'Holds 15 holes of sand.', cost: 160, needs: 'bucket2' },
-    { id: 'spade', name: 'Sharpened spade', desc: 'He digs 60% faster.', cost: 50 },
+    { id: 'spade', name: 'Sharpened spade', desc: 'He digs 60% faster.', cost: 50, needs: 'shovel' },
     { id: 'canteen', name: 'Big canteen', desc: 'Fewer water breaks: shorter rests, fewer trips back to the tent.', cost: 35 },
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
     { id: 'onions', name: 'Sack of onions', desc: 'He eats them all day. Lizards leave him alone.', cost: 45 },
@@ -22,6 +23,10 @@
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
      a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
   const HANDS = { depth: 0.45, scoop: 0.03, fleck: 0.04 }, PAN = 1, SHOVEL_FLECK = 0.02;
+  /* hiring the crew (JT 2026-10-01: "start with no crew members, hire them for a price"): each one you take on costs more
+     than the last. They show up with bare hands and a gold pan, like you did. */
+  const CREW_HIRE = [40, 60, 90, 130, 180, 240];
+  const crewHirePrice = hired => CREW_HIRE[Math.min(CREW_HIRE.length - 1, Math.max(0, hired | 0))];
   const GOLD = { perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
   /* the sifter's take for `holes` holes of sand: about perHole a hole; a batch runs from about half to double that, and
      about 1 in 16 turns up a nugget (2-4x). rnd: a 0..1 random function; mult: dig day doubles it. */
@@ -767,7 +772,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,
