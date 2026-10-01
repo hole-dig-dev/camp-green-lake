@@ -93,6 +93,17 @@ function playerLook(name,ci){
   return{skin:SKIN_TONES[h%SKIN_TONES.length],band:CAMPER_COLORS[ci],hat:HAT_ROLL[(h>>>4)%HAT_ROLL.length],
     body:BODY_KEYS[(h>>>8)%BODY_KEYS.length],hair:HAIR_COLORS[(h>>>12)%HAIR_COLORS.length]};
 }
+/* the sharpened spade (the store's, for you or a crew member): its steel goes from the camp's dull blue-grey to a dark,
+   blued gunmetal, so you can tell at a glance who's got one. The blade, ridge and socket share the camper's
+   CGL_SteelBlue material (art: blender/camper); each camper with one gets their own darker copy of it. */
+const SPADE_SHARP={color:0x2b3036,metal:0.85,rough:0.28};
+function spadeLook(p,sharp){
+  if(!p)return;sharp=!!sharp;const vm=p===me&&typeof VM_SHOVEL!=='undefined'?VM_SHOVEL:[],key=(p.model?'m':'b')+sharp+vm.length;if(p.spadeLook===key)return;p.spadeLook=key;
+  for(const n of[...(p.shovelMeshes||[]),...vm]){const m=n.userData.steel0||(n.material&&n.material.name==='CGL_SteelBlue'?n.material:null);if(!m)continue;
+    n.userData.steel0=m;
+    if(sharp){if(!n.userData.steelSharp){const c=m.clone();c.color.setHex(SPADE_SHARP.color);if('metalness'in c)c.metalness=SPADE_SHARP.metal;if('roughness'in c)c.roughness=SPADE_SHARP.rough;n.userData.steelSharp=c}n.material=n.userData.steelSharp}
+    else n.material=m}
+}
 function upgradePerson(p){
   if(p.model||!MODEL.ready)return;
   const o=p.o||{},bt=BODY_TYPES[o.body]||BODY_TYPES.average;
