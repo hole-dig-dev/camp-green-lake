@@ -14,7 +14,7 @@ section below exists so a crew that plays well can always get through, even on i
 ## The map
 
 A ridiculous mountain shaped like a **giant half-buried onion** (Sam's onions got out of hand), past the lake with
-Big Thumb behind it. About 300 m across and 90 m tall. The crew starts at the roots and climbs to the green sprout on
+Big Thumb behind it. About 300 m across and 40 m tall (built: 2 m Roots, four 8 m layer walls, a 6 m Peel Gate; each wall has to fit one stamina bar, so the onion is wide rather than tall). The crew starts at the roots and climbs to the green sprout on
 top, where the campfire is.
 
 - **5 layers.** Each onion layer is a ring-shaped terrace. Between rings is a steep **layer wall**. The route spirals
@@ -31,8 +31,8 @@ The canyon only has leg-ups and ropes. This map needs *Peak* climbing, and it's 
 
 | Input | What happens |
 |---|---|
-| Walk into a steep face, hold Space | Grab the wall. Holding drains stamina; moving drains it faster. At 0 you let go. |
-| Tap Space while climbing | Lunge about 1 m up. Fast, and costs a lot of stamina. |
+| Jump at a steep face and keep Space held | Catch the wall. Holding drains stamina; moving drains it faster. At 0 you let go. |
+| Shift while climbing | Lunge about 1 m up. Fast, and costs a lot of stamina. (Built as Shift, not a Space tap: Space is already "hold on".) |
 | Reach the top edge | Mantle: pull yourself over automatically. |
 | Friend at the top holds F | Pulls you up (the buried town's "hand from the rim", pos flag 256). |
 | Friend at the bottom holds F | Boost: you start about 2 m up. Replaces the canyon's jump-speed leg-up. |
@@ -48,7 +48,8 @@ each has 2 or 3 versions.
 For each obstacle: how it works, how it warns you, the crew way, the solo way, and what a mistake costs.
 
 ### 1. The Roots (always first: the tutorial)
-Root ramps and low walls of 1 to 2 m. Teaches climbing, boosting and dropping a rope. Falls here barely hurt.
+A 2 m root wall you can climb anywhere round the onion, plus one root ramp anyone can walk up. Teaches climbing.
+Falls here barely hurt. (Built.)
 
 ### 2. Skin Walls (a 6 to 8 m layer wall)
 - **Works:** the face is slick onion flesh you can't hold, with dry skin patches you can. A patch **tears 3 s after
@@ -141,6 +142,14 @@ Root ramps and low walls of 1 to 2 m. Teaches climbing, boosting and dropping a 
   onions. The flap is a grab prop with a hinge, owned by its first grabber like JT's other props.
 - **Tuning:** every number above is an F2 slider (a new "Onion" tab), read with `tuneOr()`.
 - **Style:** JT's CLAUDE.md: compact JS, named constants with a one-line comment, `npm test` before any push.
+
+## Built so far (2026-09-30)
+
+- `feature/climb`: climbing (`public/js/88-climb.js`), its numbers shared through `SIM.CLIMB`.
+- `feature/onion-mountain`: the shape (`SIM.ONION` in `sim.js`, `public/js/89-zone-onion.js`), the day's layout
+  (`SIM.ONION.layout(seed)`, seeded by map + day), the Roots, every middle section as a climbable dry-skin patch with a
+  rope at the top (a placeholder until its obstacle is built), the Peel Gate as a ramp, the campfire, the sprout.
+  `tests/onion-layout.mjs` (200 seeds, in `npm test`) and `tests/onion.mjs` (browser).
 
 ## Build order
 

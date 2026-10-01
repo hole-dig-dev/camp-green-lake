@@ -136,19 +136,23 @@ try {
   check('one camper at the campfire: waiting for the crew', /1 of 2/.test(line1), { line1 });
   await shot(p1, 'canyon-campfire-waiting-1280.png');
   await p2.evaluate(() => { const f = ZONES.canyon.fire; P.x = f.x - 1; P.z = f.z + 1; P.y = groundAt(P.x, P.z); });
-  await waitFor(p1, () => cpStat && cpStat.at === 2, 10000, 'the campfire to count 2 of 2');
+  await waitFor(p1, () => (cpStat && cpStat.at === 2) || ZONE.id === 'onion', 10000, 'the campfire to count 2 of 2');   // or already moved on: the server switches maps the moment everyone's there
   // the line on screen is rewritten on the next HUD refresh, not the instant the count arrives: give it a moment
-  await waitFor(p1, () => /whole crew made it/i.test(document.querySelector('#zoneLine').textContent), 5000, 'the campfire line to say the crew made it').catch(() => {});
-  const line2 = await p1.evaluate(() => document.querySelector('#zoneLine').textContent);
-  check('the whole crew at the campfire', /whole crew made it/i.test(line2), { line2 });
+  await waitFor(p1, () => /whole crew made it|everyone made it/i.test(document.querySelector('#zoneLine').textContent), 5000, 'the campfire line to say the crew made it').catch(() => {});
+  const line2 = await p1.evaluate(() => ZONE.id === 'onion' ? 'moved on' : document.querySelector('#zoneLine').textContent);
+  check('the whole crew at the campfire', /whole crew made it|everyone made it|moved on/i.test(line2), { line2 });
   await p1.evaluate(() => { P.yaw = 0; P.pitch = -0.08; });
   await shot(p1, 'canyon-campfire-big-thumb-1280.png');
 
+  // the canyon isn't the last map any more (Greg's Onion Mountain follows it): the whole crew moves on
+  await waitFor(p1, () => ZONE.id === 'onion', 30000, 'the crew to move on from the canyon campfire');
+  check('the whole crew at the campfire moves on to the next map', await p2.evaluate(() => ZONE.id === 'onion'));
+
   // --- a phone-sized view ---
   const phone = await openPlayer('p3', 'Squid', 360, 800);
-  await waitFor(phone, () => ZONE.id === 'canyon', 30000, 'a late joiner lands in the canyon');
-  check('a late joiner lands in the canyon at the start', await phone.evaluate(() => Math.hypot(P.x - ZONES.canyon.arrive.x, P.z - ZONES.canyon.arrive.z) < 8));
-  await shot(phone, 'canyon-start-phone.png');
+  await waitFor(phone, () => ZONE.id === 'onion', 30000, 'a late joiner to land in the crew map');
+  check('a late joiner lands where the crew is, at the start', await phone.evaluate(() => Math.hypot(P.x - ZONE.arrive.x, P.z - ZONE.arrive.z) < 8));
+  await shot(phone, 'zone-late-joiner-phone.png');
 
   // --- back to the lake: everything comes back ---
   await p1.evaluate(() => window.__cgl.runCommand('zone lake'));

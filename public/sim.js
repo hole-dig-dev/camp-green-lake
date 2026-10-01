@@ -21,8 +21,50 @@
     for (let i = 0; i < W.length - 1; i++) { const [a, wa] = W[i], [b, wb] = W[i + 1]; if (z <= a && z >= b) { w = wa + (wb - wa) * smooth((a - z) / (a - b)); break; } }
     return w + 2.2 * Math.sin(z * 0.05);
   };
+  // Peak-style climbing (public/js/88-climb.js reads these as its defaults; tests/onion-layout.mjs checks every map against them)
+  const CLIMB = { up: 1.1, side: 0.9, hold: 4, move: 9, lunge: 1.0, lungeCost: 16, lungeT: 0.25, min: 8,   // m/s, stamina/s, m, stamina, s
+    jump: 0.9, stam: 100, margin: 0.8, rampMax: 0.6 };   // a plain jump's height (m); a climb must fit in margin x the stamina bar; steepest walkable ramp
+  // Onion Mountain (Greg's Claude, 2026-09-30; docs/plans/2026-09-30-onion-mountain-design.md): a giant half-buried
+  // onion, climbed ring by ring. public/js/89-zone-onion.js builds the ground from this, the server snaps spawns onto a
+  // ring (toFloor), and tests/onion-layout.mjs proves every layout can be climbed.
+  // Ring 0 is the ground round the onion, rings 1-5 are its layers, ring 6 is the top round the sprout. Wall k (1-6)
+  // is the steep face at radius R[k-1], from ring k-1 (H[k-1]) up to ring k (H[k]). Each wall has one section where
+  // the way up is: the Roots (wall 1, always first), four middle sections shuffled each run, the Peel Gate (wall 6).
+  const ONION = { X: -330, Z: -300,                 // the onion's middle (well clear of the camp box, inside the ±600 square)
+    R: [150, 124, 100, 78, 58, 38],                  // wall k's radius is R[k-1]
+    H: [0, 2, 10, 18, 26, 34, 40],                   // ring k's floor height
+    FACE: 0.35,                                      // half-thickness of a wall's face: too steep to walk
+    SECT_W: 12,                                      // a section's width along its wall (m)
+    RAMP_L: 14,                                      // a walkable ramp through a wall (the Roots' path, the Peel Gate) is this long
+    RIM: 210,                                        // past this radius the basin rim rises: nobody wanders off into the desert
+    MIDDLE: ['skin', 'scree', 'fume', 'shoot'],      // the four middle sections (one obstacle each, built one per commit)
+    TWISTS: [['windy', 2], ['harvest', 2], ['fog', 2], ['scorcher', 2], ['calm', 2]],   // the day's twist, by weight
+    TURN: [140, 200],                                // degrees round the onion from one section to the next (walk round the ring)
+    FALL_MAX: 8.5,                                   // the worst fall anywhere: one ring down (tests/onion-layout.mjs checks it)
+  };
+  ONION.ring = (x, z) => { const r = Math.hypot(x - ONION.X, z - ONION.Z); let k = 0; while (k < 6 && r <= ONION.R[k]) k++; return k; };
+  // the run's mountain: section order, where each one is round its wall, and the twist. Same seed, same mountain.
+  ONION.layout = seed => {
+    let s = seed >>> 0; const rnd = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const mid = ONION.MIDDLE.slice(); for (let i = mid.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [mid[i], mid[j]] = [mid[j], mid[i]]; }
+    const kinds = ['roots', ...mid, 'peel'], sec = [null]; let a = Math.PI / 2;   // wall 1 faces south (+z), toward the lake
+    kinds.forEach((kind, i) => {
+      if (i) a += (ONION.TURN[0] + rnd() * (ONION.TURN[1] - ONION.TURN[0])) * Math.PI / 180;
+      sec.push({ k: i + 1, kind, a: Math.atan2(Math.sin(a), Math.cos(a)), ver: Math.floor(rnd() * 3), ramp: kind === 'roots' || kind === 'peel' });
+    });
+    const W = ONION.TWISTS, tot = W.reduce((t, w) => t + w[1], 0); let r = rnd() * tot, twist = 'calm';
+    for (const [k, w] of W) if ((r -= w) < 0) { twist = k; break; }
+    return { seed: seed >>> 0, sec, twist };
+  };
+  // signed distance (m) along wall k from its section's middle
+  ONION.along = (x, z, S) => { const th = Math.atan2(z - ONION.Z, x - ONION.X); let d = th - S.a; d = Math.atan2(Math.sin(d), Math.cos(d)); return d * ONION.R[S.k - 1]; };
   // a spawn point in this map, moved onto open floor if it isn't (only the canyon has walls; the lake is all floor)
   const toFloor = (x, z, pad) => {
+    if (ZONE_NOW === 'onion') {   // onto a ring, clear of the layer walls, inside the basin rim
+      const dx = x - ONION.X, dz = z - ONION.Z, d = Math.hypot(dx, dz) || 1, p = pad == null ? 2.5 : pad; let r = Math.min(d, ONION.RIM - 8);
+      for (const R of ONION.R) if (Math.abs(r - R) < p) r = R + p;
+      return { x: ONION.X + dx / d * r, z: ONION.Z + dz / d * r };
+    }
     if (ZONE_NOW !== 'canyon') return { x, z };
     z = clamp(z, CANYON.Z1 + 15, CANYON.Z0 - 5);
     const cx = CANYON.x(z), w = Math.max(2, CANYON.w(z) - (pad == null ? 2.5 : pad));
@@ -733,7 +775,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, ONION, CLIMB, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

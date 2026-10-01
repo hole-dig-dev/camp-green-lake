@@ -24,9 +24,11 @@
      build(group)          adds the map's meshes to group; may return a per-frame update(dt)
      items(rnd)            buried loot for the day: [{type,x,z,depth}] (same for everyone: rnd is seeded by map + day)
      solids:[[x,z,w,d]]    box colliders, like solid() in 20-world.js
+     enter()               called as the crew arrives, before anything is built (e.g. pick the day's layout)
+     climbable(x,z)        can a wall be held here (88-climb.js)? x,z is just past the wall's face. Default: yes
 */
 const ZONES={lake:{id:'lake',name:'Camp Green Lake'}};
-const ZONE_ORDER=['lake','canyon'];   // the escape route, in order; server.js has the same list
+const ZONE_ORDER=['lake','canyon','onion'];   // the escape route, in order; server.js has the same list
 let ZONE=ZONES.lake;
 const ZSTORE={};                      // per map: its holes and buried loot while the crew is somewhere else
 const ZONE_FLAGS={};                  // things in this map that changed for everyone (rope0: the first rope is down)
@@ -153,6 +155,7 @@ function zoneEnter(id,flags){
   S.carry=null;
   if(from.id==='lake')parkLake(true);else dropZone();
 
+  if(Z.enter)Z.enter();
   ZONE=Z;ZONE_H=Z.height||null;ZONE_TINT=Z.tint||null;ZONE_MAP=Z.map||null;ZONE_STEP=Z.height?1:0;
   const st=ZSTORE[id];delete ZSTORE[id];
   if(st){

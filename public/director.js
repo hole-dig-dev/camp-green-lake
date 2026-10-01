@@ -139,6 +139,7 @@
   const ZONE_WEIGHTS = {
     lake: {},
     canyon: { landslide: 2.5, twister: 0.3, haboob: 0.5, tumbleweed: 0.4, sinkhole: 0, javelinas: 0.6, lion: 1.5 },
+    onion: { landslide: 0.6, twister: 0.6, haboob: 0.5, tumbleweed: 0.3, sinkhole: 0, javelinas: 0.4, lion: 0.5 },   // terraces, not a slot: the obstacles are the danger (Greg's Claude)
   };
   function step(state, ctx) {
     const now = ctx.now, rand = ctx.rand || Math.random;

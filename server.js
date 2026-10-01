@@ -137,7 +137,7 @@ const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lip
    everything else here runs unchanged on whichever map is loaded. Each map keeps its own holes, finds, heavy loot,
    sacks and flags (a dropped rope); the ones not in use wait in world.zones. ZONE_ORDER is the escape route and
    must match the client's. */
-const ZONE_ORDER = ['lake', 'canyon'];
+const ZONE_ORDER = ['lake', 'canyon', 'onion'];
 const ZONE_MAX_Y = 200; // the canyon floor climbs; public/js/10-core.js has the same number
 function zoneMsg() {
   return {

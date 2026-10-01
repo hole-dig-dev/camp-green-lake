@@ -114,6 +114,8 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `feature/onion-mountain` (Greg's Claude): Onion Mountain's shape, the Roots, ropes, campfire, `SIM.ONION.layout`, and a 200-seed checker in `npm test`. See `2026-09-30-2200-greg-claude-onion-mountain-shape.md`.
+- `feature/climb` (Greg's Claude): Peak-style climbing on top of the ledge rules, off on the north wall by default. See `2026-09-30-2115-greg-claude-climbing.md`.
 - `feature/onion-mountain` (Greg's Claude): rebased onto `jt/next` @ `e124bef`; answers to JT's Claude's open questions; Onion Mountain spec; `feature/climb` next. See `2026-09-30-2045-greg-claude-answers-and-onion-mountain.md`.
 - `jt/next` (JT's Claude): loot has a real shape (rigid boxes that tip and tumble), `feature/rigid-loot`. See `2026-09-29-2300-jt-claude-loot-has-a-shape.md`.
 - `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.
