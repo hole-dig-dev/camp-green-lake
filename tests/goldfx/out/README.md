@@ -1,15 +1,15 @@
 # First-person gold work review
 
-The four contact sheets compare the original animation at `8705f438` with this change. Captions use the actual animation clock; completed frames show the resulting reward. Each capture uses its own fresh game, so random payouts differ.
+The four contact sheets compare the previous animation at `6266491` with this change. Captions use the actual animation clock; completed frames show the resulting reward. Each capture uses its own fresh game, so random payouts differ.
 
 - `before-pan-grid.jpg` / `after-pan-grid.jpg`
 - `before-sift-grid.jpg` / `after-sift-grid.jpg`
 - `pan.mp4`: bare hands → dig → carry sand back → wash the pan.
 - `sifter.mp4`: shovel → dig → carry sand back → pour and dry-sift.
 
-Videos are 1280×720, 30 fps, encoded from CDP timestamps at real speed. Screenshots and video review frames were inspected during iteration. Chromium rendered on AMD Radeon 760M / RADV, verified with the GPU preflight. The test logs are included alongside the media.
+Videos are 1280×720, 30 fps, encoded from CDP timestamps at real speed. Screenshots and video review frames were inspected during iteration. Chromium rendered on AMD Radeon 760M / RADV, verified with the GPU preflight. MP4s and test logs remain local and are excluded from git.
 
-Rebuild assets with `cd art/blender && python3 bx.py goldfx.py`. This saves the authoring scenes in `props.blend` and copies the exports into `public/models/`; the camper rig/export is untouched.
+Rebuild assets with `cd art/blender && python3 bx.py goldfx.py` (or `python3 bx.py goldfx_sediment.py` to rebuild only the new sand cover). This saves the authoring scenes in `props.blend` and copies the exports into `public/models/`; the camper rig/export is untouched.
 
 Reproduce from the repository root:
 
@@ -30,4 +30,4 @@ bash tests/carry/run.sh 4810 tests/out start-with-nothing.cjs
 bash scripts/check-globals.sh
 ```
 
-`GOLDFX_BASELINE=1` pins the original revision; another git revision can also be supplied. Raw frames and interim review sheets stay local and are excluded from git.
+`GOLDFX_BASELINE=1` pins the previous revision; another git revision can also be supplied. Raw frames and interim review sheets stay local and are excluded from git.

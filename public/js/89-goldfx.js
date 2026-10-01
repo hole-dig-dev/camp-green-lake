@@ -20,8 +20,8 @@ for(const im of[gfxSandIM,gfxGoldIM,gfxDropIM,gfxDustIM]){im.frustumCulled=false
 const gfxGr=[],gfxGd=[],gfxDrops=[],gfxDust=[];
 const _gm=new T.Matrix4(),_gq=new T.Quaternion(),_gs=new T.Vector3(),_gp=new T.Vector3(),_ge=new T.Euler(),_gfxUp=new T.Vector3(0,1,0);
 function gfxDraw(){
-  const put=(im,list,n)=>{let i=0;for(const g of list){if(i>=n)break;if(g.m==='gone'||g.fade===0)continue;
-    _ge.set(g.rx||0,g.ry||0,0);_gq.setFromEuler(_ge);const s=g.s*(g.fade==null?1:g.fade);
+  const put=(im,list,n)=>{let i=0;for(const g of list){if(i>=n)break;if(g.m==='gone'||(im!==gfxGoldIM&&g.fade===0))continue;
+    _ge.set(g.rx||0,g.ry||0,0);_gq.setFromEuler(_ge);const s=g.s*(im===gfxGoldIM?1:(g.fade==null?1:g.fade));
     _gs.set(s*(g.sx||1),s*(g.sy||1),s*(g.sz||1));_gp.set(g.x,g.y,g.z);im.setMatrixAt(i++,_gm.compose(_gp,_gq,_gs))}
     im.count=i;im.instanceMatrix.needsUpdate=true};
   put(gfxSandIM,gfxGr,GFX_SAND);put(gfxGoldIM,gfxGd,GFX_GOLD);put(gfxDropIM,gfxDrops,GFX_DROP);put(gfxDustIM,gfxDust,GFX_DUST);
@@ -29,7 +29,7 @@ function gfxDraw(){
 
 /* Asset arrivals also fill props created while the download was still in flight. */
 const gfxParts={},gfxWaiting=new Map();
-const GFX_ASSETS=['GoldPan','CampBucketEmpty','CampBucketBail','GoldFxBucketSand','GoldFxSediment','GoldFxBlackSand','GoldFxWater','GoldFxPanHands','GoldFxBucketHandL','GoldFxBucketHandR','GoldFxArm','GoldFxStream','GoldFxSpill','GoldFxRipple'];
+const GFX_ASSETS=['GoldPan','CampBucketEmpty','CampBucketBail','GoldFxBucketSand','GoldFxSediment','GoldFxBlackSand','GoldFxWater','GoldFxRiffleSand','GoldFxPanHands','GoldFxBucketHandL','GoldFxBucketHandR','GoldFxArm','GoldFxStream','GoldFxSpill','GoldFxRipple'];
 for(const n of GFX_ASSETS)modelParts(n).then(p=>{gfxParts[n]=p;for(const fill of gfxWaiting.get(n)||[])fill();gfxWaiting.delete(n)}).catch(()=>{gfxWaiting.delete(n)});
 function gfxModel(n,tint){
   const g=new T.Group(),owner=GFX.root;
@@ -99,7 +99,13 @@ function gfxSiftStart(){
   GFX.stream=gfxModel('GoldFxStream');R.add(GFX.stream);GFX.stream.visible=false;
   GFX.hopperSand=gfxModel('GoldFxBucketSand');R.add(GFX.hopperSand);GFX.hopperSand.visible=false;
   GFX.poured=0;GFX.emit=0;GFX.dustEmit=0;GFX.soundT=0;
-  for(let i=0;i<gfxGoldCount();i++)gfxGd.push({m:'waiting',s:0.009+Math.random()*0.005,fade:0,rx:Math.random()*6,ry:Math.random()*6,cx:(Math.random()-.5)*.28,cz:(Math.random()-.5)*.28});
+  /* Gold starts inside the load. It is always drawn, including below opaque sediment. */
+  for(let i=0;i<gfxGoldCount();i++){const lx=(Math.random()-.5)*.13,lz=(Math.random()-.5)*.13;
+    gfxGd.push({m:'bucket',s:.009+Math.random()*.005,rx:Math.random()*6,ry:Math.random()*6,lx,lz,x:lx,y:.033,z:lz,
+      launch:1.94+Math.random()*.42,target:i%4,release:5.55+(i%4)*.10+Math.random()*.07,washSpeed:.29,
+      cx:(Math.random()-.5)*.28,cz:(Math.random()-.5)*.28})}
+  GFX.beds=SFT_RIF.map((end,i)=>{const start=i?SFT_RIF[i-1]:.04,model=gfxModel('GoldFxRiffleSand');R.add(model);
+    model.rotation.z=-Math.atan2(SFT.Z0-SFT.Z1,SFT.X1-SFT.X0);return{start,end,model,depth:0}});
   sloc(-.25,-1.45,2.7,GFX.camT);sloc(-.65,0,1.74,GFX.lookT);
 }
 function gfxSiftStep(dt){
@@ -119,7 +125,6 @@ function gfxSiftStep(dt){
     GFX.poured+=n;
     const end=sloc(SFT.hopX,0,SFT.hopZ-.15);gfxSpan(GFX.stream,lip,end,.75+.16*Math.sin(t*23));GFX.stream.visible=true;
   }else GFX.stream.visible=false;
-  if(t>2.2)for(const g of gfxGd)if(g.m==='waiting'){g.m='hopper';g.wait=.08+Math.random()*.45;g.w=(Math.random()-.5)*.42;g.x=hop.x;g.y=hop.y-.15;g.z=hop.z-g.w;g.u=.07;g.spd=.26+Math.random()*.05;g.k=0;g.h=0;g.vh=0}
   const fill=gfxEase(t,1.9,2.6)*(1-gfxEase(t,3.1,4.1));
   GFX.hopperSand.visible=fill>.01;GFX.hopperSand.position.copy(sloc(SFT.hopX,0,SFT.hopZ-.26));GFX.hopperSand.scale.set(1.6,.38*fill,1.6);
   const running=t>2&&t<8.1,envelope=gfxEase(t,2,2.4)*(1-gfxEase(t,7.5,8.1));
@@ -127,8 +132,15 @@ function gfxSiftStep(dt){
   if(gfxCrank&&running)gfxCrank.rotation.z-=dt*9*envelope;
   if(running){GFX.soundT+=dt;if(GFX.soundT>.18){GFX.soundT=0;noise(.07,360,0.8,.026,'lowpass')}
     GFX.dustEmit+=dt*19;while(GFX.dustEmit>=1){GFX.dustEmit--;if(gfxDust.length<GFX_DUST){const q=trayAt(Math.random()*.85,.28);gfxDust.push({x:q.x,y:q.y+.02,z:q.z,vx:.2,vy:.12,vz:-.38,age:0,s:.035+Math.random()*.035,m:'dust'})}}}
-  const step=(g,gold)=>{
-    if(g.m==='waiting')return;
+  /* Each sand bed follows the grains actually passing through that riffle bay.
+     Its opaque surface recedes across the gold; no gold visibility/size switch is involved. */
+  for(const bed of GFX.beds){
+    let grains=0;for(const g of gfxGr)if(g.m==='tray'&&g.u>=bed.start&&g.u<bed.end)grains++;
+    bed.depth+=(.048*clamp(grains/42,0,1)-bed.depth)*(1-Math.exp(-dt*7));
+    bed.model.position.copy(trayAt((bed.start+bed.end)/2,0));bed.model.position.y-=.023;
+    bed.model.scale.set((bed.end-bed.start)*SFT_SL-.012,Math.max(.00001,bed.depth),.54);bed.model.visible=bed.depth>.0001;
+  }
+  const step=g=>{
     if(g.m==='pour'){
       g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
       if(g.y<hop.y-.15){g.m='hopper';g.wait=.1+Math.random()*.24;g.w=(Math.random()-.5)*.49;g.u=.06;g.spd=.30+Math.random()*.07;g.k=0;g.h=0;g.vh=0;g.y=hop.y-.15}
@@ -139,22 +151,59 @@ function gfxSiftStep(dt){
       g.u+=g.spd*dt*(.86+.14*Math.sin(t*30));
       if(g.k<SFT_RIF.length&&g.u>SFT_RIF[g.k]){g.u-=.007;g.vh=.17+Math.random()*.14;g.k++}
       g.vh-=5*dt;g.h=Math.max(0,g.h+g.vh*dt);if(!g.h)g.vh=0;
-      const q=trayAt(Math.min(1,g.u),g.w);g.x=q.x;g.y=q.y+g.h;g.z=q.z;g.rx+=dt*7;
-      if(g.u>=1){g.m=gold?'topan':'off';g.vx=gold?.36:.28;g.vy=0;g.vz=gold?0:-.65}
-    }else if(g.m==='off'||g.m==='topan'){
+      const q=trayAt(Math.min(1,g.u),g.w);g.x=q.x;g.y=Math.max(q.y,gfxSiftBedY(g.u,g.w)+g.s*.4)+g.h;g.z=q.z;g.rx+=dt*7;
+      if(g.u>=1){g.m='off';g.vx=.28;g.vy=0;g.vz=-.65}
+    }else if(g.m==='off'){
       g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
-      if(gold){const pc=sloc(SFT.panX,0,.08);g.x+=(pc.x+g.cx-g.x)*Math.min(1,dt*5);g.z+=(pc.z+g.cz-g.z)*Math.min(1,dt*6)}
-      const floor=gold?sloc(0,0,.081).y:groundAt(g.x,g.z)+.04;
+      const floor=groundAt(g.x,g.z)+.04;
       if(g.y<=floor){g.y=floor;g.m='rest';g.age=0;g.s0=g.s}
-    }else if(g.m==='rest'){g.age+=dt;if(!gold&&g.age>1.8)g.fade=clamp(1-(g.age-1.8)/.8,0,1)}
-    if(gold)g.fade=g.m==='rest'?1+.13*Math.max(0,Math.sin(t*8+g.w*90)):0;
+    }else if(g.m==='rest'){g.age+=dt;if(g.age>1.8)g.fade=clamp(1-(g.age-1.8)/.8,0,1)}
   };
-  for(const g of gfxGr)step(g,false);for(const g of gfxGd)step(g,true);
+  for(const g of gfxGr)step(g);for(const g of gfxGd)gfxSiftGoldStep(g,dt,hop,b);
   for(const g of gfxDust){g.age+=dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;g.s+=dt*.035;g.fade=Math.sin(clamp(g.age/1.4,0,1)*Math.PI);if(g.age>=1.4)g.m='gone'}
   while(gfxDust.length&&gfxDust[0].m==='gone')gfxDust.shift();
   const follow=gfxEase(t,3.6,6.3),finish=gfxEase(t,6.65,8.1);
   GFX.camT.copy(sloc(-.25+.85*follow+.85*finish,-1.45+.2*follow+.52*finish,2.7-.55*follow-1.25*finish));
   GFX.lookT.copy(sloc(-.65+1.30*follow+.72*finish,0,1.74-.73*follow-.93*finish));
+}
+
+/* Physical height of the moving sand sheet; the geometry is authored in Blender. */
+function gfxSiftBedY(u,w){
+  const bed=GFX.beds.find(b=>u>=b.start&&u<=b.end);if(!bed)return -Infinity;
+  const x=(u-bed.start)/(bed.end-bed.start),z=w/.54;
+  return trayAt(u,w).y-.023+bed.depth*(.72+.22*x)*(.78+.22*Math.cos(Math.PI*z));
+}
+function gfxSiftGoldStep(g,dt,hop,b){
+  if(g.m==='bucket'){
+    const slide=gfxEase(GFX.t,1.65,g.launch),v=new T.Vector3(g.lx*(1-slide),.033+(.378-.033)*slide,g.lz*(1-slide)-.2*slide).applyMatrix4(b.matrixWorld);
+    g.x=v.x;g.y=v.y;g.z=v.z;
+    if(GFX.t>=g.launch){g.m='pour';g.vx=-.04;g.vy=-.8;g.vz=-.10}
+    return;
+  }
+  if(g.m==='pour'){
+    g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
+    if(g.y<=hop.y-.15){g.m='hopper';g.wait=.24+Math.random()*.10;g.w=(Math.random()-.5)*.36;g.u=.06;g.spd=.19+Math.random()*.025}
+    return;
+  }
+  if(g.m==='hopper'){
+    /* Heavy particles sink through the hopper load and travel along the tray floor. */
+    g.wait-=dt;const q=trayAt(g.u,g.w);q.y-=.024-g.s*.7;
+    g.y=Math.max(q.y,g.y-dt*(g.wait<0?1.35:.75));g.x+=(q.x-g.x)*Math.min(1,dt*5);g.z+=(q.z-g.z)*Math.min(1,dt*5);
+    if(g.y<=q.y+.002&&Math.abs(g.x-q.x)<.004&&Math.abs(g.z-q.z)<.004)g.m='tray';return;
+  }
+  if(g.m==='tray'||g.m==='caught'||g.m==='wash'){
+    const stop=SFT_RIF[g.target]-.014;
+    if(g.m==='tray'){g.u=Math.min(stop,g.u+g.spd*dt);if(g.u>=stop)g.m='caught'}
+    if(g.m==='caught'&&GFX.t>=g.release)g.m='wash';
+    if(g.m==='wash')g.u=Math.min(1,g.u+g.washSpeed*dt);
+    const q=trayAt(g.u,g.w);g.x=q.x;g.y=q.y-.024+g.s*.7;g.z=q.z;
+    if(g.u>=1){g.m='topan';g.vx=.36;g.vy=0;g.vz=0}return;
+  }
+  if(g.m==='topan'){
+    g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
+    const pc=sloc(SFT.panX,0,.081);g.x+=(pc.x+g.cx-g.x)*Math.min(1,dt*5);g.z+=(pc.z+g.cz-g.z)*Math.min(1,dt*6);
+    if(g.y<=pc.y){g.y=pc.y;g.m='rest'}
+  }
 }
 
 /* Dip, stratify with alternating shakes, wash over the riffles, re-dip, drain, inspect. */
@@ -167,7 +216,7 @@ function gfxPanStart(){
   const tub=GFX.tub=new T.Vector3(TUB.x,baseH(TUB.x,TUB.z)+TUB.waterY,TUB.z),dx=P.x-TUB.x,dz=P.z-TUB.z,d=Math.hypot(dx,dz)||1;
   GFX.dir={x:dx/d,z:dz/d};GFX.panYaw=Math.atan2(dx,dz);GFX.splash=0;GFX.washSound=0;GFX.dropEmit=0;
   const D=GFX.dir;GFX.camT.set(tub.x+D.x*.67,tub.y+.63,tub.z+D.z*.67);GFX.lookT.copy(tub).add(new T.Vector3(D.x*.10,.12,D.z*.10));
-  for(let i=0;i<gfxGoldCount();i++){const a=Math.random()*Math.PI*2,r=.022+Math.random()*.061;gfxGd.push({lx:Math.cos(a)*r,lz:Math.sin(a)*r,s:.0055+Math.random()*.0035,m:'inpan',fade:0,rx:Math.random()*6,ry:Math.random()*6,x:0,y:-50,z:0})}
+  for(let i=0;i<gfxGoldCount();i++){const a=Math.random()*Math.PI*2,r=.022+Math.random()*.049,lx=Math.cos(a)*r,lz=Math.sin(a)*r;gfxGd.push({lx,lz,s:.0055+Math.random()*.0035,m:'inpan',rx:Math.random()*6,ry:Math.random()*6,x:lx*1.1,y:.016*1.1,z:lz*1.1})}
 }
 function gfxPanStep(dt){
   const t=GFX.t,pan=GFX.pan,tub=GFX.tub,D=GFX.dir;
@@ -181,7 +230,12 @@ function gfxPanStep(dt){
   pan.updateMatrixWorld(true);
   const left=clamp(1-first*.68-second*.32,0,1);
   GFX.panSand.visible=left>.035;GFX.panSand.scale.set(.52+.48*left,Math.max(.035,left),.52+.48*left);GFX.panSand.position.z=-.017*first;
-  GFX.panBlack.visible=first>.5;GFX.panBlack.scale.setScalar(.65+.35*second);
+  /* Both layers start over the gold. Drain their depth about the pan floor, rather
+     than shrinking gold through them or introducing a black-sand cover late. */
+  GFX.panSand.position.y=.012*(1-left);
+  const clean=first*.22+second*.65+gfxEase(t,5.4,5.85)*.13,blackDepth=1-.92*clean;
+  GFX.panBlack.scale.set(1-.12*clean,blackDepth,1-.12*clean);
+  GFX.panBlack.position.y=.012+.013*(1-clean)-.017*blackDepth;
   const wet=gfxEase(t,.95,1.25),drain=gfxEase(t,5.4,5.85),water=wet*(1-drain);
   gfxOpacity(GFX.panWater,water*(.72-.27*first-.16*second));
   GFX.panWater.rotation.set(-pan.rotation.x*.25,0,-pan.rotation.z*.25);GFX.panWater.position.y=-.009*first-.006*second;
@@ -201,7 +255,7 @@ function gfxPanStep(dt){
   gfxBallistic(gfxDrops,dt,tub.y-.014);gfxBallistic(gfxGr,dt,tub.y-.014);
   GFX.ripples.forEach((r,i)=>{const phase=((t+i*.3)%1.05)/1.05;r.position.copy(tub);r.position.y+=.018;r.scale.setScalar(.5+phase*1.5);gfxOpacity(r,(1-phase)*.20*wet*(t<5.8?1:0))});
   if(GFX.splash===0&&t>1.02){GFX.splash=1;sfx.splash()}if(GFX.splash===1&&t>3.75){GFX.splash=2;sfx.splash()}
-  for(const g of gfxGd){const v=new T.Vector3(g.lx,.022,g.lz).applyMatrix4(pan.matrixWorld);g.x=v.x;g.y=v.y;g.z=v.z;g.fade=gfxEase(t,5.05,5.65)*(1+.16*Math.max(0,Math.sin(t*9+g.lx*90)))}
+  for(const g of gfxGd){const v=new T.Vector3(g.lx,.016,g.lz).applyMatrix4(pan.matrixWorld);g.x=v.x;g.y=v.y;g.z=v.z}
   GFX.lookT.copy(tub).add(new T.Vector3(D.x*(.10+.14*show),.12+.16*show,D.z*(.10+.14*show)));
   GFX.camT.set(tub.x+D.x*(.67-.06*show),tub.y+.63-.015*show,tub.z+D.z*(.67-.06*show));
 }

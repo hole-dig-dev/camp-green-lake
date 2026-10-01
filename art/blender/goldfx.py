@@ -146,3 +146,6 @@ PUBLIC=os.path.abspath(os.path.join(HERE,'..','..','public','models'))
 for n in ['Sifter','SifterTray','CampBucketEmpty','CampBucketBail','GoldPan','GoldFxBucketSand','GoldFxSediment','GoldFxBlackSand','GoldFxWater','GoldFxPanHands','GoldFxBucketHandL','GoldFxBucketHandR','GoldFxArm','GoldFxStream','GoldFxSpill','GoldFxRipple']:
     shutil.copyfile(os.path.join(OUT,n+'.glb'),os.path.join(PUBLIC,n+'.glb'))
 print('Copied gold-work assets to',PUBLIC)
+
+# Rebuild the physical sediment cover as well; other authored assets keep their poses.
+exec(open(os.path.join(HERE,'goldfx_sediment.py')).read())

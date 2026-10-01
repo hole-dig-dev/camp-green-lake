@@ -6,7 +6,7 @@ const PORT=process.argv[2],SP=process.argv[3],KIND=process.argv[4];
 (async()=>{
   fs.mkdirSync(SP,{recursive:true});const b=await browser(),errs=[];
   if(process.env.GOLDFX_BASELINE){
-    const ref=process.env.GOLDFX_BASELINE==='1'?'8705f438c0391735d345b68d30d2d99fc0639a04':process.env.GOLDFX_BASELINE;
+    const ref=process.env.GOLDFX_BASELINE==='1'?'6266491f4ebf4231fb45986bebbf155795b51894':process.env.GOLDFX_BASELINE;
     const route=b.newContext.bind(b);b.newContext=async opts=>{
       const ctx=await route(opts);
       for(const file of ['js/89-goldfx.js','js/45-state.js','models/Sifter.glb','models/GoldPan.glb'])await ctx.route('**/'+file,r=>r.fulfill({body:execFileSync('git',['show',ref+':public/'+file],{maxBuffer:2e6}),contentType:file.endsWith('.glb')?'model/gltf-binary':'text/javascript'}));
