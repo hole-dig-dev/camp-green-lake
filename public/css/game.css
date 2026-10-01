@@ -321,6 +321,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .outcome-card{border-top:6px solid var(--ink-soft)}
 .outcome-card--ko{border-top-color:var(--danger)}
 .outcome-card--win{border-top-color:var(--water)}
+#fired{background:rgba(30,0,0,.7);z-index:50}
+#fired h2{font:900 56px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;color:#b3261e}
 .outcome-card--fired{border-top-color:var(--danger)}
 .outcome-card--fired .eyebrow{color:#e0a99f}
 .seedline{display:flex;align-items:baseline;gap:6px;font-size:16px}

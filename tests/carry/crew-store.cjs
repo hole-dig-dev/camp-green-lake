@@ -6,18 +6,18 @@ await A.keyboard.press('f');await A.waitForTimeout(500);check('the store opens o
 await A.click('#shopModeCrew');await A.waitForTimeout(300);
 const cols=await A.evaluate(()=>[...document.querySelectorAll('#crewGrid .crew-h')].map(e=>e.firstChild.textContent));
 check('The crew: a column per crew member',cols.length===7&&cols.includes('Zach'),cols.join(', '));
-check('a row per upgrade',await A.evaluate(()=>document.querySelectorAll('#crewGrid .crew-item').length)===6);
+check('a row per upgrade',await A.evaluate(()=>document.querySelectorAll('#crewGrid .crew-item').length===SIM.CREW_SHOP.length));
 await A.screenshot({path:SP+'/crewshop.png'});
-check('the Huge bucket waits for the Big one',/Needs Big bucket/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket3"]').textContent)));
+check('the crew start with no bucket; the Big one waits for it',/Needs Bucket/i.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent)),await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent));
 const g0=await A.evaluate(()=>S.seeds);
-await A.click('.crew-buy[data-key="Zach|bucket2"]');await A.waitForTimeout(150);
-check('first click asks "Sure?"',/Sure/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent))&&await A.evaluate(g=>S.seeds===g,g0));
-await A.click('.crew-buy[data-key="Zach|bucket2"]');await A.waitForTimeout(800);
-check('second click buys it from your gold',await A.evaluate(g=>S.seeds===g-60,g0),`${g0} -> ${await A.evaluate(()=>S.seeds)}`);
-check('Zach carries a 10-hole bucket now (your screen)',await A.evaluate(()=>crewBucketMax(bots.find(b=>b.d.n==='Zach'))===10));
-check('...and your friend\'s',await B.evaluate(()=>crewBucketMax(bots.find(b=>b.d.n==='Zach'))===10));
-check('your friend is told',/Alpha bought Zach a big bucket/.test(await B.evaluate(()=>[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|'))));
-check('the row shows he has it',/Has it/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent)));
+await A.click('.crew-buy[data-key="Zach|bucket"]');await A.waitForTimeout(150);
+check('first click asks "Sure?"',/Sure/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket"]').textContent))&&await A.evaluate(g=>S.seeds===g,g0));
+await A.click('.crew-buy[data-key="Zach|bucket"]');await A.waitForTimeout(800);
+check('second click buys it from your gold',await A.evaluate(g=>S.seeds===g-30,g0),`${g0} -> ${await A.evaluate(()=>S.seeds)}`);
+check('Zach carries a bucket now (5 holes) (your screen)',await A.evaluate(()=>crewBucketMax(bots.find(b=>b.d.n==='Zach'))===5));
+check('...and your friend\'s',await B.evaluate(()=>crewBucketMax(bots.find(b=>b.d.n==='Zach'))===5));
+check('your friend is told',/Alpha bought Zach a bucket/.test(await B.evaluate(()=>[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|'))));
+check('the row shows he has it',/Has it/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket"]').textContent)));
 // a spade digs faster
 const rate=await A.evaluate(()=>new Promise(res=>{const z=bots.find(b=>b.d.n==='Stan');z.hole=addHole({x:-30,z:-20,d:0.1,bot:true});z.state='dig';z.p.g.position.set(-30,groundAt(-30,-20),-20);const d0=z.hole.d;setTimeout(()=>res(z.hole.d-d0),10000)}));
 await A.evaluate(()=>{crewMsg({up:Object.assign({},CREW_UP,{Stan:{spade:true}})})});

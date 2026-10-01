@@ -455,7 +455,8 @@ function maybeSkipNight() {
   broadcastSleep();
 }
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
-function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
+function quotaNow() { return SIM.quotaFor(world.run.day, Math.max(world.run.peak || 1, joined().length, 1)); }
+function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, quota: quotaNow(), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
 // the curse (sim.js CURSE): the crew's, 0-100. why: shown to everyone
 function addCurse(d, why) {
   const was = world.run.curse || 0; world.run.curse = Math.max(0, Math.min(100, was + d)); dirty = true;
@@ -556,7 +557,7 @@ wss.on('connection', (ws, req) => {
         c.x = num(m.x, -620, c.town ? SIM.TOWN.X + 60 : 620, c.x); c.y = num(m.y, c.town ? SIM.TOWN.Y - 5 : -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 10, 0) | 0; /* 10: sitting (86-sit.js) */ c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
-        c.sp = m.sp === true; c.lg = m.lg === true; /* lg: the long-handled shovel's handle shows (25-people.js) */ // a sharpened spade: friends see its darker blade (public/js/25-people.js spadeLook)
+        c.sp = m.sp === true; c.lg = m.lg === true; c.sh = m.sh !== false; /* lg: the long-handled shovel's handle shows (25-people.js) */ // a sharpened spade: friends see its darker blade (public/js/25-people.js spadeLook)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
@@ -570,7 +571,7 @@ wss.on('connection', (ws, req) => {
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town, sp: c.sp, lg: c.lg }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town, sp: c.sp, lg: c.lg, sh: c.sh }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;
@@ -1205,14 +1206,29 @@ function simPlayers(now) {
   }));
 }
 function endOfDay() {
-  // The gold rush (2026-09-30): no quota and no getting fired. Curfew just ends the day.
+  // The Warden's quota (JT 2026-10-01): at curfew she takes it out of the crew bank. Short, and the whole crew's fired:
+  // the run starts over from nothing (the lake, the bank, the crew's kit; everyone's levels stay). A crew that's only
+  // just got here gets a grace day.
+  const quota = quotaNow(), played = world.run.played || 0;
   world.run.played = 0;
   if (!joined().length) return;
-  LOG.log('newDay', { day: world.run.day + 1, bank: world.run.bank });
-  world.run.day++; world.run.peak = joined().length; dirty = true;
-  if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
-  world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
-  broadcast({ ...runInfo(), t: 'newday' });
+  if (world.run.bank >= quota) {
+    LOG.log('quota', { met: true, bank: world.run.bank, quota, day: world.run.day });
+    world.run.bank -= quota; world.run.day++; world.run.peak = joined().length; dirty = true;
+    if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
+    world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
+    broadcast({ ...runInfo(), t: 'newday', paid: quota });
+  } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true }); }
+  else {
+    const got = world.run.bank;
+    LOG.log('fired', { bank: got, quota, day: world.run.day });
+    const wasZone = world.zone || 'lake';
+    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun(), crew: {}, director: world.director }); ensureCart();
+    gotSet = new Set(); kbHolder = null; dirty = true; save();
+    broadcast({ t: 'fired', bank: got, quota });
+    broadcast({ t: 'crew', up: world.crew }); broadcast(runInfo());
+    if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
+  }
 }
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;

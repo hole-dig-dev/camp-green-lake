@@ -60,7 +60,7 @@ const CREW_HOLES=5;   // a crew member's bucket, until someone buys him a bigger
 /* his upgrades from the store's "The crew" side (sim.js CREW_SHOP; the server keeps them, 65-net.js 'crew') */
 const CREW_UP={};
 const crewHas=(b,id)=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n][id]);
-const crewBucketMax=b=>SIM.GOLD.buckets[crewHas(b,'bucket3')?2:crewHas(b,'bucket2')?1:0];
+const crewBucketMax=b=>crewHas(b,'bucket3')?SIM.GOLD.buckets[2]:crewHas(b,'bucket2')?SIM.GOLD.buckets[1]:crewHas(b,'bucket')?SIM.GOLD.buckets[0]:0;   // 0: no bucket yet (starting with nothing): he digs, but earns nothing
 const crewThirst=b=>crewHas(b,'canteen3')?0.35:crewHas(b,'canteen')?0.65:1;   // how long and how often he stops for water
 /* his own health, stamina and water (JT 2026-10-01: the crew panel, 78-hud.js). Digging tires him and dries him out;
    rests bring his stamina back; low on water, he walks in to the drums by the water truck to fill up (a bigger canteen
@@ -118,7 +118,7 @@ for(const d of BOTDEF){
   const hole=addHole({x:sp.x,z:sp.z,d:0.2+botRng()*1.0,bot:true});touchHole(hole);
   p.g.position.set(hole.x,groundAt(hole.x,hole.z),hole.z);p.g.rotation.y=Math.PI+(botRng()-0.5);
   const L=makeLabel(p.g,d.n,'bot');
-  bots.push({d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0,bucket:Math.floor(botRng()*CREW_HOLES),hp:100,stam:60+botRng()*40,water:50+botRng()*50});   // bucket: holes of sand so far
+  bots.push({d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0,bucket:0,hp:100,stam:60+botRng()*40,water:50+botRng()*50});   // bucket: holes of sand so far
 }
 /* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
 const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
@@ -176,9 +176,9 @@ function crewBucket(b,show){
   b.gb.position.set(x,baseH(x,z),z);
 }
 function crewHands(b){
-  const carry=CREW_CARRY.has(b.state)&&b.p.g.visible,held=b.p.held&&b.p.held.k==='bucket'&&b.p.held.t>0;
+  const has=crewBucketMax(b)>0,carry=has&&CREW_CARRY.has(b.state)&&b.p.g.visible,held=b.p.held&&b.p.held.k==='bucket'&&b.p.held.t>0;   // no bucket bought for him: nothing to carry
   if(carry&&!held)holdProp(b.p,'bucket');else if(!carry&&held)releaseProp(b.p,'bucket');
-  crewBucket(b,(b.state==='dig'||b.state==='rest')&&b.p.g.visible);
+  crewBucket(b,has&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible);
 }
 const curfewSoon=()=>clockT()>=DAYMS-60000;   // the siren (82-patrol.js) through the night
 const xrayBedtime=()=>clockT()>=tAtHour(1);    // 01:00 until dawn
@@ -345,7 +345,7 @@ function updateBots(dt,now){
         /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
         if(b.stam<45){b.t=2;continue}   // still catching his breath
         if(b.water<crewWaterMax(b)*CREW_WATER_LOW){b.errand='water';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['I need water.','Canteen\'s dry. Back in a minute.','So thirsty...']),2600)}
-        else if(b.bucket>=crewBucketMax(b)){b.errand='sift';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
+        else if(crewBucketMax(b)>0&&b.bucket>=crewBucketMax(b)){b.errand='sift';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
         else if(botRng()<0.12*crewThirst(b)){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
         else{const sp=crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.tx=sp.x;b.tz=sp.z;b.state='walk'}else b.t=4}
       }

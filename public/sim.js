@@ -11,13 +11,17 @@
      time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
   const CREW = ['Jim Bob', 'Randy', 'Stan', 'Pete', 'Larry', 'Zach'];
   const CREW_SHOP = [
-    { id: 'bucket2', name: 'Big bucket', desc: 'Holds 10 holes of sand before he goes to sift, instead of 5.', cost: 60 },
+    { id: 'bucket', name: 'Bucket', desc: 'Without one he just digs. With one, he carries 5 holes of sand to the sifter and his gold goes in the crew bank.', cost: 30 },
+    { id: 'bucket2', name: 'Big bucket', desc: 'Holds 10 holes of sand before he goes to sift, instead of 5.', cost: 60, needs: 'bucket' },
     { id: 'bucket3', name: 'Huge bucket', desc: 'Holds 15 holes of sand.', cost: 160, needs: 'bucket2' },
     { id: 'spade', name: 'Sharpened spade', desc: 'He digs 60% faster.', cost: 50 },
     { id: 'canteen', name: 'Big canteen', desc: 'Fewer water breaks: shorter rests, fewer trips back to the tent.', cost: 35 },
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
     { id: 'onions', name: 'Sack of onions', desc: 'He eats them all day. Lizards leave him alone.', cost: 45 },
   ];
+  /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
+     a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
+  const HANDS = { depth: 0.45, scoop: 0.03, fleck: 0.04 }, PAN = 1, SHOVEL_FLECK = 0.02;
   const GOLD = { perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
   /* the sifter's take for `holes` holes of sand: about perHole a hole; a batch runs from about half to double that, and
      about 1 in 16 turns up a nugget (2-4x). rnd: a 0..1 random function; mult: dig day doubles it. */
@@ -55,7 +59,10 @@
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
   const RO_LAKE_ONLY = ['sir', 'warden'];
-  const quotaFor = (day, n) => Math.round((60 + 40 * day) * (1 + 0.6 * Math.max(0, n - 1)));
+  /* the Warden's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
+     of the crew bank at curfew. Short of it, the whole crew's fired and the run starts over from nothing.
+     15, 37, 63, 93, 127 ... 357 on day 10; more campers, more gold (x1.6 for each extra). */
+  const quotaFor = (day, n) => { const d = Math.max(0, day - 1); return Math.round((15 + 20 * d + 2 * d * d) * (1 + 0.6 * Math.max(0, n - 1))); };
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
   const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };
@@ -760,7 +767,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,
