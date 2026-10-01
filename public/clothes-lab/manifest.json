@@ -1,0 +1,322 @@
+[
+  {
+    "id": 1,
+    "slug": "01-camp-classic",
+    "name": "Camp Classic",
+    "description": "Familiar orange workwear with a proper zipper, chest badge and utility pockets.",
+    "file": "../models/clothes/01-camp-classic.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 2,
+    "slug": "02-desert-scout",
+    "name": "Desert Scout",
+    "description": "Sand button shirt, rolled sleeves and forest-green shorts.",
+    "file": "../models/clothes/02-desert-scout.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 3,
+    "slug": "03-denim-day",
+    "name": "Denim Day",
+    "description": "Denim jacket with cream inset, chest pockets and turned-up jeans.",
+    "file": "../models/clothes/03-denim-day.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 4,
+    "slug": "04-red-flannel",
+    "name": "Red Flannel",
+    "description": "Raised plaid shirt panels, button placket and dark jeans.",
+    "file": "../models/clothes/04-red-flannel.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 5,
+    "slug": "05-college-varsity",
+    "name": "College Varsity",
+    "description": "Navy varsity jacket, cream sleeves, red ribbing and a letter patch.",
+    "file": "../models/clothes/05-college-varsity.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 6,
+    "slug": "06-trail-hoodie",
+    "name": "Trail Hoodie",
+    "description": "Sage hood, drawstrings, kangaroo pocket and black joggers.",
+    "file": "../models/clothes/06-trail-hoodie.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 7,
+    "slug": "07-rain-patrol",
+    "name": "Rain Patrol",
+    "description": "Yellow storm coat with folded hood, storm flap and teal trousers.",
+    "file": "../models/clothes/07-rain-patrol.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 8,
+    "slug": "08-garage-mechanic",
+    "name": "Garage Mechanic",
+    "description": "Blue coveralls with tool pockets, name tag and reinforced thighs.",
+    "file": "../models/clothes/08-garage-mechanic.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 9,
+    "slug": "09-prison-stripes",
+    "name": "Prison Stripes",
+    "description": "Graphic black-and-cream stripes across shirt, sleeves and trousers.",
+    "file": "../models/clothes/09-prison-stripes.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 10,
+    "slug": "10-sunset-surfer",
+    "name": "Sunset Surfer",
+    "description": "Teal sun tee with peach emblem and bright pink shorts.",
+    "file": "../models/clothes/10-sunset-surfer.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 11,
+    "slug": "11-night-runner",
+    "name": "Night Runner",
+    "description": "Purple track jacket with cream racing stripes and matching side-striped pants.",
+    "file": "../models/clothes/11-night-runner.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 12,
+    "slug": "12-patchwork-pal",
+    "name": "Patchwork Pal",
+    "description": "Peach-and-mint sewn panels, contrast sleeves and stitched brown trousers.",
+    "file": "../models/clothes/12-patchwork-pal.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 13,
+    "slug": "13-lake-sailor",
+    "name": "Lake Sailor",
+    "description": "Breton stripes, a red neckerchief and navy deck shorts.",
+    "file": "../models/clothes/13-lake-sailor.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 14,
+    "slug": "14-utility-cargo",
+    "name": "Utility Cargo",
+    "description": "Dark utility vest over an olive tee, with generous cargo pockets.",
+    "file": "../models/clothes/14-utility-cargo.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 15,
+    "slug": "15-retro-sport",
+    "name": "Retro Sport",
+    "description": "Coral sports jersey, cream arm bands and retro athletic shorts.",
+    "file": "../models/clothes/15-retro-sport.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 16,
+    "slug": "16-diner-cook",
+    "name": "Diner Cook",
+    "description": "White chef shirt, sage apron and check-patterned trousers.",
+    "file": "../models/clothes/16-diner-cook.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 17,
+    "slug": "17-garden-overalls",
+    "name": "Garden Overalls",
+    "description": "Mustard tee under blue bib overalls, shoulder straps and metal buttons.",
+    "file": "../models/clothes/17-garden-overalls.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 18,
+    "slug": "18-winter-puffer",
+    "name": "Winter Puffer",
+    "description": "Sculpted plum puffer panels, cream scarf and warm navy trousers.",
+    "file": "../models/clothes/18-winter-puffer.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 19,
+    "slug": "19-party-suit",
+    "name": "Party Suit",
+    "description": "Purple dinner jacket, cream shirt insert, gold bow tie and pinstripe pants.",
+    "file": "../models/clothes/19-party-suit.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 20,
+    "slug": "20-cosmic-kid",
+    "name": "Cosmic Kid",
+    "description": "Playful space workwear with teal harness, pink panels and a star badge.",
+    "file": "../models/clothes/20-cosmic-kid.glb",
+    "slots": [
+      "torso",
+      "arms",
+      "legs"
+    ],
+    "head": "unchanged",
+    "continuousSkinning": true,
+    "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+    "cosmeticOnly": true
+  }
+]

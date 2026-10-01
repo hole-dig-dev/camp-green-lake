@@ -97,3 +97,12 @@ and exported GLB together, and bump the loader's cache version when changing the
 JT approved all twenty [hats](docs/art/hats-20.md) and [faces](docs/art/faces-20.md).
 The [twenty glasses](docs/art/glasses-20.md) are ready for review at `/glasses-lab/`, with face and hat selectors.
 These are independent head-bone attachments; preserve the current head, nose, skinning, animations and physics.
+
+## Modular clothing
+
+[Twenty outfits](docs/art/clothes-20.md) are ready at `/clothes-lab/`: independent torso/arms/legs choices and
+actual movement previews on the current camper. Native source: `art/blender/clothes.blend`; exports:
+`public/models/clothes/`; builder: `art/blender/clothes_options.py`. Preserve the original head, nose, hands and
+sneakers. Rebind the garments to each camper's existing bones and inverse bind matrices as demonstrated in
+`public/clothes-lab/viewer.js`; the docs explain multi-material metadata and body-width handling. These are
+reviewable wardrobe candidates; gameplay assignments remain unchanged.
