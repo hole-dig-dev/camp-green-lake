@@ -3,7 +3,7 @@
 [Open the comparison studio](../../public/hat-lab/index.html). On a running game server it is `/hat-lab/`.
 The numbered cards show front and side views on the actual `public/models/camper.glb`, with its original skinning
 and head geometry. Select a card to rotate it, inspect the full body, switch skin tones, save picks on your device
-or download the selected GLB. JT is choosing from these candidates; existing game hat assignments are unchanged.
+or download the selected GLB. JT approved all twenty hats on 2026-10-01. Keep the complete library; existing game role assignments remain available.
 
 ![All twenty Blender hat candidates](../../public/hat-lab/previews/all-20.png)
 
@@ -43,8 +43,8 @@ Each hat has fewer than 20,000 triangles; the twenty exported GLBs together are 
 - Hat-only exports: `public/models/hats/<number>-<slug>.glb`.
 - Names, descriptions, groups, paths and clearance measurements: `public/hat-lab/manifest.json`.
 - GLBs are in head-local metres: origin at the head bone, Blender Z-up converted to glTF Y-up. Add the loaded
-  hat scene to the existing `head` bone, as `public/hat-lab/viewer.js` does. Hide the old hat meshes. A future game
-  selector should preserve each NPC's identity and wait for JT's picks.
+  hat scene to the existing `head` bone, as `public/hat-lab/viewer.js` does. Hide the old hat meshes. The complete set is approved; future game
+  wardrobe assignments should preserve each NPC's identity.
 - The studio loads its own renderer only and runs no game networking or world drawing. Three.js r128 and its
   GLTFLoader are vendored under the MIT license in `public/hat-lab/vendor/` so the studio can load locally.
 

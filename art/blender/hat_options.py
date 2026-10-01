@@ -173,7 +173,7 @@ for i,(slug,name,desc,group,build) in enumerate(DEFS):
     assert lowest>.465,(slug,'front too low',lowest)
     path=os.path.join(OUT,slug+'.glb')
     bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,use_active_scene=True,export_apply=True,export_animations=False,export_yup=True)
-    manifest.append(dict(id=i+1,slug=slug,name=name,description=desc,group=group,file='../models/hats/'+slug+'.glb',frontMinHeight=round(lowest,4),eyeLine=.392))
+    manifest.append(dict(id=i+1,slug=slug,name=name,description=desc,group=group,file='../models/hats/'+slug+'.glb',frontMinHeight=round(lowest,4),eyeLine=.392,approved=True))
     # Native preview uses the exact authored head and face, separate from the exported hat selection.
     reference=camper('FitReference',0,'Original',None)
     for o in list(reference.children_recursive):

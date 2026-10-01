@@ -7,7 +7,8 @@
     "group": "Everyday",
     "file": "../models/hats/01-sunbreak-bucket.glb",
     "frontMinHeight": 0.491,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 2,
@@ -17,7 +18,8 @@
     "group": "Everyday",
     "file": "../models/hats/02-trail-boonie.glb",
     "frontMinHeight": 0.494,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 3,
@@ -27,7 +29,8 @@
     "group": "Everyday",
     "file": "../models/hats/03-blue-hour-cap.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 4,
@@ -37,7 +40,8 @@
     "group": "Everyday",
     "file": "../models/hats/04-dust-road-trucker.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 5,
@@ -47,7 +51,8 @@
     "group": "Everyday",
     "file": "../models/hats/05-switchback-five-panel.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 6,
@@ -57,7 +62,8 @@
     "group": "Trail",
     "file": "../models/hats/06-pine-ranger.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 7,
@@ -67,7 +73,8 @@
     "group": "Trail",
     "file": "../models/hats/07-dry-creek-cowboy.glb",
     "frontMinHeight": 0.498,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 8,
@@ -77,7 +84,8 @@
     "group": "Trail",
     "file": "../models/hats/08-high-noon-straw.glb",
     "frontMinHeight": 0.498,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 9,
@@ -87,7 +95,8 @@
     "group": "Trail",
     "file": "../models/hats/09-dune-pith.glb",
     "frontMinHeight": 0.498,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 10,
@@ -97,7 +106,8 @@
     "group": "Trail",
     "file": "../models/hats/10-neck-shade-cap.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 11,
@@ -107,7 +117,8 @@
     "group": "Work",
     "file": "../models/hats/11-shift-hardhat.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 12,
@@ -117,7 +128,8 @@
     "group": "Work",
     "file": "../models/hats/12-night-shift-miner.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 13,
@@ -127,7 +139,8 @@
     "group": "Cold",
     "file": "../models/hats/13-golden-hour-knit.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 14,
@@ -137,7 +150,8 @@
     "group": "Cold",
     "file": "../models/hats/14-campfire-slouch.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 15,
@@ -147,7 +161,8 @@
     "group": "Cold",
     "file": "../models/hats/15-harbor-docker.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 16,
@@ -157,7 +172,8 @@
     "group": "Character",
     "file": "../models/hats/16-embers-beret.glb",
     "frontMinHeight": 0.512,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 17,
@@ -167,7 +183,8 @@
     "group": "Cold",
     "file": "../models/hats/17-frostline-trapper.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 18,
@@ -177,7 +194,8 @@
     "group": "Character",
     "file": "../models/hats/18-sky-road-aviator.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 19,
@@ -187,7 +205,8 @@
     "group": "Weather",
     "file": "../models/hats/19-storm-slicker.glb",
     "frontMinHeight": 0.487,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   },
   {
     "id": 20,
@@ -197,6 +216,7 @@
     "group": "Character",
     "file": "../models/hats/20-lake-captain.glb",
     "frontMinHeight": 0.505,
-    "eyeLine": 0.392
+    "eyeLine": 0.392,
+    "approved": true
   }
 ]

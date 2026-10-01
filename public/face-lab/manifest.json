@@ -1,0 +1,222 @@
+[
+  {
+    "id": 1,
+    "slug": "01-classic",
+    "name": "Classic",
+    "description": "Your familiar button eyes, gentle brows and small smile.",
+    "group": "Familiar",
+    "file": "../models/faces/01-classic.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 2,
+    "slug": "02-friendly",
+    "name": "Friendly",
+    "description": "Bright taller eyes, soft brows and a wider welcoming smile.",
+    "group": "Warm",
+    "file": "../models/faces/02-friendly.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 3,
+    "slug": "03-tiny-trouble",
+    "name": "Tiny Trouble",
+    "description": "Small dot eyes, one cocked brow and a crooked little grin.",
+    "group": "Playful",
+    "file": "../models/faces/03-tiny-trouble.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 4,
+    "slug": "04-deadpan",
+    "name": "Deadpan",
+    "description": "Even brows and a neat straight mouth: totally unimpressed.",
+    "group": "Dry",
+    "file": "../models/faces/04-deadpan.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 5,
+    "slug": "05-sleepy",
+    "name": "Sleepy",
+    "description": "Half-lidded eyes, relaxed brows and a sleepy small mouth.",
+    "group": "Chill",
+    "file": "../models/faces/05-sleepy.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 6,
+    "slug": "06-skeptic",
+    "name": "Skeptic",
+    "description": "A raised eyebrow, a heavy lid and an off-center smirk.",
+    "group": "Dry",
+    "file": "../models/faces/06-skeptic.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 7,
+    "slug": "07-focused",
+    "name": "Focused",
+    "description": "Bold inward brows and a compact determined mouth.",
+    "group": "Serious",
+    "file": "../models/faces/07-focused.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 8,
+    "slug": "08-worried",
+    "name": "Worried",
+    "description": "Brows lifted toward the middle and a small upside-down smile.",
+    "group": "Soft",
+    "file": "../models/faces/08-worried.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 9,
+    "slug": "09-sunshine",
+    "name": "Sunshine",
+    "description": "Happy closed eyes and a generous open grin.",
+    "group": "Warm",
+    "file": "../models/faces/09-sunshine.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 10,
+    "slug": "10-wink",
+    "name": "Wink",
+    "description": "One bright eye, one curved wink and a jaunty grin.",
+    "group": "Playful",
+    "file": "../models/faces/10-wink.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 11,
+    "slug": "11-surprised",
+    "name": "Surprised",
+    "description": "Wide oval eyes, lifted brows and a little O-shaped mouth.",
+    "group": "Expressive",
+    "file": "../models/faces/11-surprised.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 12,
+    "slug": "12-freckle-friend",
+    "name": "Freckle Friend",
+    "description": "Six scattered freckles, warm eyes and a simple smile.",
+    "group": "Detail",
+    "file": "../models/faces/12-freckle-friend.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 13,
+    "slug": "13-dimple-grin",
+    "name": "Dimple Grin",
+    "description": "Rounded eyes, a toothy grin and small curved dimples.",
+    "group": "Warm",
+    "file": "../models/faces/13-dimple-grin.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 14,
+    "slug": "14-gap-tooth",
+    "name": "Gap Tooth",
+    "description": "Small eye whites and an open grin with two separated front teeth.",
+    "group": "Playful",
+    "file": "../models/faces/14-gap-tooth.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 15,
+    "slug": "15-goofball",
+    "name": "Goofball",
+    "description": "Tiny eyes, raised brows and two large cartoon front teeth.",
+    "group": "Playful",
+    "file": "../models/faces/15-goofball.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 16,
+    "slug": "16-scruffy",
+    "name": "Scruffy",
+    "description": "Calm eyes, a crooked smile and little chin stubble marks.",
+    "group": "Detail",
+    "file": "../models/faces/16-scruffy.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 17,
+    "slug": "17-old-pal",
+    "name": "Old Pal",
+    "description": "A curled brown mustache, kind eyes and a small smile underneath.",
+    "group": "Detail",
+    "file": "../models/faces/17-old-pal.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 18,
+    "slug": "18-rosy",
+    "name": "Rosy",
+    "description": "Soft cheek color, happy crescent eyes and a quiet smile.",
+    "group": "Soft",
+    "file": "../models/faces/18-rosy.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 19,
+    "slug": "19-seasoned",
+    "name": "Seasoned",
+    "description": "Short smile lines, thicker brows and a slightly uneven grin.",
+    "group": "Detail",
+    "file": "../models/faces/19-seasoned.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  },
+  {
+    "id": 20,
+    "slug": "20-swagger",
+    "name": "Swagger",
+    "description": "A bold brow, one narrowed eye and a confident asymmetric smile.",
+    "group": "Expressive",
+    "file": "../models/faces/20-swagger.glb",
+    "head": "unchanged",
+    "nose": "original",
+    "cosmeticOnly": true
+  }
+]
