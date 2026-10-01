@@ -90,6 +90,8 @@ command('haboob',{usage:'haboob [direction]',help:'Start a dust storm blowing in
     return`Dust storm rolling in from the ${compass(Math.sin(a)*100,-Math.cos(a)*100)}.`}});   // same fromVec math as hbCalc's warning toast in 75-haboob.js
 command('god',{usage:'god [on|off]',help:'God mode for you: no damage, no knockouts, water never runs out. Hazards still push you around.',
   run([a]){const k=(a||'').toLowerCase();GOD=k==='on'?true:k==='off'?false:!GOD;if(GOD){clearAff();S.water=waterMax()}$('#hud').classList.toggle('god',GOD);return GOD?'God mode on.':'God mode off.'}});
+command('give',{usage:'give seeds <amount>',help:'Give yourself sunflower seeds to spend (testing), e.g. give seeds 500 for the long-handled shovel.',
+  run([what,n]){if((what||'').toLowerCase()!=='seeds'||n===undefined)throw new Error('Usage: give seeds <amount>');const v=numArg(n,0,1,1e6)|0;S.seeds+=v;sfx.find();return`+${v} seeds. You have ${S.seeds}.`}});
 command('heal',{usage:'heal',help:'Full health, stamina and water; clears every affliction.',run(){clearAff();S.water=waterMax();return'Healed.'}});
 command('respawn',{usage:'respawn',help:'Back on your feet at camp with full health and water (like Restart in the pause menu). Keeps seeds and gear.',run(){respawn();return'Respawned at camp.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
