@@ -228,6 +228,8 @@ if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
 if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew's upgrades: { name: { id: true } } (sim.js CREW_SHOP)
+{ const was = { 'X-Ray': 'Jim Bob', Armpit: 'Randy', Squid: 'Stan', Zigzag: 'Pete', Magnet: 'Larry', Zero: 'Zach' }; // JT 2026-10-01 renamed the crew: their kit goes with them
+  for (const [o, n] of Object.entries(was)) if (world.crew[o]) { world.crew[n] = Object.assign(world.crew[n] || {}, world.crew[o]); delete world.crew[o]; } }
 LOG.init({ getClock: () => world.clock });
 let gotSet = new Set(world.got);
 SIM.setZone(world.zone || 'lake');

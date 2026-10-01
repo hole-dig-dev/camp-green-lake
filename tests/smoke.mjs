@@ -262,7 +262,7 @@ async function main() {
     const depthText = await page1.$eval('#depth', el => el.textContent);
     record('digging on the lake bed changes hole depth', true, depthText);
 
-    // The D Tent crew keep a schedule: home at the curfew siren, shovels on the rack, asleep without them (X-Ray deals
+    // The D Tent crew keep a schedule: home at the curfew siren, shovels on the rack, asleep without them (Jim Bob deals
     // until 01:00), and out again with their shovels in the morning. The clock is paused at each hour and the crew's
     // update is stepped by hand, so this doesn't wait on real time.
     const crew = await page1.evaluate(() => {
@@ -281,15 +281,15 @@ async function main() {
       CLK.paused = false;
       return { atSiren, night, late, morning,
         sirenOk: atSiren.every(b => !['dig', 'rest', 'walk', 'return', 'gatebackout'].includes(b.st)),
-        nightOk: night.every(b => b.st === 'inside' && b.stowed && b.racked && (b.n === 'X-Ray' ? !b.xs : true)),
-        lateOk: late.find(b => b.n === 'X-Ray').xs && late.every(b => b.st === 'inside'),
+        nightOk: night.every(b => b.st === 'inside' && b.stowed && b.racked && (b.n === 'Jim Bob' ? !b.xs : true)),
+        lateOk: late.find(b => b.n === 'Jim Bob').xs && late.every(b => b.st === 'inside'),
         morningOk: morning.every(b => b.wasOut) };
     });
     assert(crew.sirenOk, `crew kept working through the siren: ${JSON.stringify(crew.atSiren)}`);
     assert(crew.nightOk, `crew not all in bed with shovels racked by 21:00: ${JSON.stringify(crew.night)}`);
-    assert(crew.lateOk, `X-Ray not in bed after 01:00: ${JSON.stringify(crew.late)}`);
+    assert(crew.lateOk, `Jim Bob not in bed after 01:00: ${JSON.stringify(crew.late)}`);
     assert(crew.morningOk, `crew not all out with their shovels within 90 s of dawn: ${JSON.stringify(crew.morning)}`);
-    record('D Tent crew: home at the siren, shovels racked, X-Ray deals till 01:00, out with shovels by morning', true);
+    record('D Tent crew: home at the siren, shovels racked, Jim Bob deals till 01:00, out with shovels by morning', true);
 
     await page1.evaluate(() => window.__cgl.runCommand('twister 30'));
     await waitFor(page1, () => window.__cgl.TW_LIVE.size > 0, 5000, 'TW_LIVE to gain an entry'); // TW_LIVE is a Map -- .size, not .length

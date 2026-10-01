@@ -7,25 +7,25 @@ const setup=async(name,x,z)=>p.evaluate(([n,x,z])=>{const b=bots.find(b=>b.d.n==
 const st=n=>p.evaluate(n=>{const b=bots.find(b=>b.d.n===n),g=b.p.g.position;return{st:b.state,bucket:b.bucket,up:+(g.y-groundAt(g.x,g.z)).toFixed(2),rag:!!(b.p.rag&&ragActive(b.p)),x:+g.x.toFixed(1),z:+g.z.toFixed(1)}},n);
 const watch=async(n,secs,shot)=>{const seen=new Set();let rag=false,maxUp=0,shotDone=false;for(let i=0;i<secs*5;i++){await p.waitForTimeout(200);const s=await st(n);seen.add(s.st);rag=rag||s.rag;maxUp=Math.max(maxUp,s.up);if(shot&&s.st==='tossed'&&s.up>1&&!shotDone){shotDone=true;await p.screenshot({path:SP+'/crew_'+shot+'.png'})}if(seen.has('tossed')&&['return','dig','rest','walk'].includes(s.st)&&i>3)break;if(seen.has('ko')&&s.st==='gatebackout')break}return{seen:[...seen],rag,maxUp}};
 // 1. a twister
-await setup('Zero',-60,-40);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zero'),g=b.p.g.position;spawnEnv('twister',{x:g.x-30,z:g.z,a:0})});
-let w=await watch('Zero',30,'twister');let s=await st('Zero');
-check('twister: Zero gets thrown (a ragdoll), lands, gets back to work, bucket kept',w.seen.includes('tossed')&&w.seen.includes('down')&&w.rag&&s.bucket>=3&&w.maxUp>2,JSON.stringify(w)+' '+JSON.stringify(s));
+await setup('Zach',-60,-40);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach'),g=b.p.g.position;spawnEnv('twister',{x:g.x-30,z:g.z,a:0})});
+let w=await watch('Zach',30,'twister');let s=await st('Zach');
+check('twister: Zach gets thrown (a ragdoll), lands, gets back to work, bucket kept',w.seen.includes('tossed')&&w.seen.includes('down')&&w.rag&&s.bucket>=3&&w.maxUp>2,JSON.stringify(w)+' '+JSON.stringify(s));
 // 2. a tumbleweed
-await setup('Squid',60,-40);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Squid'),g=b.p.g.position;spawnEnv('tumbleweed',{x:g.x-40,z:g.z,a:0})});
-w=await watch('Squid',20,'tumbleweed');s=await st('Squid');
-check('tumbleweed: Squid gets bowled over, gets up, bucket kept',w.seen.includes('tossed')&&w.rag&&s.bucket===3,JSON.stringify(w)+' '+JSON.stringify(s));
+await setup('Stan',60,-40);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Stan'),g=b.p.g.position;spawnEnv('tumbleweed',{x:g.x-40,z:g.z,a:0})});
+w=await watch('Stan',20,'tumbleweed');s=await st('Stan');
+check('tumbleweed: Stan gets bowled over, gets up, bucket kept',w.seen.includes('tossed')&&w.rag&&s.bucket===3,JSON.stringify(w)+' '+JSON.stringify(s));
 // 3. a boulder
-await setup('Magnet',-80,-120);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Magnet'),g=b.p.g.position;for(let k=0;k<3;k++)spawnEnv('landslide',{x:g.x,z:g.z,a:0})});
-w=await watch('Magnet',30,'boulder');s=await st('Magnet');
-check('landslide: a boulder knocks Magnet flying, no harm, bucket kept',w.seen.includes('tossed')&&s.bucket===3,JSON.stringify(w)+' '+JSON.stringify(s));
+await setup('Larry',-80,-120);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Larry'),g=b.p.g.position;for(let k=0;k<3;k++)spawnEnv('landslide',{x:g.x,z:g.z,a:0})});
+w=await watch('Larry',30,'boulder');s=await st('Larry');
+check('landslide: a boulder knocks Larry flying, no harm, bucket kept',w.seen.includes('tossed')&&s.bucket===3,JSON.stringify(w)+' '+JSON.stringify(s));
 await p.evaluate(()=>{tbWeeds.length=0;lsBoulders.length=0;twSpawned.length=0});   // the weather from the steps above is still about: clear it for the animals
 // 4. a lizard
-await setup('Armpit',100,-60);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Armpit'),g=b.p.g.position,L=lizards[0];L.x=g.x+3;L.z=g.z;P.x=g.x+40});
-w=await watch('Armpit',20,'lizard');s=await st('Armpit');
-check('lizard: it goes for Armpit, he is knocked out, his bucket spills, he wakes at the nurse and walks out',w.seen.includes('ko')&&s.bucket===0&&(s.st==='gatebackout'||Math.hypot(s.x,s.z-33)<12),JSON.stringify(w)+' '+JSON.stringify(s));
+await setup('Randy',100,-60);await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Randy'),g=b.p.g.position,L=lizards[0];L.x=g.x+3;L.z=g.z;P.x=g.x+40});
+w=await watch('Randy',20,'lizard');s=await st('Randy');
+check('lizard: it goes for Randy, he is knocked out, his bucket spills, he wakes at the nurse and walks out',w.seen.includes('ko')&&s.bucket===0&&(s.st==='gatebackout'||Math.hypot(s.x,s.z-33)<12),JSON.stringify(w)+' '+JSON.stringify(s));
 // 5. a javelina
-await setup('X-Ray',-100,60);await p.evaluate(()=>{const g=bots.find(b=>b.d.n==='X-Ray').p.g.position;JAVV=[[g.x+0.4,g.z,0,0]]});
-w=await watch('X-Ray',8);s=await st('X-Ray');check('javelina: X-Ray is knocked out, bucket spills',w.seen.includes('ko')&&s.bucket===0,JSON.stringify(w)+' '+JSON.stringify(s));
+await setup('Jim Bob',-100,60);await p.evaluate(()=>{const g=bots.find(b=>b.d.n==='Jim Bob').p.g.position;JAVV=[[g.x+0.4,g.z,0,0]]});
+w=await watch('Jim Bob',8);s=await st('Jim Bob');check('javelina: Jim Bob is knocked out, bucket spills',w.seen.includes('ko')&&s.bucket===0,JSON.stringify(w)+' '+JSON.stringify(s));
 await p.evaluate(()=>{JAVV=[]});
 // 6. me: pass out with sand in the bucket
 await p.evaluate(()=>{GOD=false;S.bucket=3.5;knockOut('Test','Knocked out.')});await p.waitForTimeout(300);

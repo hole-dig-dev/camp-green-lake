@@ -1,6 +1,6 @@
 'use strict';
 /* public/js/87-sinkhole.js -- sinkhole hazard: ground shakes, a big deep crater opens, only a friend linking hands
-   (or, alone, Zero with a line) can pull you out; it fills back in after a few minutes. Loads after 86-voice.js so
+   (or, alone, Zach with a line) can pull you out; it fills back in after a few minutes. Loads after 86-voice.js so
    it can use campDist/CLK/twNow (82-patrol.js), remoteNear/addXP/holeDepthHere/isTrapped/popOut (84-coop.js) and the
    ENV/command registry (76-console.js) at load time; other files that run earlier (65-net.js, 45-state.js, 70-player.js,
    78-hud.js, 30-npcs.js, 90-loop.js) reach the handful of names below from inside their own functions, which is fine
@@ -36,11 +36,11 @@ const SINK_RESCUE_TIME=2;                    // seconds to hold, solo, before yo
 const SINK_CHAIN_BONUS=0.5;                  // each extra simultaneous rescuer adds this much rate (2 friends = 1.5x, 3 = 2x, ...)
 const SINK_MAX_CHAIN=4;                      // helpers beyond this stop adding speed (diminishing returns, not exploitable)
 const SINK_RESCUE_XP=40;                     // XP for each rescuer once the pull completes
-const SINK_SOLO_WAIT=50;                     // seconds trapped alone before Zero sets out with a line (40-60s per spec)
-const SINK_SOLO_APPROACH_R=14;               // Zero "arrives" this far out from the rim, then walks the rest -- keeps
+const SINK_SOLO_WAIT=50;                     // seconds trapped alone before Zach sets out with a line (40-60s per spec)
+const SINK_SOLO_APPROACH_R=14;               // Zach "arrives" this far out from the rim, then walks the rest -- keeps
                                               // the wait bounded no matter how far away his own hole actually is
 const SINK_SOLO_WALK_SPEED=3.1;              // m/s
-const SINK_SOLO_PULL_TIME=2.2;               // seconds of Zero's own reach-down animation before you're free
+const SINK_SOLO_PULL_TIME=2.2;               // seconds of Zach's own reach-down animation before you're free
 const SINK_WARN_R=110;                       // toast/shake range (m) around a shaking-ground warning
 const SINK_SLIDE_TIME=0.35;                  // seconds of "sliding toward the middle" once you fall in -- feel, not physics
 const SINK_POSE_K=6;                         // lerp speed for the reach-up/reach-down poses
@@ -50,7 +50,7 @@ let sinkSpawned=[];          // console/env-triggered ones (mirrors twSpawned/EN
 let sinkRumbleNode=null;
 let sinkPulling=false;                        // am I (locally) holding the rescue key at someone's rim right now?
 let sinkRescueT=0, sinkPrevSh=null, sinkFallSlideT=0;
-/* Once you fall in you STAY in: sinkTrapped remembers which crater has you until a friend's pull, Zero's line, the
+/* Once you fall in you STAY in: sinkTrapped remembers which crater has you until a friend's pull, Zach's line, the
    crater filling in, a knockout, or another hazard carrying you off (twister/tumbleweed/vulture) ends it. The old
    check only stopped a single step that climbed more than 0.6 m, but the crater's wall rises 4.4 m over ~3.4 m, so
    every step climbed only ~7 cm and you could just walk up the side (and halfway up you no longer counted as "in").
@@ -134,7 +134,7 @@ function inSinkhole(){
   return null;
 }
 /* haul the local player up onto the rim, in whatever direction they're already offset from the centre (same idea as
-   popOut() for an ordinary hole). Also cleans up a mid-rescue solo bot, if Zero was on his way or already pulling. */
+   popOut() for an ordinary hole). Also cleans up a mid-rescue solo bot, if Zach was on his way or already pulling. */
 function popOutOfSinkhole(sh,by){
   sinkTrapped=null;
   if(sh.soloBot){const b=sh.soloBot;b.sinkOverride=null;b.state='return';b.tx=b.hole.x;b.tz=b.hole.z;b.p.upper.rotation.x=0;b.p.armR.rotation.x=0;sh.soloBot=null}
@@ -145,18 +145,18 @@ function popOutOfSinkhole(sh,by){
   logEv('sinkPulled',{by:by||'',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
 }
 
-/* ---- solo fallback: with nobody else online, Zero (D Tent's fastest digger) comes with a line instead ---- *
+/* ---- solo fallback: with nobody else online, Zach (D Tent's fastest digger) comes with a line instead ---- *
    He "arrives" from SINK_SOLO_APPROACH_R out (not literally from his own hole clear across the map) so the whole
    fallback resolves in a bounded, predictable time -- worse than a friend, never a softlock. b.sinkOverride, set
    here, tells updateBots() (30-npcs.js) to leave this bot alone while it's set; updateSoloRescues() below drives it. */
 function startSoloRescue(sh){
-  const zero=bots.find(b=>b.d.n==='Zero')||bots[0];if(!zero||zero.sinkOverride)return;
+  const zero=bots.find(b=>b.d.n==='Zach')||bots[0];if(!zero||zero.sinkOverride)return;
   const a=Math.atan2(sh.x,sh.z-39)||0.001;   // roughly "away from camp", so he visibly walks in from outside
   const sx=sh.x+Math.sin(a)*(sh.r+SINK_SOLO_APPROACH_R),sz=sh.z+Math.cos(a)*(sh.r+SINK_SOLO_APPROACH_R);
   zero.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};
   zero.p.g.position.set(sx,groundAt(sx,sz),sz);
   sh.soloBot=zero;
-  toast('Nobody else is around to pull you out... but Zero heard you and is coming with a line.','good',5000);
+  toast('Nobody else is around to pull you out... but Zach heard you and is coming with a line.','good',5000);
   logEv('sinkSolo',{x:+sh.x.toFixed(1),z:+sh.z.toFixed(1)});
 }
 function updateSoloRescues(dt){
@@ -173,8 +173,8 @@ function updateSoloRescues(dt){
       o.t+=dt;g.rotation.y=Math.atan2(targetSh.x-g.position.x,targetSh.z-g.position.z);
       b.p.upper.rotation.x=lerp(b.p.upper.rotation.x,0.5,Math.min(1,dt*SINK_POSE_K));b.p.armR.rotation.x=lerp(b.p.armR.rotation.x,1.3,Math.min(1,dt*SINK_POSE_K));
       if(o.t>=SINK_SOLO_PULL_TIME){
-        popOutOfSinkhole(targetSh,'Zero');
-        toast('Zero pulled you out with the line. "I like digging holes. Not falling in them."','good',3800);
+        popOutOfSinkhole(targetSh,'Zach');
+        toast('Zach pulled you out with the line. "I like digging holes. Not falling in them."','good',3800);
         logEv('sinkSoloRescued',{x:+targetSh.x.toFixed(1),z:+targetSh.z.toFixed(1)});
       }
     }
@@ -312,7 +312,7 @@ function updateSinkholes(dt){
 }
 /* HUD text for the trapped player's own prompt (shown from 78-hud.js; no interaction of their own, just status) */
 function sinkTrappedText(sh){
-  if(sh.soloBot)return sh.soloBot.sinkOverride&&sh.soloBot.sinkOverride.stage==='pull'?'Zero is pulling you up…':'Zero is on his way with a line…';
+  if(sh.soloBot)return sh.soloBot.sinkOverride&&sh.soloBot.sinkOverride.stage==='pull'?'Zach is pulling you up…':'Zach is on his way with a line…';
   if(sinkRescueT>0)return`Being pulled up… ${Math.round(clamp(sinkRescueT/SINK_RESCUE_TIME,0,1)*100)}%`;
   if(!othersOnline())return`Too steep to climb. Nobody else is around; someone will come find you in ${Math.max(0,Math.ceil(SINK_SOLO_WAIT-sh.myTrapT))}s.`;
   return'Too steep and loose to climb. A friend has to come to the rim and hold E (or F) to link hands and pull you up.';
