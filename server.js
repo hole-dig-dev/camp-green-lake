@@ -288,6 +288,12 @@ const FACE_LAB_FILES=Object.fromEntries([
   ...['all-20','faces-1-5','faces-6-10','faces-11-15','faces-16-20'].map(n=>['previews/'+n+'.png','image/png'])
 ].map(([file,type])=>['/face-lab/'+file,{file,type}]));
 FACE_LAB_FILES['/face-lab/']=FACE_LAB_FILES['/face-lab/index.html'];
+const GLASSES_LAB_FILES=Object.fromEntries([
+  ['index.html','text/html; charset=utf-8'],['style.css','text/css; charset=utf-8'],
+  ['viewer.js','text/javascript; charset=utf-8'],['manifest.json','application/json'],
+  ...['all-20','glasses-1-5','glasses-6-10','glasses-11-15','glasses-16-20'].map(n=>['previews/'+n+'.png','image/png'])
+].map(([file,type])=>['/glasses-lab/'+file,{file,type}]));
+GLASSES_LAB_FILES['/glasses-lab/']=GLASSES_LAB_FILES['/glasses-lab/index.html'];
 function sendStatic(res, subdir, rawName) {
   const dir = STATIC_DIRS[subdir];
   let name;
@@ -365,7 +371,7 @@ const server = http.createServer((req, res) => {
     const tunePost = DEV_MODE && req.method === 'POST' && url0 === '/tune';
     if (req.method !== 'GET' && req.method !== 'HEAD' && !tunePost) { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
-    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/(?:(?:hats|faces)\/)?[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js' || Object.hasOwn(HAT_LAB_FILES,url0) || Object.hasOwn(FACE_LAB_FILES,url0);
+    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/(?:(?:hats|faces|glasses)\/)?[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js' || Object.hasOwn(HAT_LAB_FILES,url0) || Object.hasOwn(FACE_LAB_FILES,url0) || Object.hasOwn(GLASSES_LAB_FILES,url0);
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
@@ -393,6 +399,8 @@ const server = http.createServer((req, res) => {
     if (Object.hasOwn(HAT_LAB_FILES,url)) { const f=HAT_LAB_FILES[url]; return sendFile(res,'hat-lab/'+f.file,f.type,req.method==='HEAD'); }
     if (url === '/face-lab') { res.writeHead(302,{location:'/face-lab/'}); return res.end(); }
     if (Object.hasOwn(FACE_LAB_FILES,url)) { const f=FACE_LAB_FILES[url]; return sendFile(res,'face-lab/'+f.file,f.type,req.method==='HEAD'); }
+    if (url === '/glasses-lab') { res.writeHead(302,{location:'/glasses-lab/'}); return res.end(); }
+    if (Object.hasOwn(GLASSES_LAB_FILES,url)) { const f=GLASSES_LAB_FILES[url]; return sendFile(res,'glasses-lab/'+f.file,f.type,req.method==='HEAD'); }
     if (url === '/' || url === '/index.html') return sendFile(res, 'index.html', 'text/html; charset=utf-8', req.method === 'HEAD');
     if (url === '/sim.js') return sendFile(res, 'sim.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');
     if (url === '/director.js') return sendFile(res, 'director.js', 'text/javascript; charset=utf-8', req.method === 'HEAD');

@@ -1,6 +1,6 @@
 # Camp Green Lake Blender art
 
-The 3D assets live in six `.blend` files, grouped so an edit only touches (and commits) its own group. **One scene
+The 3D assets live in separate `.blend` files, grouped so an edit only touches (and commits) its own group. **One scene
 per asset.** In each scene the `<Name>.Asset` collection is the model and `<Name>.Studio` is the preview camera,
 lights and floor.
 
@@ -14,6 +14,8 @@ lights and floor.
 | `characters.blend` | `Camper`: the player/crew/staff camper (from JT's PC, rigged by `/blender/cgl_rig.py`, exported to `public/models/camper.glb`); `ARCHIVED_Camper_minipc`: the superseded minipc camper | `/blender/cgl_rig.py` |
 | `hats.blend` | Twenty original hat candidates, one scene per hat with the authored camper head as a fit reference; hat-only exports to `public/models/hats/` | `hat_options.py` |
 | `faces.blend` | Twenty cosmetic face sets on the same authored head and nose; reference head/nose excluded from face-only exports in `public/models/faces/` | `face_options.py` |
+
+| `glasses.blend` | Twenty eyewear pairs, with fit references excluded from eyewear-only exports in `public/models/glasses/` | `glasses_options.py` |
 
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
 it. The files are saved **compressed** (Blender keeps compression on every later save): the old single

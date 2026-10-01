@@ -112,7 +112,7 @@ for i,(slug,name,description,group,build) in enumerate(DEFS):
     bpy.context.view_layer.objects.active=ROOT
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,slug+'.glb'),export_format='GLB',use_selection=True,use_active_scene=True,export_apply=True,export_animations=False,export_yup=True)
     scene['name']=name;scene['description']=description
-    manifest.append(dict(id=i+1,slug=slug,name=name,description=description,group=group,file='../models/faces/'+slug+'.glb',head='unchanged',nose='original',cosmeticOnly=True))
+    manifest.append(dict(id=i+1,slug=slug,name=name,description=description,group=group,file='../models/faces/'+slug+'.glb',head='unchanged',nose='original',cosmeticOnly=True,approved=True))
 bpy.context.window.scene=bpy.data.scenes['Face_01-classic']
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(REPO,'art/blender/faces.blend'),compress=True)
 with open(os.path.join(REPO,'public/face-lab/manifest.json'),'w') as f:json.dump(manifest,f,indent=2)

@@ -52,5 +52,5 @@ head vertices across every face, checks the original nose remains visible, face/
 behavior and denied paths, and exercises phone controls, saved picks and an approved hat combination.
 It captures all twenty front/side previews plus desktop/phone shots; these were visually reviewed on Radeon Vulkan.
 
-JT is reviewing the faces. These are aesthetic options; the game's player/NPC face assignments remain available
+JT accepted the face set on 2026-10-01. Keep all twenty cosmetic faces; the game's player/NPC face assignments remain available
 for a later cosmetic selector, with the same underlying character model and physics.
