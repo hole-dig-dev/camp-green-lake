@@ -7,8 +7,8 @@
      full of muddy water and swirl it; sand and water slop over the far lip, the sand in it shrinks to nothing, the
      water clears, and the gold flecks are left glinting in the bottom. Then you're paid (45-state.js washPan).
    - THE SIFTER (a bucket of sand): your bucket comes up over the hopper and tips; the sand pours in, the crank turns,
-     the sand tumbles down the riffle tray, hopping the riffles, and off the end onto the tailings; the gold catches
-     behind the riffles and slides down into the catch pan. Then you're paid (45-state.js siftBucket).
+     the sand tumbles down the riffle tray, hopping the riffles, and off the end onto the tailings; the gold, hidden in
+     the sand till then, only shows once it's down in the catch pan. Then you're paid (45-state.js siftBucket).
    Models are Blender's (art/blender/sifter.py: GoldPan, CampBucket, WashTub, SifterCrank, Sifter); your hands are the
    camper's own (camper.glb). The sand is grains in two instanced meshes: one draw call for the sand, one for the gold.
    Looks only: nothing here decides how much gold you get. */
@@ -121,7 +121,7 @@ function gfxSiftStep(dt){
       if(g.m==='topan'){const pc=sloc(SFT.panX,0,0);g.x+=(pc.x+(g.w||0)*0.3-g.x)*Math.min(1,dt*4);g.z+=(pc.z+(g.w||0)*0.3-g.z)*Math.min(1,dt*4)}}
     else if(g.m==='rest'){g.t+=dt;if(!gold&&g.t>2)g.fade=Math.max(0,1-(g.t-2)/1.2);if(gold)g.s=(g.s0||g.s)*(1+0.3*Math.max(0,Math.sin(GFX.t*9+g.x*50)))}
   };
-  for(const g of gfxGr)step(g,false);for(const g of gfxGd)step(g,true);
+  for(const g of gfxGr)step(g,false);for(const g of gfxGd){step(g,true);g.fade=g.m==='topan'||g.m==='rest'?1:0}   // JT: the gold doesn't show till it's at the bottom, in the catch pan (it's in the sand till then)
 }
 
 /* ---- the pan ---- */
