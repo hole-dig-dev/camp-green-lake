@@ -34,7 +34,7 @@ function depositGold(v){
   if(online())wsSend({t:'deposit',v});else{RUN.bank+=v;saveRun()}
   toast(`You put ${v} gold in the crew bank.`,'good',3000);return v;
 }
-function deposited(m){if(m.id!==myId())toast(`${m.n||'A camper'} put ${num(m.v,0,1e6,0)|0} gold in the crew bank.`,'gold',3200)}
+function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A camper'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }

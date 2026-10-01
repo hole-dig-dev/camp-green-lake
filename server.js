@@ -114,6 +114,8 @@ const JAV_WHACK_MAX = 2.4;                   // generous server-side reach check
 const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lion, per connection per window
 const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
 const MAX_DEPOSIT = 100000;                  // gold per crew-bank deposit; trims a hacked client's ceiling
+const MAX_CREW_DEPOSIT = 600;                // one D Tent crew bucket (5 holes, a nugget on a dig day: ~200)
+const CREW_NAMES = ['X-Ray', 'Armpit', 'Squid', 'Zigzag', 'Magnet', 'Zero']; // public/js/30-npcs.js BOTDEF
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
 const ipHttpWindow = new Map(); // ip -> recent HTTP request timestamps
@@ -576,10 +578,12 @@ wss.on('connection', (ws, req) => {
         // says how much it took out of its own pocket (client-authoritative, like the rest of the economy): the rate limit
         // and MAX_DEPOSIT just cap a hacked client per message.
         if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
-        const v = num(m.v, 0, MAX_DEPOSIT, 0) | 0; if (!v) return;
+        // bot: a D Tent crew member's sifted bucket (public/js/30-npcs.js crewDeposit), paid by one camper's screen
+        const bot = CREW_NAMES.includes(m.bot) ? m.bot : null;
+        const v = num(m.v, 0, bot ? MAX_CREW_DEPOSIT : MAX_DEPOSIT, 0) | 0; if (!v) return;
         world.run.bank += v; dirty = true;
-        LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank });
-        broadcast({ t: 'deposit', id: c.id, n: c.n, v });
+        LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank, bot });
+        broadcast({ t: 'deposit', id: c.id, n: c.n, v, bot });
         broadcast(runInfo());
         break;
       }

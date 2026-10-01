@@ -51,13 +51,38 @@ const BOTDEF=[
   {n:'Zero',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
-const bots=BOTDEF.map(d=>{
+/* ---- the crew's gold run (the gold rush, JT 2026-09-30): each digs CREW_HOLES holes, one after another in fresh ground
+   outside the no-dig line, filling a bucket; then carries it in through the gate, waits their turn at the sifter (one
+   at a time, and not while a camper's using it), sifts it and puts all the gold in the crew bank, and heads back out
+   to new ground. The crew runs on every screen (they aren't networked), so only one screen pays the bank: the
+   camper with the lowest id (like the pickup's physics, 87-truck.js). ---- */
+const CREW_HOLES=5;
+const CREW_GATE={x:0,out:25,in:30};   // the main gate: just outside, just inside
+const GATE_LANE=4;                    // keep this clear either side of the path out of the gate (x 0)
+function crewDigOK(x,z,b){
+  if(inCamp(x,z)||Math.max(Math.abs(x),Math.abs(z))>EDGE-6)return false;
+  if(Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,z-56))<CAMP_NODIG+1.5)return false;   // well past the white line (10-core.js)
+  if(Math.abs(x)<GATE_LANE&&z>0&&z<27)return false;   // not in the way out of the gate
+  if(holeNear(x,z,2.9))return false;                    // fresh ground: no hole (anyone's) here yet
+  for(const o of bots)if(o!==b&&(o.state==='walk'?Math.hypot(o.tx-x,o.tz-z)<3:o.hole&&Math.hypot(o.hole.x-x,o.hole.z-z)<3))return false;   // or about to be
+  return true;
+}
+/* somewhere new to dig: close to (cx, cz) if there's room, further out if not */
+function crewDigSpot(b,cx,cz){
+  for(const R of[3.3,5,8,12,18,26,36])for(let k=0;k<16;k++){
+    const a=botRng()*Math.PI*2,x=r1(cx+Math.cos(a)*R),z=r1(cz+Math.sin(a)*R);if(crewDigOK(x,z,b))return{x,z};
+  }
+  return null;
+}
+const bots=[];
+for(const d of BOTDEF){
   const p=makePerson({skin:d.skin,band:d.band,hat:d.hat,body:d.body,hair:d.hair});scene.add(p.g);
-  const hole=addHole({x:r1(d.x),z:r1(d.z),d:0.2+botRng()*1.0,bot:true});touchHole(hole);
+  const sp=crewDigOK(r1(d.x),r1(d.z),null)?{x:r1(d.x),z:r1(d.z)}:crewDigSpot(null,d.x,Math.min(d.z,20))||{x:r1(d.x),z:12};
+  const hole=addHole({x:sp.x,z:sp.z,d:0.2+botRng()*1.0,bot:true});touchHole(hole);
   p.g.position.set(hole.x,groundAt(hole.x,hole.z),hole.z);p.g.rotation.y=Math.PI+(botRng()-0.5);
   const L=makeLabel(p.g,d.n,'bot');
-  return{d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0};
-});
+  bots.push({d,p,hole,L,state:'dig',t:0,dph:botRng(),talkT:4+botRng()*20,tx:0,tz:0,bucket:Math.floor(botRng()*CREW_HOLES)});   // bucket: holes of sand so far
+}
 /* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
 const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
 /* Inside D Tent (the room sits underground at the tent's x/z): come in at the entry, hang your shovel on your own
@@ -83,7 +108,41 @@ function botBedPath(b){   // walk to beside your bunk (they run along the west w
 }
 function botIndoorSpot(b){return b.d.n==='X-Ray'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
 function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
-const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout']);
+const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting']);
+/* ---- the sifter queue: the first in line sifts (beside the hopper), the rest wait in a line behind ---- */
+const SIFTQ=[];
+const SIFT_SLOTS=[[9.8,37.7],[11.2,36.9],[12.5,36.4],[13.8,35.9],[15.1,35.4],[16.4,35.0],[17.7,34.6]];
+const siftSlot=i=>SIFT_SLOTS[Math.min(i,SIFT_SLOTS.length-1)];
+function leaveSiftQ(b){const i=SIFTQ.indexOf(b);if(i>=0)SIFTQ.splice(i,1)}
+function humanAtSifter(){   // a camper using the sifter right now: the crew waits for them
+  const G=SIM.GOLD.SIFTER,near=(x,z)=>Math.hypot(x-G.x,z-G.z)<SIM.GOLD.SIFT_R;
+  if(S.started&&S.tent==null&&!S.inTown&&near(P.x,P.z))return true;
+  for(const R of remotes.values())if(R.room==null&&!R.tn&&near(R.tx,R.tz))return true;
+  return false;
+}
+/* the gold from a crew member's bucket goes in the crew bank, once: only the lowest-id camper's screen pays it */
+function crewPaysHere(){if(!online())return true;for(const id of remotes.keys())if(id<net.id)return false;return true}
+function crewDeposit(b,gold){
+  if(!crewPaysHere())return;
+  logEv('crewSift',{n:b.d.n,gold});
+  if(online())wsSend({t:'deposit',v:gold,bot:b.d.n});
+  else{RUN.bank+=gold;saveRun();toast(`${b.d.n} sifted ${gold} gold into the crew bank.`,'',3200)}
+}
+/* the crew's buckets: carried by the bail while walking (86-walkie.js holdProp, like the first-aid kit), set down by
+   the hole while digging (art/blender/sifter.py CampBucket) */
+const CREW_CARRY=new Set(['walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq']);
+let CREW_BUCKET_PARTS=null;modelParts('CampBucket').then(p=>{CREW_BUCKET_PARTS=p}).catch(()=>{});
+function crewBucket(b,show){
+  if(!b.gb){if(!CREW_BUCKET_PARTS||!show)return;b.gb=new T.Group();for(const pt of CREW_BUCKET_PARTS){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;b.gb.add(m)}scene.add(b.gb)}
+  b.gb.visible=show;if(!show)return;
+  const h=b.hole,ux=h.x-h.mx,uz=h.z-h.mz,ul=Math.hypot(ux,uz)||1,x=h.x+ux/ul*HOLE_R*1.2,z=h.z+uz/ul*HOLE_R*1.2;   // on the far side from the dirt pile
+  b.gb.position.set(x,baseH(x,z),z);
+}
+function crewHands(b){
+  const carry=CREW_CARRY.has(b.state)&&b.p.g.visible,held=b.p.held&&b.p.held.k==='bucket'&&b.p.held.t>0;
+  if(carry&&!held)holdProp(b.p,'bucket');else if(!carry&&held)releaseProp(b.p,'bucket');
+  crewBucket(b,(b.state==='dig'||b.state==='rest')&&b.p.g.visible);
+}
 const curfewSoon=()=>clockT()>=DAYMS-60000;   // the siren (82-patrol.js) through the night
 const xrayBedtime=()=>clockT()>=tAtHour(1);    // 01:00 until dawn
 function walkTo(b,x,z,dt,speed,y){   // true once there
@@ -110,8 +169,11 @@ function updateBots(dt,now){
     const asleep=b.state==='inside'&&(b.d.n!=='X-Ray'||b.xraySleeps);
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
+    if(SIFTQ.includes(b)&&b.state!=='siftq'&&b.state!=='sifting')leaveSiftQ(b);   // sent off by something else (the party, a sinkhole rescue)
+    if(OUTDOOR.has(b.state))crewHands(b);
     if(siren){
-      if(b.state==='dig'||b.state==='rest'||b.state==='walk'||b.state==='return'||b.state==='gatebackout'){b.state='gateout';b.tx=0;b.tz=25}
+      if(b.state==='siftq'||b.state==='sifting'){leaveSiftQ(b);b.errand=null;b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}   // already inside the fence: straight to the tent, bucket and all
+      if(b.state==='dig'||b.state==='rest'||b.state==='walk'||b.state==='return'||b.state==='gatebackout'){b.state='gateout';b.tx=0;b.tz=25;b.errand=null}
       else if(b.state==='gatebackin'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
     }
     if(b.state==='indoor'){
@@ -160,7 +222,7 @@ function updateBots(dt,now){
       g.position.y=groundAt(g.position.x,g.position.z);
       animPerson(b.p,2,dt,b.dph%1);
       if(b.hole.d>=FIVE_FT){
-        b.state='rest';b.t=6+botRng()*6;b.restT=0;
+        b.state='rest';b.t=6+botRng()*6;b.restT=0;b.bucket=Math.min(CREW_HOLES,(b.bucket||0)+1);
         if(botRng()<0.3){const ty2=['cap','can','spoon'][Math.floor(botRng()*3)];popItem({type:ty2},b.hole.x,b.hole.z);say(b.L,{cap:'Just a bottle cap. Figures.',can:'A rusty can. Great.',spoon:'Somebody lost a spoon out here.'}[ty2])}
       }
     }else if(b.state==='rest'){
@@ -169,20 +231,34 @@ function updateBots(dt,now){
       animPerson(b.p,b.restT<2.2?5:b.restT<3.8?6:0,dt);
       if(b.t<=0){
         /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
-        if(botRng()<0.22){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
-        else{
-          for(let k=0;k<20;k++){const a=botRng()*Math.PI*2;const x=r1(b.hole.x+Math.cos(a)*3.3),z=r1(clamp(b.hole.z+Math.sin(a)*3.3,14,26));if(!holeNear(x,z,2.9)){b.tx=x;b.tz=z;break}}
-          if(b.tx||b.tz)b.state='walk';else b.t=4;
-        }
+        if(b.bucket>=CREW_HOLES){b.errand='sift';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s five. Sifter time.','Full bucket. Back in a bit.']),3000)}
+        else if(botRng()<0.12){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
+        else{const sp=crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.tx=sp.x;b.tz=sp.z;b.state='walk'}else b.t=4}
+      }
+    }else if(b.state==='siftq'){
+      const i=SIFTQ.indexOf(b),[sx,sz]=siftSlot(i);
+      if(!walkTo(b,sx,sz,dt,2.2)){continue}
+      const G=SIM.GOLD.SIFTER,fx=i===0?G.x-0.8:siftSlot(i-1)[0],fz=i===0?G.z:siftSlot(i-1)[1];   // face the hopper, or the back of the one ahead
+      let dr=Math.atan2(fx-g.position.x,fz-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
+      animPerson(b.p,0,dt);
+      if(i===0){b.waitT=(b.waitT||0)+dt;if(!humanAtSifter()||b.waitT>10){b.state='sifting';b.t=3.6;b.puffT=0}}
+    }else if(b.state==='sifting'){
+      const G=SIM.GOLD.SIFTER;b.t-=dt;animPerson(b.p,b.t>2.8?2:0,dt,b.t>2.8?(3.6-b.t)/0.8:0);   // tip the bucket in, then watch it shake
+      if((b.puffT-=dt)<=0&&nearCam(G.x,G.z,30)){b.puffT=0.6;puff(G.x+(botRng()-0.5)*1.2,groundAt(G.x,G.z)+1.1,G.z+(botRng()-0.5)*0.8,G.x,G.z,6);if(nearCam(G.x,G.z,18))noise(0.25,500,0.5,0.06,'bandpass')}
+      if(b.t<=0){
+        const r=SIM.siftGold(b.bucket||CREW_HOLES,botRng,tune('gold.perHole'),RUN.mood==='digday'?2:1);
+        crewDeposit(b,r.gold);say(b.L,r.nugget?'A nugget! Into the crew bank.':r.luck>1.4?'Good batch. Into the crew bank.':pick(['Into the crew bank.','For the crew.','There. Crew bank.']),3200);
+        b.bucket=0;b.errand=null;leaveSiftQ(b);b.state='gatebackin';b.tx=CREW_GATE.x;b.tz=CREW_GATE.in;
       }
     }else{
       const dx=b.tx-g.position.x,dz=b.tz-g.position.z,d=Math.hypot(dx,dz);
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=FIVE_FT?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
       else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=0;b.tz=30}
+      else if(d<0.1&&b.state==='gatein'&&b.errand==='sift'){b.state='siftq';SIFTQ.push(b);b.waitT=0}
       else if(d<0.1&&b.state==='gatein'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
       else if(d<0.1&&b.state==='gotent'){g.position.set(D_ENTRY.x,TENT_FLOOR_Y,D_ENTRY.z);goIndoor(b,[RACK[bots.indexOf(b)].front],'rack')}   // in through the flap, straight to the rack
       else if(d<0.1&&b.state==='gatebackin'){b.state='gatebackout';b.tx=0;b.tz=25}
-      else if(d<0.1&&b.state==='gatebackout'){b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
+      else if(d<0.1&&b.state==='gatebackout'){const sp=b.hole.d>=FIVE_FT&&crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.state='walk';b.tx=sp.x;b.tz=sp.z}else{b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}}   // that hole's done: new ground
       else if(d<0.1){b.hole=addHole({x:b.tx,z:b.tz,d:0.05,bot:true});b.tx=b.tz=0;b.state='dig';b.dph=0;touchHole(b.hole)}
       else walkTo(b,b.tx,b.tz,dt,siren?3.6:b.state==='return'?3.5:2.2);
     }
