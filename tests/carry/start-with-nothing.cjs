@@ -35,7 +35,7 @@ check('the bucket (45): sand goes in the bucket now (5 holes)',await A.evaluate(
 await A.evaluate(()=>{S.bucket=5;P.x=SIM.GOLD.SIFTER.x;P.z=SIM.GOLD.SIFTER.z-2;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(300);const g2=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(1800);
 check('a bucket of sand goes through the sifter',await A.evaluate(g=>S.seeds>g&&S.bucket===0,g2));
 // the crew start with no bucket
-check('the crew dig but earn nothing until you buy them a bucket',await A.evaluate(()=>bots.every(b=>crewBucketMax(b)===0)&&/no bucket/.test($('#crewRows').textContent)));
+check('no crew until you hire them',await A.evaluate(()=>bots.every(b=>b.state==='away')&&!$('#crewNone').hidden));
 // the quota. Day 1: you've only just got here, so a grace day
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 let d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota,t:[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|')}));

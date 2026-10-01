@@ -259,7 +259,7 @@ function drawMap(){
   for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.min(9,Math.max(1.6,ws(h.r))),0,6.3);mx.fill()}
   if(S.revealed){mx.strokeStyle=night?'#ff6a5a':'#d12a2a';mx.lineWidth=night?3.5:3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
   /* NPCs: smaller cream diamonds (shape, not just color, so it reads without relying on color) */
-  for(const b of bots){const X=wx(b.p.g.position.x),Z=wz(b.p.g.position.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
+  for(const b of bots){if(b.state==='away')continue;const X=wx(b.p.g.position.x),Z=wz(b.p.g.position.z);if(X<-6||Z<-6||X>W+6||Z>W+6)continue;
     mx.save();mx.translate(X,Z);mx.rotate(Math.PI/4);mx.fillStyle=night?'#cfc4a4':'#f3e6c8';mx.strokeStyle='#2b1d12';mx.lineWidth=1.3;mx.fillRect(-3.2,-3.2,6.4,6.4);mx.strokeRect(-3.2,-3.2,6.4,6.4);mx.restore()}
   /* remote players: stable per-player color (derived from their camper-color index) plus a 1-2
      letter initial, so identity doesn't depend on color alone */
@@ -303,6 +303,7 @@ try{const v=localStorage.getItem('cgl-crewPanel');crewPanelOn=v==null?!isTouch:v
 function toggleCrewPanel(){crewPanelOn=!crewPanelOn;try{localStorage.setItem('cgl-crewPanel',crewPanelOn?'1':'0')}catch(e){}toast(crewPanelOn?'Crew panel on (K to hide)':'Crew panel off (K to show)','',1400);updateCrewPanel(1)}
 function crewPanelBuild(){
   const box=$('#crewRows');box.textContent='';crewRowEls.length=0;
+  const none=document.createElement('div');none.className='crew-none';none.id='crewNone';none.textContent='No crew yet. Hire them at the Supply Depot window (The crew tab).';box.appendChild(none);
   for(const b of bots){const r=document.createElement('div');r.className='crew-row';
     r.innerHTML=`<div class="crew-row__top"><b></b><span class="crew-row__doing"></span><span class="crew-bk"></span></div><div class="crew-bars"><div class="crew-bar crew-bar--hp" title="Health"><i></i></div><div class="crew-bar crew-bar--st" title="Stamina"><i></i></div><div class="crew-bar crew-bar--wt" title="Water"><i></i></div></div>`;
     r.querySelector('b').textContent=b.d.n;box.appendChild(r);
@@ -314,9 +315,10 @@ function updateCrewPanel(dt){
   if((crewPanelT-=dt)>0)return;crewPanelT=0.25;
   if(crewRowEls.length!==bots.length)crewPanelBuild();
   const mb=$('#mapbox').getBoundingClientRect();el.style.top=Math.round(mb.bottom+8)+'px';el.style.maxHeight=Math.max(80,innerHeight-mb.bottom-70)+'px';
-  bots.forEach((b,i)=>{const E=crewRowEls[i],cap=crewWaterMax(b),txt=crewActivity(b);
+  $('#crewNone').hidden=bots.some(crewHired);
+  bots.forEach((b,i)=>{const E=crewRowEls[i],cap=crewWaterMax(b),txt=crewActivity(b);E.r.hidden=!crewHired(b);if(E.r.hidden)return;
     if(E.doing.textContent!==txt)E.doing.textContent=txt;
     E.r.classList.toggle('is-bad',b.state==='ko'||b.state==='tossed'||b.water<=0);
-    const bk=crewBucketMax(b)?`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:'no bucket';if(E.bk.textContent!==bk)E.bk.textContent=bk;
+    const bk=crewSifts(b)?`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:`pan ${Math.round((b.bucket||0)*100)}%`;if(E.bk.textContent!==bk)E.bk.textContent=bk;
     E.hp.style.width=clamp(b.hp??100,0,100)+'%';E.st.style.width=clamp(b.stam??100,0,100)+'%';E.wt.style.width=clamp((b.water??cap)/cap*100,0,100)+'%'});
 }

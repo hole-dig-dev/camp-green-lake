@@ -1,6 +1,6 @@
 const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
-(async()=>{const b=await browser(),errs=[];const p=await player(b,PORT,'Tester',errs);await p.evaluate(()=>{/* crewKit */crewMsg({up:Object.fromEntries(SIM.CREW.map(n=>[n,{bucket:true}]))})});
+(async()=>{const b=await browser(),errs=[];const p=await player(b,PORT,'Tester',errs);await p.evaluate(()=>{/* crewKit */crewMsg({up:Object.fromEntries(SIM.CREW.map(n=>[n,{hired:true,shovel:true,bucket:true}]))})});
 await p.evaluate(()=>{runCommand('time 9:00');P.x=0;P.z=12;P.y=groundAt(P.x,P.z)});await p.waitForTimeout(1500);
 const rows=await p.evaluate(()=>[...document.querySelectorAll('.crew-row')].map(r=>r.querySelector('b').textContent+': '+r.querySelector('.crew-row__doing').textContent+' / bucket '+r.querySelector('.crew-bk').textContent));
 check('the crew panel shows all six, with what they are doing',!(await p.evaluate(()=>$('#crewPanel').hidden))&&rows.length===6,'\n    '+rows.join('\n    '));

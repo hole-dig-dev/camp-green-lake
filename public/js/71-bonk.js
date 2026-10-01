@@ -29,7 +29,7 @@ function bonkSwing(){
     bonkT=now;wsSend({t:'bonk',id:best.id});bonkFx(best.R.p.g.position);
     logEv('bonk',{id:best.id,n:best.R.name,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});return true;
   }
-  for(const b of bots){if(b.state==='inside')continue;const g=b.p.g.position;if(inFront(g.x,g.z)){bonkT=now;bonkFx(g);say(b.L,pick(BONK_LINES),3000);return true}}
+  for(const b of bots){if(b.state==='inside'||b.state==='away')continue;const g=b.p.g.position;if(inFront(g.x,g.z)){bonkT=now;bonkFx(g);say(b.L,pick(BONK_LINES),3000);return true}}
   return false;
 }
 function bonkFx(pos){sfx.clank();sfx.thud();puff(pos.x,pos.y+1.6,pos.z,pos.x,pos.z,6)}

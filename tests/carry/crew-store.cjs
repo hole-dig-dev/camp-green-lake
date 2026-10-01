@@ -6,9 +6,12 @@ await A.keyboard.press('f');await A.waitForTimeout(500);check('the store opens o
 await A.click('#shopModeCrew');await A.waitForTimeout(300);
 const cols=await A.evaluate(()=>[...document.querySelectorAll('#crewGrid .crew-h')].map(e=>e.firstChild.textContent));
 check('The crew: a column per crew member',cols.length===7&&cols.includes('Zach'),cols.join(', '));
-check('a row per upgrade',await A.evaluate(()=>document.querySelectorAll('#crewGrid .crew-item').length===SIM.CREW_SHOP.length));
+check('a row per upgrade, plus Hire',await A.evaluate(()=>document.querySelectorAll('#crewGrid .crew-item').length===SIM.CREW_SHOP.length+1));
 await A.screenshot({path:SP+'/crewshop.png'});
-check('the crew start with no bucket; the Big one waits for it',/Needs Bucket/i.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent)),await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent));
+check('the crew start with no bucket; the Big one waits for it',/Needs Bucket|Hire him first/i.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent)),await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket2"]').textContent));
+check('nobody hired yet: every column says Hire, the rest wait',await A.evaluate(()=>$('.crew-buy[data-key="Zach|hire"]').textContent==='Hire · 40'&&/Hire him first/.test($('.crew-buy[data-key="Zach|bucket"]').textContent)));
+await A.click('.crew-buy[data-key="Zach|hire"]');await A.waitForTimeout(150);await A.click('.crew-buy[data-key="Zach|hire"]');await A.waitForTimeout(800);
+check('hire Zach (40): the next hire costs 60',await A.evaluate(()=>crewHired(bots.find(b=>b.d.n==='Zach'))&&$('.crew-buy[data-key="Stan|hire"]').textContent==='Hire · 60'));
 const g0=await A.evaluate(()=>S.seeds);
 await A.click('.crew-buy[data-key="Zach|bucket"]');await A.waitForTimeout(150);
 check('first click asks "Sure?"',/Sure/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket"]').textContent))&&await A.evaluate(g=>S.seeds===g,g0));
@@ -19,12 +22,13 @@ check('...and your friend\'s',await B.evaluate(()=>crewBucketMax(bots.find(b=>b.
 check('your friend is told',/Alpha bought Zach a bucket/.test(await B.evaluate(()=>[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|'))));
 check('the row shows he has it',/Has it/.test(await A.evaluate(()=>$('.crew-buy[data-key="Zach|bucket"]').textContent)));
 // a spade digs faster
-const rate=await A.evaluate(()=>new Promise(res=>{const z=bots.find(b=>b.d.n==='Stan');z.hole=addHole({x:-30,z:-20,d:0.1,bot:true});z.state='dig';z.p.g.position.set(-30,groundAt(-30,-20),-20);const d0=z.hole.d;setTimeout(()=>res(z.hole.d-d0),10000)}));
-await A.evaluate(()=>{crewMsg({up:Object.assign({},CREW_UP,{Stan:{spade:true}})})});
+await A.evaluate(()=>{crewMsg({up:Object.assign({},CREW_UP,{Stan:{hired:true,shovel:true}})})});await A.waitForTimeout(300);const rate=await A.evaluate(()=>new Promise(res=>{const z=bots.find(b=>b.d.n==='Stan');z.hole=addHole({x:-30,z:-20,d:0.1,bot:true});z.state='dig';z.p.g.position.set(-30,groundAt(-30,-20),-20);const d0=z.hole.d;setTimeout(()=>res(z.hole.d-d0),10000)}));
+await A.evaluate(()=>{crewMsg({up:Object.assign({},CREW_UP,{Stan:{hired:true,shovel:true,spade:true}})})});
 const rate2=await A.evaluate(()=>new Promise(res=>{const z=bots.find(b=>b.d.n==='Stan');z.hole=addHole({x:-34,z:-20,d:0.1,bot:true});z.state='dig';z.p.g.position.set(-34,groundAt(-34,-20),-20);const d0=z.hole.d;setTimeout(()=>res(z.hole.d-d0),10000)}));
 check('a sharpened spade: he digs ~60% faster',rate2>rate*1.35,`${rate.toFixed(2)} m -> ${rate2.toFixed(2)} m in 10 s`);
 // both buy the same thing at once: one pays, the other gets their gold back
-await B.evaluate(()=>{runCommand('give gold 400')});const a1=await A.evaluate(()=>S.seeds),b1=await B.evaluate(()=>S.seeds);
+await B.evaluate(()=>{runCommand('give gold 400')});await B.waitForTimeout(300);
+await A.evaluate(()=>{S.seeds+=200;crewBuy('Larry',CREW_HIRE_ITEM)});await A.waitForTimeout(1000);const a1=await A.evaluate(()=>S.seeds),b1=await B.evaluate(()=>S.seeds);
 await Promise.all([A.evaluate(()=>crewBuy('Larry',SIM.CREW_SHOP.find(i=>i.id==='canteen'))),B.evaluate(()=>{shopOpen=true;crewBuy('Larry',SIM.CREW_SHOP.find(i=>i.id==='canteen'))})]);
 await A.waitForTimeout(1200);const spent=(a1-await A.evaluate(()=>S.seeds))+(b1-await B.evaluate(()=>S.seeds));
 check('two of you buying the same thing: only one pays',spent===35,`spent ${spent} between you`);

@@ -219,7 +219,7 @@ function endParty(){
   if(!PARTY.on)return;PARTY.on=false;
   ball.visible=false;beams.forEach(b=>{b.visible=false});spots.forEach(o=>{o.s.intensity=0});
   stopMusic();$('#partyBanner').hidden=true;
-  for(const b of bots){b.tx=b.hole.x;b.tz=b.hole.z;b.state='return'}
+  for(const b of bots){if(b.state==='away')continue;b.tx=b.hole.x;b.tz=b.hole.z;b.state='return'}
   toast("The party's over. Back to digging.",'',3000);
 }
 function danceArms(p,beat,style){
@@ -256,7 +256,7 @@ function updateParty(dt,now){
     const v=new T.Vector3(0,-8,0).applyEuler(bm.rotation);spots[i].tg.position.set(v.x,7+v.y,v.z);spots[i].s.intensity=1.6+2*(1-bph)});
   /* the D Tent crew, Mr. Sir, the Warden and every other camper dance in a ring around the target and follow them */
   const dancers=[];
-  for(const b of bots)dancers.push(b.p);
+  for(const b of bots)if(b.state!=='away')dancers.push(b.p);
   dancers.push(sir,warden);
   for(const[id,R]of remotes)if(id!==PARTY.targetId)dancers.push(R.p);
   const n=dancers.length;

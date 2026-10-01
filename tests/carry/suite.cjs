@@ -7,6 +7,7 @@ const clearProps=p=>p.evaluate(()=>{for(const pr of [...PROPS.values()])if(!isCa
 const prompt=p=>p.evaluate(()=>$('#prompt').hidden?'':$('#prompt').textContent);
 const prop=(p,id)=>p.evaluate(id=>{const t=PROPS.get(id);return t?{x:+t.x.toFixed(2),z:+t.z.toFixed(2),up:+(t.y-groundAt(t.x,t.z)).toFixed(2),val:t.val,held:GRAB_ST.id===id,grab:t.grab.slice(),cart:t.cartId}:null},id);
 (async()=>{const b=await browser(),errs=[];const A=await player(b,PORT,'Alpha',errs),B=await player(b,PORT,'Bravo',errs);
+await A.evaluate(()=>{/* crewKit: the crew start unhired now; take them all on */crewMsg({up:Object.fromEntries(SIM.CREW.map(n=>[n,{hired:true,shovel:true,bucket:true}]))})});await A.waitForTimeout(500);
 const bid=await B.evaluate(()=>myId()),aid=await A.evaluate(()=>myId());
 await A.evaluate(()=>{for(const b of bots)b.talkT=999});
 
