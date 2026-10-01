@@ -111,7 +111,11 @@ function upgradePerson(p){
     else if(nm.includes('_Shades_'))n.visible=!!o.shades;
     else if(nm.includes('_R_Shovel')){n.visible=o.shovel!==false;(p.shovelMeshes=p.shovelMeshes||[]).push(n)}
     const mn=n.material&&n.material.name;
-    if(mn&&tint[mn]!=null){if(!mats[mn]){mats[mn]=n.material.clone();mats[mn].color.setHex(tint[mn])}n.material=mats[mn]}
+    // one tinted copy per material AND per kind of mesh: the rigid hands/sneakers share names with the skinned sleeves
+    // and trousers, and a skinned mesh given a rigid mesh's material (skinning off) draws its shadow in the bind pose
+    // (and three.js warns about it every frame)
+    if(mn&&tint[mn]!=null){const key=mn+(n.isSkinnedMesh?'#skin':'');if(!mats[key]){mats[key]=n.material.clone();mats[key].color.setHex(tint[mn]);mats[key].skinning=!!n.isSkinnedMesh}n.material=mats[key]}
+    if(n.isSkinnedMesh&&n.material&&!n.material.skinning){n.material=n.material.clone();n.material.skinning=true}
     if(/_(Torso|Zipper|Patch|Neck)$/.test(nm))torso.push(n);
     if(/_[LR]_(Sleeve|Elbow|Forearm|Leg)$/.test(nm)){
       // A skinned limb's vertices are sized in bind space; scaling its object would move it off the joint.
