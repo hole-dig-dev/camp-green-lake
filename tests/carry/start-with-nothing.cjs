@@ -20,7 +20,7 @@ check('the odd fleck of gold turns up as you dig (about 1 scoop in 25)',fl>=4&&f
 await A.evaluate(()=>{runCommand('give gold 200')});await buy(A,'pan');
 check('the pan (10 gold): the meter says Pan',await A.evaluate(()=>S.up.pan&&!$('#bucketMeter').hidden&&$('#bucketK').textContent==='Pan'));
 await A.evaluate(()=>{S.bucket=1;P.x=SIM.GOLD.WATER.x;P.z=SIM.GOLD.WATER.z;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(400);
-const pr=await A.evaluate(()=>$('#prompt').textContent);const g1=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(3200);
+const pr=await A.evaluate(()=>$('#prompt').textContent);const g1=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(7500);   // the panning plays first (89-goldfx.js)
 check('a full pan washes out at the water drums (F)',/Wash your pan/.test(pr)&&await A.evaluate(g=>S.seeds>g&&S.bucket===0,g1),`${pr} | +${await A.evaluate(g=>S.seeds-g,g1)} gold`);
 await A.evaluate(()=>{S.bucket=0.8;P.x=SIM.GOLD.SIFTER.x;P.z=SIM.GOLD.SIFTER.z-2;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(300);await A.keyboard.press('f');await A.waitForTimeout(400);
 check('the sifter wants a bucket, not a pan',await A.evaluate(()=>S.bucket===0.8&&[...document.querySelectorAll('#toasts > *')].some(e=>/sifter takes a bucket/.test(e.textContent))));
@@ -32,7 +32,7 @@ check('...and it digs to 5 feet',await A.evaluate(()=>Math.abs(digDepthMax()-FIV
 // the bucket and the sifter
 await buy(A,'bucket');
 check('the bucket (45): sand goes in the bucket now (5 holes)',await A.evaluate(()=>carrier()==='bucket'&&bucketMax()===5&&$('#bucketK').textContent==='Bucket'));
-await A.evaluate(()=>{S.bucket=5;P.x=SIM.GOLD.SIFTER.x;P.z=SIM.GOLD.SIFTER.z-2;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(300);const g2=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(1800);
+await A.evaluate(()=>{S.bucket=5;P.x=SIM.GOLD.SIFTER.x;P.z=SIM.GOLD.SIFTER.z-2;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(300);const g2=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(10000);   // the sifter plays first
 check('a bucket of sand goes through the sifter',await A.evaluate(g=>S.seeds>g&&S.bucket===0,g2));
 // the crew start with no bucket
 check('no crew until you hire them',await A.evaluate(()=>bots.every(b=>b.state==='away')&&!$('#crewNone').hidden));

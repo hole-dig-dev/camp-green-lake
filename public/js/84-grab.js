@@ -104,7 +104,7 @@ function grabTarget(t){
   if(t.cartId!=null)t.cartId=null;   // taking it back out of the wheelbarrow (the server hears it from pgrab)
   GRAB_ST.id=t.id;if(t.id>=0)S.carry=t.id;digHeld=false;
   const h=t.isBody||t.isCrew?0.4:physOf(t).h/2;
-  const rad=t.isBody||t.isCrew?0.5:physOf(t).r;GRAB_ST.dist=FP?clamp(Math.hypot(t.x-P.x,t.y+h-(P.y+1.05),t.z-P.z),1.6,3.0):clamp(0.75+rad,1.1,2.0);   // just in front of you; scroll to change
+  const rad=t.isBody||t.isCrew?0.5:physOf(t).r;GRAB_ST.dist=FP?clamp(Math.hypot(t.x-P.x,t.y+h-(P.y+1.05),t.z-P.z),1.3,t.isBody||t.isCrew?2.0:2.6):clamp(0.75+rad,1.1,2.0);   // first person: at arm's length (a person closer still)   // just in front of you; scroll to change
   t.grabT=performance.now();
   if(isCart(t)&&t.tip){t.tip=false;t.rest=false;toast('You set the wheelbarrow back on its wheel.','',2000)}
   if(t.isCrew){t.grab=[myId()];crewGrabbed(t.b,true)}
