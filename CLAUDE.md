@@ -2,6 +2,10 @@
 
 A multiplayer browser game inspired by the book *Holes*. JT (repo owner, `jth458`) directs the work; Greg (`buissong`) collaborates. Read `docs/HANDOFF.md` for the full history, current state and backlog, and `ARCHITECTURE.md` for how the code is laid out.
 
+**Characters / animation / ragdoll work: read [CHARACTER-HANDOFF.md](CHARACTER-HANDOFF.md) first.** It identifies
+JT's approved continuously skinned camper, the smooth elbow update, all asset/runtime paths and the player/NPC
+physics audit he requested. The finished model and integration are already on `jt/next`.
+
 ## Branches (the most important rules)
 
 - **`main`**: Greg's co-op version plus a revert. **Never commit to, merge into, or push `main`** unless JT explicitly says "merge it to main" in the current conversation.

@@ -2,6 +2,9 @@
 
 A multiplayer browser digging game set in the dry lake bed from *Holes*. Dig five-foot holes, sell what you find to Mr. Sir, dodge yellow-spotted lizards, and work with your friends to find what Kissin' Kate Barlow buried.
 
+**Updated character models and animations:** [Claude's character handoff](CHARACTER-HANDOFF.md) lists the approved
+Blender/GLB assets, continuous elbow/knee skinning, shared player/NPC integration and physics validation steps.
+
 Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, one buried prize, and a group of friends arguing about where to dig.
 
 ## Play
