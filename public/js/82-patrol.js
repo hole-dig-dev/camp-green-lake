@@ -19,7 +19,7 @@ function toggleAdmin(){const el=$('#admin');if(el.hidden&&net.ws&&net.ws.readySt
 function renderAdmin(){if($('#admin').hidden)return;$('#admT').textContent=clockText();$('#admS').textContent=CLK.paused?'paused':CLK.off?'(changed)':'(real clock)';$('#admPause').textContent=CLK.paused?'Resume time':'Pause time'}
 $('#admin').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.h)jumpTo(tAtHour(+d.h));else if(d.c)jumpTo(DAYMS-59000);else if(d.d)jumpTo(tAtHour(hourOf(clockT())+(+d.d)));
-  else if(d.a){if(online())wsSend({t:'admin',a:d.a});else{setRun({day:RUN.day,bank:d.a==='fill'?RUN.quota:0,quota:RUN.quota});saveRun()}}
+  else if(d.a){if(online())wsSend({t:'admin',a:d.a});else{setRun({day:RUN.day,bank:0});saveRun()}}
   else if(b.id==='admPause'){if(CLK.paused)applyClock({paused:false,off:CLK.pt-Date.now()});else applyClock({paused:true,pt:clockT()})}
   else if(b.id==='admReal')applyClock({paused:false,off:0,pt:0});
   b.blur()});

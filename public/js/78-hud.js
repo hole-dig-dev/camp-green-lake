@@ -16,19 +16,19 @@ const COOP_TXT={
   townDown:s=>'Climb down into the buried town',townLoot:s=>`Pick up: ${LOOT[s.e.L.type].name}`,townShaft:s=>'Climb up the shaft',townWell:s=>'Climb the old well',townStair:s=>'Walk up the collapsed stairwell',
   cartLoad:s=>`Put it in the wheelbarrow (${(s.cart.load||[]).length}/${SIM.CART.CAP})`,
   drop:s=>`Let go of the ${propName(s.pr)}`+(s.pr.grab&&s.pr.grab.length>=2?` (${s.pr.grab.length} of you on it)`:' (just you)')+' · click to throw · scroll: closer / farther',
-  prop:s=>s.pr.type==='cart'?`Push the wheelbarrow${s.pr.tip?' (set it back up)':''}, or aim and hold R`:`Grab the ${LOOT[s.pr.type].name} (${s.pr.val!=null?s.pr.val:SIM.HEAVY[s.pr.type]} seeds, ${SIM.PHYS[s.pr.type].m} kg), or aim and hold R`+(s.pr.grab&&s.pr.grab.length?` · ${s.pr.grab.length} holding`:''),
+  prop:s=>s.pr.type==='cart'?`Push the wheelbarrow${s.pr.tip?' (set it back up)':''}, or aim and hold R`:`Grab the ${LOOT[s.pr.type].name} (${s.pr.val!=null?s.pr.val:SIM.HEAVY[s.pr.type]} gold, ${SIM.PHYS[s.pr.type].m} kg), or aim and hold R`+(s.pr.grab&&s.pr.grab.length?` · ${s.pr.grab.length} holding`:''),
   bag:s=>`Pick up ${s.b.n||'someone'}'s sack (${s.b.items.length} item${s.b.items.length===1?'':'s'})`,
   tentdoor:s=>`Go inside ${TENTS[s.ti].name}`,
   exit:()=>'Step back outside',
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
   office:()=>"Read the Warden's ledger and the note on her desk",
 };
-const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
+const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),bucket:$('#bucketBar'),bucketWrap:$('#bucketWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
   else sleepEl.style.display='none';
   hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
+  hq.quota.textContent=`${RUN.bank} gold`;   // the crew bank (84-coop.js)
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   let curWarn=false;
@@ -44,12 +44,13 @@ function updateHUD(){
     const txt=worst.length?worst.map(k=>AFF_INFO[k]).join(' · '):low?'Low health':'';
     hw.hpWarn.hidden=!txt;if(txt&&hw.hpWarn.textContent!==txt)hw.hpWarn.textContent=txt}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
+  {const bk=S.bucket/bucketMax();hq.bucket.style.width=(bk*100).toFixed(1)+'%';hq.bucketWrap.classList.toggle('full',bk>=0.999)}   // sand in your bucket (45-state.js fillBucket)
   {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
    hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
-  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty');
+  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} gold`:(S.hasKB?'Gold tube':'empty');
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
   hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
   hw.battRow.hidden=!(S.light||S.batt<30);
@@ -69,7 +70,7 @@ function updateHUD(){
   else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='sir'?'Talk to Mr. Sir (water, sell your finds)':s.id==='store'?'Buy from Mr. Pendanski at the Supply Depot window':s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden');
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='water'?(S.water>=waterMax()-1?'The water drums (your canteen\'s full)':'Fill your canteen'):s.id==='sift'?(S.bucket>0.05?`Sift your bucket for gold (${Math.floor(S.bucket*10)/10} holes of sand)`:'The sifter (your bucket\'s empty: go dig)'):s.id==='store'?(S.sack.length?'Trade with Mr. Pendanski (sell your finds, buy gear)':'Trade with Mr. Pendanski at the Supply Depot window'):s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n:(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden (the crew bank)');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else hud.prompt.hidden=true;
 }

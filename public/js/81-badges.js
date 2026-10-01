@@ -17,7 +17,7 @@ const BADGES={
   squasher:['Snake charmer','Squash 15 hatchlings, rattlesnakes or scorpions'],
   hauler:['Hauler','Sell 3 pieces of heavy loot'],
   knots:['Knots','Tie your rope to something 10 times'],
-  butter:['Butterfingers','Knock 50 seeds off heavy loot by dropping it'],
+  butter:['Butterfingers','Knock 50 gold off heavy loot by dropping it'],
   stanley:['Stanley','Dig up the suitcase'],
   clyde:['Sweet Feet','Get hit by falling sneakers'],
 };

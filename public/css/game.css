@@ -175,8 +175,8 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 /* red edge flash when you take damage (opacity driven from updateHealth) */
 #hurtFx{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(184,50,31,0) 55%,rgba(184,50,31,.55) 100%)}
 .bar.xp i{background:#d4af37}
-#fired{background:rgba(30,0,0,.7);z-index:50}
-#fired h2{font:900 56px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;color:#b3261e}
+.bar.bucket i{background:#c9a35c}   /* sand in your bucket (78-hud.js) */
+.bar.bucket.full i{background:#e8c048}
 /* developer console (open with the ` key) */
 #console{position:fixed;left:50%;bottom:calc(60px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(1240px,calc(100vw - 32px));z-index:40;background:rgba(20,14,8,.88);border:2px solid var(--ink);border-radius:4px;color:#f3ead2;font:500 14px/1.35 ui-monospace,Menlo,Consolas,monospace;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
 #conLog{max-height:190px;overflow:auto;white-space:pre-wrap;word-break:break-word}

@@ -156,8 +156,8 @@ function stepThing(t,dt){
   if(online()&&((t.rest&&!wasRest)||(!t.rest&&now-(t.sentT||0)>100))){t.sentT=now;   // the settling update always goes out
     wsSend({t:'pst',id:t.id,x:+t.x.toFixed(2),y:+t.y.toFixed(2),z:+t.z.toFixed(2),vx:+t.vx.toFixed(2),vy:+t.vy.toFixed(2),vz:+t.vz.toFixed(2),val:t.val,rest:t.rest,tip:!!t.tip})}
   if(!online()&&Math.hypot(t.x-SIM.SELL.x,t.z-SIM.SELL.z)<SIM.SELL.r){
-    if(cart){for(const l of [...(t.load||[])]){const q=PROPS.get(l);if(q){const v=q.val;propSold(l,v,[myId()]);payTeam(v)}}t.load=[]}
-    else{const v=t.val;propSold(t.id,v,[myId()]);payTeam(v)}
+    if(cart){for(const l of [...(t.load||[])]){const q=PROPS.get(l);if(q){const v=q.val;propSold(l,v,[myId()])}}t.load=[]}
+    else{const v=t.val;propSold(t.id,v,[myId()])}
   }
 }
 function propHit(pr,loss){
@@ -316,7 +316,7 @@ function updateGrab(dt){
     else{g.position.x+=(tx-g.position.x)*k;g.position.z+=(tz-g.position.z)*k;g.position.y+=(ty-g.position.y)*k}
     if(isCart(pr)){if(!iOwn(pr)&&Math.hypot(pr.vx,pr.vz)>0.3)pr.yaw=Math.atan2(pr.vx,pr.vz);g.rotation.y+=(((pr.yaw||0)-g.rotation.y+Math.PI*3)%(Math.PI*2)-Math.PI)*Math.min(1,dt*6);g.rotation.z+=((pr.tip?1.35:0)-g.rotation.z)*Math.min(1,dt*8)}
     else if(!rig){const tilt=pr.rest?0:clamp(Math.hypot(pr.vx,pr.vz)*0.05,0,0.25);g.rotation.z+=(Math.sin(performance.now()/260+pr.id)*tilt-g.rotation.z)*Math.min(1,dt*6)}
-    if(pr.L){const txt=isCart(pr)?`Wheelbarrow${pr.load.length?` · ${pr.load.length}/3`:''}${pr.tip?' · tipped over':''}`:`${LOOT[pr.type].name} · ${pr.val} seeds`;if(pr.shownTxt!==txt){pr.shownTxt=txt;pr.L.n.textContent=txt}}
+    if(pr.L){const txt=isCart(pr)?`Wheelbarrow${pr.load.length?` · ${pr.load.length}/3`:''}${pr.tip?' · tipped over':''}`:`${LOOT[pr.type].name} · ${pr.val} gold`;if(pr.shownTxt!==txt){pr.shownTxt=txt;pr.L.n.textContent=txt}}
     const cy=rig?pr.y+rigBox(pr).hy:g.position.y+ph.h/2,cx=rig?pr.x:g.position.x,cz=rig?pr.z:g.position.z;   // beams and ropes go to its middle
     bi=drawHolders(pr,cx,cy,cz,bi);
     for(const pid of pr.ropes){const hp=holderPos(pid);if(hp)drawRope(ri++,hp[0],hp[1]+1.0,hp[2],cx,cy,cz)}

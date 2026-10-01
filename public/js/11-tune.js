@@ -58,6 +58,7 @@ const TUNE_DEFS=[
   {key:'dmg.Rattlesnake',tab:'Damage',label:'Rattlesnake strike (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Scorpion',tab:'Damage',label:'Scorpion sting (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'hp.thirst',tab:'Damage',label:'Thirst: health lost per second once your water runs out',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
+  {key:'gold.perHole',tab:'Gold',label:'Gold per hole of sand, on average (the sifter)',def:4,kind:'lin',span:20,min:0,unit:' gold'},
   {key:'water.last',tab:'Damage',label:'Water lasts (how long a full canteen goes, vs the original)',def:3,kind:'mul',range:4,unit:'×'},   // JT: water lasts 3x longer by default
   {key:'hp.healRate',tab:'Damage',label:'Injuries heal',def:1.5,kind:'mul',range:4,zero:true,unit:' hp/s'},
   {key:'hp.healDelay',tab:'Damage',label:'Wait before injuries start healing',def:5,kind:'mul',range:4,unit:' s'},
@@ -133,7 +134,7 @@ const TUNE_DEFS=[
   {key:'curse.ko',tab:'Monsters',label:'Curse: per knockout',def:4,kind:'mul',range:4,zero:true,unit:'%'},
   {key:'curse.curfew',tab:'Monsters',label:'Curse: per camper outside at curfew',def:5,kind:'mul',range:4,zero:true,unit:'%'},
   {key:'curse.dawn',tab:'Monsters',label:'Curse: eases each dawn by',def:3,kind:'mul',range:4,zero:true,unit:'%'},
-  {key:'curse.quota',tab:'Monsters',label:'Curse: eases when the quota is met by',def:10,kind:'mul',range:3,zero:true,unit:'%'},
+  {key:'curse.quota',tab:'Monsters',label:'Curse: eases when the quota is met by (unused since the gold rush: no quota)',def:10,kind:'mul',range:3,zero:true,unit:'%'},
   {key:'curse.lullaby',tab:'Monsters',label:'Curse: eases when Zeroni is sung away by',def:20,kind:'mul',range:3,zero:true,unit:'%'},
   {key:'mood.heat',tab:'Monsters',label:'Heatwave: water drain',def:1.6,kind:'mul',range:2,unit:'×'},
   // ---- creatures

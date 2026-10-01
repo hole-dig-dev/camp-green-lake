@@ -126,7 +126,7 @@ function askConfirm(title,text,yesLabel,onYes){
   showPauseScreen('confirm');
 }
 $('#pRestart').onclick=()=>askConfirm('Restart?',
-  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your seeds, gear, sack, onions, the team\'s quota, or the time of day -- that\'s shared with everyone at camp and already saved.',
+  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your gold, gear, sack, onions, the crew bank, or the time of day -- that\'s shared with everyone at camp and already saved.',
   'Respawn at camp',()=>{logEv('pause',{action:'restart'});respawn();closePause()});
 $('#pQuit').onclick=()=>askConfirm('Quit to title?',
   'Your progress is saved. You\'ll disconnect from camp and land back on the title screen -- come back any time to pick up where you left off.',

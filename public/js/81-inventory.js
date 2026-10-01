@@ -20,15 +20,15 @@ function invEntries(){
   const types=Object.keys(counts).sort((a,b)=>LOOT[b].val-LOOT[a].val);
   for(const t of types){
     const L=LOOT[t],n=counts[t];
-    out.push({id:'find:'+t,cat:'sack',type:t,name:L.name,desc:`Find · worth ${L.val} seeds${n>1?' each':''}. Sell it to Mr. Sir at camp.`,
-      loot:t,swatch:L.color,meta:`${L.val*n} seeds`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
+    out.push({id:'find:'+t,cat:'sack',type:t,name:L.name,desc:`Find · worth ${L.val} gold${n>1?' each':''}. Sell it to Mr. Pendanski at the Supply Depot.`,
+      loot:t,swatch:L.color,meta:`${L.val*n} gold`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
   }
   if(!types.length)out.push({id:'sack:empty',cat:'sack',name:'Empty sack',desc:`Nothing dug up yet. Room for ${sackMax()} finds.`,icon:'sack',meta:'',state:`0 / ${sackMax()}`,dim:true});
   // special items: the KB tube, and heavy loot you're dragging
   if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Warden will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
   if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Mr. Sir's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
-  else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Sir's pickup by the main gate: worth ${LOOT[pr.type].val} seeds to the team.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} seeds`,state:'Hauling'});
+  else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Pendanski's window at the Supply Depot: worth ${LOOT[pr.type].val} gold.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} gold`,state:'Hauling'});
   // supplies
   out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
@@ -102,12 +102,12 @@ function renderInvDetail(e){
   const row=(k,v)=>{const w=document.createElement('div');w.className='shop-detail__effect';w.innerHTML=`<span class="k"></span><span class="to"></span>`;w.firstChild.textContent=k;w.lastChild.textContent=v;box.appendChild(w)};
   const acts=document.createElement('div');acts.className='inv-actions';
   if(e.cat==='sack'&&e.type){
-    row('Value',`${e.val} seeds${e.count>1?` × ${e.count} = ${e.val*e.count} seeds`:''}`);
+    row('Value',`${e.val} gold${e.count>1?` × ${e.count} = ${e.val*e.count} gold`:''}`);
     acts.append(invButton(e.count>1?'Drop one here':'Drop it here',()=>invDrop(e.type),false));
   }
   if(e.cat==='sack'&&(e.type||e.id==='sack:empty')){
     const sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
-    row('Sack',`${S.sack.length} / ${sackMax()} finds · worth ${sum} seeds`);
+    row('Sack',`${S.sack.length} / ${sackMax()} finds · worth ${sum} gold`);
     if(S.sack.length)acts.append(invButton('Drop the whole sack',()=>{dropBag();toast('You set your sack down. Anyone can pick it up with F.','',2200);sfx.thud();renderInventory(true)},false));
   }
   if(e.type==='jar'||e.type==='sploosh'){   // food: cures hunger (70-player.js eatFood), but then you can't sell it
@@ -128,7 +128,7 @@ function renderInvDetail(e){
   if(e.id==='water')row('Water',`${Math.round(S.water)} of ${waterMax()}`);
   if(e.shop){
     const eff=shopEffect(e.shop);if(eff)row(eff.label,S.up[e.shop.id]?eff.to:eff.from);
-    if(!S.up[e.shop.id])row('Where to get it',`Supply Depot, ${e.shop.cost} seeds`);
+    if(!S.up[e.shop.id])row('Where to get it',`Supply Depot, ${e.shop.cost} gold`);
   }
   if(acts.children.length)box.appendChild(acts);
 }
@@ -147,7 +147,7 @@ function renderInventory(full){
   if(!list.some(e=>e.id===invSel))invSel=list[0]?list[0].id:null;
   const sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
   $('#invSeeds').textContent=S.seeds;
-  $('#invFlavor').textContent=`Sack ${S.sack.length} / ${sackMax()} · worth ${sum} seeds`;
+  $('#invFlavor').textContent=`Sack ${S.sack.length} / ${sackMax()} · worth ${sum} gold`;
   if(full)buildInvTabs();
   const focusId=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#invList')?document.activeElement.dataset.item:null;
   buildInvGrid(list);
