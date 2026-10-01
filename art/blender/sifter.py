@@ -72,4 +72,16 @@ text('signtxt','SIFTER',(X1-0.25,0.545,1.52),0.2,('ink','ink',0.8),rot=(math.pi/
 text('signtxt2','SAND IN · GOLD OUT',(X1-0.25,0.545,1.39),0.07,('ink','ink',0.8),rot=(math.pi/2,0,math.pi),parent=r)
 studio(elev=24,azim=-40,lens=40,floor=False);frame(margin=1.1);render(res=(900,600),samples=16)
 p=export_glb(os.path.join(OUT,'Sifter.glb'));print('Sifter',p[1],p[2])
+
+# ---- the crew's bucket (public/js/30-npcs.js): each D Tent camper fills one digging, carries it by the bail to the
+#   sifter (86-walkie.js holds it like the first-aid kit). Origin at the bottom; the bail's top (the grip) at 0.40 m.
+scene('CampBucket');r=root('CampBucket')
+cyl('pail',0.15,0.28,(0,0,0.14),TIN,verts=16,r2=0.12,bevel=0.004,parent=r)
+cyl('sand',0.146,0.03,(0,0,0.285),SAND,verts=16,bevel=0,parent=r)   # heaped to the brim
+for k in range(3):B(f'clod{k}',(0.06,0.05,0.03),(J(0.06),J(0.06),0.305),SAND,p=r,bv=0.01)
+for s_ in(-1,1):cyl(f'lug{s_}',0.02,0.02,(s_*0.15,0,0.25),IRON,verts=6,rot=(0,math.pi/2,0),bevel=0,parent=r)
+tube('bailL',(-0.15,0,0.25),(-0.08,0,0.39),0.007,IRON,r,v=5);tube('bailT',(-0.08,0,0.39),(0.08,0,0.39),0.007,IRON,r,v=5);tube('bailR',(0.08,0,0.39),(0.15,0,0.25),0.007,IRON,r,v=5)
+cyl('grip',0.014,0.1,(0,0,0.395),WOOD[1],verts=8,rot=(0,math.pi/2,0),bevel=0,parent=r)
+studio(elev=24,azim=-40,lens=50,floor=False);frame(margin=1.2);render(res=(600,600),samples=16)
+p=export_glb(os.path.join(OUT,'CampBucket.glb'));print('CampBucket',p[1],p[2])
 bpy.ops.wm.save_mainfile()

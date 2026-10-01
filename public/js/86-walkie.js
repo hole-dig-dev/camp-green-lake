@@ -9,9 +9,9 @@
    Friends see it: pos flag 2048 = talking on the walkie (65-net.js); a tonic or kit is an emote ('tonic'/'medkit').
    Voice: two campers who both own a walkie (flag 4096) hear each other at any distance; out of earshot it comes over
    the radio, filtered, with a squelch as they key up and let go (86-voice.js radioPair / RADIO_*). */
-const HELD_MODEL={walkie:'SupplyWalkie',tonic:'SupplyTonic',medkit:'SupplyMedkit'};
-const HELD_GRIP={walkie:0.059,tonic:0.055,medkit:0.155};   // grip height above each model's origin (supplies.py GRIP)
-const HELD_SIZE={walkie:1.7,tonic:1.6,medkit:1.3};        // × real size: the camper's chunky hands (~10 cm across) would swallow a life-size radio
+const HELD_MODEL={walkie:'SupplyWalkie',tonic:'SupplyTonic',medkit:'SupplyMedkit',bucket:'CampBucket'};   // bucket: the D Tent crew's (30-npcs.js)
+const HELD_GRIP={walkie:0.059,tonic:0.055,medkit:0.155,bucket:0.395};   // grip height above each model's origin (supplies.py GRIP)
+const HELD_SIZE={walkie:1.7,tonic:1.6,medkit:1.3,bucket:1.1};        // × real size: the camper's chunky hands (~10 cm across) would swallow a life-size radio
 const HELD_POSE={walkie:'Radio',tonic:'Drink'};           // the clip whose left arm + head go over the body's clip
 const HELD_BONES=['armL','forearmL','head'];
 const HOLD_SECS={tonic:1.7,medkit:1.5};
