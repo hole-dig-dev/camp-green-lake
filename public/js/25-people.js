@@ -104,6 +104,11 @@ function spadeLook(p,sharp){
     if(sharp){if(!n.userData.steelSharp){const c=m.clone();c.color.setHex(SPADE_SHARP.color);if('metalness'in c)c.metalness=SPADE_SHARP.metal;if('roughness'in c)c.roughness=SPADE_SHARP.rough;n.userData.steelSharp=c}n.material=n.userData.steelSharp}
     else n.material=m}
 }
+/* the long-handled shovel (the store's): the camper model carries a second, longer handle with a steel collar and a red
+   cap (blender/cgl_rig.py long_handle: CGLCamper_R_Shovel{Shaft,Collar,Cap}Long) on the same blade. A camper who's
+   bought one (p.longShovel: you from S.up.long, friends from 'pos' lg) shows it in place of the camp handle. */
+function shovelPart(n){if(/Long$/.test(n.name))n.userData.longPart=true;else if(/_R_Shovel(Shaft|Cap)$/.test(n.name))n.userData.campPart=true}
+function shovelShows(p,n){return n.userData.longPart?!!p.longShovel:n.userData.campPart?!p.longShovel:true}
 function upgradePerson(p){
   if(p.model||!MODEL.ready)return;
   const o=p.o||{},bt=BODY_TYPES[o.body]||BODY_TYPES.average;
@@ -120,7 +125,7 @@ function upgradePerson(p){
     if(/_(Bucket|Cowboy|DesertCap)_/.test(nm))n.visible=!!hat&&nm.includes('_'+hat+'_');
     else if(nm.includes('_Hair_'))n.visible=!hat;
     else if(nm.includes('_Shades_'))n.visible=!!o.shades;
-    else if(nm.includes('_R_Shovel')){n.visible=o.shovel!==false;(p.shovelMeshes=p.shovelMeshes||[]).push(n)}
+    else if(nm.includes('_R_Shovel')){shovelPart(n);n.visible=o.shovel!==false&&shovelShows(p,n);(p.shovelMeshes=p.shovelMeshes||[]).push(n)}
     const mn=n.material&&n.material.name;
     // one tinted copy per material AND per kind of mesh: the rigid hands/sneakers share names with the skinned sleeves
     // and trousers, and a skinned mesh given a rigid mesh's material (skinning off) draws its shadow in the bind pose
@@ -190,7 +195,7 @@ function setClip(p,name,fade){
 function animModel(p,mode,dt,digPhase,speed){
   const now=performance.now();if(dt==null)dt=Math.min(0.05,(now-p.lastT)/1000);p.lastT=now;
   p.g.rotation.x=0;
-  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=(!p.o||p.o.shovel!==false)&&!p.stowed;   // back in hand once you're up (sleepPose hides it), unless it's on a rack (p.stowed)
+  if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=(!p.o||p.o.shovel!==false)&&!p.stowed&&shovelShows(p,n);   // back in hand once you're up (sleepPose hides it), unless it's on a rack (p.stowed)
   if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
   const name=MODE_CLIP[mode]||'Idle';
   setClip(p,name);

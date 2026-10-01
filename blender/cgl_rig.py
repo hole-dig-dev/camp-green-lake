@@ -106,12 +106,34 @@ SHOVEL_HOLD = 1.1   # how far up the shovel (from the blade tip) the right hand 
 SHOVEL_TILT = 26    # degrees the shovel leans forward in the hand
 
 
-def shovel(pre, parent):
-    """The chosen faceted shovel (#9) held in the right hand, tip forward/down, scoop facing forward."""
+LONG_HANDLE = 1.6   # the long-handled shovel's handle (m): the camp shovel's is SHOVEL["L"] = 1.05
+
+
+def shovel(pre, parent, long_too=False):
+    """The chosen faceted shovel (#9) held in the right hand, tip forward/down, scoop facing forward.
+    long_too: also the long-handled shovel's handle and cap (R_ShovelShaftLong / R_ShovelCapLong) on the same blade;
+    the game shows them instead of the camp handle for a camper who's bought it (public/js/25-people.js shovelLook)."""
     sx = TW / 2 + ARM["off"] + math.sin(D(ARM["splay"])) * 0.72
     hz = SH_Z - math.cos(D(ARM["splay"])) * 0.72
     mount = empty(pre + "R_ShovelMount", parent, (sx, 0, hz), (-SHOVEL_TILT, 0, 0))
     shovel_parts(pre + "R_Shovel", mount, z_off=-SHOVEL_HOLD)
+    if long_too:
+        long_handle(pre + "R_Shovel", mount, z_off=-SHOVEL_HOLD)
+
+
+SH_CAP_RED = mat("CGL_LongCapRed", "#B0402C", 0.6)   # a painted cap and a steel collar: you can tell the long one at a glance
+
+
+def long_handle(pre, parent, z_off=0.0):
+    """The long-handled shovel's handle, built to sit on shovel_parts' blade and socket exactly as the camp one does."""
+    p = SHOVEL
+    h, sl, sr, L = p["h"], p["sock"], p["sr"], LONG_HANDLE
+    z0 = z_off + h - 0.07 + sl - 0.02
+    _flat(mk(pre + "ShaftLong", lathe([(0, 0), (sr, 0), (sr * 0.92, L), (0, L)], seg=8), SH_WOOD, parent, (0, 0, z0), smooth=False))
+    _flat(mk(pre + "CollarLong", lathe([(0, 0), (sr * 1.25, 0), (sr * 1.25, 0.05), (0, 0.05)], seg=8), SH_STEEL, parent,
+             (0, 0, z0 + L * 0.55), smooth=False))
+    _flat(mk(pre + "CapLong", lathe([(0, 0), (sr * 1.05, 0), (sr * 1.05, 0.09), (sr * 0.6, 0.12), (0, 0.12)], seg=8), SH_CAP_RED,
+             parent, (0, 0, z0 + L), smooth=False))
 
 
 def rig_camper(name, x=0.0, face_name="Original", hat=None, with_shovel=True, wardrobe=False):
@@ -121,7 +143,7 @@ def rig_camper(name, x=0.0, face_name="Original", hat=None, with_shovel=True, wa
     r = camper(name, x, face_name, hat)
     pre = name + "_"
     if with_shovel:
-        shovel(pre, r)
+        shovel(pre, r, long_too=wardrobe)
     if wardrobe:
         for hn, fn in HATS.items():
             fn(pre + hn + "_", r)
