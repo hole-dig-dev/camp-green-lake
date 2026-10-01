@@ -32,6 +32,7 @@ The build scripts recreate their scenes from scratch:
 | `wreckroom.py` | Rebuilds only WreckRoom from `buildings.py` and exports `glb/WreckRoom.glb` |
 | `camper_export.py` | Rebuilds the camper from `characters.blend` (rig, wardrobe, every clip in `/blender/cgl_rig.py`, now including Sit and SitEdge) and writes `public/models/camper.glb` |
 | `beasts.py` + `rig.py` | Lizard, Javelina, Lion: modelled, then rigged, animated and exported to `glb/Creature*.glb` |
+| `wardennote.py` | WardenNote: the note on the Warden's desk with the old town's X/Y (the town's only way in) |
 | `north.py` | NorthRamp, NorthCliff5, NorthCliff2, SignTrench, SignBigThumb: the end of Act 1 at the lake's north edge (the jump ramp, rock faces for the trench and the wall's ledges, the signs); the shapes are in the ground (`public/js/10-core.js` NORTH) |
 | `carryloot.py` | LootCrate, LootTools, LootJug: carried finds (the middle loot tier, too big for the sack), grabbed and hauled like the safe |
 | `supplies.py` | SupplyWalkie, SupplyTonic, SupplyMedkit: the Wreck Room supplies, matched to their painted store icons, stood on their base with the grip height recorded for the game's hand props (`public/js/86-walkie.js`) |

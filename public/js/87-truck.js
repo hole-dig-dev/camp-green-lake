@@ -82,7 +82,7 @@ function truckOut(){
 /* my seat changed (from the server, or solo right away): sit down or climb out */
 function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
-  if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;TRUCK.pY=TRUCK.pVy=TRUCK.pVx=TRUCK.pVz=undefined;P.moving=false;digHeld=false;if(was)return;
+  if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;if(!was&&!FP){P.yaw=TRUCK.h+Math.PI;P.pitch=0.25}   // the view starts behind the truckTRUCK.pY=TRUCK.pVy=TRUCK.pVx=TRUCK.pVz=undefined;P.moving=false;digHeld=false;if(was)return;
     toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, then north toward Big Thumb: jump the trench off the ramp.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
   const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;if(me)me.g.visible=true;
   const o=TRUCK_SEATS[was].out,p=truckAt(o[0],o[1]);
@@ -294,12 +294,13 @@ function truckPlayer(dt){
   if(me)truckSit(me,S.inTruck,dt);
   const g=me?me.g.position:truckAt(0,0);P.x=g.x;P.z=g.z;P.y=me?g.y:T.y;P.vy=0;P.grounded=true;P.moving=false;P.anim=10;P.fa=T.h+TRUCK_SEATS[S.inTruck].face;
 }
-/* the third-person camera while driving: behind and above, looking down the road */
+/* the third-person camera for anyone in the pickup: it orbits the truck with the mouse (JT: look around while W stays
+   the truck's forward). P.yaw turns with the truck (truckPlayer), so a view you've swung round stays put relative to it. */
 function truckCamera(dt){
-  const T=TRUCK,f=[Math.sin(T.h),Math.cos(T.h)],k=1-Math.exp(-dt*6),back=9,up=4.2;
-  camera.position.x+=(T.x-f[0]*back-camera.position.x)*k;camera.position.z+=(T.z-f[1]*back-camera.position.z)*k;
-  camera.position.y+=(Math.max(T.y+up,groundAt(camera.position.x,camera.position.z)+1)-camera.position.y)*k;
-  camera.lookAt(T.x+f[0]*4,T.y+1.3,T.z+f[1]*4);
+  const T=TRUCK,dist=9,a=P.yaw,cp=Math.cos(P.pitch),k=1-Math.exp(-dt*10);
+  const cx=T.x+Math.sin(a)*dist*cp,cz=T.z+Math.cos(a)*dist*cp,cy=Math.max(T.y+1.6+Math.sin(P.pitch)*dist+1.2,groundAt(cx,cz)+1);
+  camera.position.x+=(cx-camera.position.x)*k;camera.position.z+=(cz-camera.position.z)*k;camera.position.y+=(cy-camera.position.y)*k;
+  camera.lookAt(T.x,T.y+1.4,T.z);
 }
 
 /* ---- every frame: everyone else's view of it, and the people in it ---- */

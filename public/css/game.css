@@ -558,3 +558,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #curseRow .v{color:#8a3a8a}
 #curseRow.hot .v{color:var(--danger);font-weight:700}
 #mapbox.sand canvas{filter:blur(6px) sepia(1) brightness(.8)}
+
+/* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Warden's note */
+.map-coords{font:600 13px ui-monospace,Menlo,Consolas,monospace;text-align:center;padding:2px 0 4px;letter-spacing:0.02em;color:var(--ink,inherit)}

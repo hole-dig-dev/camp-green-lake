@@ -615,7 +615,8 @@
      door is local -z. */
   const TOWN_SEED = 1882;   // the one fixed layout; change it to rebuild the town differently (tests/town-layout.mjs checks any seed)
   const TOWN = { X: 2000, Z: 0, Y: -30, H: 3.6, STREET: { x0: -34, x1: 34, z0: -7.5, z1: 7.5, h: 5.5 }, TUN_R: 1.3, TUN_H: 2.6 };
-  const OLD_TOWN = { x: -230, z: -250, r: 70 };   // where the old town sits under the lake: every 8 ft hole in here breaks through
+  const OLD_TOWN = { x: -230, z: -250, r: 70 };
+  const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Warden's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
     ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
@@ -701,12 +702,14 @@
   }
   // where a breach from hole (x,z) drops you (same answer everywhere): on Main Street or in a building, never the vault or well
   function townBreachSpot(x, z, lay) {
+    return [TOWN.STREET.x0 + 7, 0];   // always the same place: Main Street by the stairwell (the way in is one spot now: townBreaks)
     const cand = [[-24, 0], [-8, 0], [8, 0], [24, 0], ...lay.bldgs.filter(b => b.key !== 'vault' && b.key !== 'well').map(b => [b.x + 0.6, b.z + 0.6])];
     return cand[Math.abs(Math.floor(x * 7.3 + z * 3.1)) % cand.length];
   }
   const inTownXZ = x => x > TOWN.X - 70;
-  // does an 8 ft hole at (x,z) break through? Always in the old town; now and then anywhere else (seeded by spot + day)
-  const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < OLD_TOWN.r || roRnd(Math.floor(x * 10) * 7919 + Math.floor(z * 10) * 104729 + day * 31)() < 0.1;
+  // does an 8 ft hole at (x,z) break through? Only at the one spot (JT, 2026-09-30: the same place every time, for
+  // building the level): the middle of the old town, the coordinates on the Warden's note. You always land in the same place.
+  const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < TOWN_NOTE_R;
 
   /* ---- the Warden's mood and the curse (after Greg's branch; public/js/82-mood.js shows and applies them) ----
      One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the curse rises). Day 1 is normal.
