@@ -59,6 +59,7 @@ function frame(now){
   streamChunks(fx,fz);farU.uFocus.value.set(fx,fz);flushTerrain();updateViewmodel();stars.position.copy(camera.position);
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
+  updateGoldFx(dt);   // panning / sifting you watch (89-goldfx.js): drives the view while it runs
   renderer.render(scene,camera);
   updateLabels(now);
   requestAnimationFrame(frame);

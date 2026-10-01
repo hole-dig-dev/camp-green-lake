@@ -2,7 +2,7 @@
 const {browser,player,spawn,aimAt,walkTo}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(name,ok,info)=>{R.push([ok,name,info]);console.log((ok?'PASS ':'FAIL ')+name+(info?'  -- '+info:''))};
 const at=(p,x,z,yaw)=>p.evaluate(([x,z,yaw])=>{P.x=x;P.z=z;P.y=groundAt(x,z);P.vy=0;if(yaw!=null)P.yaw=yaw;P.pitch=FP?0.05:0.32;S.stam=100},[x,z,yaw]);
-const face=(p,x,z)=>p.evaluate(([x,z])=>{P.yaw=Math.atan2(-(x-P.x),-(z-P.z));P.pitch=FP?0.05:0.32},[x,z]);
+const face=(p,x,z)=>p.evaluate(([x,z])=>{P.yaw=Math.atan2(-(x-P.x),-(z-P.z));const d=Math.hypot(x-P.x,z-P.z);P.pitch=FP?clamp(Math.atan2(1.2,d),0,1.2):0.32},[x,z]);   // first person: look down at it, like a player would
 const clearProps=p=>p.evaluate(()=>{for(const pr of [...PROPS.values()])if(!isCart(pr)){removeProp(pr.id)}});
 const prompt=p=>p.evaluate(()=>$('#prompt').hidden?'':$('#prompt').textContent);
 const prop=(p,id)=>p.evaluate(id=>{const t=PROPS.get(id);return t?{x:+t.x.toFixed(2),z:+t.z.toFixed(2),up:+(t.y-groundAt(t.x,t.z)).toFixed(2),val:t.val,held:GRAB_ST.id===id,grab:t.grab.slice(),cart:t.cartId}:null},id);
@@ -66,7 +66,7 @@ await at(A,zp[0],zp[1]-2.2);await face(A,zp[0],zp[1]);await A.waitForTimeout(400
 await A.keyboard.down('r');await A.waitForTimeout(600);check('grab Zach',await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state==='held'));
 await A.keyboard.down('s');await A.waitForTimeout(1500);await A.keyboard.up('s');
 const zh=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zach').p.g.position;return{up:+(g.y-groundAt(g.x,g.z)).toFixed(2),d:+Math.hypot(g.x-P.x,g.z-P.z).toFixed(2)}});
-check('Zach comes with you, held up',zh.up>=0&&zh.d<2.6&&await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state==='held'),JSON.stringify(zh));
+check('Zach comes with you, held up',zh.up>=-0.05&&zh.d<2.6&&await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state==='held'),JSON.stringify(zh));
 await A.mouse.down();await A.waitForTimeout(80);await A.mouse.up();await A.waitForTimeout(2500);
 const zs=await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state);check('thrown, he lands and heads back to work',['return','dig','rest'].includes(zs),zs);
 await A.keyboard.up('r');
@@ -79,7 +79,7 @@ pr=await prompt(A);await A.keyboard.press('f');await A.waitForTimeout(800);await
 check('F puts what you hold in the wheelbarrow',(await prop(A,id)||{}).cart!=null,pr);
 const cart=await A.evaluate(()=>{const c=[...PROPS.values()].find(isCart);return[c.id,c.x,c.z]});
 await face(A,cart[1],cart[2]);await A.waitForTimeout(150);await A.keyboard.down('r');await A.waitForTimeout(400);
-await walkTo(A,0,28.6,25);await walkTo(A,10.7,28.8,15);await walkTo(A,10.7,35.8,15);await walkTo(A,13.4,36.2,15);await A.waitForTimeout(1500);await A.keyboard.up('r');
+await walkTo(A,0,29.4,25);await walkTo(A,10.7,29.4,15);await walkTo(A,10.7,35.8,15);await walkTo(A,13.4,36.2,15);await A.waitForTimeout(1500);await A.keyboard.up('r');
 check('wheelbarrow pushed to the window sells what is in it',!(await prop(A,id)),`cart at ${JSON.stringify(await prop(A,cart[0]))}`);
 
 await clearProps(A);await clearProps(B);

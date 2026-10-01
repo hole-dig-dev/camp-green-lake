@@ -51,9 +51,8 @@ cyl('drum',0.26,0.34,(bx_,by_,0.42),RED,verts=16,rot=(math.pi/2,0,0),bevel=0.01,
 cyl('drumcap',0.27,0.03,(bx_,by_-0.18,0.42),IRON,verts=16,rot=(math.pi/2,0,0),bevel=0,parent=r)
 for s in(-1,1):B(f'drumleg{s}',(0.05,0.05,0.2),(bx_+s*0.18,by_,0.1),IRON,p=r)
 B('drumbase',(0.5,0.3,0.04),(bx_,by_,0.02),WOOD[2],p=r)
-tube('crank',(bx_,by_-0.2,0.42),(bx_,by_-0.34,0.42),0.02,IRON,r)
-tube('crankarm',(bx_,by_-0.34,0.42),(bx_+0.18,by_-0.34,0.56),0.018,IRON,r)
-tube('handle',(bx_+0.18,by_-0.34,0.56),(bx_+0.18,by_-0.46,0.56),0.025,WOOD[1],r)
+tube('crank',(bx_,by_-0.2,0.42),(bx_,by_-0.34,0.42),0.02,IRON,r)   # the axle stub; the arm and handle are SifterCrank (below), which the game turns
+CRANK_AT=(bx_,by_-0.34,0.42)   # where SifterCrank's origin sits, in the sifter's frame (the game: public/js/91-goldfx.js)
 pts=[(bx_,by_+0.1,0.62),(bx_+0.15,-0.35,0.85),(0.0,-0.05,1.0)]   # drum to the tray's underside
 for i in range(len(pts)-1):tube(f'hose{i}',pts[i],pts[i+1],0.07,CANVAS,r,v=10)
 # the catch pan at the low end, and a tailings pile
@@ -84,4 +83,42 @@ tube('bailL',(-0.15,0,0.25),(-0.08,0,0.39),0.007,IRON,r,v=5);tube('bailT',(-0.08
 cyl('grip',0.014,0.1,(0,0,0.395),WOOD[1],verts=8,rot=(0,math.pi/2,0),bevel=0,parent=r)
 studio(elev=24,azim=-40,lens=50,floor=False);frame(margin=1.2);render(res=(600,600),samples=16)
 p=export_glb(os.path.join(OUT,'CampBucket.glb'));print('CampBucket',p[1],p[2])
+
+# ---- the sifter's crank (arm + handle), on its own so the game can turn it while the blower runs. Origin on the axle;
+#   it turns about Blender Y (the drum's axis).
+scene('SifterCrank');r=root('SifterCrank')
+tube('crankarm',(0,0,0),(0.18,0,0.14),0.018,IRON,r)
+tube('handle',(0.18,0,0.14),(0.18,-0.12,0.14),0.025,WOOD[1],r)
+cyl('hub',0.035,0.03,(0,0,0),IRON,verts=10,rot=(math.pi/2,0,0),bevel=0,parent=r)
+studio(elev=20,azim=-40,lens=60,floor=False);frame(margin=1.4);render(res=(400,400),samples=8)
+p=export_glb(os.path.join(OUT,'SifterCrank.glb'));print('SifterCrank',p[1],p[2])
+
+# ---- the gold pan (the store's first tool; panning at the wash tub, 91-goldfx.js). A shallow, wide steel pan with
+#   riffles on one side of the wall to trap the gold. Origin at the bottom's centre; rim up +Z, 0.07 m tall, 0.2 m radius.
+scene('GoldPan');r=root('GoldPan')
+PANSTEEL=M_('pan_steel',(0x3a,0x3c,0x40),0.45,0.75)
+cyl('panbase',0.115,0.012,(0,0,0.006),PANSTEEL,verts=24,bevel=0.002,parent=r)
+import bmesh
+bm=bmesh.new();N=28;lo=[bm.verts.new((math.cos(k/N*math.tau)*0.115,math.sin(k/N*math.tau)*0.115,0.012)) for k in range(N)];hi=[bm.verts.new((math.cos(k/N*math.tau)*0.2,math.sin(k/N*math.tau)*0.2,0.07)) for k in range(N)]
+for k in range(N):bm.faces.new((lo[k],lo[(k+1)%N],hi[(k+1)%N],hi[k]))   # the sloping wall, open at the top
+me=bpy.data.meshes.new('panwall');bm.to_mesh(me);bm.free();o=bpy.data.objects.new('panwall',me);_link(o)
+so=o.modifiers.new('Thick','SOLIDIFY');so.thickness=0.006;_finish(o,PANSTEEL,0,r)
+bpy.ops.mesh.primitive_torus_add(major_radius=0.2,minor_radius=0.006,major_segments=28,minor_segments=6,location=(0,0,0.071));o=bpy.context.active_object;o.name='rim';_finish(o,PANSTEEL,0,r)   # a rolled rim (a ring, not a lid)
+for k in range(3):   # the riffles: three ridges round one side of the wall
+    z=0.026+k*0.014;rr=0.13+k*0.025
+    for j in range(7):a=math.pi*0.55+j*0.13;B(f'riffle{k}_{j}',(0.03,0.006,0.005),(math.cos(a)*rr,math.sin(a)*rr,z),PANSTEEL,rot=(0.5,0,a+math.pi/2),p=r,bv=0)
+studio(elev=40,azim=-30,lens=60,floor=False);frame(margin=1.3);render(res=(500,500),samples=12)
+p=export_glb(os.path.join(OUT,'GoldPan.glb'));print('GoldPan',p[1],p[2])
+
+# ---- the wash tub by the water drums: a half barrel of muddy water you pan in. Origin at the bottom's centre; water at 0.4 m.
+scene('WashTub');r=root('WashTub')
+TUBWATER=M_('tub_water',(0x5e,0x58,0x3a),0.12,0.0)   # muddy, greenish
+for k in range(16):   # staves
+    a=k/16*math.tau;B(f'stave{k}',(0.17,0.04,0.48),(math.cos(a)*0.43,math.sin(a)*0.43,0.24),rnd.choice(WOOD),rot=(0,0,a+math.pi/2),p=r,bv=0.005)
+for z in(0.08,0.4):cyl(f'hoop{z}',0.455,0.035,(0,0,z),IRON,verts=24,bevel=0,parent=r)
+cyl('tubfloor',0.42,0.03,(0,0,0.03),WOOD[2],verts=20,bevel=0,parent=r)
+cyl('water',0.415,0.02,(0,0,0.4),TUBWATER,verts=24,bevel=0,parent=r)
+for k in range(4):B(f'slop{k}',(0.25+J(0.1),0.2+J(0.08),0.01),(J(0.6)+0.55,J(0.6),0.006),SAND,rot=(0,0,J(3)),p=r,bv=0.004)   # spilled sand round the foot
+studio(elev=30,azim=-30,lens=50,floor=False);frame(margin=1.2);render(res=(500,500),samples=12)
+p=export_glb(os.path.join(OUT,'WashTub.glb'));print('WashTub',p[1],p[2])
 bpy.ops.wm.save_mainfile()
