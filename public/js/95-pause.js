@@ -254,7 +254,7 @@ if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startG
 /* more test hooks: #shot-carry (a safe next to you, grabbed), #shot-ping, #shot-dark (night, flashlight on), #shot-trap (stuck in a deep hole) */
 if(location.hash.startsWith('#shot')){const h=location.hash;
   if(h.includes('carry')){P.x=20;P.z=-10;P.yaw=0;P.y=groundAt(P.x,P.z);addProp(9990,'safe',P.x,P.z-1.6);S.carry=9990;S.sack=['cap','jar','locket'];setRun({day:2,bank:140,quota:SIM.quotaFor(2,1)});PROG.xp=700;addXP(1)}
-  if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Armpit')}
+  if(h.includes('ping')){P.x=20;P.z=-10;P.yaw=0;P.pitch=0.25;P.y=groundAt(P.x,P.z);setTimeout(doPing,300);addBag(9991,P.x+2,P.z-3,['can','spoon'],'Randy')}
   if(h.includes('dark')){CLK.pt=DAYMS+20000;CLK.paused=true;P.x=20;P.z=-10;P.yaw=0;P.pitch=0.1;P.y=groundAt(P.x,P.z);S.light=true;if(!FP)toggleView();setTimeout(()=>{for(let i=0;i<3;i++)updateParty(1,performance.now())},200)}
   if(h.includes('trap')){P.x=24;P.z=-14;P.y=groundAt(P.x,P.z);S.up.long=true;const hh=addHole({x:24,z:-14,d:2.4,mine:true,own:true});touchHole(hh);P.y=groundAt(P.x,P.z)}
   if(h.includes('sinkwarn')){P.x=200;P.z=-40;P.yaw=0;P.pitch=0.15;spawnSinkhole(200,-70,1,twNow()-2000)}

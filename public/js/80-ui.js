@@ -42,19 +42,19 @@ function wardenNode(first){
   return{name:'The Warden',text:first?pick(['Excuse me. Aren\'t you supposed to be digging?','I was painting my nails. This had better be good.','Well? Speak up.']):'What else?',opts};
 }
 const BOT_TALK={
-  'X-Ray':{hi:['What you want? I\'m busy.','Talk quick. I\'m almost done.'],special:[{label:'Why do you always go first at the water truck?',go:back=>({name:'X-Ray',text:'Cause I\'m X-Ray. You bring me anything good you find, maybe I let you go ahead of me. Deal?',opts:[{label:'Deal.',go:()=>{S.water=waterMax();sfx.splash();return reply('X-Ray','Smart kid. Here, have a sip of my water. Remember who your friends are. (Water refilled)',back)}},{label:'No way.',go:()=>reply('X-Ray','Your funeral. Enjoy the back of the line.',back)},LEAVE]})}]},
-  'Armpit':{hi:['Hey. My back is killing me.','Don\'t step on my dirt pile.'],special:[{label:'You got anything to eat?',go:back=>{if(DLG.used.armpit)return reply('Armpit','I already gave you my onion, man.',back);DLG.used.armpit=1;S.onions++;return reply('Armpit','Got an onion. Raw. Lizards hate the smell. So does everybody else. Take it. (+1 onion)',back)}}]},
-  'Squid':{hi:['What.','Keep your eyes on the ground, new kid.'],special:[{label:'You doing okay, Squid?',go:back=>({name:'Squid',text:'...Why do you care? I\'m fine. It\'s the sun. Gets in your eyes.',opts:[{label:'If you ever want to talk, I\'m around.',go:()=>{if(DLG.used.squid)return reply('Squid','Yeah. Thanks.',back);DLG.used.squid=1;S.seeds+=5;sfx.coin();return reply('Squid','...Yeah. Okay. Here, take these seeds. Don\'t make it weird. (+5 seeds)',back)}},{label:'Cool. Just checking.',go:back},LEAVE]})}]},
-  'Zigzag':{hi:['Shh. I\'m listening to the dirt.','Did you hear that? The ground hummed.'],special:[{label:'What is the dirt saying?',go:back=>{
+  'Jim Bob':{hi:['What you want? I\'m busy.','Talk quick. I\'m almost done.'],special:[{label:'Why do you always go first at the water truck?',go:back=>({name:'Jim Bob',text:'Cause I\'m Jim Bob. You bring me anything good you find, maybe I let you go ahead of me. Deal?',opts:[{label:'Deal.',go:()=>{S.water=waterMax();sfx.splash();return reply('Jim Bob','Smart kid. Here, have a sip of my water. Remember who your friends are. (Water refilled)',back)}},{label:'No way.',go:()=>reply('Jim Bob','Your funeral. Enjoy the back of the line.',back)},LEAVE]})}]},
+  'Randy':{hi:['Hey. My back is killing me.','Don\'t step on my dirt pile.'],special:[{label:'You got anything to eat?',go:back=>{if(DLG.used.armpit)return reply('Randy','I already gave you my onion, man.',back);DLG.used.armpit=1;S.onions++;return reply('Randy','Got an onion. Raw. Lizards hate the smell. So does everybody else. Take it. (+1 onion)',back)}}]},
+  'Stan':{hi:['What.','Keep your eyes on the ground, new kid.'],special:[{label:'You doing okay, Stan?',go:back=>({name:'Stan',text:'...Why do you care? I\'m fine. It\'s the sun. Gets in your eyes.',opts:[{label:'If you ever want to talk, I\'m around.',go:()=>{if(DLG.used.squid)return reply('Stan','Yeah. Thanks.',back);DLG.used.squid=1;S.seeds+=5;sfx.coin();return reply('Stan','...Yeah. Okay. Here, take this gold. Don\'t make it weird. (+5 gold)',back)}},{label:'Cool. Just checking.',go:back},LEAVE]})}]},
+  'Pete':{hi:['Shh. I\'m listening to the dirt.','Did you hear that? The ground hummed.'],special:[{label:'What is the dirt saying?',go:back=>{
     const kb=items.find(i=>i.type==='kb');let t;
     if(!kb.found&&!S.hasKB){const d=Math.hypot(kb.x-P.x,kb.z-P.z);t=`It says something gold is buried ${d>30?'way out':'somewhere'} to the ${compass(kb.x-P.x,kb.z-P.z)}. Or it's lying. Dirt lies sometimes.`}
     else if(S.revealed&&!SUITCASE.found)t=`It says the Warden's flags are ${compass(SEARCH.x-P.x,SEARCH.z-P.z)} of here, and the real thing is deeper than five feet.`;
     else t='It says dig more. It always says that.';
-    return reply('Zigzag',t,back)}}]},
-  'Magnet':{hi:['Hey. You didn\'t see anybody\'s sunflower seeds, did you?','Things just stick to my hands.'],special:[{label:'What\'s in your pockets?',go:back=>({name:'Magnet',text:'Oh, just stuff I found. Or borrowed. Ten seeds gets you a mystery item. No refunds.',opts:[{label:'Here, 10 seeds.',go:()=>{if(S.seeds<10)return reply('Magnet','You ain\'t got ten seeds, man.',back);S.seeds-=10;const t=pick(['cap','can','spoon','shoe','arrow','jar','fossil']);S.sack.push(t);sfx.find();return reply('Magnet',`Pleasure doing business. You got: ${LOOT[t].name}. Mr. Sir pays ${LOOT[t].val} for that.`,back)}},{label:'Pass.',go:back},LEAVE]})}]},
-  'Zero':{hi:['...','Hi.'],special:[
-    {label:'Want to dig together?',go:back=>{S.zeroT=90;return reply('Zero','Okay. I like digging. I\'ll help with your next hole. (You dig twice as fast for 90 seconds.)',back)}},
-    {label:'Want me to teach you to read?',go:back=>reply('Zero','...Yes. I would like that. Maybe after we\'re done digging. One letter every day.',back)}]},
+    return reply('Pete',t,back)}}]},
+  'Larry':{hi:['Hey. You didn\'t see anybody\'s sunflower seeds, did you?','Things just stick to my hands.'],special:[{label:'What\'s in your pockets?',go:back=>({name:'Larry',text:'Oh, just stuff I found. Or borrowed. Ten gold gets you a mystery item. No refunds.',opts:[{label:'Here, 10 gold.',go:()=>{if(S.seeds<10)return reply('Larry','You ain\'t got ten gold, man.',back);S.seeds-=10;const t=pick(['cap','can','spoon','shoe','arrow','jar','fossil']);S.sack.push(t);sfx.find();return reply('Larry',`Pleasure doing business. You got: ${LOOT[t].name}. Pendanski pays ${LOOT[t].val} for that.`,back)}},{label:'Pass.',go:back},LEAVE]})}]},
+  'Zach':{hi:['...','Hi.'],special:[
+    {label:'Want to dig together?',go:back=>{S.zeroT=90;return reply('Zach','Okay. I like digging. I\'ll help with your next hole. (You dig twice as fast for 90 seconds.)',back)}},
+    {label:'Want me to teach you to read?',go:back=>reply('Zach','...Yes. I would like that. Maybe after we\'re done digging. One letter every day.',back)}]},
 };
 function botNode(b,first){
   const T2=BOT_TALK[b.d.n],back=()=>botNode(b,false),opts=[],name=b.d.n;
@@ -65,7 +65,7 @@ function botNode(b,first){
     if(!it)return reply(name,'Nothing around here. Try farther out.',back);
     return reply(name,`I saw the ground glint about ${stepsTo(Math.hypot(it.x-P.x,it.z-P.z))} steps ${compass(it.x-P.x,it.z-P.z)} of here. Maybe a ${LOOT[it.type].name.toLowerCase()}. Maybe nothing.`,back)}});
   for(const sp of T2.special)opts.push({label:sp.label,go:()=>sp.go(back)});
-  opts.push({label:'How deep is your hole?',go:()=>reply(name,b.hole.d>=FIVE_FT?'Done. Five by five. Don\'t fall in.':`About ${(b.hole.d*FT).toFixed(1)} feet. ${name==='Zero'?'Almost done.':'Long way to go.'}`,back)});
+  opts.push({label:'How deep is your hole?',go:()=>reply(name,b.hole.d>=FIVE_FT?'Done. Five by five. Don\'t fall in.':`About ${(b.hole.d*FT).toFixed(1)} feet. ${name==='Zach'?'Almost done.':'Long way to go.'}`,back)});
   opts.push(LEAVE);
   return{name,text:first?pick(T2.hi):'What else?',opts};
 }
@@ -95,8 +95,8 @@ function syncHand(el,cards,hideIdx){
   while(el.children.length>i)el.lastChild.remove();
   for(let j=i;j<cards.length;j++){const e=cardEl(cards[j],j===hideIdx);e.dataset.k=want[j];el.appendChild(e)}
 }
-function bjSay(t){$('#bjSay').textContent='X-Ray: "'+t+'"'}
-const BJ_STATUS={bet:'Betting',play:'Your turn',dealer:"X-Ray's turn",done:'Result'};
+function bjSay(t){$('#bjSay').textContent='Jim Bob: "'+t+'"'}
+const BJ_STATUS={bet:'Betting',play:'Your turn',dealer:"Jim Bob's turn",done:'Result'};
 function renderBJ(){
   $('#bjSeeds').textContent=S.seeds;
   const hide=BJ.phase==='play'?1:-1;
@@ -138,12 +138,12 @@ function bjSettle(){
   const y=handVal(BJ.you),d=handVal(BJ.dealer),yb=isBJ(BJ.you),db=isBJ(BJ.dealer);let pay=0,res,line;
   if(yb&&db){pay=BJ.stake;res='Push';line='Two blackjacks. Nobody wins.'}
   else if(yb){pay=Math.floor(BJ.stake*2.5);res='Blackjack';line='Blackjack. Lucky. Real lucky.'}
-  else if(db){res='X-Ray has blackjack';line='Blackjack. Hand over the gold.'}
+  else if(db){res='Jim Bob has blackjack';line='Blackjack. Hand over the gold.'}
   else if(y>21){res='Bust';line=pick(['Twenty-two. One too many.','Bust. Thanks for the gold.'])}
-  else if(d>21){pay=BJ.stake*2;res='X-Ray busts';line='Dealer busts. Take your gold before I change my mind.'}
+  else if(d>21){pay=BJ.stake*2;res='Jim Bob busts';line='Dealer busts. Take your gold before I change my mind.'}
   else if(y>d){pay=BJ.stake*2;res='You win';line=pick(['Fine. You win this one.','Beginner\'s luck.'])}
   else if(y===d){pay=BJ.stake;res='Push';line='Push. Nobody wins.'}
-  else{res='You lose';line=pick(['House wins.','X-Ray always wins. Remember that.'])}
+  else{res='You lose';line=pick(['House wins.','Jim Bob always wins. Remember that.'])}
   S.seeds+=pay;const delta=pay-BJ.stake;BJ.net+=delta;
   $('#bjResult').textContent=res+(delta>0?` · +${delta}`:delta<0?` · ${delta}`:'');bjSay(line);
   if(delta>0)sfx.coin();else if(delta<0)sfx.thud();
@@ -231,7 +231,7 @@ function danceArms(p,beat,style){
   p.legL.rotation.x=w*0.35;p.legR.rotation.x=-w*0.35;
   p.g.rotation.x=0;
 }
-const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'Best day at Camp Green Lake EVER.',n=>'Show us your moves, '+n+'!',()=>"I haven't danced since the lake dried up.",()=>'Zero, you can DANCE?',n=>'Where you going, '+n+"? We're coming with you."];
+const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'Best day at Camp Green Lake EVER.',n=>'Show us your moves, '+n+'!',()=>"I haven't danced since the lake dried up.",()=>'Zach, you can DANCE?',n=>'Where you going, '+n+"? We're coming with you."];
 function stepTo(g,gx,gz,dt,sp){const dx=gx-g.position.x,dz=gz-g.position.z,d=Math.hypot(dx,dz);if(d>0.02){const s=Math.min(d,dt*sp);g.position.x+=dx/d*s;g.position.z+=dz/d*s}return d}
 function updateParty(dt,now){
   if(!PARTY.on){

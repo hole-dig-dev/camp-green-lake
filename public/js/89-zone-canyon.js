@@ -135,7 +135,7 @@ function cyItems(rnd){
 }
 
 ZONES.canyon={id:'canyon',name:'The Dry Canyon',
-  blurb:'Zero ran for Big Thumb. Follow the canyon up to the rim and get the whole crew to the campfire.',
+  blurb:'Zach ran for Big Thumb. Follow the canyon up to the rim and get the whole crew to the campfire.',
   height:cyHeight,tint:cyTint,map:cyMap,
   arrive:{x:cyX(CY_Z0-12),z:CY_Z0-12,yaw:0},fire:FIRE,ropes:[ROPE],
   build:cyBuild,items:cyItems,solids:[],

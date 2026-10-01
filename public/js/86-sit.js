@@ -1,7 +1,7 @@
 'use strict';
 /* public/js/86-sit.js -- sitting down (JT, 2026-09-30): F at a free seat to sit, F again (or just walk) to get up.
    The seats: the mess tables' benches (four a table, facing it), the two yard benches (two each, facing the yard) and
-   the four stools round D Tent's card table (facing it; X-Ray deals from one of them). Mr. Sir's pickup has its own
+   the four stools round D Tent's card table (facing it; Jim Bob deals from one of them). Mr. Sir's pickup has its own
    seats (87-truck.js) but sits you the same way.
    Sitting is the camper's Sit clip (animPerson mode 10, blender/cgl_rig.py anim_sit). It goes out as your animation,
    so friends see you sit; a seat with someone on it (a friend or a bot) isn't offered. */

@@ -59,15 +59,15 @@ check('carried inside the fence, they are back on their feet',await B.evaluate((
 
 await clearProps(A);await clearProps(B);
 // 6. the D Tent crew: grab one, carry, throw; he lands and gets back to work
-await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zero');z.state='dig';z.p.g.position.set(z.hole.x,groundAt(z.hole.x,z.hole.z),z.hole.z)});
-const zp=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zero').p.g.position;return[g.x,g.z]});
-await at(A,zp[0],zp[1]-2.2);await face(A,zp[0],zp[1]);await A.waitForTimeout(400);pr=await prompt(A);check('prompt: facing a crew member offers to grab him',/Zero.*R to grab|Grab Zero/.test(pr),pr);
-await A.keyboard.down('r');await A.waitForTimeout(600);check('grab Zero',await A.evaluate(()=>bots.find(b=>b.d.n==='Zero').state==='held'));
+await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zach');z.state='dig';z.p.g.position.set(z.hole.x,groundAt(z.hole.x,z.hole.z),z.hole.z)});
+const zp=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zach').p.g.position;return[g.x,g.z]});
+await at(A,zp[0],zp[1]-2.2);await face(A,zp[0],zp[1]);await A.waitForTimeout(400);pr=await prompt(A);check('prompt: facing a crew member offers to grab him',/Zach.*R to grab|Grab Zach/.test(pr),pr);
+await A.keyboard.down('r');await A.waitForTimeout(600);check('grab Zach',await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state==='held'));
 await A.keyboard.down('s');await A.waitForTimeout(1500);await A.keyboard.up('s');
-const zh=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zero').p.g.position;return{up:+(g.y-groundAt(g.x,g.z)).toFixed(2),d:+Math.hypot(g.x-P.x,g.z-P.z).toFixed(2)}});
-check('Zero comes with you, held up',zh.up>=0&&zh.d<2.6&&await A.evaluate(()=>bots.find(b=>b.d.n==='Zero').state==='held'),JSON.stringify(zh));
+const zh=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zach').p.g.position;return{up:+(g.y-groundAt(g.x,g.z)).toFixed(2),d:+Math.hypot(g.x-P.x,g.z-P.z).toFixed(2)}});
+check('Zach comes with you, held up',zh.up>=0&&zh.d<2.6&&await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state==='held'),JSON.stringify(zh));
 await A.mouse.down();await A.waitForTimeout(80);await A.mouse.up();await A.waitForTimeout(2500);
-const zs=await A.evaluate(()=>bots.find(b=>b.d.n==='Zero').state);check('thrown, he lands and heads back to work',['return','dig','rest'].includes(zs),zs);
+const zs=await A.evaluate(()=>bots.find(b=>b.d.n==='Zach').state);check('thrown, he lands and heads back to work',['return','dig','rest'].includes(zs),zs);
 await A.keyboard.up('r');
 
 await clearProps(A);await clearProps(B);

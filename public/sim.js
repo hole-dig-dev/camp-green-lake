@@ -9,7 +9,7 @@
      Warden's) for the big stuff everyone shares. */
   /* the crew's upgrades (JT 2026-10-01: the store's "The crew" side): bought with your own gold, one crew member at a
      time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
-  const CREW = ['X-Ray', 'Armpit', 'Squid', 'Zigzag', 'Magnet', 'Zero'];
+  const CREW = ['Jim Bob', 'Randy', 'Stan', 'Pete', 'Larry', 'Zach'];
   const CREW_SHOP = [
     { id: 'bucket2', name: 'Big bucket', desc: 'Holds 10 holes of sand before he goes to sift, instead of 5.', cost: 60 },
     { id: 'bucket3', name: 'Huge bucket', desc: 'Holds 15 holes of sand.', cost: 160, needs: 'bucket2' },

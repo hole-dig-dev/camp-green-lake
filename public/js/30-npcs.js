@@ -43,12 +43,12 @@ BUNKS.forEach((b,bi)=>SPOTS.push({id:'bunk',bi,x:b.x,z:b.z,r:1.2}));
 
 /* the D Tent crew (they're here even when your friends aren't) */
 const BOTDEF=[
-  {n:'X-Ray',skin:0x6b4a35,band:0x3a3a3a,hat:'desert',body:'slim',x:-14,z:20,rate:0.07,lines:['Anything shiny, you bring it to me first.','You dig like a lawn chair.','I can\'t see a thing without my glasses.']},
-  {n:'Armpit',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','Don\'t call me Armpit. Fine, call me Armpit.']},
-  {n:'Squid',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
-  {n:'Zigzag',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
-  {n:'Magnet',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','Mr. Sir is coming. Look busy.']},
-  {n:'Zero',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
+  {n:'Jim Bob',skin:0x6b4a35,band:0x3a3a3a,hat:'desert',body:'slim',x:-14,z:20,rate:0.07,lines:['Anything shiny, you bring it to me first.','You dig like a lawn chair.','I can\'t see a thing without my glasses.']},
+  {n:'Randy',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','It\'s Randy. Randall if you\'re the Warden.']},
+  {n:'Stan',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
+  {n:'Pete',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
+  {n:'Larry',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','Mr. Sir is coming. Look busy.']},
+  {n:'Zach',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
 /* ---- the crew's gold run (the gold rush, JT 2026-09-30): each digs CREW_HOLES holes, one after another in fresh ground
@@ -87,7 +87,7 @@ function crewActivity(b){
   if(s==='sifting')return'Sifting his bucket';
   if(s==='drink')return'Filling his canteen';
   if(s==='gatebackin'||s==='gatebackout')return'Heading back out';
-  if(s==='indoor'||s==='inside')return curfewSoon()||clockT()>=DAYMS?(b.d.n==='X-Ray'&&!b.xraySleeps?'Dealing cards in D Tent':'Asleep'):'On a break in D Tent';
+  if(s==='indoor'||s==='inside')return curfewSoon()||clockT()>=DAYMS?(b.d.n==='Jim Bob'&&!b.xraySleeps?'Dealing cards in D Tent':'Asleep'):'On a break in D Tent';
   if(s==='tossed')return b.tossWhy==='tw'?'Caught in a twister!':b.tossWhy==='tb'?'Bowled over by a tumbleweed!':'Hit by a boulder!';
   if(s==='down')return'Getting back up';
   if(s==='ko')return`Knocked out (${{liz:'lizard',jav:'javelina',lion:'mountain lion',bite:'bitten'}[b.koWhy]||'hurt'})`;
@@ -123,10 +123,10 @@ for(const d of BOTDEF){
 /* the D Tent door, from outside: where the crew walks to before ducking in for a break or the night */
 const D_TENT_DOOR={x:D_TENT.x,z:D_TENT.z-D_TENT.hd-1.3};
 /* Inside D Tent (the room sits underground at the tent's x/z): come in at the entry, hang your shovel on your own
-   rack slot by the door, then go to your bunk. X-Ray deals at the card table until 01:00 and takes the sixth bunk. */
+   rack slot by the door, then go to your bunk. Jim Bob deals at the card table until 01:00 and takes the sixth bunk. */
 const D_TI=TENTS.indexOf(D_TENT),D_ROOM_Z0=D_TENT.z-D_TENT.roomD;   // the room's door wall
 const D_TENT_BUNKS=BUNKS.map((b,i)=>({b,i})).filter(o=>o.b.tent===D_TI).map(o=>o.i);
-const BOT_BUNK={};BOTDEF.forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[d.n==='X-Ray'?5:i-1]});   // X-Ray is BOTDEF[0]; the rest take bunks 0-4
+const BOT_BUNK={};BOTDEF.forEach((d,i)=>{BOT_BUNK[d.n]=D_TENT_BUNKS[d.n==='Jim Bob'?5:i-1]});   // Jim Bob is BOTDEF[0]; the rest take bunks 0-4
 const D_ENTRY={x:D_TENT.x,z:D_ROOM_Z0+2.6},D_EXIT={x:D_TENT.x,z:D_ROOM_Z0+0.85};
 /* the rack: six slots on the door wall, left of the doorway (the room model has the board, art/blender/interiors.py).
    Each crew member owns a slot; its shovel shows there while that shovel is racked. */
@@ -140,10 +140,10 @@ const RACK=BOTDEF.map((d,k)=>{
   return{x,front:{x,z:D_ROOM_Z0+1.3},mesh:g};
 });
 function botBedPath(b){   // walk to beside your bunk (they run along the west wall), or round the table to the dealer's seat
-  if(b.d.n==='X-Ray'&&!b.xraySleeps){const s=D_TENT.dealerSeat;return[{x:s.x+2.5,z:s.z-4.75},{x:s.x+2.5,z:s.z},{x:s.x,z:s.z}]}   // round the east side of the card table
+  if(b.d.n==='Jim Bob'&&!b.xraySleeps){const s=D_TENT.dealerSeat;return[{x:s.x+2.5,z:s.z-4.75},{x:s.x+2.5,z:s.z},{x:s.x,z:s.z}]}   // round the east side of the card table
   const k=BUNKS[BOT_BUNK[b.d.n]];return[{x:k.x+1.4,z:k.z}];
 }
-function botIndoorSpot(b){return b.d.n==='X-Ray'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
+function botIndoorSpot(b){return b.d.n==='Jim Bob'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
 function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
 const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink']);
 /* ---- the sifter queue: the first in line sifts (beside the hopper), the rest wait in a line behind ---- */
@@ -274,7 +274,7 @@ function updateBots(dt,now){
       let dr=Math.atan2(P.x-g.position.x,P.z-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*8);
       animPerson(b.p,0,dt);continue;
     }
-    const asleep=b.state==='inside'&&(b.d.n!=='X-Ray'||b.xraySleeps);
+    const asleep=b.state==='inside'&&(b.d.n!=='Jim Bob'||b.xraySleeps);
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
     crewNeeds(b,dt);
@@ -304,9 +304,9 @@ function updateBots(dt,now){
       continue;
     }
     if(b.state==='inside'){
-      /* dealing at the card table (X-Ray, until 01:00) or lying on your bunk */
-      if(b.d.n==='X-Ray'&&!b.xraySleeps){
-        const st=SEATS.find(q=>q.tent===D_TI&&q.z>D_TENT.table.z+3);   // X-Ray deals sitting on the far stool (86-sit.js)
+      /* dealing at the card table (Jim Bob, until 01:00) or lying on your bunk */
+      if(b.d.n==='Jim Bob'&&!b.xraySleeps){
+        const st=SEATS.find(q=>q.tent===D_TI&&q.z>D_TENT.table.z+3);   // Jim Bob deals sitting on the far stool (86-sit.js)
         if(st)sitPose(b.p,st.x,TENT_FLOOR_Y+st.y,st.z,st.h,dt);else{g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt)}
         if(xrayBedtime()){b.xraySleeps=true;goIndoor(b,[{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z},{x:D_TENT.dealerSeat.x+2.5,z:D_TENT.dealerSeat.z-4.75},...botBedPath(b)],'settle')}
         else if(!siren&&b.t==null)b.t=0;   // a daytime visit's dealing ends when the day timer does
@@ -315,7 +315,7 @@ function updateBots(dt,now){
         if(b.t==null)b.t=botRng()*40;   // morning: each gets up at their own time, 06:00-07:00
         b.t-=dt;
         if(b.t<=0){   // up: stand beside the bunk (or leave the dealer's seat), fetch your shovel and head out
-          const seated=b.d.n==='X-Ray'&&!b.xraySleeps,k=BUNKS[BOT_BUNK[b.d.n]];b.xraySleeps=false;
+          const seated=b.d.n==='Jim Bob'&&!b.xraySleeps,k=BUNKS[BOT_BUNK[b.d.n]];b.xraySleeps=false;
           if(!seated)g.position.set(k.x+1.4,TENT_FLOOR_Y,k.z);
           const s=D_TENT.dealerSeat;goIndoor(b,[...(seated?[{x:s.x+2.5,z:s.z},{x:s.x+2.5,z:s.z-4.75}]:[]),RACK[bots.indexOf(b)].front],'unrack');
         }

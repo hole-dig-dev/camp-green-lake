@@ -8,7 +8,7 @@ const hw={hpWarn:$('#hpWarn'),waterWarn:$('#waterWarn'),onionRow:$('#onionRow'),
 /* bottom-right tool glyphs: icon + a visually-hidden accessible label, per spec 4 ("hide tool
    names behind icons plus accessible labels"). Falls back to a small text badge for anything not
    in this table rather than silently dropping it. */
-const TOOL_ICON={'Spade':'shovel','Rusty shovel':'shovel','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zero is helping':'teammate',onion:'onion'};
+const TOOL_ICON={'Spade':'shovel','Rusty shovel':'shovel','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zach is helping':'teammate',onion:'onion'};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
@@ -54,7 +54,7 @@ function updateHUD(){
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
   hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
   hw.battRow.hidden=!(S.light||S.batt<30);
-  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zero is helping':'');
+  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zach is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
     const label=t==='onion'?'Onion breath':t,icon=TOOL_ICON[t];
     const s=document.createElement('span');s.setAttribute('title',label);
