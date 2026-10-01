@@ -492,6 +492,7 @@
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
      players: simPlayers() on the server / meSim() solo, plus kt (holding Kate's loot), on (onion active), vy (camera yaw). */
+  const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
   const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
   const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -530,7 +531,7 @@
     // who's been standing around out on the lake (for Mr. Sir and the Warden)
     for (const p of players) { const m = R.pm[p.id] || (R.pm[p.id] = { idle: 0, warned: 0 }); if (p.an === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } }
     if (live.length) {
-      if (has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
+      if (has('hatch') && !RO_OFF.has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
       if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22 / cmul)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
       if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * cmul * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
       if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
@@ -734,7 +735,7 @@
     normal: { name: 'A regular day', desc: 'Nothing special. Dig.' },
     heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
     sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
-    breeding: { name: 'Lizard breeding season', desc: 'Lizard hatchlings everywhere, twice as many.' },
+    breeding: { name: 'Lizard breeding season', desc: 'Lizard hatchlings everywhere, twice as many.' }, // never rolled while hatchlings are off (RO_OFF)
     stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
     fullmoon: { name: 'Full moon', desc: 'Madame Zeroni is out all night. No police.' },
     digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
@@ -743,7 +744,7 @@
   function rollMood(day, curse) {
     if (day <= 1) return 'normal';
     const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
-    const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 0, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
+    const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 0, stingy: 0, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
     let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return 'normal';
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
