@@ -166,7 +166,7 @@ function enterTown(k){
   if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false)}S.carry=null;
   townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();
   hurt(4,'Fall','You dropped into the buried town.');sfx.thud();logEv('townIn',{k});
-  toast('You drop into the dark: the buried town of Green Lake. Grab what you can, then find a way out. A shaft or a well needs help to climb (a friend boosting you, a hand from up top, or a staked rope ladder). The collapsed stairwell you can walk out of.','gold',9000);
+  toast('You drop into the dark: the buried town of Green Lake. Grab what you can. To get out, press F under the shaft you came down, or at the collapsed stairwell at the end of Main Street.','gold',9000);
 }
 function exitTown(x,z,why){
   S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;
