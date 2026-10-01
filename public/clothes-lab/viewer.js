@@ -26,6 +26,14 @@
    n.frustumCulled=false;
   }return {scene:group,meshes};
  });
+ const footwearManifest=await fetch('../footwear-lab/manifest.json').then(r=>r.json());
+ const footwearAssets=await Promise.all(footwearManifest.map(d=>load('../models/footwear/'+d.slug+'.glb')));
+ const footwear=footwearAssets.map((asset,i)=>{
+  colors(asset.scene);const group=new T.Group();model.add(group);group.visible=false;const meshes=[];asset.scene.traverse(n=>{if(n.isMesh)meshes.push(n)});
+  for(const n of meshes){const match=n.skeleton.bones.map(b=>boneMap.get(normalized(b.name)));if(match.some(m=>!m))throw Error('Unknown footwear bone');n.parent.remove(n);group.add(n);n.position.set(0,0,0);n.quaternion.identity();n.scale.set(1,1,1);n.updateMatrixWorld(true);n.bind(new T.Skeleton(match.map(m=>m.bone),match.map(m=>m.inverse.clone())),original.bindMatrix.clone());n.frustumCulled=false}
+  const o=document.createElement('option');o.value=i;o.textContent=String(i+1).padStart(2,'0')+' '+footwearManifest[i].name;$('#footwear').append(o);return {scene:group,meshes};
+ });
+ $('#footwear').onchange=e=>{footwear.forEach((f,i)=>f.scene.visible=i===+e.target.value);model.traverse(n=>{if(/^CGLCamper_[LR]_(Shoe|Sole)$/.test(n.name))n.visible=+e.target.value<0});draw()};
  const [faceManifest,hatManifest,glassesManifest]=await Promise.all(['face','hat','glasses'].map(k=>fetch('../'+k+'-lab/manifest.json').then(r=>r.json())));
  const extras=await Promise.all([faceManifest,hatManifest,glassesManifest].map(list=>Promise.all(list.map(d=>load('../models/'+(list===faceManifest?'faces':list===hatManifest?'hats':'glasses')+'/'+d.slug+'.glb')))));
  const [faces,hats,glasses]=extras;
@@ -62,5 +70,5 @@
  $('#play').onclick=()=>{if(!action){$('#motion').value='Walk';pose('Walk',0)}playing=!playing;$('#play').textContent=playing?'Ⅱ Pause movement':'▶ Play movement'};
  let last=performance.now();function tick(now){if(playing){mixer.update(Math.min((now-last)/1000,.05));draw()}last=now;requestAnimationFrame(tick)}requestAnimationFrame(tick);
  new ResizeObserver(draw).observe($('#viewport'));
- window.clothesLab={ready:true,manifest,model,clothes,chosen,select,apply,draw,pose,scene,renderer,cam,thumbs,hats,hatManifest,faces,faceManifest,glasses,glassesManifest,mixer,original};
+ window.clothesLab={ready:true,manifest,model,clothes,footwear,footwearManifest,chosen,select,apply,draw,pose,scene,renderer,cam,thumbs,hats,hatManifest,faces,faceManifest,glasses,glassesManifest,mixer,original};
 })().catch(e=>{console.error(e);document.querySelector('#loading').textContent='Could not load clothing: '+e.message});
