@@ -212,7 +212,11 @@
       </div>
     </header>
 
-    <div class="shop-body">
+    <div class="shop-modes" role="tablist" aria-label="Who it's for">
+      <button type="button" class="shop-mode" id="shopModeMe" role="tab" aria-selected="true">Me</button>
+      <button type="button" class="shop-mode" id="shopModeCrew" role="tab" aria-selected="false">The crew</button>
+    </div>
+    <div class="shop-body" id="shopMe">
       <div class="shop-catalog">
         <div id="shopTabs" class="shop-tabs" role="tablist" aria-label="Supply categories"></div>
         <div id="shopList" class="shop-grid" role="listbox" aria-label="Store items"></div>
@@ -222,6 +226,11 @@
         <div id="shopConfirm" class="shop-confirm" hidden></div>
         <p id="shopFeedback" class="shop-feedback" role="status"></p>
       </aside>
+    </div>
+    <div id="crewShop" class="crew-shop" hidden>
+      <p class="crew-shop__intro">Kit out the D Tent crew with your own gold. A better-kitted crew member fills the crew bank faster.</p>
+      <div id="crewGrid" class="crew-grid" aria-label="Crew upgrades"></div>
+      <p id="crewFeedback" class="shop-feedback" role="status"></p>
     </div>
   </section>
 </div>

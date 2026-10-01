@@ -7,6 +7,17 @@
      A bucket holds so many holes' worth of sand (a hole = 5 ft deep); the sifter turns a full one into about
      GOLD.perHole gold a hole, give or take luck (siftGold). Gold you carry is yours; deposit it in the crew bank (the
      Warden's) for the big stuff everyone shares. */
+  /* the crew's upgrades (JT 2026-10-01: the store's "The crew" side): bought with your own gold, one crew member at a
+     time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
+  const CREW = ['X-Ray', 'Armpit', 'Squid', 'Zigzag', 'Magnet', 'Zero'];
+  const CREW_SHOP = [
+    { id: 'bucket2', name: 'Big bucket', desc: 'Holds 10 holes of sand before he goes to sift, instead of 5.', cost: 60 },
+    { id: 'bucket3', name: 'Huge bucket', desc: 'Holds 15 holes of sand.', cost: 160, needs: 'bucket2' },
+    { id: 'spade', name: 'Sharpened spade', desc: 'He digs 60% faster.', cost: 50 },
+    { id: 'canteen', name: 'Big canteen', desc: 'Fewer water breaks: shorter rests, fewer trips back to the tent.', cost: 35 },
+    { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
+    { id: 'onions', name: 'Sack of onions', desc: 'He eats them all day. Lizards leave him alone.', cost: 45 },
+  ];
   const GOLD = { perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
   /* the sifter's take for `holes` holes of sand: about perHole a hole; a batch runs from about half to double that, and
      about 1 in 16 turns up a nugget (2-4x). rnd: a 0..1 random function; mult: dig day doubles it. */
@@ -749,7 +760,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

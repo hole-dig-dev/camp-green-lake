@@ -56,7 +56,12 @@ const botRng=mulberry32((Date.now()/1000)|0);
    at a time, and not while a camper's using it), sifts it and puts all the gold in the crew bank, and heads back out
    to new ground. The crew runs on every screen (they aren't networked), so only one screen pays the bank: the
    camper with the lowest id (like the pickup's physics, 87-truck.js). ---- */
-const CREW_HOLES=5;
+const CREW_HOLES=5;   // a crew member's bucket, until someone buys him a bigger one
+/* his upgrades from the store's "The crew" side (sim.js CREW_SHOP; the server keeps them, 65-net.js 'crew') */
+const CREW_UP={};
+const crewHas=(b,id)=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n][id]);
+const crewBucketMax=b=>SIM.GOLD.buckets[crewHas(b,'bucket3')?2:crewHas(b,'bucket2')?1:0];
+const crewThirst=b=>crewHas(b,'canteen3')?0.35:crewHas(b,'canteen')?0.65:1;   // how long and how often he stops for water
 const CREW_GATE={x:0,out:25,in:30};   // the main gate: just outside, just inside
 const GATE_LANE=4;                    // keep this clear either side of the path out of the gate (x 0)
 function crewDigOK(x,z,b){
@@ -288,7 +293,7 @@ function updateBots(dt,now){
       const iv=b.d.rate>0.1?0.7:0.95,prev=b.dph;b.dph+=dt/iv;
       /* dirt leaves the shovel at the top of the toss and lands on this hole's pile */
       if(prev<0.72&&b.dph>=0.72&&nearCam(b.hole.x,b.hole.z,35)){const ux=b.hole.mx-g.position.x,uz=b.hole.mz-g.position.z,ul=Math.hypot(ux,uz)||1;puff(g.position.x+ux/ul*0.5,g.position.y+1.3,g.position.z+uz/ul*0.5,b.hole.mx,b.hole.mz,5)}
-      if(b.dph>=1){b.dph-=1;b.hole.d=Math.min(FIVE_FT,b.hole.d+b.d.rate*1.25);touchHole(b.hole)}
+      if(b.dph>=1){b.dph-=1;b.hole.d=Math.min(FIVE_FT,b.hole.d+b.d.rate*1.25*(crewHas(b,'spade')?1.6:1));touchHole(b.hole)}
       /* stand in the hole with the dirt pile on the throwing side, and sink as it gets deeper */
       const ux=b.hole.mx-b.hole.x,uz=b.hole.mz-b.hole.z,ty=Math.atan2(-uz,ux);
       let dr=ty-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
@@ -296,7 +301,7 @@ function updateBots(dt,now){
       g.position.y=groundAt(g.position.x,g.position.z);
       animPerson(b.p,2,dt,b.dph%1);
       if(b.hole.d>=FIVE_FT){
-        b.state='rest';b.t=6+botRng()*6;b.restT=0;b.bucket=Math.min(CREW_HOLES,(b.bucket||0)+1);
+        b.state='rest';b.t=(6+botRng()*6)*crewThirst(b);b.restT=0;b.bucket=Math.min(crewBucketMax(b),(b.bucket||0)+1);
         if(botRng()<0.3){const ty2=['cap','can','spoon'][Math.floor(botRng()*3)];popItem({type:ty2},b.hole.x,b.hole.z);say(b.L,{cap:'Just a bottle cap. Figures.',can:'A rusty can. Great.',spoon:'Somebody lost a spoon out here.'}[ty2])}
       }
     }else if(b.state==='rest'){
@@ -305,8 +310,8 @@ function updateBots(dt,now){
       animPerson(b.p,b.restT<2.2?5:b.restT<3.8?6:0,dt);
       if(b.t<=0){
         /* at night the crew heads back to D Tent to sleep; by day they'll wander over for a break sometimes */
-        if(b.bucket>=CREW_HOLES){b.errand='sift';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s five. Sifter time.','Full bucket. Back in a bit.']),3000)}
-        else if(botRng()<0.12){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
+        if(b.bucket>=crewBucketMax(b)){b.errand='sift';b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
+        else if(botRng()<0.12*crewThirst(b)){b.state='gateout';b.tx=0;b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
         else{const sp=crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.tx=sp.x;b.tz=sp.z;b.state='walk'}else b.t=4}
       }
     }else if(b.state==='siftq'){

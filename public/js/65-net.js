@@ -159,6 +159,7 @@ function onMsg(m){
     case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
     case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;
+    case 'crew':crewMsg(m);break;
     case 'curfew':SIM.setCurfew(Object.assign({},SIM.CURFEW_DEF,m.v));break;   // the play-test server's Curfew-tab values (police + searchlights run there)
     case 'sleepstat':SLEEP.asleep=num(m.asleep,0,80,0)|0;SLEEP.total=num(m.total,0,80,1)|0;break;
     case 'daybreak':S.inBed=null;toast('Morning already - everyone in camp was asleep.','good',4500);break;
