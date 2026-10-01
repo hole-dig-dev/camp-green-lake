@@ -111,8 +111,10 @@ function buildTown(){
       if(h<0.07){const s=h<0.035?1:-1,nx=-(b[1]-a[1])/l,nz=(b[0]-a[0])/l;put('TownJunk'+'ABC'[k%3],a[0]+nx*0.75*s,a[1]+nz*0.75*s,k)}
     });
   }
-  townCols().then(J=>{if(grp!==townGroup)return;townWalkBuild(L,J);return Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp)))})
-    .catch(e=>console.warn('town',e&&e.message));
+  // the models and the floor load separately, so a missing colliders file can't leave you in a black void
+  Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp))).catch(e=>console.warn('town',e&&e.message));
+  townCols().then(J=>{if(grp===townGroup)townWalkBuild(L,J)})
+    .catch(e=>{console.warn('town colliders',e&&e.message);if(grp===townGroup)townWalkBuild(L,{cols:{}})});
 }
 const TOWN_STREET_EDGE=SIM.TOWN_EDGES.findIndex(e=>e[0]==='street');
 function shaftPos(b){const L=townLay(),p=SIM.townBreachSpot(b.x,b.z,L);return{x:tx(p[0]),z:tz(p[1])}}
@@ -164,7 +166,7 @@ function enterTown(k){
   if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false)}S.carry=null;
   townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();
   hurt(4,'Fall','You dropped into the buried town.');sfx.thud();logEv('townIn',{k});
-  toast('You drop into the dark: the buried town of Green Lake. Grab what you can, then find a way out. A shaft or a well needs help to climb (a friend boosting you, a hand from up top, or a staked rope ladder). The collapsed stairwell you can walk out of.','gold',9000);
+  toast('You drop into the dark: the buried town of Green Lake. Grab what you can. To get out, press F under the shaft you came down, or at the collapsed stairwell at the end of Main Street.','gold',9000);
 }
 function exitTown(x,z,why){
   S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;
