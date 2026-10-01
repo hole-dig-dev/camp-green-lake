@@ -95,8 +95,8 @@ command('give',{usage:'give seeds <amount>',help:'Give yourself sunflower seeds 
 command('heal',{usage:'heal',help:'Full health, stamina and water; clears every affliction.',run(){clearAff();S.water=waterMax();return'Healed.'}});
 command('respawn',{usage:'respawn',help:'Back on your feet at camp with full health and water (like Restart in the pause menu). Keeps seeds and gear.',run(){respawn();return'Respawned at camp.'}});
 command('hurt',{usage:'hurt [amount]',help:'Take [20] damage (to test health and healing).',run([n]){const v=numArg(n,20,1,100);hurt(v,'Hurt','You hurt yourself from the console.');return`-${v} health.`}});
-command('tp',{usage:'tp <x> <z> | tp camp',help:'Teleport. The map runs from -595 to 595.',
-  run([a,b]){if(inTent())exitTent();if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <z>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;return`Teleported to ${P.x.toFixed(0)}, ${P.z.toFixed(0)}.`}});
+command('tp',{usage:'tp <x> <y> | tp camp',help:'Teleport to the X and Y shown above the Field map button (X east, Y north). The map runs from -595 to 595.',
+  run([a,b]){if(inTent())exitTent();if(a==='camp'){P.x=0;P.z=39}else{if(b===undefined)throw new Error('Usage: tp <x> <y>  or  tp camp');P.x=numArg(a,0,-EDGE+3,EDGE-3);P.z=-numArg(b,0,-EDGE+3,EDGE-3)}P.y=groundAt(P.x,P.z);P.vy=P.kx=P.kz=0;const[X,Y]=coordXY(P.x,P.z);return`Teleported to X ${X}, Y ${Y}.`}});
 command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
   run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
 command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
