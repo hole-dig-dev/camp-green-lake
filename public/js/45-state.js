@@ -17,13 +17,13 @@ const vm=new T.Group();
 vm.position.set(0.34,-0.4,-0.55);vm.visible=false;camera.add(vm);
 /* Once the camper model loads, swap the box shovel above for the Blender one the camper carries (camper.glb's
    *_R_Shovel* meshes, rigid children of forearm.R). Laid along -Z like the box one: blade out front, scoop up. */
-let vmBlender=false;
+let vmBlender=false;const VM_SHOVEL=[];   // the first-person shovel's meshes (25-people.js spadeLook darkens a sharpened one)
 function vmUseModelShovel(){
   vmBlender=true;
   const parts=[];MODEL.scene.traverse(n=>{if(n.isMesh&&/^CGLCamper_R_Shovel/.test(n.name))parts.push(n)});
   const shaft=parts.find(n=>/Shaft$/.test(n.name));if(!shaft)return;
   const inv=new T.Matrix4().copy(shaft.matrix).invert(),g=new T.Group();   // shovel space: the shaft's own frame, +Y = handle end
-  for(const n of parts){const m=new T.Mesh(n.geometry,n.material);m.matrixAutoUpdate=false;m.matrix.multiplyMatrices(inv,n.matrix);g.add(m)}
+  for(const n of parts){const m=new T.Mesh(n.geometry,n.material);m.matrixAutoUpdate=false;m.matrix.multiplyMatrices(inv,n.matrix);g.add(m);VM_SHOVEL.push(m)}
   const bb=new T.Box3().setFromObject(g),len=bb.max.y-bb.min.y;
   const s=1.1/len,holder=new T.Group();g.scale.setScalar(s);g.position.y=-bb.max.y*s;   // handle end at the holder's origin
   g.rotation.set(0,Math.PI/2,0);holder.add(g);   // roll: scoop side up
@@ -31,7 +31,7 @@ function vmUseModelShovel(){
   holder.position.set(0,-0.02,0.3);
   const sh=vm.children[0];sh.clear();sh.add(holder);
 }
-function updateViewmodel(){if(!vmBlender&&MODEL.ready)vmUseModelShovel();vm.visible=FP&&S.started&&!S.ko&&!twSt&&!tbSt&&!(me&&me.model);   // only for the box camper: with the model you see your own arms (fpBody, 70-player.js)
+function updateViewmodel(){if(!vmBlender&&MODEL.ready)vmUseModelShovel();if(me)spadeLook(me,S.up.spade);vm.visible=FP&&S.started&&!S.ko&&!twSt&&!tbSt&&!(me&&me.model);   // only for the box camper: with the model you see your own arms (fpBody, 70-player.js)
   if(!vm.visible)return;const d=P.anim===2?Math.sin(P.digPh*Math.PI):0,b=P.moving?Math.sin(performance.now()/110)*0.012:0;vm.rotation.x=-d*0.9;vm.position.set(0.34+b,-0.4-d*0.05+Math.abs(b),-0.55-d*0.2)}
 
 function waterMax(){return (S.up.canteen3?230:S.up.canteen?160:100)+(myLevel()>=4?20:0)}

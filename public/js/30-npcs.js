@@ -277,7 +277,7 @@ function updateBots(dt,now){
     const asleep=b.state==='inside'&&(b.d.n!=='Jim Bob'||b.xraySleeps);
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
-    crewNeeds(b,dt);
+    crewNeeds(b,dt);spadeLook(b.p,crewHas(b,'spade'));
     if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
     if(b.state==='tossed'||b.state==='down'||b.state==='ko'){g.visible=true;animPerson(b.p,b.state==='tossed'?7:3,dt);crewHurtStep(b,dt);continue}
     if(OUTDOOR.has(b.state)&&!siren)crewHazards(b);

@@ -538,6 +538,7 @@ wss.on('connection', (ws, req) => {
         c.x = num(m.x, -620, c.town ? SIM.TOWN.X + 60 : 620, c.x); c.y = num(m.y, c.town ? SIM.TOWN.Y - 5 : -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 10, 0) | 0; /* 10: sitting (86-sit.js) */ c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
+        c.sp = m.sp === true; // a sharpened spade: friends see its darker blade (public/js/25-people.js spadeLook)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
@@ -551,7 +552,7 @@ wss.on('connection', (ws, req) => {
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town, sp: c.sp }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;
