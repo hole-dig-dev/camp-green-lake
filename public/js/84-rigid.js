@@ -82,7 +82,7 @@ function stepRigid(t,dt){
       const f=Math.min(FM,SIM.ROPE.K*(dl-SIM.ROPE.L)),vr=(RG_V.x*dx+RG_V.y*dy+RG_V.z*dz)/dl,fd=f-Math.max(0,vr)*D*0.3;
       gx=dx/dl*fd;gy=dy/dl*fd;gz=dz/dl*fd;ropeCap+=FM;ropeUp+=dy/dl;
     }else{
-      if(dl>SIM.GRAB.SNAP){t.hands.delete(key);if(self){releaseGrab(false);toast('It slipped out of your hands. Too far, or too heavy.','bad',2500)}continue}
+      if(gripGone(t,key,dl,dt)){t.hands.delete(key);if(self){releaseGrab(false);toast('It slipped out of your hands. Too far, or too heavy.','bad',2500)}continue}
       gx=dx*K-RG_V.x*D;gy=dy*K-RG_V.y*D;gz=dz*K-RG_V.z*D;const gm=Math.hypot(gx,gy,gz);if(gm>FM){gx*=FM/gm;gy*=FM/gm;gz*=FM/gm}
       handCap+=FM;
     }
@@ -117,7 +117,7 @@ function stepRigid(t,dt){
     }
   }
   // chips: the hardest corner landing this step
-  if(t.v0&&imp>SIM.DMG.MIN&&now-t.hitT>SIM.DMG.COOL*1000&&t.val>0){
+  if(t.v0&&!held&&imp>SIM.DMG.MIN&&now-t.hitT>SIM.DMG.COOL*1000&&t.val>0){
     t.hitT=now;const loss=Math.min(t.val,Math.max(1,Math.round(t.v0*t.ph.frag*(imp-SIM.DMG.MIN)*SIM.DMG.RATE*tune('grab.fragile'))));
     t.val-=loss;propHit(t,loss);
   }

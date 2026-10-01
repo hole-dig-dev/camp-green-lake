@@ -75,7 +75,7 @@ const TUNE_DEFS=[
   {key:'aff.hunger',tab:'Stamina',label:'Hunger builds (daytime)',def:0.03,kind:'mul',range:6,zero:true,unit:'/s'},
   {key:'aff.hungerMax',tab:'Stamina',label:'Hunger can take up to',def:40,kind:'lin',span:40,min:0,max:100,unit:''},
   // ---- grabbing heavy loot (84-grab.js)
-  {key:'grab.fmax',tab:'Grab',label:'How hard one camper can pull (the safe is ~1180 N)',def:700,kind:'mul',range:3,unit:' N'},
+  {key:'grab.fmax',tab:'Grab',label:'How hard one camper can pull (the safe is ~1180 N)',def:900,kind:'mul',range:3,unit:' N'},
   {key:'grab.throw',tab:'Environment',label:'Throw strength (heavy loot, bodies)',def:1,kind:'mul',range:4,unit:'×'},
   {key:'stam.rope',tab:'Grab',label:'Pulling a taut rope costs (stamina)',def:5,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'grab.cartTip',tab:'Grab',label:'Wheelbarrow tips over above (speed)',def:1,kind:'mul',range:3,unit:'×'},

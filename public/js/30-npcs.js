@@ -152,6 +152,26 @@ function walkTo(b,x,z,dt,speed,y){   // true once there
   g.position.y=y!==undefined?y:groundAt(g.position.x,g.position.z);animPerson(b.p,speed>3?4:1,dt,0,speed>3?1:undefined);return false;
 }
 function goIndoor(b,path,then){b.state='indoor';b.path=path;b.then=then}
+/* ---- grabbed (84-grab.js, hold R on one of them): you can pick a crew member up and carry them about, or throw them.
+   They aren't networked, so only you see it. Let go and they land, grumble, and get back to work. ---- */
+const crewGrabbable=b=>OUTDOOR.has(b.state)||b.state==='held'||b.state==='flung';
+function crewGrabbed(b,on,throwDir){
+  if(on){if(b.state!=='held'){b.heldFrom=b.state;b.state='held';b.v={x:0,y:0,z:0};leaveSiftQ(b);say(b.L,pick(['Hey! Put me down!','What are you doing?!','Not cool, man.','I\'m not a sack of potatoes!']),2500)}return}
+  if(b.state!=='held')return;b.state='flung';b.handAt=null;
+  if(throwDir){const th=SIM.GRAB.THROW*tune('grab.throw')*0.8;b.v={x:throwDir[0]*th,y:throwDir[1]*th+3,z:throwDir[2]*th};say(b.L,'WHOAAA!',1800)}
+}
+function crewHeldStep(b,dt){
+  const g=b.p.g.position;
+  if(b.state==='held'&&b.handAt){const h=b.handAt,ty=h[1]-0.75,k=Math.min(1,dt*9);   // dangling from your hands
+    b.v.x=(h[0]-g.x)/Math.max(dt,1e-3)*k;b.v.y=(ty-g.y)/Math.max(dt,1e-3)*k;b.v.z=(h[2]-g.z)/Math.max(dt,1e-3)*k;
+    g.x+=(h[0]-g.x)*k;g.z+=(h[2]-g.z)*k;g.y+=(Math.max(ty,groundAt(g.x,g.z))-g.y)*k;animPerson(b.p,7,dt);return}   // the Jump clip: legs kicking
+  // flung or dropped: fall, land, then back to work
+  b.v.y-=16*dt;g.x+=b.v.x*dt;g.y+=b.v.y*dt;g.z+=b.v.z*dt;b.v.x*=1-0.4*dt;b.v.z*=1-0.4*dt;
+  const gy=groundAt(g.x,g.z);animPerson(b.p,7,dt);
+  if(g.y<=gy){g.y=gy;if(Math.abs(b.v.y)>7)sfx.thud();b.v={x:0,y:0,z:0};
+    say(b.L,pick(['Ow.','Thanks a lot.','I\'m telling the Warden.','My back...']),2200);
+    b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
+}
 function updateBots(dt,now){
   if(PARTY.on)return;
   if(ZONE_H)return;   // the crew stays behind at camp while you're in another map (88-zones.js)
@@ -169,6 +189,7 @@ function updateBots(dt,now){
     const asleep=b.state==='inside'&&(b.d.n!=='X-Ray'||b.xraySleeps);
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
+    if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
     if(SIFTQ.includes(b)&&b.state!=='siftq'&&b.state!=='sifting')leaveSiftQ(b);   // sent off by something else (the party, a sinkhole rescue)
     if(OUTDOOR.has(b.state))crewHands(b);
     if(siren){
