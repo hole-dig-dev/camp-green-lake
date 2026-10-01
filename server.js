@@ -202,7 +202,7 @@ function truckRams(now, jev) {
   for (const m of ROSTER.mobs || []) if (hit('r' + m.id, m.x, m.z, 0.5)) SIM.rosterSwat(ROSTER, { id: d, x: m.x - Math.sin(fa) * 1, z: m.z - Math.cos(fa) * 1, fa }, rev);
   if (rev.length) broadcast({ t: 'rost', list: SIM.packRoster(ROSTER), ev: rev, today: ROSTER.roster });
 }
-function truckPark() { TRUCK.wreck = 0; Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
+function truckPark() { TRUCK.parkAt = Date.now(); TRUCK.wreck = 0; Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
 function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUCK.seats[k]; broadcast(truckMsg()); }
 /* The end of Act 1: the whole crew on top of the wall past the trench (88-north.js). Like the campfire: everyone joined
    (and not down in the buried town) has to be up there. */
@@ -666,6 +666,7 @@ wss.on('connection', (ws, req) => {
           LOG.log('truck', { id: c.id, n: c.n, seat: k });
           broadcast(truckMsg()); return;
         }
+        if (op === 'respawn') { if (!c.host) return; LOG.log('truckRespawn', { id: c.id, n: c.n }); truckPark(); return; } // console / F2: back where you drive it from
         if (op === 'flip') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 6) send(clients.get(o), { t: 'truck', flip: 1 }); return; } // heave it back upright (the owner's page does it)
         if (op === 'wreck') { // it came down in the trench (88-north.js): wrecked till dawn
           if (truckOwner() !== c.id || TRUCK.z > -505 || TRUCK.wreck) return;
@@ -673,7 +674,7 @@ wss.on('connection', (ws, req) => {
         }
         if (op === 'push') { const o = truckOwner(); if (o != null && o !== c.id && clients.has(o) && Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) < 5) send(clients.get(o), { t: 'truck', push: [num(m.dx, -1, 1, 0), num(m.dz, -1, 1, 0)] }); return; }
         if (op === 'pos') { // from whoever runs its physics (the driver, else the lowest id): where it is, how it's tipped, how fast
-          if (truckOwner() !== c.id) return;
+          if (truckOwner() !== c.id || Date.now() - (TRUCK.parkAt || 0) < 1000) return; // just parked: the old position still in flight doesn't count
           TRUCK.x = num(m.x, -600, 600, TRUCK.x); TRUCK.z = num(m.z, -600, 600, TRUCK.z); TRUCK.h = num(m.h, -100, 100, TRUCK.h);
           TRUCK.vx = num(m.vx, -60, 60, 0); TRUCK.vz = num(m.vz, -60, 60, 0);
           const qn = k => Math.round(num(m[k], -1, 1, k === 'qw' ? 1 : 0) * 10000) / 10000; // its full turn (a quaternion): it can be on its side or roof

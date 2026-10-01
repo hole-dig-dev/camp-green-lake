@@ -243,7 +243,7 @@ function townCamPull(cx,cz){
 }
 /* every frame, after the sky: it's dark down there */
 function updateTown(dt){
-  if(S.inTown){scene.fog.color.setRGB(0.02,0.015,0.01);scene.fog.near=2;scene.fog.far=S.light?26:12;sun.intensity=0.04;hemi.intensity=S.light?0.1:0.05}   // no daylight down here (the day/night code eases it back once you're out)
+  if(S.inTown){scene.fog.color.setRGB(0.02,0.015,0.01);scene.fog.near=2;scene.fog.far=S.light?tune('light.townSee'):12;sun.intensity=0.04;hemi.intensity=S.light?0.1:0.05}   // no daylight down here (the day/night code eases it back once you're out)
   S.handDown=!S.inTown&&!S.ko&&KEYS['f']&&(!!breachNear(3.6)&&holeDepthHere()<1.2||northClimb(P.x,P.z));   // (or on the north wall: a hand down to a friend on the ledge below, 88-north.js)   // on the rim (not down in the hole), holding F   // lowering a hand to a friend climbing a shaft (their climbHelp sees flag 256)
 }
 

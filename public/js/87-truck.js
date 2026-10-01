@@ -218,7 +218,8 @@ function truckPhys(dt){
 function truckSend(dt,drive){
   const K=TRUCK;if(!online())return;
   const moving=Math.hypot(K.vx,K.vz)>0.05||Math.abs(K.vy)>0.05||K.air||drive||K.flipT>0||K.w.lengthSq()>1e-3;
-  K.sendT-=dt;if(!moving||K.sendT>0)return;K.sendT=TRUCK_SEND;
+  const stopped=!moving&&K.wasMoving;K.wasMoving=moving;   // one last word when it comes to rest, so nobody keeps it coasting
+  K.sendT-=dt;if(!stopped&&(!moving||K.sendT>0))return;K.sendT=TRUCK_SEND;
   wsSend({t:'truck',op:'pos',x:+K.x.toFixed(2),z:+K.z.toFixed(2),h:+K.h.toFixed(3),v:+K.v.toFixed(1),y:+K.y.toFixed(2),
     qx:+K.q.x.toFixed(4),qy:+K.q.y.toFixed(4),qz:+K.q.z.toFixed(4),qw:+K.q.w.toFixed(4),vx:+K.vx.toFixed(1),vz:+K.vz.toFixed(1)});
 }
@@ -311,7 +312,7 @@ function updateTruck(dt){
   if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck&&!T.wreck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
   if(on&&truckOwner()===truckMe())truckPhys(dt);
   else if(T.tgt){   // ease toward the owner's last word, carried on by its speed in between
-    const g=T.tgt,k=Math.min(1,dt*8);g.x+=g.vx*dt;g.z+=g.vz*dt;
+    const g=T.tgt,k=Math.min(1,dt*8);if(performance.now()-g.at<300){g.x+=g.vx*dt;g.z+=g.vz*dt}   // carried on by its speed only briefly between words
     T.x+=(g.x-T.x)*k;T.z+=(g.z-T.z)*k;T.y+=(g.y-T.y)*k;T.q.slerp(g.q,k);T.flipped=truckUp()<TRUCK_FLIP_UP;
     let dh=g.h-T.h;dh=Math.atan2(Math.sin(dh),Math.cos(dh));T.h+=dh*k;T.vx=g.vx;T.vz=g.vz;T.v=g.v;truckDraw();
   }
@@ -359,13 +360,19 @@ function truckMsg(m){
     truckSeated()}
   if(Array.isArray(m.pos)&&truckOwner()!==truckMe()){const q=m.pos;
     const qq=new THREE.Quaternion(num(q[5],-1,1,0),num(q[6],-1,1,0),num(q[7],-1,1,0),num(q[8],-1,1,1));if(qq.lengthSq()<0.5)qq.set(0,0,0,1);qq.normalize();
-    TRUCK.tgt={x:num(q[0],-600,600,TRUCK.x),z:num(q[1],-600,600,TRUCK.z),h:num(q[2],-100,100,TRUCK.h),v:num(q[3],-40,40,0),y:num(q[4],-50,200,TRUCK.y),q:qq,vx:num(q[9],-60,60,0),vz:num(q[10],-60,60,0)}}
+    TRUCK.tgt={x:num(q[0],-600,600,TRUCK.x),z:num(q[1],-600,600,TRUCK.z),h:num(q[2],-100,100,TRUCK.h),v:num(q[3],-40,40,0),y:num(q[4],-50,200,TRUCK.y),q:qq,vx:num(q[9],-60,60,0),vz:num(q[10],-60,60,0),at:performance.now()}}
   if(m.push&&truckOwner()===truckMe())truckShove(num(m.push[0],-1,1,0),num(m.push[1],-1,1,0));
   if(m.flip&&truckOwner()===truckMe())truckFlipStart();
 }
 function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 
-command('truck',{usage:'truck [park]',help:'Mr. Sir\'s pickup: where it is and who is in it; park puts it back (solo). Drivable only with the F2 flag Vehicles > Make drivable.',
+/* put it back where you drive it from (JT): its spot by the service gate (or by Mr. Sir with the flag off), upright,
+   everyone out, not wrecked. Online the server does it for everyone. Console `truck respawn`, or F2 > Vehicles. */
+function truckRespawn(){
+  if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Mr. Sir\'s pickup back.'}
+  TRUCK.wreck=0;truckLeaveLocal();return'Mr. Sir\'s pickup is back where you drive it from.';
+}
+command('truck',{usage:'truck [respawn]',help:'Mr. Sir\'s pickup: where it is and who is in it; respawn puts it back where you drive it from (upright, everyone out). Drivable only with the F2 flag Vehicles > Make drivable.',
   run([a]){
-    if(a==='park'){if(online())return'Online it parks itself when the flag goes off or the crew changes map.';truckLeaveLocal();return'Parked by the main gate.'}
+    if(a==='respawn'||a==='park'||a==='reset')return truckRespawn();
     return`Drivable: ${truckOn()?'yes':'no (F2 > Vehicles > Make drivable)'}. At ${TRUCK.x.toFixed(1)}, ${TRUCK.z.toFixed(1)}. Seats: ${TRUCK_SEAT_KEYS.map(k=>k+' '+(TRUCK.seats[k]??'-')).join(', ')}.`}});

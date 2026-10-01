@@ -132,9 +132,10 @@ function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim()
 /* ---- flashlight (L): yours, plus the three nearest friends' ---- */
 const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45,1.2);scene.add(s,s.target);FL.push(s)}
 function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Supply Depot sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
-function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?2.4:0;if(!on)return;s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
+function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?tune('light.power'):0;if(!on)return;s.distance=tune('light.reach');s.angle=Math.min(1.4,tune('light.width'));s.penumbra=tune('light.soft');s.decay=tune('light.falloff');   // F2 > Flashlight
+  s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
 function updateLights(dt){
-  if(S.light){S.batt=Math.max(0,S.batt-dt*0.6);if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}
+  if(S.light){S.batt=Math.max(0,S.batt-dt*tune('light.drain'));if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}
   camera.getWorldDirection(pingV);
   const hy=P.y+(P.crouch?1:1.5);aimLight(FL[0],P.x+pingV.x*0.4,hy,P.z+pingV.z*0.4,pingV.x,pingV.y-0.05,pingV.z,S.light&&!S.ko);
   const lit=[...remotes.values()].filter(R=>R.f&4).map(R=>({R,d:(R.p.g.position.x-P.x)**2+(R.p.g.position.z-P.z)**2})).sort((a,b)=>a.d-b.d);
