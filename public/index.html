@@ -58,10 +58,10 @@
       <p id="hpWarn" class="hud-warn" hidden>Low health</p>
       <div class="meter"><span class="k">Water</span><div class="ui-meter bar" id="waterWrap"><i id="waterBar"></i></div></div>
       <p id="waterWarn" class="hud-warn" hidden>Low water</p>
-      <div class="meter" title="Sand in your bucket. Fill it digging, then sift it for gold at the sifter in camp."><span class="k">Bucket</span><div class="ui-meter bar bucket" id="bucketWrap"><i id="bucketBar"></i></div></div>
+      <div class="meter" id="bucketMeter" title="Sand in your gold pan (wash it at the water drums) or your bucket (sift it in camp)."><span class="k" id="bucketK">Bucket</span><div class="ui-meter bar bucket" id="bucketWrap"><i id="bucketBar"></i></div></div>
     </div>
     <div id="hudObjective" class="hud-strip hud-strip--objective ui-panel">
-      <div class="row"><span class="k">Crew bank</span><span class="v" id="quota">0 gold</span></div>
+      <div class="row"><span class="k" title="The crew bank, and the gold the Warden takes out of it at curfew">Bank / quota</span><span class="v" id="quota">0 / 15</span></div>
       <div class="row" id="curseRow" hidden><span class="k">Curse</span><span class="v" id="curseV">0%</span></div>
       <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
       <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
@@ -298,6 +298,15 @@
   </div>
 </div>
 
+<div id="fired" class="overlay" hidden>
+  <div class="card outcome-card outcome-card--fired">
+    <p class="eyebrow">Dismissed</p>
+    <h2>Fired</h2>
+    <p id="firedText"></p>
+    <p class="fine">The Warden fired the whole crew. The lake gets filled back in and you all start over with nothing: no gold, no tools, an empty crew bank. Your level stays.</p>
+    <button id="firedBtn" class="ui-button ui-button--danger">Start a new run</button>
+  </div>
+</div>
  <div id="tune" hidden role="dialog" aria-label="Control center">
   <div class="tune-head"><b>Control center</b><span id="tuneCount"></span><button type="button" id="tuneClose" title="Close (F2 or Esc)">✕</button></div>
   <div id="tuneTabs" role="tablist"></div>

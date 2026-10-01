@@ -56,6 +56,7 @@ addEventListener('keydown',e=>{
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
   if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter')startGame();return}
+  if(!$('#fired').hidden)return;
   if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
   if(shopOpen){shopKeydown(e);return}
   if(invOpen){invKeydown(e);return}

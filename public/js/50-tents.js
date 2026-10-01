@@ -42,10 +42,13 @@ function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
 // (S.up[id], S.onions, S.batt) are unchanged from before.
 const SHOP=[
-  {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel'},
-  {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long'},
+  {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel',needs:'shovel'},
+  {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long',needs:'shovel'},
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
-  {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:50,cat:'dig',icon:'bucket'},
+  {id:'pan',name:'Gold pan',desc:'Your first tool. Fill it digging (one hole of sand) and wash it at the water drums for gold.',cost:10,cat:'dig',icon:'bucket'},
+  {id:'shovel',name:'Camp shovel',desc:'Dig properly: three times faster than your hands, and down to 5 feet.',cost:25,cat:'dig',icon:'shovel'},
+  {id:'bucket',name:'Bucket',desc:'Carries 5 holes of sand to the sifter in camp. Much more gold per trip than the pan.',cost:45,cat:'dig',icon:'bucket'},
+  {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:60,cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'bucket3',name:'Huge bucket',desc:'Tier 3 bucket: holds 15 holes of sand.',cost:140,cat:'dig',icon:'bucket',needs:'bucket2'},
   {id:'canteen',name:'Big canteen',desc:'Tier 2 canteen: holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
@@ -64,7 +67,7 @@ function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg'
 function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
 const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'}];
 const shopCatLabel=id=>(SHOP_CATS.find(c=>c.id===id)||{}).label||'';
-let shopOpen=false,shopCat='all',shopSel='spade',shopConfirming=false,shopPrevFocus=null,shopGpTimer=null;
+let shopOpen=false,shopCat='all',shopSel='pan',shopConfirming=false,shopPrevFocus=null,shopGpTimer=null;
 const shopGp={dir:null,t:0,a:false,b:false};
 
 /* live effect text for the detail panel -- computed from real game state (not baked into SHOP)
@@ -76,6 +79,9 @@ function shopEffect(it){
     case 'detector': return {label:'Detection range',from:'No detector',to:'7 m range'};
     case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+'',to:(160+bonus)+''}}
     case 'canteen3': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(160+bonus)+'',to:(230+bonus)+''}}
+    case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' hole, washed at the water drums'};
+    case 'shovel': return {label:'Digging',from:'Bare hands, 1.5 ft deep',to:'Shovel, 3x faster, 5 ft deep'};
+    case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: 1 hole':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
     case 'bucket2': return {label:'Bucket holds',from:SIM.GOLD.buckets[0]+' holes of sand',to:SIM.GOLD.buckets[1]+' holes of sand'};
     case 'bucket3': return {label:'Bucket holds',from:SIM.GOLD.buckets[1]+' holes of sand',to:SIM.GOLD.buckets[2]+' holes of sand'};
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
@@ -270,7 +276,7 @@ function renderCrewShop(){
   const grid=$('#crewGrid');grid.textContent='';
   const head=document.createElement('div');head.className='crew-h';head.textContent='Upgrade';grid.appendChild(head);
   for(const n of SIM.CREW){const b=bots.find(o=>o.d.n===n),h=document.createElement('div');h.className='crew-h';h.textContent=n;
-    const sm=document.createElement('small');sm.textContent=b?`bucket ${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:'';h.appendChild(sm);grid.appendChild(h)}
+    const sm=document.createElement('small');sm.textContent=b?(crewBucketMax(b)?`bucket ${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:'no bucket'):'';h.appendChild(sm);grid.appendChild(h)}
   for(const it of SIM.CREW_SHOP){
     const c=document.createElement('div');c.className='crew-item';const t=document.createElement('b');t.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc;const p=document.createElement('em');p.textContent=it.cost+' gold';c.append(t,d,p);grid.appendChild(c);
     for(const n of SIM.CREW){const st=crewItemState(n,it),cell=document.createElement('div');cell.className='crew-cell';const btn=document.createElement('button');btn.type='button';btn.className='crew-buy';

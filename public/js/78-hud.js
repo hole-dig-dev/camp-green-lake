@@ -8,7 +8,7 @@ const hw={hpWarn:$('#hpWarn'),waterWarn:$('#waterWarn'),onionRow:$('#onionRow'),
 /* bottom-right tool glyphs: icon + a visually-hidden accessible label, per spec 4 ("hide tool
    names behind icons plus accessible labels"). Falls back to a small text badge for anything not
    in this table rather than silently dropping it. */
-const TOOL_ICON={'Spade':'shovel','Rusty shovel':'shovel','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zach is helping':'teammate',onion:'onion'};
+const TOOL_ICON={'Spade':'shovel','Camp shovel':'shovel','Bare hands':'teammate','1.5 ft reach':'depth','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','KB tube':'lock','Zach is helping':'teammate',onion:'onion'};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
@@ -23,12 +23,12 @@ const COOP_TXT={
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
   office:()=>"Read the Warden's ledger and the note on her desk",
 };
-const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),bucket:$('#bucketBar'),bucketWrap:$('#bucketWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
+const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),bucket:$('#bucketBar'),bucketK:$('#bucketK'),bucketMeter:$('#bucketMeter'),bucketWrap:$('#bucketWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
   else sleepEl.style.display='none';
   hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`${RUN.bank} gold`;   // the crew bank (84-coop.js)
+  hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);   // the crew bank / the Warden's quota (84-coop.js)
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   let curWarn=false;
@@ -44,7 +44,7 @@ function updateHUD(){
     const txt=worst.length?worst.map(k=>AFF_INFO[k]).join(' · '):low?'Low health':'';
     hw.hpWarn.hidden=!txt;if(txt&&hw.hpWarn.textContent!==txt)hw.hpWarn.textContent=txt}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
-  {const bk=S.bucket/bucketMax();hq.bucket.style.width=(bk*100).toFixed(1)+'%';hq.bucketWrap.classList.toggle('full',bk>=0.999)}   // sand in your bucket (45-state.js fillBucket)
+  {const mx=bucketMax(),bk=mx?S.bucket/mx:0,c=carrier();hq.bucket.style.width=(bk*100).toFixed(1)+'%';hq.bucketWrap.classList.toggle('full',mx>0&&bk>=0.999);const k=c==='pan'?'Pan':'Bucket';if(hq.bucketK.textContent!==k)hq.bucketK.textContent=k;hq.bucketMeter.hidden=!c}   // nothing to carry sand in yet: no bar   // sand in your bucket (45-state.js fillBucket)
   {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
    hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
@@ -54,7 +54,7 @@ function updateHUD(){
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
   hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
   hw.battRow.hidden=!(S.light||S.batt<30);
-  const tools=[S.up.spade?'Spade':'Rusty shovel',S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zach is helping':'');
+  const tools=[!S.up.shovel?'Bare hands':S.up.spade?'Spade':'Camp shovel',!S.up.shovel?'1.5 ft reach':S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'KB tube':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zach is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
     const label=t==='onion'?'Onion breath':t,icon=TOOL_ICON[t];
     const s=document.createElement('span');s.setAttribute('title',label);
@@ -70,7 +70,7 @@ function updateHUD(){
   else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
     hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
   else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':s.id==='drop'&&!grabByUse?'R':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='water'?(S.water>=waterMax()-1?'The water drums (your canteen\'s full)':'Fill your canteen'):s.id==='sift'?(S.bucket>0.05?`Sift your bucket for gold (${Math.floor(S.bucket*10)/10} holes of sand)`:'The sifter (your bucket\'s empty: go dig)'):s.id==='store'?(S.sack.length?'Trade with Mr. Pendanski (sell your finds, buy gear)':'Trade with Mr. Pendanski at the Supply Depot window'):s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n+' · hold R to grab him':(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden (the crew bank)');
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='water'?(carrier()==='pan'&&S.bucket>0.05?'Wash your pan for gold (and fill your canteen)':S.water>=waterMax()-1?'The water drums (your canteen\'s full)':'Fill your canteen'):s.id==='sift'?(S.bucket>0.05?`Sift your bucket for gold (${Math.floor(S.bucket*10)/10} holes of sand)`:'The sifter (your bucket\'s empty: go dig)'):s.id==='store'?(S.sack.length?'Trade with Mr. Pendanski (sell your finds, buy gear)':'Trade with Mr. Pendanski at the Supply Depot window'):s.id==='cards'?'Play blackjack in D Tent':s.id==='bot'?'Talk to '+s.bot.d.n+' · hold R to grab him':(S.hasKB?'Give the gold tube to the Warden':'Talk to the Warden (the crew bank)');
     hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
   else{const gh=!uiOpen()&&grabHint();   // what R would grab (84-grab.js)
     if(gh){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Grab':'R';hud.prompt.append(kb,document.createTextNode(gh+' · hold'));hud.prompt.hidden=false}
@@ -317,6 +317,6 @@ function updateCrewPanel(dt){
   bots.forEach((b,i)=>{const E=crewRowEls[i],cap=crewWaterMax(b),txt=crewActivity(b);
     if(E.doing.textContent!==txt)E.doing.textContent=txt;
     E.r.classList.toggle('is-bad',b.state==='ko'||b.state==='tossed'||b.water<=0);
-    const bk=`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`;if(E.bk.textContent!==bk)E.bk.textContent=bk;
+    const bk=crewBucketMax(b)?`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:'no bucket';if(E.bk.textContent!==bk)E.bk.textContent=bk;
     E.hp.style.width=clamp(b.hp??100,0,100)+'%';E.st.style.width=clamp(b.stam??100,0,100)+'%';E.wt.style.width=clamp((b.water??cap)/cap*100,0,100)+'%'});
 }

@@ -1,6 +1,6 @@
 const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
-(async()=>{const b=await browser(),errs=[];const p=await player(b,PORT,'Watcher',errs);
+(async()=>{const b=await browser(),errs=[];const p=await player(b,PORT,'Watcher',errs);await p.evaluate(()=>{/* crewKit: the crew start with no bucket now; give them one */crewMsg({up:Object.fromEntries(SIM.CREW.map(n=>[n,{bucket:true}]))})});
 await p.evaluate(()=>{window.lsPlan=()=>null;GOD=true;for(const b of bots)b.talkT=999});
 // put one crew member digging out on the lake, the watcher 14 m off
 const setup=async(name,x,z)=>p.evaluate(([n,x,z])=>{const b=bots.find(b=>b.d.n===n);b.hole=addHole({x,z,d:0.3,bot:true});b.state='dig';b.bucket=3;b.p.g.position.set(x,groundAt(x,z),z);P.x=x+14;P.z=z;P.y=groundAt(P.x,P.z);P.yaw=Math.PI/2;P.pitch=0.2;return b.state},[name,x,z]);

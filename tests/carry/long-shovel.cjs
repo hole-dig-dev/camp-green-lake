@@ -2,7 +2,7 @@ const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=proce
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 const vis=`p=>Object.fromEntries((p.shovelMeshes||[]).map(n=>[n.name.replace('CGLCamper_R_Shovel',''),n.visible]))`;
 (async()=>{const b=await browser(),errs=[];const A=await player(b,PORT,'Alpha',errs),B=await player(b,PORT,'Bravo',errs);
-await A.waitForTimeout(800);let v=await A.evaluate(s=>eval(s)(me),vis);
+await A.evaluate(()=>{S.up.shovel=true;P.x+=0.01});await A.waitForTimeout(1500);let v=await A.evaluate(s=>eval(s)(me),vis);
 check('the camp shovel: camp handle, no long one',v.Shaft&&v.Cap&&!v.ShaftLong&&!v.CapLong,JSON.stringify(v));
 await A.evaluate(()=>{S.up.long=true;P.x+=0.01});await A.waitForTimeout(1500);v=await A.evaluate(s=>eval(s)(me),vis);
 check('buy the long-handled shovel: the long handle, collar and red cap show instead',!v.Shaft&&!v.Cap&&v.ShaftLong&&v.CollarLong&&v.CapLong,JSON.stringify(v));

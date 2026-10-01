@@ -108,7 +108,8 @@ function spadeLook(p,sharp){
    cap (blender/cgl_rig.py long_handle: CGLCamper_R_Shovel{Shaft,Collar,Cap}Long) on the same blade. A camper who's
    bought one (p.longShovel: you from S.up.long, friends from 'pos' lg) shows it in place of the camp handle. */
 function shovelPart(n){if(/Long$/.test(n.name))n.userData.longPart=true;else if(/_R_Shovel(Shaft|Cap)$/.test(n.name))n.userData.campPart=true}
-function shovelShows(p,n){return n.userData.longPart?!!p.longShovel:n.userData.campPart?!p.longShovel:true}
+function shovelShows(p,n){if(p.noShovel)return false;   // bare hands: no shovel yet (S.up.shovel; friends' 'pos' sh)
+  return n.userData.longPart?!!p.longShovel:n.userData.campPart?!p.longShovel:true}
 function upgradePerson(p){
   if(p.model||!MODEL.ready)return;
   const o=p.o||{},bt=BODY_TYPES[o.body]||BODY_TYPES.average;

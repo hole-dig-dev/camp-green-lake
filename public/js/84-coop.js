@@ -24,8 +24,8 @@ function setHat(p,l){
 
 /* ---- the crew bank (the gold rush, 2026-09-30): gold a camper deposits with the Warden (80-ui.js wardenNode), shared by
    the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
-const RUN={day:1,bank:0,curse:0,mood:'normal'};   // curse/mood: 81-mood.js
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}$('#dayTag').textContent='Day '+RUN.day}
+const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Warden's, out of the bank at curfew   // curse/mood: 81-mood.js
+function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
 /* put v of your own gold in the crew bank */
 function depositGold(v){
@@ -36,12 +36,21 @@ function depositGold(v){
 }
 function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A camper'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
-  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
+  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function newDay(){toast(`Day ${RUN.day}. A new day on the lake. The sand's still full of gold.`,'gold',5000);addXP(50)}
+function newDay(m){m=m||{};toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
+/* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. */
+function fired(bank,quota){
+  if(!$('#fired').hidden)return;
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  Object.assign(S,{seeds:0,bucket:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+}
+$('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
   if(online()||!S.started)return;
-  S.dayPlay=0;RUN.day++;noteDay(RUN.day);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay();
+  const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
+  if(RUN.bank<q&&played>=180){const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
+  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q}:{grace:true});
 }
 
 /* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
