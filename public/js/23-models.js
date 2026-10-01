@@ -24,7 +24,7 @@ function gameMat(m){
   if(m.vertexColors)g.vertexColors=true;
   if(m.transparent){g.transparent=true;g.opacity=m.opacity;g.depthWrite=false}   // the peach jar's glass   // rocks carry their strata/sun-bleach as vertex colours
   if(m.map){m.map.encoding=T.LinearEncoding;g.alphaTest=0.45;g.transparent=false;g.side=T.DoubleSide;m.map.anisotropy=4}
-  modelMatCache.set(m,g);return g;
+  g.name=m.name;modelMatCache.set(m,g);return g;
 }
 /* vertex colours arrive as linear light (often as normalised 16-bit ints): turn them into the game's as-is floats */
 function srgbVertexColors(geo){

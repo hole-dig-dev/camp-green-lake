@@ -1,178 +1,218 @@
 'use strict';
-/* public/js/89-goldfx.js -- panning and sifting you watch happen (JT 2026-10-01: "much better animations for the sifter
-   and the pan ... first person ... actually sifting the sand through the pan, and actually dumping the bucket in the top
-   of the sifter and watching the sand roll through").
-   Both take over your view for a few seconds (you can't walk or look about meanwhile), then hand it back:
-   - THE PAN (gold pan, at the wash tub by the water drums): your hands bring the pan up, dip it in the tub, lift it out
-     full of muddy water and swirl it; sand and water slop over the far lip, the sand in it shrinks to nothing, the
-     water clears, and the gold flecks are left glinting in the bottom. Then you're paid (45-state.js washPan).
-   - THE SIFTER (a bucket of sand): your bucket comes up over the hopper and tips; the sand pours in, the crank turns,
-     the sand tumbles down the riffle tray, hopping the riffles, and off the end onto the tailings; the gold, hidden in
-     the sand till then, only shows once it's down in the catch pan. Then you're paid (45-state.js siftBucket).
-   Models are Blender's (art/blender/sifter.py: GoldPan, CampBucket, WashTub, SifterCrank, Sifter); your hands are the
-   camper's own (camper.glb). The sand is grains in two instanced meshes: one draw call for the sand, one for the gold.
-   Looks only: nothing here decides how much gold you get. */
+/* First-person gold work. All props, grip poses, arms and fluid surfaces are authored in
+   art/blender/goldfx.py. Runtime animation poses those assets and advances bounded particle pools.
+   Rewards are chosen by 45-state.js before playback; this file only shows that payload. */
 const GFX={on:null,t:0,done:null,yaw:0,pitch:0,cam:new T.Vector3(),look:new T.Vector3(),camT:new T.Vector3(),lookT:new T.Vector3()};
-const GFX_SAND=900,GFX_GOLD=48,GFX_TRAY_W=0.62;
-const GFX_SIFT_T=8.6,GFX_PAN_T=6.2;   // how long each takes (s)
-/* the wash tub (art/blender/sifter.py WashTub), by the water drums: you pan in it */
+const GFX_SAND=900,GFX_GOLD=48,GFX_DROP=240,GFX_DUST=72,GFX_TRAY_W=0.62;
+const GFX_SIFT_T=9.2,GFX_PAN_T=7.0;
 const TUB={x:10.3,z:35.2,r:0.43,waterY:0.4};
 {solid(TUB.x,TUB.z,0.95,0.95);placeModel('WashTub',{x:TUB.x,y:baseH(TUB.x,TUB.z),z:TUB.z,ry:0.3}).catch(()=>{})}
-SPOTS.push({id:'water',x:TUB.x,z:TUB.z,r:2.4});   // F at the tub: wash your pan (or drink: it's the same water as the drums)
+SPOTS.push({id:'water',x:TUB.x,z:TUB.z,r:2.4});
 
-/* ---- the grains ---- */
+/* Reusable pools: no per-run geometry allocation, and no permanent particles left in the world. */
 const gfxGeo=new T.IcosahedronGeometry(1,0);
 const gfxSandIM=new T.InstancedMesh(gfxGeo,new T.MeshStandardMaterial({color:0xffffff,roughness:1,flatShading:true}),GFX_SAND);
-const gfxGoldIM=new T.InstancedMesh(gfxGeo,new T.MeshStandardMaterial({color:0xffcf3a,emissive:0x7a5200,metalness:0.9,roughness:0.22,flatShading:true}),GFX_GOLD);
-for(const im of[gfxSandIM,gfxGoldIM]){im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);im.castShadow=false;im.visible=false;scene.add(im)}
-{const c=new T.Color();for(let i=0;i<GFX_SAND;i++){c.setHex([0xcaa874,0xbf9c66,0xd6b684,0xa98a5c,0x8f7650][i%5]);gfxSandIM.setColorAt(i,c)}gfxSandIM.instanceColor.needsUpdate=true}
-const gfxGr=[],gfxGd=[];   // {x,y,z,vx,vy,vz,s,m (mode),u,w,h,vh,t,k}
-const _gm=new T.Matrix4(),_gq=new T.Quaternion(),_gs=new T.Vector3(),_gp=new T.Vector3(),_ge=new T.Euler();
+const gfxGoldIM=new T.InstancedMesh(gfxGeo,new T.MeshStandardMaterial({color:0xffd35b,emissive:0x755010,metalness:0.55,roughness:0.25,flatShading:true}),GFX_GOLD);
+const gfxDropIM=new T.InstancedMesh(gfxGeo,new T.MeshStandardMaterial({color:0xa3cdc6,roughness:0.18,transparent:true,opacity:0.65,depthWrite:false}),GFX_DROP);
+const gfxDustIM=new T.InstancedMesh(gfxGeo,new T.MeshBasicMaterial({color:0xcab58b,transparent:true,opacity:0.065,depthWrite:false}),GFX_DUST);
+for(const im of[gfxSandIM,gfxGoldIM,gfxDropIM,gfxDustIM]){im.frustumCulled=false;im.instanceMatrix.setUsage(T.DynamicDrawUsage);im.visible=false;scene.add(im)}
+{const c=new T.Color();for(let i=0;i<GFX_SAND;i++){c.setHex([0xc6a06b,0xb9945e,0xd5b47c,0xa28251,0x987b51][i%5]);gfxSandIM.setColorAt(i,c)}gfxSandIM.instanceColor.needsUpdate=true}
+const gfxGr=[],gfxGd=[],gfxDrops=[],gfxDust=[];
+const _gm=new T.Matrix4(),_gq=new T.Quaternion(),_gs=new T.Vector3(),_gp=new T.Vector3(),_ge=new T.Euler(),_gfxUp=new T.Vector3(0,1,0);
 function gfxDraw(){
-  const put=(im,list,n)=>{let i=0;for(const g of list){if(i>=n)break;if(g.m==='gone')continue;_ge.set(g.rx||0,g.ry||0,0);_gq.setFromEuler(_ge);_gs.setScalar(g.s*(g.fade==null?1:g.fade));_gp.set(g.x,g.y,g.z);im.setMatrixAt(i++,_gm.compose(_gp,_gq,_gs))}
-    _gs.setScalar(0);_gm.compose(_gp,_gq,_gs);for(;i<n;i++)im.setMatrixAt(i,_gm);im.instanceMatrix.needsUpdate=true};
-  put(gfxSandIM,gfxGr,GFX_SAND);put(gfxGoldIM,gfxGd,GFX_GOLD);
+  const put=(im,list,n)=>{let i=0;for(const g of list){if(i>=n)break;if(g.m==='gone'||g.fade===0)continue;
+    _ge.set(g.rx||0,g.ry||0,0);_gq.setFromEuler(_ge);const s=g.s*(g.fade==null?1:g.fade);
+    _gs.set(s*(g.sx||1),s*(g.sy||1),s*(g.sz||1));_gp.set(g.x,g.y,g.z);im.setMatrixAt(i++,_gm.compose(_gp,_gq,_gs))}
+    im.count=i;im.instanceMatrix.needsUpdate=true};
+  put(gfxSandIM,gfxGr,GFX_SAND);put(gfxGoldIM,gfxGd,GFX_GOLD);put(gfxDropIM,gfxDrops,GFX_DROP);put(gfxDustIM,gfxDust,GFX_DUST);
 }
 
-/* ---- props: your hands, the bucket, the pan, the sifter's crank ---- */
-let gfxParts={};
-for(const n of['GoldPan','CampBucket'])modelParts(n).then(p=>{gfxParts[n]=p}).catch(()=>{});
-function gfxModel(n){const g=new T.Group();for(const pt of gfxParts[n]||[]){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;g.add(m)}return g}
-function gfxHand(side){   // a copy of your camper's hand (camper.glb), for the props you're holding
-  const hm=me&&me.model&&me.model.getObjectByName('CGLCamper_'+side+'_Hand');if(!hm)return new T.Group();
-  const h=new T.Mesh(hm.geometry,hm.material);const ws=new T.Vector3();hm.getWorldScale(ws);h.scale.setScalar(ws.x*1.1);return h;
+/* Asset arrivals also fill props created while the download was still in flight. */
+const gfxParts={},gfxWaiting=new Map();
+const GFX_ASSETS=['GoldPan','CampBucketEmpty','CampBucketBail','GoldFxBucketSand','GoldFxSediment','GoldFxBlackSand','GoldFxWater','GoldFxPanHands','GoldFxBucketHandL','GoldFxBucketHandR','GoldFxArm','GoldFxStream','GoldFxSpill','GoldFxRipple'];
+for(const n of GFX_ASSETS)modelParts(n).then(p=>{gfxParts[n]=p;for(const fill of gfxWaiting.get(n)||[])fill();gfxWaiting.delete(n)}).catch(()=>{gfxWaiting.delete(n)});
+function gfxModel(n,tint){
+  const g=new T.Group(),owner=GFX.root;
+  const fill=()=>{if(owner!==GFX.root)return;for(const pt of gfxParts[n]||[]){let mat=pt.material;
+    if(tint||/gfx_skin|gfx_sleeve|gfx_cuff/.test(mat.name)){mat=mat.clone();GFX.materials.push(mat);
+      if(/gfx_skin/.test(mat.name)&&me&&me.o)mat.color.setHex(me.o.skin);
+      if(/gfx_sleeve|gfx_cuff/.test(mat.name)&&me&&me.o&&me.o.suit!=null)mat.color.setHex(me.o.suit);
+      if(tint){mat.transparent=true;mat.depthWrite=false;mat.side=n==='GoldFxWater'?T.FrontSide:T.DoubleSide}}
+    const m=new T.Mesh(pt.geometry,mat);m.castShadow=!tint;m.receiveShadow=!tint;g.add(m)}};
+  if(gfxParts[n])fill();else{if(!gfxWaiting.has(n))gfxWaiting.set(n,[]);gfxWaiting.get(n).push(fill)}
+  return g;
 }
-let gfxCrank=null;
-placeModel('SifterCrank',{x:0,y:0,z:0,ry:0}).then(g=>{   // on the sifter's blower axle (sifter.py CRANK_AT), turned while it runs
-  const S0=SIM.GOLD.SIFTER,cx=-0.35,cy=-0.75-0.34,cz=0.42;g.position.set(S0.x+cx,baseH(S0.x,S0.z)+cz,S0.z-cy);
-  for(const m of g.children){m.matrixAutoUpdate=true;m.matrix.decompose(m.position,m.quaternion,m.scale)}
-  gfxCrank=g}).catch(()=>{});
-
-/* the sifter, in the game's frame: Blender (x, y, z) about its origin -> world (ry 0: x = x, z = -y, y = up) */
-function sloc(bx,by,bz,v){const S0=SIM.GOLD.SIFTER;return(v||new T.Vector3()).set(S0.x+bx,baseH(S0.x,S0.z)+bz,S0.z-by)}
-const SFT={X0:-1.05,X1:1.05,Z0:1.32,Z1:0.78,hopX:-0.85,hopZ:1.66,panX:1.37};
+function gfxOpacity(g,opacity){g.visible=opacity>0.005;g.traverse(m=>{if(m.isMesh)m.material.opacity=opacity})}
+function gfxSpan(g,a,b,width=1){g.position.copy(a);const v=b.clone().sub(a);g.quaternion.setFromUnitVectors(_gfxUp,v.clone().normalize());g.scale.set(width,v.length(),width)}
+function gfxArms(parents,sockets){GFX.armParents=parents;GFX.sockets=sockets;GFX.arms=sockets.map(()=>{const g=gfxModel('GoldFxArm');GFX.root.add(g);return g})}
+function gfxPoseArms(){
+  for(const p of GFX.armParents)p.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  const right=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion),down=new T.Vector3(0,-1,0).applyQuaternion(camera.quaternion),front=new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  GFX.arms.forEach((g,i)=>{const p=GFX.armParents[i];g.visible=p.visible;const a=new T.Vector3(...GFX.sockets[i]).applyMatrix4(p.matrixWorld);
+    const b=camera.position.clone().addScaledVector(right,i?0.36:-0.36).addScaledVector(down,0.57).addScaledVector(front,0.16);gfxSpan(g,a,b)})
+}
+let gfxCrank=null,gfxTray=null;
+placeModel('SifterCrank',{x:0,y:0,z:0}).then(g=>{
+  const S0=SIM.GOLD.SIFTER;g.position.set(S0.x-0.35,baseH(S0.x,S0.z)+0.42,S0.z+1.09);
+  for(const m of g.children){m.matrixAutoUpdate=true;m.matrix.decompose(m.position,m.quaternion,m.scale)}gfxCrank=g;
+}).catch(()=>{});
+{const s=SIM.GOLD.SIFTER;placeModel('SifterTray',{x:s.x,y:baseH(s.x,s.z),z:s.z,ry:s.ry}).then(g=>{gfxTray=g}).catch(()=>{})}
+function sloc(bx,by,bz,v){const s=SIM.GOLD.SIFTER;return(v||new T.Vector3()).set(s.x+bx,baseH(s.x,s.z)+bz,s.z-by)}
+const SFT={X0:-1.05,X1:1.05,Z0:1.32,Z1:0.78,hopX:-0.85,hopZ:1.86,panX:1.37};
 const SFT_SL=Math.hypot(SFT.X1-SFT.X0,SFT.Z0-SFT.Z1);
-const SFT_RIF=Array.from({length:9},(_,k)=>(0.35+k*0.2)/SFT_SL);   // the riffles, as a share of the way down the tray (sifter.py)
-const trayAt=(u,w,v)=>sloc(SFT.X0+(SFT.X1-SFT.X0)*u,w,SFT.Z0+(SFT.Z1-SFT.Z0)*u+0.045,v);
-
-/* ---- starting one ---- */
+const SFT_RIF=Array.from({length:9},(_,k)=>(0.35+k*0.2)/SFT_SL);
+const trayAt=(u,w,v)=>sloc(SFT.X0+(SFT.X1-SFT.X0)*u,w,SFT.Z0+(SFT.Z1-SFT.Z0)*u+0.045+(GFX.shake||0),v);
+const gfxEase=(t,a,b)=>sm(clamp((t-a)/(b-a),0,1));
+function gfxGoldCount(){return clamp(Math.round(GFX.p.gold||0),0,GFX_GOLD)}
 function gfxBusy(){return!!GFX.on}
 function gfxStart(kind,payload,done){
   if(GFX.on)return false;
-  GFX.on=kind;GFX.t=0;GFX.done=done;GFX.p=payload||{};GFX.yaw=P.yaw;GFX.pitch=P.pitch;
-  camera.updateMatrixWorld();GFX.cam.copy(camera.position);camera.getWorldDirection(GFX.look);GFX.look.multiplyScalar(3).add(camera.position);
-  gfxGr.length=0;gfxGd.length=0;gfxSandIM.visible=gfxGoldIM.visible=true;digHeld=false;
-  GFX.root=new T.Group();scene.add(GFX.root);
+  GFX.on=kind;GFX.t=0;GFX.done=done;GFX.p=payload||{};GFX.yaw=P.yaw;GFX.pitch=P.pitch;GFX.shake=0;GFX.materials=[];
+  camera.updateMatrixWorld();GFX.cam.copy(camera.position);camera.getWorldDirection(GFX.look);GFX.look.multiplyScalar(3).add(camera.position);GFX.homeCam=GFX.cam.clone();GFX.homeLook=GFX.look.clone();
+  for(const a of[gfxGr,gfxGd,gfxDrops,gfxDust])a.length=0;
+  for(const im of[gfxSandIM,gfxGoldIM,gfxDropIM,gfxDustIM]){im.count=0;im.visible=true}
+  digHeld=false;GFX.root=new T.Group();scene.add(GFX.root);
   if(kind==='pan')gfxPanStart();else gfxSiftStart();
   logEv('goldfx',{kind});return true;
 }
 function gfxEnd(){
-  const done=GFX.done;GFX.on=null;GFX.done=null;scene.remove(GFX.root);GFX.root=null;gfxSandIM.visible=gfxGoldIM.visible=false;gfxGr.length=0;gfxGd.length=0;
+  const done=GFX.done;GFX.on=null;GFX.done=null;scene.remove(GFX.root);GFX.root=null;
+  for(const m of GFX.materials)m.dispose();GFX.materials=[];
+  for(const im of[gfxSandIM,gfxGoldIM,gfxDropIM,gfxDustIM])im.visible=false;
+  for(const a of[gfxGr,gfxGd,gfxDrops,gfxDust])a.length=0;
+  if(gfxTray)gfxTray.position.y=0;GFX.shake=0;
   P.yaw=GFX.yaw;P.pitch=GFX.pitch;if(me)me.g.visible=true;
   if(done)done();
 }
+function gfxBallistic(list,dt,floor){
+  for(const g of list){if(g.m==='gone')continue;g.age=(g.age||0)+dt;g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
+    if(g.y<floor||g.age>0.8)g.m='gone';else g.fade=1-g.age/0.8}
+  while(list.length&&list[0].m==='gone')list.shift();
+}
 
-/* ---- the sifter ---- */
+/* A weighted lift, held pour, last shake, then follow the material all the way down. */
 function gfxSiftStart(){
-  const R=GFX.root,b=GFX.bucket=new T.Group(),m=gfxModel('CampBucket');m.scale.setScalar(1.35);b.add(m);
-  const hl=gfxHand('L'),hr=gfxHand('R');hl.position.set(-0.07,0.62,0);hr.position.set(0.07,0.62,0);b.add(hl,hr);   // both hands on the bail (0.53 m up the scaled bucket): wrists above, fingers down round it
-  R.add(b);b.visible=false;GFX.poured=0;
-  // the view: the blower side of the sifter (the sign's on the other), above it, looking down into the hopper
-  sloc(-0.1,-1.75,2.3,GFX.camT);sloc(SFT.hopX,0.05,SFT.hopZ,GFX.lookT);
+  const R=GFX.root,b=GFX.bucket=new T.Group(),pail=gfxModel('CampBucketEmpty');pail.scale.setScalar(1.35);b.add(pail);
+  const load=GFX.bucketSand=gfxModel('GoldFxBucketSand');load.scale.setScalar(1.35);b.add(load,gfxModel('GoldFxBucketHandR'));R.add(b);
+  const bail=GFX.bail=new T.Group(),handle=gfxModel('CampBucketBail');handle.scale.setScalar(1.35);bail.add(handle,gfxModel('GoldFxBucketHandL'));R.add(bail);
+  gfxArms([bail,b],[[-.095,.2215,.085],[.231,.028,.081]]);
+  GFX.stream=gfxModel('GoldFxStream');R.add(GFX.stream);GFX.stream.visible=false;
+  GFX.hopperSand=gfxModel('GoldFxBucketSand');R.add(GFX.hopperSand);GFX.hopperSand.visible=false;
+  GFX.poured=0;GFX.emit=0;GFX.dustEmit=0;GFX.soundT=0;
+  for(let i=0;i<gfxGoldCount();i++)gfxGd.push({m:'waiting',s:0.009+Math.random()*0.005,fade:0,rx:Math.random()*6,ry:Math.random()*6,cx:(Math.random()-.5)*.28,cz:(Math.random()-.5)*.28});
+  sloc(-.25,-1.45,2.7,GFX.camT);sloc(-.65,0,1.74,GFX.lookT);
 }
 function gfxSiftStep(dt){
-  const t=GFX.t,b=GFX.bucket,hop=sloc(SFT.hopX,0,SFT.hopZ+0.55);
-  // the bucket: up from below the view, over the hopper, tip, back out
-  const up=sm(clamp((t-0.5)/0.8,0,1)),tip=sm(clamp((t-1.3)/0.7,0,1))-sm(clamp((t-3.2)/0.6,0,1)),away=sm(clamp((t-3.4)/0.7,0,1));
-  b.visible=t>0.45&&t<4.2;
-  b.position.set(hop.x+0.05,hop.y-0.9*(1-up)-0.6*away+0.15,hop.z+0.42+0.3*(1-up)+0.4*away);
-  b.rotation.set(-tip*2.15,0,0);   // tips toward the hopper (game -z is the sifter's +Y side: the bucket comes from the south)
-  // the sand pours from its lip while it's tipped
-  if(tip>0.55&&GFX.poured<GFX_SAND){const n=Math.min(GFX_SAND-GFX.poured,Math.ceil(dt*GFX_SAND/1.4));
-    const lip=new T.Vector3(0,0.32*1.35,-0.17*1.35).applyEuler(b.rotation).add(b.position);
-    for(let i=0;i<n;i++){gfxGr.push({x:lip.x+(Math.random()-0.5)*0.14,y:lip.y+(Math.random()-0.5)*0.05,z:lip.z+(Math.random()-0.5)*0.06,vx:(Math.random()-0.5)*0.4,vy:-0.3-Math.random()*0.6,vz:-0.5-Math.random()*0.5,s:0.008+Math.random()*0.012,m:'pour',rx:Math.random()*6,ry:Math.random()*6});
-      if(Math.random()<GFX_GOLD/GFX_SAND*1.1&&gfxGd.length<GFX_GOLD)gfxGd.push({x:lip.x,y:lip.y,z:lip.z,vx:(Math.random()-0.5)*0.3,vy:-0.4,vz:-0.6,s:0.009+Math.random()*0.006,m:'pour',gold:true,rx:Math.random()*6})}
-    GFX.poured+=n;if(nearCam(hop.x,hop.z,20)&&Math.random()<0.4)noise(0.12,700,0.5,0.05,'bandpass')}
-  // the crank turns and the blower puffs while there's sand on the tray
-  const running=t>1.8&&t<GFX_SIFT_T-1;
-  if(gfxCrank&&running)gfxCrank.rotation.z-=dt*7;
-  if(running&&Math.random()<dt*9)noise(0.09,320,0.8,0.03,'lowpass');
-  // the camera: the hopper while it pours, then down the tray with the sand, then the catch pan
-  const lk=t<2.6?sloc(SFT.hopX,0.05,SFT.hopZ):t<6.4?trayAt(clamp((t-2.6)/3.4,0,1)*0.85+0.1,0):sloc(SFT.panX,0,0.1);
-  GFX.lookT.lerp(lk,Math.min(1,dt*2.2));
-  if(t>2.6)GFX.camT.lerp(t<6.4?sloc(0.2,-1.55,2.0):sloc(1.15,-1.05,1.75),Math.min(1,dt*0.9));
-  // the grains
+  const t=GFX.t,b=GFX.bucket,hop=sloc(SFT.hopX,0,SFT.hopZ);
+  const up=gfxEase(t,.3,1.3),tip=gfxEase(t,1.35,2.15)-gfxEase(t,3.5,4.15),away=gfxEase(t,4.15,4.85);
+  b.visible=t<4.85;b.rotation.set(-tip*1.95,0,.035*Math.sin(t*3)*tip);
+  const lipLocal=new T.Vector3(0,.378,-.2),rotLip=lipLocal.clone().applyEuler(b.rotation);
+  const lip=hop.clone().add(new T.Vector3(.02, .52-.26*tip-1.1*(1-up)-.5*away,.36-.3*tip+.6*(1-up)+.6*away));
+  b.position.copy(lip).sub(rotLip);b.updateMatrixWorld(true);
+  GFX.bail.position.copy(new T.Vector3(0,.3375,0).applyMatrix4(b.matrixWorld));GFX.bail.rotation.set(.07*Math.sin(t*3)*(1-away),0,.04*Math.sin(t*2));GFX.bail.visible=b.visible;
+  const pouring=t>=1.9&&t<3.5;
+  GFX.bucketSand.visible=GFX.poured<GFX_SAND;
+  const remain=1-GFX.poured/GFX_SAND;GFX.bucketSand.scale.set(1.35,1.35*Math.max(.03,remain),1.35);
+  if(pouring){
+    GFX.emit+=dt*GFX_SAND/1.6;const n=Math.min(GFX_SAND-GFX.poured,Math.floor(GFX.emit));GFX.emit-=n;
+    for(let i=0;i<n;i++)gfxGr.push({x:lip.x+(Math.random()-.5)*.055,y:lip.y,z:lip.z+(Math.random()-.5)*.035,vx:-.04,vy:-.65,vz:-.10,s:.008+Math.random()*.008,m:'pour',rx:Math.random()*6,ry:Math.random()*6});
+    GFX.poured+=n;
+    const end=sloc(SFT.hopX,0,SFT.hopZ-.15);gfxSpan(GFX.stream,lip,end,.75+.16*Math.sin(t*23));GFX.stream.visible=true;
+  }else GFX.stream.visible=false;
+  if(t>2.2)for(const g of gfxGd)if(g.m==='waiting'){g.m='hopper';g.wait=.08+Math.random()*.45;g.w=(Math.random()-.5)*.42;g.x=hop.x;g.y=hop.y-.15;g.z=hop.z-g.w;g.u=.07;g.spd=.26+Math.random()*.05;g.k=0;g.h=0;g.vh=0}
+  const fill=gfxEase(t,1.9,2.6)*(1-gfxEase(t,3.1,4.1));
+  GFX.hopperSand.visible=fill>.01;GFX.hopperSand.position.copy(sloc(SFT.hopX,0,SFT.hopZ-.26));GFX.hopperSand.scale.set(1.6,.38*fill,1.6);
+  const running=t>2&&t<8.1,envelope=gfxEase(t,2,2.4)*(1-gfxEase(t,7.5,8.1));
+  GFX.shake=Math.sin(t*48)*.006*envelope;if(gfxTray)gfxTray.position.y=GFX.shake;
+  if(gfxCrank&&running)gfxCrank.rotation.z-=dt*9*envelope;
+  if(running){GFX.soundT+=dt;if(GFX.soundT>.18){GFX.soundT=0;noise(.07,360,0.8,.026,'lowpass')}
+    GFX.dustEmit+=dt*19;while(GFX.dustEmit>=1){GFX.dustEmit--;if(gfxDust.length<GFX_DUST){const q=trayAt(Math.random()*.85,.28);gfxDust.push({x:q.x,y:q.y+.02,z:q.z,vx:.2,vy:.12,vz:-.38,age:0,s:.035+Math.random()*.035,m:'dust'})}}}
   const step=(g,gold)=>{
-    if(g.m==='pour'){g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
-      const fl=sloc(SFT.hopX,0,SFT.hopZ-0.32);if(g.y<=fl.y+0.02){g.m='tray';g.u=0.02+Math.random()*0.04;g.w=(Math.random()-0.5)*(GFX_TRAY_W-0.1);g.h=0.02;g.vh=0;g.spd=(0.28+Math.random()*0.18)*(gold?0.8:1);g.k=0}}
-    else if(g.m==='tray'){
-      g.u+=g.spd*dt;g.w=clamp(g.w+(Math.random()-0.5)*dt*0.3,-GFX_TRAY_W/2+0.04,GFX_TRAY_W/2-0.04);
-      while(g.k<SFT_RIF.length&&g.u>SFT_RIF[g.k]){   // over a riffle: a hop (and the gold, mostly, stops there)
-        if(gold&&Math.random()<0.6){g.m='caught';g.u=SFT_RIF[g.k]-0.012;g.caughtAt=GFX.t;break}
-        g.vh=0.35+Math.random()*0.35;g.k++}
-      g.vh-=6*dt;g.h=Math.max(0.0,g.h+g.vh*dt);if(g.h===0)g.vh=0;
-      if(g.m==='tray'&&g.u>=1){g.m='off';const e=trayAt(1,g.w);g.x=e.x;g.y=e.y;g.z=e.z;g.vx=0.5+Math.random()*0.4;g.vy=0.1;g.vz=(Math.random()-0.5)*0.2;
-        if(gold){g.m='topan'}}
-      else if(g.m==='tray'){const q=trayAt(g.u,g.w);g.x=q.x;g.y=q.y+g.h;g.z=q.z;g.rx=(g.rx||0)+dt*8}}
-    else if(g.m==='caught'){const q=trayAt(g.u,g.w);g.x=q.x;g.y=q.y+0.005;g.z=q.z;g.s=g.s0||(g.s0=g.s);g.s=g.s0*(1+0.25*Math.sin(GFX.t*14+g.w*40));   // glinting behind its riffle
-      if(GFX.t>6.6+g.w)g.m='tray',g.k=99}   // the last of the water washes it down to the catch pan
-    else if(g.m==='off'||g.m==='topan'){g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
-      const floor=g.m==='topan'?sloc(SFT.panX,0,0.06).y:groundAt(g.x,g.z)+0.01;if(g.y<=floor){g.y=floor;g.m='rest';g.vx=g.vy=g.vz=0;g.t=0}
-      if(g.m==='topan'){const pc=sloc(SFT.panX,0,0);g.x+=(pc.x+(g.w||0)*0.3-g.x)*Math.min(1,dt*4);g.z+=(pc.z+(g.w||0)*0.3-g.z)*Math.min(1,dt*4)}}
-    else if(g.m==='rest'){g.t+=dt;if(!gold&&g.t>2)g.fade=Math.max(0,1-(g.t-2)/1.2);if(gold)g.s=(g.s0||g.s)*(1+0.3*Math.max(0,Math.sin(GFX.t*9+g.x*50)))}
+    if(g.m==='waiting')return;
+    if(g.m==='pour'){
+      g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
+      if(g.y<hop.y-.15){g.m='hopper';g.wait=.1+Math.random()*.24;g.w=(Math.random()-.5)*.49;g.u=.06;g.spd=.30+Math.random()*.07;g.k=0;g.h=0;g.vh=0;g.y=hop.y-.15}
+    }else if(g.m==='hopper'){
+      g.wait-=dt;const q=trayAt(g.u,g.w);g.y=Math.max(q.y,g.y-dt*(g.wait<0?1.5:.08));g.x+=(q.x-g.x)*Math.min(1,dt*5);g.z+=(q.z-g.z)*Math.min(1,dt*5);
+      if(g.y<=q.y+.002)g.m='tray';
+    }else if(g.m==='tray'){
+      g.u+=g.spd*dt*(.86+.14*Math.sin(t*30));
+      if(g.k<SFT_RIF.length&&g.u>SFT_RIF[g.k]){g.u-=.007;g.vh=.17+Math.random()*.14;g.k++}
+      g.vh-=5*dt;g.h=Math.max(0,g.h+g.vh*dt);if(!g.h)g.vh=0;
+      const q=trayAt(Math.min(1,g.u),g.w);g.x=q.x;g.y=q.y+g.h;g.z=q.z;g.rx+=dt*7;
+      if(g.u>=1){g.m=gold?'topan':'off';g.vx=gold?.36:.28;g.vy=0;g.vz=gold?0:-.65}
+    }else if(g.m==='off'||g.m==='topan'){
+      g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;
+      if(gold){const pc=sloc(SFT.panX,0,.08);g.x+=(pc.x+g.cx-g.x)*Math.min(1,dt*5);g.z+=(pc.z+g.cz-g.z)*Math.min(1,dt*6)}
+      const floor=gold?sloc(0,0,.081).y:groundAt(g.x,g.z)+.04;
+      if(g.y<=floor){g.y=floor;g.m='rest';g.age=0;g.s0=g.s}
+    }else if(g.m==='rest'){g.age+=dt;if(!gold&&g.age>1.8)g.fade=clamp(1-(g.age-1.8)/.8,0,1)}
+    if(gold)g.fade=g.m==='rest'?1+.13*Math.max(0,Math.sin(t*8+g.w*90)):0;
   };
-  for(const g of gfxGr)step(g,false);for(const g of gfxGd){step(g,true);g.fade=g.m==='topan'||g.m==='rest'?1:0}   // JT: the gold doesn't show till it's at the bottom, in the catch pan (it's in the sand till then)
+  for(const g of gfxGr)step(g,false);for(const g of gfxGd)step(g,true);
+  for(const g of gfxDust){g.age+=dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;g.s+=dt*.035;g.fade=Math.sin(clamp(g.age/1.4,0,1)*Math.PI);if(g.age>=1.4)g.m='gone'}
+  while(gfxDust.length&&gfxDust[0].m==='gone')gfxDust.shift();
+  const follow=gfxEase(t,3.6,6.3),finish=gfxEase(t,6.65,8.1);
+  GFX.camT.copy(sloc(-.25+.85*follow+.85*finish,-1.45+.2*follow+.52*finish,2.7-.55*follow-1.25*finish));
+  GFX.lookT.copy(sloc(-.65+1.30*follow+.72*finish,0,1.74-.73*follow-.93*finish));
 }
 
-/* ---- the pan ---- */
+/* Dip, stratify with alternating shakes, wash over the riffles, re-dip, drain, inspect. */
 function gfxPanStart(){
-  const R=GFX.root,pan=GFX.pan=new T.Group(),m=gfxModel('GoldPan');pan.add(m);
-  GFX.hands=[gfxHand('L'),gfxHand('R')];pan.add(...GFX.hands);   // placed on the rim, left and right of where you're looking from (gfxPanStep)
-  // what's in it: a heap of sand, the water, and (under it all) the gold
-  const sand=GFX.panSand=new T.Mesh(new T.CylinderGeometry(0.11,0.12,0.03,18),new T.MeshStandardMaterial({color:0xb99a68,roughness:1,flatShading:true}));sand.position.y=0.025;pan.add(sand);
-  const water=GFX.panWater=new T.Mesh(new T.CylinderGeometry(0.175,0.13,0.035,22),new T.MeshStandardMaterial({color:0x7a6a4a,roughness:0.15,metalness:0.1,transparent:true,opacity:0.0}));water.position.y=0.045;pan.add(water);
-  R.add(pan);
-  const tub=new T.Vector3(TUB.x,baseH(TUB.x,TUB.z)+TUB.waterY,TUB.z),dx=P.x-TUB.x,dz=P.z-TUB.z,dl=Math.hypot(dx,dz)||1;GFX.dir={x:dx/dl,z:dz/dl};GFX.tub=tub;
-  {const rx=-GFX.dir.z,rz=GFX.dir.x;GFX.hands.forEach((h,i)=>{const sd=i?1:-1;h.position.set(rx*0.205*sd+GFX.dir.x*0.04,0.15,rz*0.205*sd+GFX.dir.z*0.04);h.rotation.set(0,Math.atan2(rx*sd,rz*sd),0)})}   // wrists just above the rim, fingers down over it
-  GFX.camT.set(tub.x+GFX.dir.x*0.62,tub.y+0.56,tub.z+GFX.dir.z*0.62);GFX.lookT.set(tub.x+GFX.dir.x*0.12,tub.y+0.05,tub.z+GFX.dir.z*0.12);
-  const n=clamp(Math.round(GFX.p.gold||4),3,GFX_GOLD);for(let i=0;i<n;i++){const a=Math.random()*6.28,r=0.02+Math.random()*0.07;gfxGd.push({lx:Math.cos(a)*r,lz:Math.sin(a)*r,s:0.0045+Math.random()*0.004,m:'inpan',rx:Math.random()*6,ry:Math.random()*6,x:0,y:-50,z:0})}
+  const R=GFX.root,pan=GFX.pan=new T.Group();pan.scale.setScalar(1.1);pan.add(gfxModel('GoldPan'),gfxModel('GoldFxPanHands'));R.add(pan);
+  GFX.panSand=gfxModel('GoldFxSediment');GFX.panBlack=gfxModel('GoldFxBlackSand');GFX.panWater=gfxModel('GoldFxWater',true);
+  pan.add(GFX.panSand,GFX.panBlack,GFX.panWater);gfxArms([pan,pan],[[-.282,.052,.078],[.282,.052,.078]]);
+  GFX.spill=gfxModel('GoldFxSpill',true);R.add(GFX.spill);
+  GFX.ripples=[0,1,2].map(()=>{const g=gfxModel('GoldFxRipple',true);R.add(g);return g});
+  const tub=GFX.tub=new T.Vector3(TUB.x,baseH(TUB.x,TUB.z)+TUB.waterY,TUB.z),dx=P.x-TUB.x,dz=P.z-TUB.z,d=Math.hypot(dx,dz)||1;
+  GFX.dir={x:dx/d,z:dz/d};GFX.panYaw=Math.atan2(dx,dz);GFX.splash=0;GFX.washSound=0;GFX.dropEmit=0;
+  const D=GFX.dir;GFX.camT.set(tub.x+D.x*.67,tub.y+.63,tub.z+D.z*.67);GFX.lookT.copy(tub).add(new T.Vector3(D.x*.10,.12,D.z*.10));
+  for(let i=0;i<gfxGoldCount();i++){const a=Math.random()*Math.PI*2,r=.022+Math.random()*.061;gfxGd.push({lx:Math.cos(a)*r,lz:Math.sin(a)*r,s:.0055+Math.random()*.0035,m:'inpan',fade:0,rx:Math.random()*6,ry:Math.random()*6,x:0,y:-50,z:0})}
 }
 function gfxPanStep(dt){
   const t=GFX.t,pan=GFX.pan,tub=GFX.tub,D=GFX.dir;
-  // where the pan is: brought up, dipped under, lifted, swirled, tipped toward you
-  const bring=sm(clamp(t/0.6,0,1)),dip=Math.sin(clamp((t-0.6)/1.1,0,1)*Math.PI),swirl=t>1.8&&t<4.6,show=sm(clamp((t-4.7)/0.6,0,1));
-  const base=new T.Vector3(tub.x+D.x*0.2,tub.y+0.2*bring-0.5*(1-bring)+0.08-0.11*dip,tub.z+D.z*0.16);
-  let ox=0,oz=0,tilt=0;
-  if(swirl){const w=(t-1.8)*15;ox=Math.cos(w)*0.022;oz=Math.sin(w)*0.022;tilt=0.12+0.06*Math.sin(w)}
-  pan.position.set(base.x+ox,base.y,base.z+oz);
-  pan.rotation.set(0,0,0);pan.rotateOnWorldAxis(new T.Vector3(-D.z,0,D.x),tilt);   // swirling: the far lip dips, so it slops out over there
-  pan.rotateOnWorldAxis(new T.Vector3(D.z,0,-D.x),show*0.75);   // and at the end, tipped up toward you
-  // the water: it comes in on the dip, thins as you swirl, clears at the end
-  const wm=GFX.panWater.material;wm.opacity=t<0.9?0:t<1.6?0.85:swirl?0.85-0.5*((t-1.8)/2.8):Math.max(0,0.35-(t-4.6));GFX.panWater.visible=wm.opacity>0.02;
-  if(swirl)GFX.panWater.scale.set(1,1,1),GFX.panWater.position.x=ox*1.5,GFX.panWater.position.z=oz*1.5;
-  // the sand: washes out over the lip as you swirl
-  const left=t<1.8?1:swirl?1-((t-1.8)/2.8):0;GFX.panSand.scale.set(0.4+0.6*left,Math.max(0.02,left),0.4+0.6*left);GFX.panSand.visible=left>0.01;
-  if(swirl&&Math.random()<dt*70){const far=new T.Vector3(-D.x*0.19,0.06,-D.z*0.19).add(pan.position);
-    gfxGr.push({x:far.x+(Math.random()-0.5)*0.08,y:far.y,z:far.z+(Math.random()-0.5)*0.08,vx:-D.x*(0.3+Math.random()*0.3),vy:0.05,vz:-D.z*(0.3+Math.random()*0.3),s:0.005+Math.random()*0.007,m:'spill',rx:Math.random()*6})
-    if(Math.random()<0.15&&nearCam(tub.x,tub.z,10))noise(0.08,1200,0.5,0.035,'bandpass')}
-  for(const g of gfxGr){if(g.m!=='spill')continue;g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;if(g.y<tub.y-0.02)g.m='gone'}
-  // the gold, in the bottom of the pan: hidden under the sand until it's washed, then glinting
-  const pm=pan.matrixWorld;pan.updateMatrixWorld(true);
-  for(const g of gfxGd){const v=new T.Vector3(g.lx,0.016,g.lz).applyMatrix4(pm);g.x=v.x;g.y=v.y;g.z=v.z;g.fade=clamp((t-3.6)/0.8,0,1)*(1+0.35*Math.max(0,Math.sin(t*10+g.lx*90)))}
-  // the view: down into the pan, a little closer at the end
-  if(t>4.6)GFX.camT.lerp(new T.Vector3(tub.x+D.x*0.58,tub.y+0.5,tub.z+D.z*0.58),Math.min(1,dt*1.5)),GFX.lookT.lerp(pan.position,Math.min(1,dt*3));
-  if(t>0.6&&t<0.75&&nearCam(tub.x,tub.z,10))sfx.splash();
+  const bring=gfxEase(t,0,.6),dip=gfxEase(t,.6,1.15)-gfxEase(t,1.2,1.85),redip=gfxEase(t,3.5,3.85)-gfxEase(t,3.9,4.4);
+  const first=gfxEase(t,1.85,3.5),second=gfxEase(t,4.35,5.55),show=gfxEase(t,5.8,6.4),lower=gfxEase(t,6.8,7);
+  const wash=(t>1.85&&t<3.5)||(t>4.35&&t<5.55),w=t*12;
+  const shake=wash?Math.sin(w)*.032:0,orbit=wash?Math.cos(w)*.014:0;
+  const right={x:D.z,z:-D.x};
+  pan.position.set(tub.x+D.x*(.08+.07*bring+.1*show)+right.x*shake+D.x*orbit,tub.y-.36*(1-bring)+.21*bring-.32*dip-.28*redip+.045*show-.14*lower,tub.z+D.z*(.08+.07*bring+.1*show)+right.z*shake+D.z*orbit);
+  pan.rotation.order='YXZ';pan.rotation.set((wash?-.22+.10*Math.cos(w):0)-.16*redip+.48*show,GFX.panYaw,wash?.10*Math.sin(w-.4):.025*Math.sin(t*3)*(1-show));
+  pan.updateMatrixWorld(true);
+  const left=clamp(1-first*.68-second*.32,0,1);
+  GFX.panSand.visible=left>.035;GFX.panSand.scale.set(.52+.48*left,Math.max(.035,left),.52+.48*left);GFX.panSand.position.z=-.017*first;
+  GFX.panBlack.visible=first>.5;GFX.panBlack.scale.setScalar(.65+.35*second);
+  const wet=gfxEase(t,.95,1.25),drain=gfxEase(t,5.4,5.85),water=wet*(1-drain);
+  gfxOpacity(GFX.panWater,water*(.72-.27*first-.16*second));
+  GFX.panWater.rotation.set(-pan.rotation.x*.25,0,-pan.rotation.z*.25);GFX.panWater.position.y=-.009*first-.006*second;
+  const waterRadius=.98-.18*first-.09*second;GFX.panWater.scale.set(waterRadius,1,waterRadius);
+  GFX.panWater.position.x=wash?-.012*Math.sin(w-.7):0;GFX.panWater.position.z=wash?-.012+.009*Math.cos(w-.7):0;
+  GFX.panWater.traverse(o=>{if(o.isMesh)o.material.color.setHex(second>.6?0x84b9b0:first>.6?0x859b85:0x9c956b)});
+  const spill=wash?Math.max(0,Math.cos(w)+.35):t>5.4&&t<5.8?.5:0;
+  const lip=new T.Vector3(-.122,.073,-.158).applyMatrix4(pan.matrixWorld),landing=lip.clone().add(new T.Vector3(-D.x*.09-right.x*.04,-.10,-D.z*.09-right.z*.04));landing.y=Math.min(landing.y,tub.y+.004);
+  gfxSpan(GFX.spill,lip,landing,.6+.4*spill);gfxOpacity(GFX.spill,Math.min(.55,spill*.55)*water);
+  if(spill>.2){
+    GFX.dropEmit+=dt*85*spill;
+    while(GFX.dropEmit>=1){GFX.dropEmit--;const q=lip.clone().add(new T.Vector3(right.x*(Math.random()-.5)*.10,0,right.z*(Math.random()-.5)*.10));
+      if(gfxDrops.length<GFX_DROP)gfxDrops.push({x:q.x,y:q.y,z:q.z,vx:-D.x*.22,vy:-.12,vz:-D.z*.22,s:.003+Math.random()*.004,sy:1.8,m:'drop'});
+      if(left>.04&&gfxGr.length<GFX_SAND)gfxGr.push({x:q.x,y:q.y,z:q.z,vx:-D.x*.20,vy:-.05,vz:-D.z*.20,s:.004+Math.random()*.004,m:'spill'})}
+    GFX.washSound+=dt;if(GFX.washSound>.3){GFX.washSound=0;noise(.15,950,.6,.045,'bandpass')}
+  }
+  gfxBallistic(gfxDrops,dt,tub.y-.014);gfxBallistic(gfxGr,dt,tub.y-.014);
+  GFX.ripples.forEach((r,i)=>{const phase=((t+i*.3)%1.05)/1.05;r.position.copy(tub);r.position.y+=.018;r.scale.setScalar(.5+phase*1.5);gfxOpacity(r,(1-phase)*.20*wet*(t<5.8?1:0))});
+  if(GFX.splash===0&&t>1.02){GFX.splash=1;sfx.splash()}if(GFX.splash===1&&t>3.75){GFX.splash=2;sfx.splash()}
+  for(const g of gfxGd){const v=new T.Vector3(g.lx,.022,g.lz).applyMatrix4(pan.matrixWorld);g.x=v.x;g.y=v.y;g.z=v.z;g.fade=gfxEase(t,5.05,5.65)*(1+.16*Math.max(0,Math.sin(t*9+g.lx*90)))}
+  GFX.lookT.copy(tub).add(new T.Vector3(D.x*(.10+.14*show),.12+.16*show,D.z*(.10+.14*show)));
+  GFX.camT.set(tub.x+D.x*(.67-.06*show),tub.y+.63-.015*show,tub.z+D.z*(.67-.06*show));
 }
 
-/* ---- every frame, after updateCamera (90-loop.js): run it and drive the view ---- */
+/* Run after updateCamera; the view and arm endpoints share the same final camera transform. */
 function updateGoldFx(dt){
-  if(!GFX.on)return;
-  GFX.t+=dt;
-  if(me)me.g.visible=false;   // your own body would only get in the shot (first or third person)
+  if(!GFX.on)return;GFX.t+=dt;if(me)me.g.visible=false;
   if(GFX.on==='pan')gfxPanStep(dt);else gfxSiftStep(dt);
-  const k=Math.min(1,dt*(GFX.t<0.8?3:2.2));GFX.cam.lerp(GFX.camT,k);GFX.look.lerp(GFX.lookT,Math.min(1,dt*3.5));
-  camera.position.copy(GFX.cam);camera.lookAt(GFX.look);
-  if(vm)vm.visible=false;if(FPH.g)FPH.g.visible=false;
-  gfxDraw();
+  const k=1-Math.exp(-dt*(GFX.t<.8?4:3.2));GFX.cam.lerp(GFX.camT,k);GFX.look.lerp(GFX.lookT,1-Math.exp(-dt*5));
+  const duration=GFX.on==='pan'?GFX_PAN_T:GFX_SIFT_T,exit=gfxEase(GFX.t,duration-.4,duration);
+  camera.position.copy(GFX.cam).lerp(GFX.homeCam,exit);camera.lookAt(GFX.look.clone().lerp(GFX.homeLook,exit));gfxPoseArms();
+  if(vm)vm.visible=false;if(FPH.g)FPH.g.visible=false;gfxDraw();
   if(GFX.t>=(GFX.on==='pan'?GFX_PAN_T:GFX_SIFT_T))gfxEnd();
 }

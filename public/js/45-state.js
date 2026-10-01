@@ -160,15 +160,16 @@ function siftBucket(){
   if(carrier()!=='bucket'){toast(carrier()==='pan'?'The sifter takes a bucket of sand. Wash your pan at the water drums instead.':'You need a bucket to bring sand to the sifter. Start with a gold pan from the Supply Depot.','',4000);return}
   if(S.bucket<0.05){toast('Your bucket\'s empty. Go dig: every scoop of a hole fills it with sand.','',3200);return}
   if(gfxBusy())return;const holes=S.bucket;siftBusy=true;sfx.scoop();
+  const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);
   const go=()=>{   // after the bucket's gone through (89-goldfx.js)
     siftBusy=false;S.bucket=0;
-    const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);S.seeds+=r.gold;addXP(5+r.gold/2);
+    S.seeds+=r.gold;addXP(5+r.gold/2);
     const how=r.nugget?'A NUGGET! ':r.luck>1.4?'A rich batch! ':r.luck<0.7?'Thin sand. ':'';
     if(r.nugget||r.luck>1.4){sfx.gold()}else sfx.coin();
     toast(`${how}The sifter shakes ${r.gold} gold out of ${Math.round(holes*10)/10} holes of sand.`,r.nugget||r.luck>1.4?'gold':'good',4200);
     logEv('sift',{holes:+holes.toFixed(2),gold:r.gold,luck:+r.luck.toFixed(2),nugget:r.nugget});
   };
-  if(!gfxStart('sift',{holes},go))go();
+  if(!gfxStart('sift',{holes,gold:r.gold},go))go();
 }
 
 /* ---------- interactions ---------- */
