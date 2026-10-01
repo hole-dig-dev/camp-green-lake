@@ -44,7 +44,7 @@ function updateHUD(){
     const txt=worst.length?worst.map(k=>AFF_INFO[k]).join(' · '):low?'Low health':'';
     hw.hpWarn.hidden=!txt;if(txt&&hw.hpWarn.textContent!==txt)hw.hpWarn.textContent=txt}
   const w=S.water/waterMax();hud.water.style.width=(w*100).toFixed(1)+'%';
-  {const mx=bucketMax(),bk=mx?S.bucket/mx:0,c=carrier();hq.bucket.style.width=(bk*100).toFixed(1)+'%';hq.bucketWrap.classList.toggle('full',mx>0&&bk>=0.999);const k=c==='pan'?'Pan':'Bucket';if(hq.bucketK.textContent!==k)hq.bucketK.textContent=k;hq.bucketMeter.hidden=!c}   // nothing to carry sand in yet: no bar   // sand in your bucket (45-state.js fillBucket)
+  {const mx=bucketMax(),bk=mx?S.bucket/mx:0,c=carrier();hq.bucket.style.width=(bk*100).toFixed(1)+'%';hq.bucketWrap.classList.toggle('full',mx>0&&bk>=0.999);const k=c==='pan'?'Pan':backsackOn()?'Backsack':'Bucket';if(hq.bucketK.textContent!==k)hq.bucketK.textContent=k;hq.bucketMeter.hidden=!c}   // nothing to carry sand in yet: no bar   // sand in your bucket (45-state.js fillBucket)
   {const wLow=w<0.25,wCrit=w<0.10;hud.wrap.classList.toggle('low',wLow&&!wCrit);hud.wrap.classList.toggle('critical',wCrit);
    hw.waterWarn.hidden=!wLow;hw.waterWarn.textContent=wCrit?'Very low water':'Low water'}
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
