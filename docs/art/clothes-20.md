@@ -3,7 +3,8 @@
 Open `/clothes-lab/` on a running game server. These are twenty Blender-authored outfit sets on JT's current
 camper: **20 torso choices, 20 arm sets, 20 leg sets**. Selecting an outfit equips its three components; the
 independent selectors then let you mix them. The original head, nose, hands and sneakers remain in place.
-Try the original movement clips, then add any of the existing faces, hats and glasses.
+Try the original movement clips, then add any of the existing faces, hats, glasses and [shoes/boots](footwear-20.md).
+The footwear selector restores the original sneakers when selecting its original option.
 
 ![Twenty outfits](../../public/clothes-lab/previews/all-20.png)
 

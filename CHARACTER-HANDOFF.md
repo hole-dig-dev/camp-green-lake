@@ -106,3 +106,11 @@ actual movement previews on the current camper. Native source: `art/blender/clot
 sneakers. Rebind the garments to each camper's existing bones and inverse bind matrices as demonstrated in
 `public/clothes-lab/viewer.js`; the docs explain multi-material metadata and body-width handling. These are
 reviewable wardrobe candidates; gameplay assignments remain unchanged.
+
+## Shoes and boots
+
+[Twenty paired footwear sets](docs/art/footwear-20.md) are ready at `/footwear-lab/` and selectable in
+`/clothes-lab/`. Native source: `art/blender/footwear.blend`; builder: `art/blender/footwear_options.py`;
+exports: `public/models/footwear/`. Rebind them onto each camper's own shin bones and original inverse matrices,
+hiding the four old Shoe/Sole meshes while replacements are worn. Floor height and the knee joint remain as before.
+All movement comes from the existing character clips. These are wardrobe candidates; gameplay assignments are unchanged.
