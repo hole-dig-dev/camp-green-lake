@@ -3,9 +3,9 @@
    The layout is in public/sim.js (TOWN, townLayout): Main Street, a buried street cavern with three big buildings on each
    side, and seven more buildings off it, joined by timber-shored tunnels. The town is the same every day; only the loot
    is new. It's built off the lake map at x 2000, the way the tent rooms sit underground, so nothing on the lake reaches you.
-   Getting in:  dig an 8 ft hole (long shovel) at the middle of the old town (SIM.OLD_TOWN, the cracked ground with old
+   Getting in:  dig a 5 ft hole (any shovel) at the middle of the old town (SIM.OLD_TOWN, the cracked ground with old
                 timbers sticking out; the X/Y on the Warden's note). Only there, and you always land in the same place
-                (JT: fixed while we build the level). The floor gives way: stand in the hole and press F.
+                (JT: fixed while we build the level). The floor gives way: press F by the hole to climb down.
    Down there:  it's dark (bring the flashlight). Some tunnels are crawlspaces (crouch, C). Finds lie around (F picks them
                 up); Kate's vault has gold bars. Everyone who breaks through shares the same town.
    Getting out: climb a shaft (F under it) or the old well. You can't alone: a friend down here crouching next to you boosts
@@ -128,7 +128,7 @@ function shaftMark(k,b){
    stairwell (sim.js townBreaks, townBreachSpot). ---- */
 function readWardenNote(){
   const[X,Y]=coordXY(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z);
-  toast(`The Warden's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 8 ft. Floor gives. Don't tell Mr. Sir." (Your coordinates are above the Field map button.)`,'gold',9000);
+  toast(`The Warden's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 5 ft. Floor gives. Don't tell Mr. Sir." (Your coordinates are above the Field map button.)`,'gold',9000);
   logEv('note',{});
 }
 /* ---- the old town on the lake: a clue (cracked, darker ground and old timbers poking out) ---- */
@@ -141,7 +141,7 @@ function readWardenNote(){
 
 /* ---- breaking through ---- */
 function townCheckBreach(h){
-  if(h.d<2.4||h.breachTried||!h.own||(typeof ZONE_H!=='undefined'&&ZONE_H))return;h.breachTried=true;
+  if(h.d<SIM.TOWN_BREAK_DEPTH||h.breachTried||!h.own||(typeof ZONE_H!=='undefined'&&ZONE_H))return;h.breachTried=true;
   if(!SIM.townBreaks(h.x,h.z,RUN.day||1))return;
   const k=h.x+'|'+h.z;
   if(online())wsSend({t:'breach',x:h.x,z:h.z});else addBreach(k,{x:h.x,z:h.z,at:Date.now(),ladder:false});
@@ -152,7 +152,7 @@ function addBreach(k,b){
   if(had)return;
   const d=new T.Mesh(new T.CircleGeometry(0.8,16),new T.MeshBasicMaterial({color:0x050403}));d.rotation.x=-Math.PI/2;d.position.set(b.x,groundAt(b.x,b.z)+0.03,b.z);scene.add(d);breachDisc.set(k,d);
   if(Math.hypot(P.x-b.x,P.z-b.z)<20&&!S.inTown){sfx.thud();noise(1.2,120,0.7,0.5,'lowpass');
-    toast('The bottom of the hole gave way. There\'s a dark room down there: the buried town. Stand in the hole and press F to climb down.','gold',7000)}
+    toast('The bottom of the hole gave way. There\'s a dark street down there: the buried town. Press F by the hole to climb down.','gold',7000)}
 }
 function breachNear(r){for(const[k,b]of BREACH)if(Math.hypot(P.x-b.x,P.z-b.z)<r)return{k,b};return null}
 
@@ -174,6 +174,7 @@ function exitTown(x,z,why){
 }
 /* who can help you up a shaft or a well: a staked ladder, a friend down here crouching next to you, or a hand from the top */
 function climbHelp(b){
+  if(b)return'your own two hands';   // JT: much easier for now -- the shaft you came down you can climb back up alone (wells still need a boost)
   if(b&&b.ladder)return'the rope ladder';
   for(const R of remotes.values()){const g=R.p.g.position;if(g.x>TW.X-60&&(R.f&8)&&!(R.f&2)&&Math.hypot(g.x-P.x,g.z-P.z)<2.6)return R.name+' boosting you'}
   if(b)for(const R of remotes.values()){const g=R.p.g.position;if((R.f&256)&&Math.hypot(g.x-b.x,g.z-b.z)<3.6)return R.name+'\'s hand'}
@@ -190,7 +191,7 @@ function townSpot(){
 function townUse(s){
   if(s.id==='townDown'){enterTown(s.k);return true}
   if(s.id==='townLoot'){townTake(s.e);return true}
-  if(s.id==='townStair'){const O=SIM.OLD_TOWN;exitTown(O.x+O.r+4,O.z,'You climb the broken stairwell and come out at the edge of the old town.');return true}
+  if(s.id==='townStair'){const O=SIM.OLD_TOWN;exitTown(O.x+4,O.z+3,'You climb the broken stairwell and come out by the hole in the old town.');return true}
   if(s.id==='townShaft'||s.id==='townWell'){
     const help=climbHelp(s.id==='townShaft'?s.b:null);
     if(!help){
@@ -259,6 +260,6 @@ function townHello(m){
 
 command('town',{usage:'town [in|out]',help:'Buried town: break through right where you stand and drop in, or climb straight out (testing).',
   run([a]){a=(a||'in').toLowerCase();
-    if(a==='out'){if(!S.inTown)return'Not in the town.';const O=SIM.OLD_TOWN;exitTown(O.x+O.r+4,O.z,'');return'Back on the lake.'}
+    if(a==='out'){if(!S.inTown)return'Not in the town.';const O=SIM.OLD_TOWN;exitTown(O.x+4,O.z+3,'');return'Back on the lake.'}
     if(S.inTown)return'Already down there.';
     const x=r1(P.x),z=r1(P.z),k=x+'|'+z;addBreach(k,{x,z,at:Date.now(),ladder:false});enterTown(k);return'Dropped into the buried town.'}});

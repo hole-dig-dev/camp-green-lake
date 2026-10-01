@@ -687,7 +687,7 @@ wss.on('connection', (ws, req) => {
       }
       case 'breach': { // an 8 ft hole broke through into the buried town (89-town.js). Must be a real, deep hole near you.
         const x = r1(num(m.x, -595, 595, 0)), z = r1(num(m.z, -595, 595, 0)), k = x + '|' + z;
-        if ((world.zone || 'lake') !== 'lake' || Math.hypot(x - c.x, z - c.z) > 6 || (world.holes[k] || 0) < 2.4) return;
+        if ((world.zone || 'lake') !== 'lake' || Math.hypot(x - c.x, z - c.z) > 6 || (world.holes[k] || 0) < SIM.TOWN_BREAK_DEPTH) return;
         if (!SIM.townBreaks(x, z, world.run.day)) return;
         world.breaches = world.breaches || {}; if (world.breaches[k]) return;
         world.breaches[k] = { x, z, at: Date.now(), ladder: false }; dirty = true;
