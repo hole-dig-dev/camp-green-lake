@@ -91,3 +91,9 @@ play every hazard, NPC schedule or seat interaction. Please complete that gamepl
 
 Make later model edits in Blender, rebuild with `art/blender/camper_export.py`, commit the compressed `.blend`
 and exported GLB together, and bump the loader's cache version when changing the served asset.
+
+## Cosmetic libraries
+
+JT approved all twenty [hats](docs/art/hats-20.md) and [faces](docs/art/faces-20.md).
+The [twenty glasses](docs/art/glasses-20.md) are ready for review at `/glasses-lab/`, with face and hat selectors.
+These are independent head-bone attachments; preserve the current head, nose, skinning, animations and physics.

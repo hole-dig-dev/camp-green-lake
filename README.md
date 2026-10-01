@@ -12,9 +12,12 @@ Blender/GLB assets, continuous elbow/knee skinning, shared player/NPC integratio
 **Twenty new hat candidates:** open `/hat-lab/` on your game server to compare them on the approved camper.
 [Hat library and Blender source](docs/art/hats-20.md).
 
-JT approved all twenty hats; the complete library is retained. **Twenty cosmetic player faces:** open `/face-lab/`
+JT approved all twenty hats and faces; the complete library is retained. **Twenty cosmetic player faces:** open `/face-lab/`
 to compare face details on the unchanged head and try combinations with the approved hats.
 [Face library and Blender source](docs/art/faces-20.md).
+
+**Twenty glasses:** open `/glasses-lab/` to compare regular glasses, sunglasses and crazy frames on the same head,
+with the approved faces and hats. [Eyewear library and Blender source](docs/art/glasses-20.md).
 
 Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, one buried prize, and a group of friends arguing about where to dig.
 
