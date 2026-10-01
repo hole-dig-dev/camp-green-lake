@@ -1,6 +1,10 @@
 # Camp Green Lake
 
-A multiplayer browser digging game set in the dry lake bed from *Holes*. Dig five-foot holes, sell what you find to Mr. Sir, dodge yellow-spotted lizards, and work with your friends to find what Kissin' Kate Barlow buried.
+A multiplayer browser digging game set in the dry lake bed from *Holes*. Dig the lake bed for sand, sift it for gold, sell what you dig up to Mr. Pendanski, gear up, and pool your gold with your crew. Dodge yellow-spotted lizards along the way, and find what Kissin' Kate Barlow buried.
+
+**The gold rush (JT + Greg, 2026-09-30):** the game is now a repeatable loop, not a run of acts. Dig, fill your bucket,
+sift it for gold, buy gear that gets you more gold. The design: [docs/plans/2026-09-30-gold-rush.md](docs/plans/2026-09-30-gold-rush.md).
+The version with Act 1 and Act 2 is kept on the `archive/acts-era` branch (tag `acts-era-2026-09-30`).
 
 **Updated character models and animations:** [Claude's character handoff](CHARACTER-HANDOFF.md) lists the approved
 Blender/GLB assets, continuous elbow/knee skinning, shared player/NPC integration and physics validation steps.
@@ -16,17 +20,19 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 - **Q** eat an onion (lizards won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound
 - **Voice chat** (proximity, like Lethal Company / Rust): click **Voice off** in the bottom-right HUD to turn on your mic (your browser will ask permission). Hold **B** to talk (push-to-talk is the default), or click the mode button to switch to always-on mic. Click **Mute voices** to silence everyone else without muting game sound. Whoever's talking gets a green glow on their name tag. **M** (sound off) mutes voice chat too, since it shares the game's volume.
-- **Esc** pauses (a touch-screen game gets a small pause button in the HUD instead): Resume, Options, Controls, Restart (respawns you at camp; keeps your seeds, gear, and the team's progress), or Quit to title. The game keeps running for everyone else while you're paused.
+- **Esc** pauses (a touch-screen game gets a small pause button in the HUD instead): Resume, Options, Controls, Restart (respawns you at camp; keeps your gold, gear, and the crew bank), or Quit to title. The game keeps running for everyone else while you're paused.
 
 In Options you can adjust mouse sensitivity, invert Y, touch look speed, field of view, master/effects/music/voice-chat volume, shadows, render quality, and the FPS counter, and rebind every control except Esc and the console key (voice push-to-talk is rebindable too). Settings and key bindings are saved in the browser (`localStorage`) and reload with you. WASD and the arrow keys always move you, even if you rebind them.
 
 The soundscape uses CC0 recordings for footsteps, digging, fabric/doors, birds, crickets, and rain, plus synthesized game cues and live proximity voice. The original wind remains the default; a recorded wind is available for A/B comparison with `audio wind new` in the developer console. [The sound inventory and recording credits](docs/audio-inventory.md) list every sound family and how it is made. The [single MP3 audio reel](docs/audio-showcase.mp3) previews the fixed sounds, with [cue times](docs/audio-showcase.md). The [asset library](asset-library/CATALOG.md) tracks every sound we use, liked, or retired.
 
-Find the gold tube marked **KB** and take it to the Warden. She'll mark the search area with red flags. The suitcase is buried deeper than five feet, so you'll need the long-handled shovel from the Wreck Room.
+**The gold loop:** every scoop of a hole puts sand in your **bucket** (the bar under Water). A bucket holds 5 holes of sand (10 and 15 with the bigger buckets from the Supply Depot). Bring it to the **sifter** in camp and press F for gold: about 4 gold a hole on average, and some batches are rich (or a nugget turns up). Sell your finds to **Mr. Pendanski** at the Supply Depot window (heavy finds, carry them to his window). Talk to **the Warden** to put gold in the **crew bank**, the crew's shared gold for the big purchases. Water's free at the drums by the water truck.
+
+Find the gold tube marked **KB** and take it to the Warden. She'll mark the search area with red flags. The suitcase is buried deeper than five feet, so you'll need the long-handled shovel from the Supply Depot.
 
 Also in camp:
-- **D Tent blackjack**: X-Ray deals. Bet your sunflower seeds, blackjack pays 3 to 2.
-- **Conversations**: walk up to Mr. Sir, the Warden, or the D Tent crew and press F. Some of them know where things are buried.
+- **D Tent blackjack**: X-Ray deals. Bet your gold, blackjack pays 3 to 2.
+- **Conversations**: walk up to the Warden, Mr. Pendanski, or the D Tent crew and press F. Some of them know where things are buried.
 
 <details>
 <summary>Easter egg (spoiler)</summary>

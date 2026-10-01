@@ -2,7 +2,21 @@
    so the clock, the quota, heavy loot and the monsters behave the same either way. Positions are x/z only. */
 (function (root) {
   const CYCLE = 12 * 60 * 1000, DAYMS = 9.5 * 60 * 1000, NIGHT_SPLIT = DAYMS + (CYCLE - DAYMS) / 2, EDGE = 595;
-  const SELL = { x: 1.4, z: 32.6, r: 6 }; // Mr. Sir's truck: bring heavy loot here
+  const SELL = { x: 16, z: 39, r: 5 }; // Mr. Pendanski's Supply Depot window (the gold rush, 2026-09-30): bring heavy loot here
+  /* ---- the gold rush (JT + Greg, 2026-09-30): dig sand into your bucket, sift it at camp for gold ----
+     A bucket holds so many holes' worth of sand (a hole = 5 ft deep); the sifter turns a full one into about
+     GOLD.perHole gold a hole, give or take luck (siftGold). Gold you carry is yours; deposit it in the crew bank (the
+     Warden's) for the big stuff everyone shares. */
+  const GOLD = { perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
+  /* the sifter's take for `holes` holes of sand: about perHole a hole; a batch runs from about half to double that, and
+     about 1 in 16 turns up a nugget (2-4x). rnd: a 0..1 random function; mult: dig day doubles it. */
+  function siftGold(holes, rnd, perHole = GOLD.perHole, mult = 1) {
+    if (!(holes > 0)) return { gold: 0, luck: 1, nugget: false };
+    const g = () => { let u = 0; for (let i = 0; i < 4; i++) u += rnd(); return (u - 2) / 0.577; }; // about a normal 0,1
+    let luck = Math.exp(g() * 0.33); luck = Math.min(2.2, Math.max(0.45, luck));
+    const nugget = rnd() < 1 / 16; if (nugget) luck *= 2 + rnd() * 2;
+    return { gold: Math.max(1, Math.round(holes * perHole * luck * mult)), luck, nugget };
+  }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const wrapT = t => ((t % CYCLE) + CYCLE) % CYCLE;
   const clockT = (c, now) => (c && c.paused ? wrapT(c.pt) : wrapT(now + (c ? c.off : 0)));
@@ -721,20 +735,20 @@
     heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
     sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
     breeding: { name: 'Lizard breeding season', desc: 'Lizard hatchlings everywhere, twice as many.' },
-    stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' },
+    stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
     fullmoon: { name: 'Full moon', desc: 'Madame Zeroni is out all night. No police.' },
-    digday: { name: 'Dig day', desc: 'Double quota, but Mr. Sir pays double.' },
+    digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
     inspection: { name: 'Inspection day', desc: 'The Warden walks the lake all day. Look busy.' },
   };
   function rollMood(day, curse) {
     if (day <= 1) return 'normal';
     const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
-    const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 1 + c, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
+    const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 0, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
     let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return 'normal';
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

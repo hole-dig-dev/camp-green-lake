@@ -6,8 +6,8 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.PI/4))%8)+8)%8;return['north','north-east','east','south-east','south','south-west','west','north-west'][i]}
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
-function uiOpen(){return shopOpen||invOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||tuneOpen()||!$('#fired').hidden||PAUSE.open||fieldMapOpen}
-function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='sir'?sirNode(true):who==='warden'?wardenNode(true):botNode(bot,true))}
+function uiOpen(){return shopOpen||invOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||tuneOpen()||PAUSE.open||fieldMapOpen}
+function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='warden'?wardenNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true;relockSoon()}
 function showNode(node){
   $('#dlgName').textContent=node.name;$('#dlgText').textContent=node.text;
@@ -20,21 +20,20 @@ const LEAVE={label:'See you later.',leave:true};
 function reply(name,text,back){return{name,text,opts:[{label:'Something else.',go:back},LEAVE]}}
 function reportKB(){
   S.reported=true;S.hasKB=false;S.seeds+=100;sfx.gold();reveal('You');wsSend({t:'kb'});
-  toast('+100 seeds. The Warden planted red flags around the search area. Check your map.','gold',7000);
+  toast('+100 gold. The Warden planted red flags around the search area. Check your map.','gold',7000);
   if(!S.up.long)setTimeout(()=>toast('Kate buried it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
-function sirNode(first){
-  const back=()=>sirNode(false),opts=[],sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
-  if(S.water<waterMax()-2)opts.push({label:'Can I fill my canteen?'+(RUN.mood==='stingy'?` (${Math.max(0,3-(S.refills||0))} left today)`:''),go:()=>{if(RUN.mood==='stingy'&&(S.refills||0)>=3)return reply('Mr. Sir','Three refills. That\'s the rule today. Go suck on a rock.',back);S.refills=(S.refills||0)+1;S.water=waterMax();sfx.splash();return reply('Mr. Sir','Drink up. Then get back out there. The sun doesn\'t care about your feelings.',back)}});
-  if(S.sack.length)opts.push({label:`I found some stuff. (${S.sack.length} item${S.sack.length>1?'s':''}, worth ${sum} seeds)`,go:()=>{S.seeds+=sum;S.sack=[];sfx.coin();payTeam(sum);addXP(sum/2);toast(`Mr. Sir paid ${sum} seeds. They count toward the team quota.`,'good');return reply('Mr. Sir',pick(['This isn\'t a Girl Scout camp. But fine. Here\'s your seeds.','Don\'t spit your seeds on my truck.','Keep \'em coming, camper.']),back)}});
-  if(S.hasKB)opts.push({label:'I found a gold tube marked KB.',go:()=>reply('Mr. Sir','That ain\'t mine. The Warden will want that. Her cabin\'s the one with the trees.',back)});
-  opts.push({label:'Can I have some of your sunflower seeds?',go:()=>{if(!DLG.used.sirSeeds&&Math.random()<0.5){DLG.used.sirSeeds=1;S.seeds+=3;sfx.coin();return reply('Mr. Sir','Fine. Three. You tell anybody, you dig two holes tomorrow. (+3 seeds)',back)}return reply('Mr. Sir','These are MY seeds. I quit smoking for these seeds.',back)}});
-  opts.push({label:'Why do we dig holes all day?',go:()=>({name:'Mr. Sir',text:'Builds character. Dig a hole every day in the hot sun and you come out a better kid.',opts:[{label:'Is that the real reason?',go:()=>reply('Mr. Sir','You ask a lot of questions for somebody holding a shovel. Go ask the Warden. Actually, don\'t.',back)},{label:'Got it. Character.',go:back},LEAVE]})});
-  opts.push(LEAVE);
-  return{name:'Mr. Sir',text:first?pick(['What do you want, camper? Make it quick.','You look thirsty. Good.','Talk fast. The truck leaves when I say it leaves.']):'Anything else?',opts};
+/* the crew bank (84-coop.js depositGold): pick how much of your own gold goes in */
+function depositNode(back){
+  const opts=[],have=S.seeds,amts=[...new Set([10,50,Math.floor(have/2),have].filter(v=>v>0&&v<=have))].sort((a,b)=>a-b);
+  for(const v of amts)opts.push({label:v===have?`All of it (${v} gold)`:v===Math.floor(have/2)&&v!==10&&v!==50?`Half (${v} gold)`:`${v} gold`,go:()=>{depositGold(v);return reply('The Warden',pick(['I\'ll keep it safe. Safer than you would.','Into the safe it goes. Now get back out there.','Good. The crew bank buys the big things. Not candy.']),back)}});
+  opts.push({label:'Never mind.',go:back});
+  return{name:'The Warden',text:`The crew bank has ${RUN.bank} gold. How much are you putting in?`,opts};
 }
 function wardenNode(first){
   const back=()=>wardenNode(false),opts=[];
+  if(S.seeds>0)opts.push({label:`Put gold in the crew bank. (You have ${S.seeds} gold.)`,go:()=>depositNode(back)});
+  opts.push({label:'How much is in the crew bank?',go:()=>reply('The Warden',`${RUN.bank} gold. Everyone's gold, for the big things the whole crew will use. Not for candy.`,back)});
   if(S.hasKB&&!S.reported)opts.push({label:'I found a gold tube marked KB.',go:()=>{reportKB();return reply('The Warden','Well, well. Where did you find this? Never mind. Dig inside my red flags. Nobody sleeps until you find it.',back)}});
   opts.push({label:'Where should I dig?',go:()=>reply('The Warden',S.revealed?(S.up.long?'Inside my flags. Did I stutter?':'Inside my flags. And it\'s deep, sugar. Buy a longer shovel.'):'Anywhere you like. If you find anything interesting, you bring it straight to me.',back)});
   opts.push({label:'Nice nail polish.',go:()=>({name:'The Warden',text:'Thank you. I make it myself. Want to know the secret ingredient?',opts:[{label:'...Sure?',go:()=>reply('The Warden','Rattlesnake venom. Completely harmless. Once it dries.',back)},{label:'No thanks.',go:back},LEAVE]})});
@@ -115,13 +114,13 @@ function renderBJ(){
   if(!betPill.hidden)$('#bjBetHeader').textContent=BJ.stake||Math.min(BJ.bet,S.seeds);
 }
 function openCards(){BJ.open=true;digHeld=false;releaseLock();$('#cards').hidden=false;$('#bjResult').textContent='';
-  bjSay(S.seeds<5?'You got no seeds. Go dig some holes and come back.':pick(['Sit down. Blackjack pays three to two. I stand on seventeen.','You in? Minimum bet is five seeds.','Cards are clean. Mostly.']));
+  bjSay(S.seeds<5?'You got no gold. Go dig some holes and come back.':pick(['Sit down. Blackjack pays three to two. I stand on seventeen.','You in? Minimum bet is five gold.','Cards are clean. Mostly.']));
   renderBJ();setTimeout(()=>$('#bjDeal').focus(),30)}
 function closeCards(){if(BJ.phase!=='bet'){bjSay('Finish the hand first.');return}BJ.open=false;$('#cards').hidden=true;
-  if(BJ.net)toast(`You left the table ${BJ.net>0?'up':'down'} ${Math.abs(BJ.net)} seeds.`,BJ.net>0?'good':'bad');BJ.net=0}
+  if(BJ.net)toast(`You left the table ${BJ.net>0?'up':'down'} ${Math.abs(BJ.net)} gold.`,BJ.net>0?'good':'bad');BJ.net=0}
 function bjDeal(){
   if(BJ.phase!=='bet'||BJ.busy)return;const bet=Math.min(BJ.bet,S.seeds);
-  if(bet<5){bjSay('Minimum bet is five seeds. Go dig some holes.');return}
+  if(bet<5){bjSay('Minimum bet is five gold. Go dig some holes.');return}
   S.seeds-=bet;BJ.stake=bet;BJ.you=[drawCard(),drawCard()];BJ.dealer=[drawCard(),drawCard()];BJ.phase='play';$('#bjResult').textContent='';cardSnd();
   renderBJ();
   if(isBJ(BJ.you)||isBJ(BJ.dealer)){BJ.busy=true;setTimeout(bjSettle,700)}
@@ -139,9 +138,9 @@ function bjSettle(){
   const y=handVal(BJ.you),d=handVal(BJ.dealer),yb=isBJ(BJ.you),db=isBJ(BJ.dealer);let pay=0,res,line;
   if(yb&&db){pay=BJ.stake;res='Push';line='Two blackjacks. Nobody wins.'}
   else if(yb){pay=Math.floor(BJ.stake*2.5);res='Blackjack';line='Blackjack. Lucky. Real lucky.'}
-  else if(db){res='X-Ray has blackjack';line='Blackjack. Hand over the seeds.'}
-  else if(y>21){res='Bust';line=pick(['Twenty-two. One too many.','Bust. Thanks for the seeds.'])}
-  else if(d>21){pay=BJ.stake*2;res='X-Ray busts';line='Dealer busts. Take your seeds before I change my mind.'}
+  else if(db){res='X-Ray has blackjack';line='Blackjack. Hand over the gold.'}
+  else if(y>21){res='Bust';line=pick(['Twenty-two. One too many.','Bust. Thanks for the gold.'])}
+  else if(d>21){pay=BJ.stake*2;res='X-Ray busts';line='Dealer busts. Take your gold before I change my mind.'}
   else if(y>d){pay=BJ.stake*2;res='You win';line=pick(['Fine. You win this one.','Beginner\'s luck.'])}
   else if(y===d){pay=BJ.stake;res='Push';line='Push. Nobody wins.'}
   else{res='You lose';line=pick(['House wins.','X-Ray always wins. Remember that.'])}

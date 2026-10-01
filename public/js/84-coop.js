@@ -22,33 +22,29 @@ function setHat(p,l){
   const c=[0,0xd9c27a,0x222222,0xd4af37][t];const br=cyl(0.42,0.42,0.04,10,c),cr=cyl(0.2,0.24,0.2,8,c);cr.position.y=0.12;h.add(br,cr);
 }
 
-/* ---- the team quota: sell enough to Mr. Sir by curfew, or the Warden fires the whole crew ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // curse/mood: 81-mood.js
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e7,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);$('#dayTag').textContent='Day '+RUN.day}
+/* ---- the crew bank (the gold rush, 2026-09-30): gold a camper deposits with the Warden (80-ui.js wardenNode), shared by
+   the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
+const RUN={day:1,bank:0,curse:0,mood:'normal'};   // curse/mood: 81-mood.js
+function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}$('#dayTag').textContent='Day '+RUN.day}
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
-function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{v*=RUN.mood==='digday'?2:1;setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
+/* put v of your own gold in the crew bank */
+function depositGold(v){
+  v=Math.min(S.seeds,Math.floor(v));if(!(v>0))return 0;
+  S.seeds-=v;sfx.coin();addXP(Math.min(40,v/5));
+  if(online())wsSend({t:'deposit',v});else{RUN.bank+=v;saveRun()}
+  toast(`You put ${v} gold in the crew bank.`,'good',3000);return v;
+}
+function deposited(m){if(m.id!==myId())toast(`${m.n||'A camper'} put ${num(m.v,0,1e6,0)|0} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
-  const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
-  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('QUOTA REACHED! Anything more is a bonus. Be back inside the fence by curfew.','gold',5500);sfx.gold()}
+  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
-function quotaMet(){toast(`QUOTA MET. The Warden keeps the crew for day ${RUN.day}. New quota: ${RUN.quota} seeds. +20 seeds, +100 XP`,'gold',7000);S.seeds+=20;addXP(100)}
-function fired(bank,quota){
-  if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew sold ${bank} of the ${quota} seeds the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  // a new run: seeds and gear are gone, your level stays
-  Object.assign(S,{seeds:20,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
-}
-$('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run')}catch(e){}location.reload()};
+function newDay(){toast(`Day ${RUN.day}. A new day on the lake. The sand's still full of gold.`,'gold',5000);addXP(50)}
 function soloEndOfDay(){
   if(online()||!S.started)return;
-  const played=S.dayPlay||0;S.dayPlay=0;
-  if(RUN.bank>=RUN.quota){RUN.day++;noteDay(RUN.day);RUN.bank=0;RUN.curse=Math.max(0,(RUN.curse||0)-tune('curse.quota'));RUN.mood=SIM.rollMood(RUN.day,RUN.curse);RUN.quota=SIM.quotaFor(RUN.day,1)*(RUN.mood==='digday'?2:1);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;quotaMet()}
-  else if(played<180)graceDay();
-  else{const b=RUN.bank,q=RUN.quota;RUN.day=1;RUN.bank=0;RUN.curse=0;RUN.mood='normal';saveRun();fired(b,q)}
+  S.dayPlay=0;RUN.day++;noteDay(RUN.day);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay();
 }
 
-/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to Mr. Sir's truck; the safe takes two to lift ---- */
+/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
@@ -64,11 +60,11 @@ function propMesh(type){
   scene.add(g);return g;
 }
 function addProp(id,type,x,z,val,val0){if(PROPS.has(id)||!(type in SIM.HEAVY||type==='cart'))return;const g=propMesh(type);g.position.set(x,groundAt(x,z),z);   // val: a carried find's own worth (45-state.js carryFind); val0: what it was when dug up
-  const v=val!=null?val:SIM.HEAVY[type];PROPS.set(id,{id,type,x,z,n:0,g,val:type==='cart'?undefined:v,val0:type==='cart'?undefined:(val0!=null?val0:v),L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+v+' seeds','',type==='cart'?1.2:1.7)})}
+  const v=val!=null?val:SIM.HEAVY[type];PROPS.set(id,{id,type,x,z,n:0,g,val:type==='cart'?undefined:v,val0:type==='cart'?undefined:(val0!=null?val0:v),L:makeLabel(g,type==='cart'?'Wheelbarrow':LOOT[type].name+' · '+v+' gold','',type==='cart'?1.2:1.7)})}
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
-  const mine=who.includes(myId());toast(`Mr. Sir paid ${v} seeds for the ${name}. It all counts toward the team quota.`,'good',4500);
+  const mine=who.includes(myId());toast(`Mr. Pendanski paid ${v} gold for the ${name}.`+(who.length>1?' Split between everyone who carried it.':''),'good',4500);
   if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}

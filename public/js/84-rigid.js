@@ -129,7 +129,7 @@ function stepRigid(t,dt){
   const wasRest=t.rest;t.rest=!held&&t.restT>0.6;
   if(online()&&((t.rest&&!wasRest)||(!t.rest&&now-(t.sentT||0)>100))){t.sentT=now;const q=t.q;   // the settling update always goes out: nothing more is sent after it
     wsSend({t:'pst',id:t.id,x:+t.x.toFixed(2),y:+t.y.toFixed(2),z:+t.z.toFixed(2),vx:+t.vx.toFixed(2),vy:+t.vy.toFixed(2),vz:+t.vz.toFixed(2),val:t.val,rest:t.rest,q:[+q.x.toFixed(3),+q.y.toFixed(3),+q.z.toFixed(3),+q.w.toFixed(3)]})}
-  if(!online()&&Math.hypot(t.x-SIM.SELL.x,t.z-SIM.SELL.z)<SIM.SELL.r){const v=t.val;propSold(t.id,v,[myId()]);payTeam(v)}
+  if(!online()&&Math.hypot(t.x-SIM.SELL.x,t.z-SIM.SELL.z)<SIM.SELL.r){const v=t.val;propSold(t.id,v,[myId()])}
 }
 /* a throw: the whole box gets the throw's speed, plus a random tumble */
 function rigidKick(t,dvx,dvy,dvz){

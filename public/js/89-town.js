@@ -209,7 +209,7 @@ function townTake(e){
   if(S.sack.length>=sackMax()){toast(`Your sack is full (${sackMax()} items).`,'bad',2500);return}
   townGone(e.L.id);if(online())wsSend({t:'tgot',id:e.L.id});
   S.sack.push(e.L.type);sfx.find();addXP(4+LOOT[e.L.type].val/4);
-  toast(`Found: ${LOOT[e.L.type].name} (worth ${LOOT[e.L.type].val} seeds).`,'good',3000);logEv('townLoot',{type:e.L.type});
+  toast(`Found: ${LOOT[e.L.type].name} (worth ${LOOT[e.L.type].val} gold).`,'good',3000);logEv('townLoot',{type:e.L.type});
 }
 function townGone(id){const e=TLOOTM.get(id);if(e){if(townGroup)townGroup.remove(e.m);TLOOTM.delete(id)}TGOT.add(id)}
 

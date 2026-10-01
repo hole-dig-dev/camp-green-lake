@@ -158,7 +158,8 @@ const CAMP_PROPS=[
   {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
   {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Supply Depot, doors facing the yard
   {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
-  // Mr. Sir's pickup (tailgate down toward him: heavy loot sells here, sim.js SELL) is placed by 87-truck.js: it can be driven
+  {m:'Sifter',x:SIM.GOLD.SIFTER.x,z:SIM.GOLD.SIFTER.z,ry:SIM.GOLD.SIFTER.ry,w:2.6,d:1.5},   // the gold rush: sand in, gold out (art/blender/sifter.py, 45-state.js siftBucket)
+  // Mr. Sir's pickup is placed by 87-truck.js: it can be driven
 ];
 {
   const byModel={};

@@ -4,6 +4,9 @@
 const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e});
 sir.g.position.set(1.2,baseH(1.2,34),34);sir.g.rotation.y=Math.PI;scene.add(sir.g);
 const sirL=makeLabel(sir.g,'Mr. Sir','npc');
+/* the gold rush (2026-09-30): Mr. Sir is gone from camp. Water's free at the drums by the water truck and Mr. Pendanski
+   buys your finds. (He's kept, hidden, for the disco and his lake walks in 83-roster.js.) */
+sir.g.visible=false;sirL.el.remove();labeled.splice(labeled.indexOf(sirL),1);
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
 warden.g.position.set(-34,baseH(-34,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
 const wardenL=makeLabel(warden.g,'The Warden','npc');
@@ -22,7 +25,8 @@ function updateClerk(dt){
   clerk.waveT=Math.max(0,clerk.waveT-dt);animPerson(clerk,clerk.waveT>0?9:0,dt);
 }
 const SPOTS=[
-  {id:'sir',x:1.4,z:32.6,r:3.6},
+  {id:'water',x:SIM.GOLD.WATER.x,z:SIM.GOLD.WATER.z,r:SIM.GOLD.WATER.r},   // the water drums by the water truck: fill up, as often as you like
+  {id:'sift',x:SIM.GOLD.SIFTER.x,z:SIM.GOLD.SIFTER.z,r:SIM.GOLD.SIFT_R},   // the sifter: your bucket of sand in, gold out (45-state.js siftBucket)
   {id:'store',x:16,z:41.2,r:3.4},
   {id:'warden',x:-34,z:40,r:2.0},
   {id:'cards',x:D_TENT.table.x,z:D_TENT.table.z,r:1.6},   // moved inside D Tent (see "tent interiors" above)

@@ -45,7 +45,10 @@ const SHOP=[
   {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel'},
   {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long'},
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
-  {id:'canteen',name:'Big canteen',desc:'Holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
+  {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:50,cat:'dig',icon:'bucket'},
+  {id:'bucket3',name:'Huge bucket',desc:'Tier 3 bucket: holds 15 holes of sand.',cost:140,cat:'dig',icon:'bucket',needs:'bucket2'},
+  {id:'canteen',name:'Big canteen',desc:'Tier 2 canteen: holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
+  {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
   {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60,cat:'supplies',icon:'sack'},
   {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
@@ -71,7 +74,10 @@ function shopEffect(it){
     case 'spade': return {label:'Scoop depth',from:'0.088 m / scoop',to:'0.15 m / scoop',note:'About 70% deeper per scoop.'};
     case 'long': return {label:'Max hole depth',from:'5 ft',to:'8 ft'};
     case 'detector': return {label:'Detection range',from:'No detector',to:'7 m range'};
-    case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+' (current max)',to:(160+bonus)+' (with canteen)'}}
+    case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+'',to:(160+bonus)+''}}
+    case 'canteen3': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(160+bonus)+'',to:(230+bonus)+''}}
+    case 'bucket2': return {label:'Bucket holds',from:SIM.GOLD.buckets[0]+' holes of sand',to:SIM.GOLD.buckets[1]+' holes of sand'};
+    case 'bucket3': return {label:'Bucket holds',from:SIM.GOLD.buckets[1]+' holes of sand',to:SIM.GOLD.buckets[2]+' holes of sand'};
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
     case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
     case 'onion': return {label:'Lizard ward',from:`${S.onions} on hand`,to:'45 s protection per onion'};
@@ -81,7 +87,8 @@ function shopEffect(it){
 }
 function shopStatus(it){
   if(it.id==='battery'&&S.batt>=100)return{kind:'full'};
-  if(!it.stack&&S.up[it.id])return{kind:'owned'};
+  if(!it.stack&&(S.up[it.id]||SHOP.some(o=>o.needs===it.id&&S.up[o.id])))return{kind:'owned'};   // a tier 2 you've traded up from counts as owned
+  if(it.needs&&!S.up[it.needs])return{kind:'locked',need:SHOP.find(o=>o.id===it.needs).name};
   if(S.seeds<it.cost)return{kind:'short',need:it.cost-S.seeds};
   return{kind:'available'};
 }
@@ -125,7 +132,7 @@ function buildShopGrid(){
     const small=document.createElement('small');small.textContent=shopCatLabel(it.cat)+' · '+it.desc;
     copy.append(strong,small);
     const meta=document.createElement('span');meta.className='shop-item__meta';
-    const price=document.createElement('span');price.className='shop-item__price';price.textContent=it.cost+' seeds';
+    const price=document.createElement('span');price.className='shop-item__price';price.textContent=it.cost+' gold';
     const state=document.createElement('span');state.className='shop-item__state';
     meta.append(price,state);body.append(copy,meta);
     b.append(icon,body);
@@ -138,7 +145,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);
@@ -161,13 +168,14 @@ function renderShopDetail(){
     if(eff.note){const n=document.createElement('p');n.className='shop-detail__note';n.textContent=eff.note;box.appendChild(n)}
   }
   const priceRow=document.createElement('p');priceRow.className='shop-detail__price';
-  priceRow.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>${it.cost} seeds`;
+  priceRow.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>${it.cost} gold`;
   box.appendChild(priceRow);
   const btn=document.createElement('button');btn.type='button';btn.id='shopBuyBtn';btn.className='ui-button ui-button--primary';
   if(st.kind==='owned'){btn.textContent='Already issued';btn.disabled=true}
   else if(st.kind==='full'){btn.textContent='Battery full';btn.disabled=true}
-  else if(st.kind==='short'){btn.textContent=`Need ${st.need} more seeds`;btn.disabled=true}
-  else{btn.textContent=`Buy for ${it.cost} seeds`;btn.disabled=false;btn.onclick=()=>openShopConfirm(it.id)}
+  else if(st.kind==='short'){btn.textContent=`Need ${st.need} more gold`;btn.disabled=true}
+  else if(st.kind==='locked'){btn.textContent=`Buy the ${st.need} first`;btn.disabled=true}
+  else{btn.textContent=`Buy for ${it.cost} gold`;btn.disabled=false;btn.onclick=()=>openShopConfirm(it.id)}
   box.appendChild(btn);
   if(it.justBought){const badge=document.createElement('span');badge.className='ui-badge ui-badge--brass shop-detail__issued';badge.textContent='Issued';box.appendChild(badge)}
 }
@@ -176,7 +184,7 @@ function openShopConfirm(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   shopConfirming=true;
   const box=$('#shopConfirm');box.hidden=false;box.innerHTML='';
-  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} seeds. Balance after: ${S.seeds-it.cost}.`;
+  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} gold. Balance after: ${S.seeds-it.cost}.`;
   const row=document.createElement('div');row.className='shop-confirm__row';
   const yes=document.createElement('button');yes.type='button';yes.id='shopConfirmBuy';yes.className='ui-button ui-button--primary';yes.textContent='Confirm purchase';yes.onclick=()=>buyShopItem(id);
   const no=document.createElement('button');no.type='button';no.className='ui-button ui-button--quiet';no.textContent='Cancel';no.onclick=hideShopConfirm;
@@ -192,10 +200,10 @@ function hideShopConfirm(){
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   S.seeds-=it.cost;
-  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
+  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}
   sfx.coin();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
-  $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} seeds left.`;
+  $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} gold left.`;
   animateShopSeeds();renderShop();
   setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);
 }
@@ -246,7 +254,18 @@ function pollShopGamepad(){
 function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
 function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
 
-function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail()}
+function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail();
+  const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
+/* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
+   his window instead (sim.js SELL, 84-grab.js). */
+function sackValue(){return S.sack.reduce((s,t)=>s+LOOT[t].val,0)}
+function sellSack(){
+  if(!S.sack.length)return;const n=S.sack.length,sum=sackValue();
+  S.seeds+=sum;S.sack=[];sfx.coin();addXP(sum/2);clerk.waveT=1.6;logEv('sell',{n,v:sum});
+  toast(`Mr. Pendanski paid ${sum} gold for ${n} find${n===1?'':'s'}.`,'good',3000);
+  $('#shopFeedback').textContent=`Sold ${n} find${n===1?'':'s'} for ${sum} gold.`;animateShopSeeds();renderShop();
+}
+$('#shopSell').onclick=sellSack;
 function openShop(){
   shopOpen=true;clerk.waveT=1.6;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
   buildShopTabs();buildShopGrid();
@@ -277,7 +296,7 @@ function respawn(){if(inTent())exitTent();if(S.inTown)exitTown(0,39,'');S.ko=0;c
 function triggerWin(who,mine){
   if(S.won)return;S.won=true;
   rain.visible=true;if(rainGain)rainGain.gain.setTargetAtTime(0.18,AC.currentTime,2);
-  $('#winText').textContent=mine?'You dug up Stanley Yelnats\'s suitcase. Kissin\' Kate\'s treasure has been in the ground for over a hundred years. +500 seeds.':`${who} dug up Stanley Yelnats's suitcase. Kissin' Kate's treasure has been in the ground for over a hundred years.`;
+  $('#winText').textContent=mine?'You dug up Stanley Yelnats\'s suitcase. Kissin\' Kate\'s treasure has been in the ground for over a hundred years. +500 gold.':`${who} dug up Stanley Yelnats's suitcase. Kissin' Kate's treasure has been in the ground for over a hundred years.`;
   if(mine){S.seeds+=500;wsSend({t:'win'})}
   setTimeout(()=>{$('#win').hidden=false;releaseLock()},1600);
 }

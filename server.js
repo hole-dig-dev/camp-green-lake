@@ -1,6 +1,6 @@
 // Camp Green Lake multiplayer server: serves the game and relays campers over WebSocket.
 // The world (holes, dug-up items, the KB tube, the suitcase) is kept here so late joiners see it.
-// It also runs the shared rules in public/sim.js: the team quota, heavy loot, and the night monsters.
+// It also runs the shared rules in public/sim.js: the crew bank, heavy loot, and the night monsters.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -113,7 +113,7 @@ const WHACK_RATE = 6, WHACK_WINDOW_MS = 1000; // shovel swings at a javelina per
 const JAV_WHACK_MAX = 2.4;                   // generous server-side reach check for a 'whack' (latency headroom over the client's own ~1.9m check)
 const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lion, per connection per window
 const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
-const MAX_SELL_V = 900;                      // above a full sack of the rarest loot (~825); trims a hacked client's ceiling
+const MAX_DEPOSIT = 100000;                  // gold per crew-bank deposit; trims a hacked client's ceiling
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)
 const ipHttpWindow = new Map(); // ip -> recent HTTP request timestamps
@@ -432,14 +432,13 @@ function maybeSkipNight() {
   broadcastSleep();
 }
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
-function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) * (world.run.mood === 'digday' ? 2 : 1), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
+function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
 // the curse (sim.js CURSE): the crew's, 0-100. why: shown to everyone
 function addCurse(d, why) {
   const was = world.run.curse || 0; world.run.curse = Math.max(0, Math.min(100, was + d)); dirty = true;
   if (Math.round(world.run.curse) === Math.round(was)) return;
   LOG.log('curse', { d, curse: Math.round(world.run.curse), why }); broadcast({ t: 'curse', d, curse: Math.round(world.run.curse), why }); broadcast(runInfo());
 }
-const payMult = () => (world.run.mood === 'digday' ? 2 : 1); // dig day: Mr. Sir pays double
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
 wss.on('connection', (ws, req) => {
@@ -572,14 +571,15 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'got', id: c.id, item }, c.id);
         break;
       }
-      case 'sell': {
-        // Selling at Mr. Sir's truck pays the team bank toward today's quota. The client reports its own sack's
-        // value (client-authoritative, known issue) — MAX_SELL_V and the rate limit just cap the damage a hacked
-        // client can do per message and per second, they don't verify the sack was honestly earned.
+      case 'deposit': {
+        // Gold a camper puts in the crew bank (the Warden's; the gold rush, sim.js GOLD). Everyone shares it. The client
+        // says how much it took out of its own pocket (client-authoritative, like the rest of the economy): the rate limit
+        // and MAX_DEPOSIT just cap a hacked client per message.
         if (!withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return;
-        const v = num(m.v, 0, MAX_SELL_V, 0) | 0; if (!v) return;
-        world.run.bank += v * payMult(); dirty = true;
-        LOG.log('sell', { id: c.id, n: c.n, v });
+        const v = num(m.v, 0, MAX_DEPOSIT, 0) | 0; if (!v) return;
+        world.run.bank += v; dirty = true;
+        LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank });
+        broadcast({ t: 'deposit', id: c.id, n: c.n, v });
         broadcast(runInfo());
         break;
       }
@@ -646,11 +646,11 @@ wss.on('connection', (ws, req) => {
           for (const sid of sell) {
             const q = world.props[sid], v = q.val == null ? SIM.HEAVY[q.type] : q.val, who = [...new Set([c.id, ...(p.grab || []), ...(p.ropes || [])])];
             delete world.props[sid]; if (p.load) p.load = p.load.filter(l => l !== sid);
-            world.run.bank += v * payMult(); dirty = true;
+            dirty = true; // the gold goes to whoever carried it in (84-coop.js propSold), not the crew bank
             LOG.log('propSold', { item: sid, type: q.type, v, who, cart: p.type === 'cart' });
             broadcast({ t: 'psold', id: sid, v, who });
           }
-          if (sell.length) { broadcast(runInfo()); if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
+          if (sell.length) { if (p.type === 'cart') broadcast({ t: 'pcart', id, load: p.load || [] }); }
         }
         break;
       }
@@ -830,8 +830,7 @@ wss.on('connection', (ws, req) => {
       case 'admin':
         // Buttons in the hidden admin panel. Only the host can use them.
         if (!c.host) return;
-        if (m.a === 'fill') { world.run.bank = runInfo().quota; dirty = true; LOG.log('admin', { id: c.id, n: c.n, a: m.a }); broadcast(runInfo()); }
-        else if (m.a === 'empty') { world.run.bank = 0; dirty = true; LOG.log('admin', { id: c.id, n: c.n, a: m.a }); broadcast(runInfo()); }
+        if (m.a === 'empty') { world.run.bank = 0; dirty = true; LOG.log('admin', { id: c.id, n: c.n, a: m.a }); broadcast(runInfo()); }
         break;
       case 'disco': {
         const now = Date.now();
@@ -1069,7 +1068,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-/* ---- shared rules, 10 times a second: heavy loot, night monsters, the quota at curfew, and the event director ---- */
+/* ---- shared rules, 10 times a second: heavy loot, night monsters, the new day at curfew, and the event director ---- */
 const MON = { trucks: [], zer: null };
 const dirState = DIRECTOR.createState(); dirState.enabled = world.director.on; // one director for the whole camp; the server is its only authority
 let lastDirInfoT = 0; // throttle for the 'dirinfo' status broadcast (host "events" command reads it)
@@ -1162,26 +1161,14 @@ function simPlayers(now) {
   }));
 }
 function endOfDay() {
-  const q = runInfo(), played = world.run.played || 0;
+  // The gold rush (2026-09-30): no quota and no getting fired. Curfew just ends the day.
   world.run.played = 0;
   if (!joined().length) return;
-  if (world.run.bank < q.quota && played < 180) { LOG.log('grace', {}); broadcast({ t: 'grace' }); return; } // the crew only just got here: no check today
-  if (world.run.bank >= q.quota) {
-    LOG.log('quota', { met: true, bank: world.run.bank, quota: q.quota, day: world.run.day });
-    world.run.day++; world.run.bank = 0; world.run.peak = joined().length; dirty = true;
-    if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
-    world.run.curse = Math.max(0, (world.run.curse || 0) - tuneS('curse.quota', 10)); world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
-    broadcast({ ...runInfo(), t: 'quota', met: true });
-  } else {
-    // Fired: the run starts over. The lake is refilled and everyone's seeds and gear are gone (levels stay).
-    const got = q.bank;
-    LOG.log('fired', { bank: got, quota: q.quota });
-    const wasZone = world.zone || 'lake';
-    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun() }); ensureCart();
-    gotSet = new Set(); kbHolder = null; dirty = true; save();
-    broadcast({ t: 'fired', bank: got, quota: q.quota });
-    if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
-  }
+  LOG.log('newDay', { day: world.run.day + 1, bank: world.run.bank });
+  world.run.day++; world.run.peak = joined().length; dirty = true;
+  if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
+  world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
+  broadcast({ ...runInfo(), t: 'newday' });
 }
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;

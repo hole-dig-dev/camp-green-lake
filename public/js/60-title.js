@@ -5,7 +5,7 @@ const NICKS=['Caveman','Sploosh','Big Thumb','Onion Boy','Lizard Bait','Seeds','
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['seeds','water','sack','onions','tonic','medkit','up','hasKB','reported','holesDone','name','color','detOn','batt'];
+const SAVE_KEYS=['seeds','bucket','water','sack','onions','tonic','medkit','up','hasKB','reported','holesDone','name','color','detOn','batt'];
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch,room:S.tent}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
@@ -18,9 +18,9 @@ function startGame(resume){
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
-    S.seeds=num(r.seeds,0,1e6,20)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
+    S.seeds=num(r.seeds,0,1e9,20)|0;S.bucket=num(r.bucket,0,15,0);S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
-    S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','bigsack','rope'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
+    S.up={};if(r.up&&typeof r.up==='object')for(const k of ['spade','long','detector','canteen','canteen3','bucket2','bucket3','bigsack','rope','walkie'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
     const p=resume.P||{};P.x=num(p.x,-HALF+3,HALF-3,0);P.z=num(p.z,-HALF+3,HALF-3,39);P.y=groundAt(P.x,P.z);P.yaw=num(p.yaw,-100,100,0);P.pitch=num(p.pitch,-0.15,1.25,0.32);
     if(Number.isInteger(p.room)&&TENTS[p.room]){
@@ -39,8 +39,8 @@ function startGame(resume){
   if(S.revealed===false&&S.reported)reveal('You');
   lockMouse();
   if(S.resumed){toast('Welcome back to camp. Your progress was saved.','good',3500)}
-  else{setTimeout(()=>say(sirL,'You\'re gonna dig one hole a day. Five feet deep, five feet across.',6000),800);
-  setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig.','',5000),1500)}
+  else{setTimeout(()=>say(clerkL,'There\'s gold in that lake bed. Fill your bucket and bring it to the sifter.',6000),800);
+  setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig. Every scoop fills your bucket with sand; sift it at camp for gold.','',6500),1500)}
   sendJoin();
 }
 const campIn=$('#campPass'),campWrap=$('#campWrap'),campErr=$('#campErr'),startBtn=$('#startBtn');
