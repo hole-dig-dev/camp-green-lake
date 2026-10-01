@@ -75,6 +75,7 @@ addEventListener('keydown',e=>{
   if(pk==='tab'&&!e.repeat&&!uiOpen()){e.preventDefault();openInventory();return}   // Tab: fixed second key for the inventory (81-inventory.js)
   const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
   if(k==='i'&&!e.repeat&&!uiOpen()){e.preventDefault();openInventory();return}   // I (rebindable): inventory
+  if(k==='k'&&!e.repeat&&!uiOpen()){toggleCrewPanel();return}   // K (rebindable): the crew panel (78-hud.js)
   KEYS[k]=true;
   if(k===' '||k.startsWith('arrow'))e.preventDefault();
   if(k==='e'){

@@ -294,3 +294,29 @@ function updateCoords(){
   const t=S.inTown?'Underground':(([X,Y])=>`X ${X} · Y ${Y}`)(coordXY(P.x,P.z));
   if(t!==mapCoordsTxt){mapCoordsTxt=t;mapCoordsEl.textContent=t}
 }
+
+/* ---- the crew panel (JT 2026-10-01): what each of the D Tent crew is up to, with their health, stamina and water and
+   how full their bucket is, so you can keep an eye on them while you get on with your own digging. Under the map;
+   K hides / shows it (remembered). Hidden by default on a phone, where the screen's already full. ---- */
+let crewPanelOn=true,crewPanelT=0;const crewRowEls=[];
+try{const v=localStorage.getItem('cgl-crewPanel');crewPanelOn=v==null?!isTouch:v==='1'}catch(e){crewPanelOn=!isTouch}
+function toggleCrewPanel(){crewPanelOn=!crewPanelOn;try{localStorage.setItem('cgl-crewPanel',crewPanelOn?'1':'0')}catch(e){}toast(crewPanelOn?'Crew panel on (K to hide)':'Crew panel off (K to show)','',1400);updateCrewPanel(1)}
+function crewPanelBuild(){
+  const box=$('#crewRows');box.textContent='';crewRowEls.length=0;
+  for(const b of bots){const r=document.createElement('div');r.className='crew-row';
+    r.innerHTML=`<div class="crew-row__top"><b></b><span class="crew-row__doing"></span><span class="crew-bk"></span></div><div class="crew-bars"><div class="crew-bar crew-bar--hp" title="Health"><i></i></div><div class="crew-bar crew-bar--st" title="Stamina"><i></i></div><div class="crew-bar crew-bar--wt" title="Water"><i></i></div></div>`;
+    r.querySelector('b').textContent=b.d.n;box.appendChild(r);
+    crewRowEls.push({r,bk:r.querySelector('.crew-bk'),doing:r.querySelector('.crew-row__doing'),hp:r.querySelector('.crew-bar--hp i'),st:r.querySelector('.crew-bar--st i'),wt:r.querySelector('.crew-bar--wt i')})}
+}
+function updateCrewPanel(dt){
+  const el=$('#crewPanel'),show=crewPanelOn&&S.started&&!ZONE_H&&!PAUSE.open&&!fieldMapOpen;
+  if(el.hidden!==!show)el.hidden=!show;if(!show)return;
+  if((crewPanelT-=dt)>0)return;crewPanelT=0.25;
+  if(crewRowEls.length!==bots.length)crewPanelBuild();
+  const mb=$('#mapbox').getBoundingClientRect();el.style.top=Math.round(mb.bottom+8)+'px';el.style.maxHeight=Math.max(80,innerHeight-mb.bottom-70)+'px';
+  bots.forEach((b,i)=>{const E=crewRowEls[i],cap=crewWaterMax(b),txt=crewActivity(b);
+    if(E.doing.textContent!==txt)E.doing.textContent=txt;
+    E.r.classList.toggle('is-bad',b.state==='ko'||b.state==='tossed'||b.water<=0);
+    const bk=`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`;if(E.bk.textContent!==bk)E.bk.textContent=bk;
+    E.hp.style.width=clamp(b.hp??100,0,100)+'%';E.st.style.width=clamp(b.stam??100,0,100)+'%';E.wt.style.width=clamp((b.water??cap)/cap*100,0,100)+'%'});
+}
