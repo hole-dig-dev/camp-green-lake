@@ -200,6 +200,16 @@ function updateRagdolls(dt){
     }
     me.ragOn=!!st;
   }
+  // the D Tent crew (30-npcs.js crewRag): thrown about by the weather, knocked out by the animals
+  for(const b of bots){const p=b.p;if(!p.model)continue;const st=crewRag(b);
+    if(st){const gp=p.g.position;
+      {const q=ragPelvis(p);if(q&&Math.hypot(q.x-gp.x,q.z-gp.z)>4){p.rag=null;p.ragBlend=0}}
+      if(!ragActive(p))ragdollOn(p,{vx:b.v?b.v.x:0,vy:b.v?b.v.y:0,vz:b.v?b.v.z:0});
+      const r=p.rag;r.flail=st.flail;r.lift=0;r.damp=0;ragdollPin(p,gp.x,gp.y+r.hipH,gp.z,st.pin);
+      p.g.rotation.set(0,p.g.rotation.y,0);ragAfterMixer(p,dt,groundAt);
+      if(st.pin<0.05){const q=ragPelvis(p);if(q){gp.x+=(q.x-gp.x)*Math.min(1,dt*3);gp.z+=(q.z-gp.z)*Math.min(1,dt*3)}}   // he gets up where his body ended up
+    }else if(ragActive(p)||p.ragBlend>0){if(ragActive(p))ragdollOff(p);p.g.rotation.set(0,p.g.rotation.y,0);ragAfterMixer(p,dt)}
+  }
   // friends: pos flag 512 = ragdolled (1024 = airborne), 2 = downed. Each of us runs the flop pinned to where they are.
   for(const[rid,R]of remotes){
     const p=R.p;if(!p.model)continue;

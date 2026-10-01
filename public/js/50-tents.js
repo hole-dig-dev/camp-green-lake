@@ -288,7 +288,8 @@ function knockOut(title,text){
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
   countUp('kos',5,'squid');curseKo();   // the curse grows a little (81-mood.js)
   const lost=S.sack.length;dropBag();
-  $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'');$('#ko').hidden=false;
+  const sand=S.bucket>0.05;S.bucket=0;   // the gold rush: your bucket spills when you go down (the crew's too, 30-npcs.js crewKO)
+  $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'')+(sand?' Your bucket spilled.':'');$('#ko').hidden=false;
 }
 function respawn(){if(inTent())exitTent();if(S.inTown)exitTown(0,39,'');S.ko=0;clearAff();S.hurtT=99;S.respawnAt=performance.now();$('#ko').hidden=true;P.x=0;P.z=39;P.y=groundAt(0,39);P.vy=0;P.kx=P.kz=0;P.fa=Math.PI;P.yaw=0;S.water=waterMax();twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;lionPinT=0;me.g.rotation.set(0,0,0)}
 
