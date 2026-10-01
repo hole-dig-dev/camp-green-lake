@@ -5,8 +5,13 @@
      scroll                          hold it closer / farther          click or E while holding   throw it
      X (aimed at something)          tie your rope to it; walk away and it pulls once it's taut. X again unties
      F next to the wheelbarrow       put what you're holding in it (up to 3 things: loot or a downed friend)
-   One camper pulls at most GRAB.FMAX (700 N): ~71 kg is the most one of you can lift. The 60 kg strongbox lifts alone, the
-   120 kg safe needs two (alone you drag it), a 70 kg body is just about liftable alone. A rope pulls like another pair of
+   One camper pulls at most GRAB.FMAX (900 N): ~92 kg is the most one of you can lift. The 60 kg strongbox lifts alone, the
+   120 kg safe needs two (alone you drag it, slowly), a 70 kg body lifts alone.
+   Carrying (JT 2026-09-30, tests/carry): in third person it rides chest-high in front of you and a little to the right,
+   where the camera sees it (look down / up to lower / raise it); it's a leash, not a snap: when it falls behind your
+   hands you slow down instead of losing it. Setting it down, or knocks while someone holds it, don't chip it; drops
+   from a height and throws do. You can also grab a friend on their feet (they're dragged; two of you lift them; three
+   taps of Space and they wriggle free) and the D Tent crew (only you see that: they aren't networked). A rope pulls like another pair of
    hands, but hauling something heavy up out of a hole with too few people on it (or running out of stamina) and THE ROPE
    SLIPS. The wheelbarrow rolls easily with anything in it, but hit a bump or a hole edge fast and it tips and spills.
    Downed friends: grab or rope them, or wheel them. While someone's got hold of you, your knockout timer stops, and
@@ -35,15 +40,20 @@ const propName=pr=>pr.type==='cart'?'wheelbarrow':LOOT[pr.type].name;
 const iOwn=pr=>pr.body?true:(!online()||pr.owner===myId());
 function tuneGrab(k){return tuneOr('grab.'+k,SIM.GRAB[k.toUpperCase()]||0)}
 /* a grab target by id: a prop, or a remote downed camper's body */
+/* ids: >= 0 a prop; -pid a friend (knocked out, or on their feet: JT 2026-09-30, grab anyone, R.E.P.O.-style);
+   CREW_GRAB_ID - k the D Tent crew member bots[k] (they aren't networked, so only you see it: 30-npcs.js crewHeld) */
+const CREW_GRAB_ID=-1e6;
 function targetOf(id){
   if(id==null)return null;
   if(id>=0)return PROPS.get(id)||null;
-  const R=remotes.get(-id);if(!R||!(R.f&2))return null;
+  if(id<=CREW_GRAB_ID){const b=bots[CREW_GRAB_ID-id];if(!b||!crewGrabbable(b))return null;const g=b.p.g.position;
+    return Object.assign(b.gt||(b.gt={id,isCrew:true,grab:[],ropes:[]}),{b,x:g.x,y:g.y,z:g.z})}
+  const R=remotes.get(-id);if(!R||R.room!==S.tent||!!R.tn!==!!S.inTown)return null;
   let b=BODIES.get(-id);if(!b){b={id,pid:-id,grab:[],ropes:[],isBody:true};BODIES.set(-id,b)}
-  b.R=R;b.x=R.p.g.position.x;b.y=R.p.g.position.y;b.z=R.p.g.position.z;b.ph=MYBODY.ph;return b;
+  b.R=R;b.standing=!(R.f&2);b.x=R.p.g.position.x;b.y=R.p.g.position.y;b.z=R.p.g.position.z;b.ph=MYBODY.ph;return b;
 }
-const tName=t=>t.isBody?(t.R?t.R.name:'your friend'):isCart(t)?'wheelbarrow':LOOT[t.type].name;
-function massOf(t){if(t.isBody)return 70;const ph=physOf(t);if(!isCart(t))return ph.m;let m=ph.m;for(const l of t.load||[])m+=l<0?70:((SIM.PHYS[(PROPS.get(l)||{}).type]||{m:0}).m);return m}
+const tName=t=>t.isCrew?t.b.d.n:t.isBody?(t.R?t.R.name:'your friend'):isCart(t)?'wheelbarrow':LOOT[t.type].name;
+function massOf(t){if(t.isBody||t.isCrew)return 70;const ph=physOf(t);if(!isCart(t))return ph.m;let m=ph.m;for(const l of t.load||[])m+=l<0?70:((SIM.PHYS[(PROPS.get(l)||{}).type]||{m:0}).m);return m}
 
 /* ---- aiming: whatever your crosshair is on, within reach ---- */
 function aimTarget(reach){
@@ -51,11 +61,41 @@ function aimTarget(reach){
   let best=null,bd=1e9;
   const test=(t,cx,cy,cz,r)=>{if(Math.hypot(t.x-P.x,t.z-P.z)>reach)return;cx-=G_EYE.x;cy-=G_EYE.y;cz-=G_EYE.z;const d=cx*G_DIR.x+cy*G_DIR.y+cz*G_DIR.z;if(d<0)return;
     if(Math.hypot(cx-G_DIR.x*d,cy-G_DIR.y*d,cz-G_DIR.z*d)<r&&d<bd){bd=d;best=t}};
-  for(const pr of PROPS.values()){const ph=physOf(pr);test(pr,pr.x,pr.y+ph.h/2,pr.z,ph.r+0.35)}
-  for(const[rid,R]of remotes)if(R.f&2&&R.room===S.tent){const t=targetOf(-rid);if(t)test(t,t.x,t.y+0.35,t.z,0.8)}
+  for(const pr of PROPS.values()){if(pr.cartId!=null)continue;const ph=physOf(pr);test(pr,pr.x,pr.y+ph.h/2,pr.z,ph.r+(isCart(pr)?0.6:0.35))}   // what's in the wheelbarrow: the wheelbarrow (it's bigger to aim at)
+  for(const rid of remotes.keys()){const t=targetOf(-rid);if(t)test(t,t.x,t.y+(t.standing?0.9:0.35),t.z,t.standing?0.55:0.8)}
+  if(S.tent==null&&!S.inTown)bots.forEach((b,k)=>{const t=targetOf(CREW_GRAB_ID-k);if(t)test(t,t.x,t.y+0.9,t.z,0.55)});
   return best;
 }
-function myHand(){camera.getWorldDirection(G_DIR);return[P.x+G_DIR.x*GRAB_ST.dist,P.y+1.05+G_DIR.y*GRAB_ST.dist,P.z+G_DIR.z*GRAB_ST.dist]}
+/* where your hands hold it. First person: out along your view (R.E.P.O.). Third person: in front of you and a touch to
+   the right, where the camera can see it past your shoulder, at chest height; look down or up to lower or raise it.
+   (It used to follow the camera's ray in third person too, which points down at your camper: things dragged along
+   the ground hidden behind you. JT 2026-09-30.) Never below the ground. */
+const GRAB_SIDE=0.65,GRAB_CHEST=1.05,GRAB_CARRY=1.3;   // CARRY: third person's carrying height (chest-high, so a crate swings clear of the ground)
+function myHand(){
+  let h;
+  if(FP){camera.getWorldDirection(G_DIR);h=[P.x+G_DIR.x*GRAB_ST.dist,P.y+GRAB_CHEST+G_DIR.y*GRAB_ST.dist,P.z+G_DIR.z*GRAB_ST.dist]}
+  else{const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),up=clamp((0.32-P.pitch)*1.6,-0.75,0.8);
+    h=[P.x+fx*GRAB_ST.dist-fz*GRAB_SIDE,P.y+GRAB_CARRY+up,P.z+fz*GRAB_ST.dist+fx*GRAB_SIDE]}
+  h[1]=Math.max(h[1],groundAt(h[0],h[2])+0.3);return h;
+}
+/* how far the thing you're holding has fallen behind your hands (m, flat): 0 when it keeps up */
+function grabLag(t){if(!t)return 0;const h=myHand();return Math.hypot(h[0]-t.x,h[2]-t.z)}
+/* what R takes: what the crosshair's on, unless that's someone on their feet and there's loot or a knocked-out friend
+   right in front of you (the crosshair in third person easily runs on past a body on the ground to whoever's behind) */
+function pickGrab(){
+  const a=aimTarget(tuneOr('env.grabReach',SIM.GRAB.REACH)),n=nearGrab(3.2);
+  if(a&&n&&a!==n&&(a.isCrew||a.standing)&&!(n.isCrew||n.standing))return n;
+  return a||n;
+}
+/* the nearest thing you could grab in front of you, for when the crosshair isn't quite on it */
+function nearGrab(r){
+  const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw);let best=null,bd=r;
+  const test=t=>{const dx=t.x-P.x,dz=t.z-P.z,d=Math.hypot(dx,dz)+(t.isCrew?0.8:t.standing?0.5:0);if(d<bd&&(dx*fx+dz*fz)/(d||1)>0.35){bd=d;best=t}};   // loot and knocked-out friends before people on their feet
+  for(const pr of PROPS.values())if(pr.cartId==null)test(pr);
+  for(const rid of remotes.keys()){const t=targetOf(-rid);if(t)test(t)}
+  if(S.tent==null&&!S.inTown)bots.forEach((b,k)=>{const t=targetOf(CREW_GRAB_ID-k);if(t)test(t)});
+  return best;
+}
 function ropeHand(){return[P.x,P.y+1.0,P.z]}
 
 /* ---- grab / let go / throw ---- */
@@ -63,20 +103,26 @@ function grabTarget(t){
   if(!t||S.ko||uiOpen()||inTent())return false;
   if(t.cartId!=null)t.cartId=null;   // taking it back out of the wheelbarrow (the server hears it from pgrab)
   GRAB_ST.id=t.id;if(t.id>=0)S.carry=t.id;digHeld=false;
-  const h=t.isBody?0.4:physOf(t).h/2;
-  GRAB_ST.dist=clamp(Math.hypot(t.x-P.x,t.y+h-(P.y+1.05),t.z-P.z),2.2,3.6);
+  const h=t.isBody||t.isCrew?0.4:physOf(t).h/2;
+  const rad=t.isBody||t.isCrew?0.5:physOf(t).r;GRAB_ST.dist=FP?clamp(Math.hypot(t.x-P.x,t.y+h-(P.y+1.05),t.z-P.z),1.6,3.0):clamp(0.75+rad,1.1,2.0);   // just in front of you; scroll to change
+  t.grabT=performance.now();
   if(isCart(t)&&t.tip){t.tip=false;t.rest=false;toast('You set the wheelbarrow back on its wheel.','',2000)}
-  if(online())wsSend({t:'pgrab',id:t.id});else{t.owner=myId();t.grab=[myId()]}
-  logEv('propGrab',{item:t.id,type:t.isBody?'body':t.type});
-  if(!grabTarget.told){grabTarget.told=true;toast(massOf(t)>SIM.GRAB.FMAX/9.82?`Too heavy to lift alone (${massOf(t)} kg): drag it, or get a friend on it too. Scroll: closer / farther. Click: throw.`:'Got it. Scroll to hold it closer or farther, click to throw, let go of R to drop it.','',6000)}
+  if(t.isCrew){t.grab=[myId()];crewGrabbed(t.b,true)}
+  else if(online())wsSend({t:'pgrab',id:t.id});else{t.owner=myId();t.grab=[myId()]}
+  logEv('propGrab',{item:t.id,type:t.isCrew?'crew':t.isBody?(t.standing?'friend':'body'):t.type});
+  const crew=1+(t.grab||[]).filter(g=>g!==myId()).length,lift=tuneGrab('fmax')*crew/9.82;
+  if(massOf(t)>lift)toast(crew>1?`Still too heavy for ${crew} of you (${massOf(t)} kg). Drag it, or get another pair of hands on it.`:`Too heavy to lift alone (${massOf(t)} kg). Drag it (slowly), or get a friend to grab it too.`,'',4500);
+  else if(crew>1)toast(`${crew} of you on it: you can lift it.`,'good',2500);
+  else if(!grabTarget.told){grabTarget.told=true;toast('Got it. Walk to carry it. Look down / up to lower or raise it, scroll for closer / farther, click to throw, let go of R to set it down.','',6500)}
   return true;
 }
 function releaseGrab(throwIt,silent){
   const id=GRAB_ST.id;if(id==null)return;GRAB_ST.id=null;if(S.carry===id)S.carry=null;
   const t=targetOf(id);
   camera.getWorldDirection(G_DIR);const d=[+G_DIR.x.toFixed(3),+G_DIR.y.toFixed(3),+G_DIR.z.toFixed(3)];
-  if(t&&!t.isBody&&iOwn(t)){t.hands.delete(myId());if(throwIt)yeetThing(t,d,1+t.grab.filter(g=>g!==myId()).length)}
-  if(!silent){if(online())wsSend({t:throwIt?'pyeet':'prel',id,d});else if(t)t.grab=[]}
+  if(t&&t.isCrew){t.grab=[];crewGrabbed(t.b,false,throwIt?d:null)}
+  else if(t&&!t.isBody&&iOwn(t)){t.hands.delete(myId());if(throwIt)yeetThing(t,d,1+t.grab.filter(g=>g!==myId()).length)}
+  if(!silent&&!(t&&t.isCrew)){if(online())wsSend({t:throwIt?'pyeet':'prel',id,d});else if(t)t.grab=[]}
   if(throwIt){sfx.shout();logEv('propThrow',{item:id})}
 }
 function yeetThing(t,d,n){
@@ -117,7 +163,7 @@ function stepThing(t,dt){
       fx+=dx/dl*fd;fy+=dy/dl*fd;fz+=dz/dl*fd;held++;ropeCap+=FM;ropeUp+=dy/dl;
       continue;
     }
-    if(dl>SIM.GRAB.SNAP){t.hands.delete(key);if(self){releaseGrab(false);toast('It slipped out of your hands. Too far, or too heavy.','bad',2500)}continue}
+    if(gripGone(t,key,dl,dt)){t.hands.delete(key);if(self){releaseGrab(false);toast('It slipped out of your hands. Too far, or too heavy.','bad',2500)}continue}
     let gx=dx*K-t.vx*D,gy=dy*K-t.vy*D,gz=dz*K-t.vz*D;const gm=Math.hypot(gx,gy,gz);if(gm>FM){gx*=FM/gm;gy*=FM/gm;gz*=FM/gm}
     fx+=gx;fy+=gy;fz+=gz;held++;handCap+=FM;
   }
@@ -134,13 +180,14 @@ function stepThing(t,dt){
   if(!t.body)for(const c of colliders){if(nx>c.x0-R&&nx<c.x1+R&&nz>c.z0-R&&nz<c.z1+R){const px=Math.min(nx-(c.x0-R),(c.x1+R)-nx),pz=Math.min(nz-(c.z0-R),(c.z1+R)-nz);
     if(px<pz){nx=nx<(c.x0+c.x1)/2?c.x0-R:c.x1+R;t.vx*=-0.2}else{nz=nz<(c.z0+c.z1)/2?c.z0-R:c.z1+R;t.vz*=-0.2}}}
   // the wheelbarrow tips over on a bump or a hole edge taken too fast
-  if(cart&&!t.tip){const sp=Math.hypot(t.vx,t.vz);if(sp>SIM.CART.TIP_SPEED*tune('grab.cartTip')){const ax=t.x+t.vx/sp*0.6,az=t.z+t.vz/sp*0.6;
+  if(cart&&held){const sp=Math.hypot(t.vx,t.vz),cap=(KEYS['shift']&&GRAB_ST.id===t.id?tune('move.sprint'):tune('move.walk'))*1.1;if(sp>cap){t.vx*=cap/sp;t.vz*=cap/sp}}   // a wheelbarrow goes as fast as you push it, no faster (grabbing it used to yank it into a tip)
+  if(cart&&!t.tip&&now-(t.grabT||0)>800){const sp=Math.hypot(t.vx,t.vz);if(sp>SIM.CART.TIP_SPEED*tune('grab.cartTip')){const ax=t.x+t.vx/sp*0.6,az=t.z+t.vz/sp*0.6;
     if(Math.abs(groundAt(ax,az)-groundAt(t.x,t.z))>SIM.CART.TIP_STEP)cartTip(t)}}
   t.x=nx;t.z=nz;t.y+=t.vy*dt;
   const g=groundAt(t.x,t.z);
   if(t.y<=g){
     const imp=-t.vy;t.y=g;t.vy=imp>1.2?imp*0.18:0;
-    if(!t.body&&t.v0&&imp>SIM.DMG.MIN&&now-t.hitT>SIM.DMG.COOL*1000&&t.val>0){
+    if(!t.body&&t.v0&&!held&&imp>SIM.DMG.MIN&&now-t.hitT>SIM.DMG.COOL*1000&&t.val>0){
       t.hitT=now;const loss=Math.min(t.val,Math.max(1,Math.round(t.v0*t.ph.frag*(imp-SIM.DMG.MIN)*SIM.DMG.RATE*tune('grab.fragile'))));
       t.val-=loss;propHit(t,loss);
     }
@@ -160,6 +207,9 @@ function stepThing(t,dt){
     else{const v=t.val;propSold(t.id,v,[myId()])}
   }
 }
+/* a grip only gives when the thing has been out of reach (stuck on something, or yanked away) for a moment, not the
+   instant it swings past arm's length */
+function gripGone(t,key,dl,dt){const F=t.farT||(t.farT={});if(dl<=SIM.GRAB.SNAP){F[key]=0;return false}F[key]=(F[key]||0)+dt;if(F[key]<0.8)return false;F[key]=0;return true}
 function propHit(pr,loss){
   sfx.thud();noise(0.25,260,0.8,0.3,'lowpass');
   if(pr.L)say(pr.L,`-${loss}`,1400);countUp('butter',50,'butter',loss);
@@ -195,10 +245,11 @@ function grabMsg(m){
   const id=num(m.id,-1e9,1e5,-1e9)|0;
   if(id<0){   // bodies
     if(-id===myId()){   // somebody's got hold of me
-      if(m.t==='pown'){MYBODY.grab=Array.isArray(m.grab)?m.grab:[];MYBODY.ropes=Array.isArray(m.ropes)?m.ropes:[];
+      if(m.t==='pown'){const was=MYBODY.grab.length+MYBODY.ropes.length;MYBODY.grab=Array.isArray(m.grab)?m.grab:[];MYBODY.ropes=Array.isArray(m.ropes)?m.ropes:[];
+        if(!S.ko&&MYBODY.grab.length+MYBODY.ropes.length>was){const R=remotes.get([...MYBODY.grab,...MYBODY.ropes].slice(-1)[0]);toast(`${R?R.name:'Someone'} grabbed you! Mash Space to wriggle free.`,'',3500)}
         for(const k of [...MYBODY.hands.keys()]){const pid=typeof k==='string'?+k.slice(1):k;if(!(typeof k==='string'?MYBODY.ropes:MYBODY.grab).includes(pid))MYBODY.hands.delete(k)}}
-      else if(m.t==='phand'&&Array.isArray(m.h)&&S.ko)MYBODY.hands.set(m.rope?'r'+m.pid:m.pid,{h:m.h.map(v=>+v||0),t:performance.now(),rope:!!m.rope});
-      else if(m.t==='pyeet'&&S.ko){MYBODY.hands.delete(m.pid);yeetThing(MYBODY,Array.isArray(m.d)?m.d:[0,0,0],1+MYBODY.grab.length)}
+      else if(m.t==='phand'&&Array.isArray(m.h))MYBODY.hands.set(m.rope?'r'+m.pid:m.pid,{h:m.h.map(v=>+v||0),t:performance.now(),rope:!!m.rope});
+      else if(m.t==='pyeet'){MYBODY.hands.delete(m.pid);yeetThing(MYBODY,Array.isArray(m.d)?m.d:[0,0,0],1+MYBODY.grab.length);if(!S.ko){P.vy=Math.max(P.vy,MYBODY.vy);P.grounded=false;MYBODY.fly=0.6}}   // thrown on your feet: you fly a bit
       return;
     }
     const b=targetOf(id);if(!b)return;
@@ -231,6 +282,27 @@ function grabMsg(m){
         if(S.ko){S.ko=Math.max(1,S.ko-tune('cart.spillKo'));sfx.thud();hurtFx=1;toast('You got tipped out of the wheelbarrow! That hurt.','bad',3000)}}}
     if(m.tip&&!iOwn(pr))toast('The wheelbarrow tipped over!','bad',2500);
   }
+}
+
+/* ---- on my feet with someone's hands on me: they pull me along (two of them can lift me); mash Space to get free ---- */
+let wrigN=0,wrigT=0,wrigSpace=false;
+function stepMeHeld(dt){
+  const now=performance.now();
+  for(const[k,H]of MYBODY.hands)if(now-H.t>600)MYBODY.hands.delete(k);
+  const B=MYBODY;
+  if(B.fly>0){B.fly-=dt;P.x+=B.vx*dt;P.z+=B.vz*dt;B.vx*=1-1.5*dt;B.vz*=1-1.5*dt}   // thrown
+  if(S.ko||!B.hands.size){wrigN=0;return}
+  const K=SIM.GRAB.K,D=SIM.GRAB.DAMP,FM=tuneGrab('fmax'),m=70,cy=P.y+0.9;let fx=0,fy=0,fz=0;
+  for(const H of B.hands.values()){const dx=H.h[0]-P.x,dy=H.h[1]-cy,dz=H.h[2]-P.z,dl=Math.hypot(dx,dy,dz)||1e-3;
+    if(H.rope){if(dl<=SIM.ROPE.L)continue;const f=Math.min(FM,SIM.ROPE.K*(dl-SIM.ROPE.L));fx+=dx/dl*f;fy+=dy/dl*f;fz+=dz/dl*f;continue}
+    let gx=dx*K-B.vx*D,gy=dy*K-P.vy*D,gz=dz*K-B.vz*D;const gm=Math.hypot(gx,gy,gz);if(gm>FM){gx*=FM/gm;gy*=FM/gm;gz*=FM/gm}fx+=gx;fy+=gy;fz+=gz}
+  B.vx+=fx/m*dt;B.vz+=fz/m*dt;const fr=P.grounded?6:1.2;B.vx*=1-Math.min(1,fr*dt);B.vz*=1-Math.min(1,fr*dt);   // your feet drag on the ground
+  let nx=clamp(P.x+B.vx*dt,-EDGE+2,EDGE-2),nz=clamp(P.z+B.vz*dt,-EDGE+2,EDGE-2);
+  for(const c of colliders)if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){nx=P.x;nz=P.z;B.vx=B.vz=0;break}
+  P.x=nx;P.z=nz;
+  if(fy>0){P.vy+=fy/m*dt;if(P.vy>0.2)P.grounded=false}   // gravity's in updatePlayer: one pair of hands can't lift you, two can
+  // wriggle free: three taps of Space in two seconds
+  const sp=!!KEYS[' '];if(sp&&!wrigSpace){if(now-wrigT>2000)wrigN=0;wrigT=now;if(++wrigN>=3){wrigN=0;B.hands.clear();wsSend({t:'pfree'});toast('You wriggled free.','good',1800);logEv('wriggle',{})}}wrigSpace=sp;
 }
 
 /* ---- my body, while I'm downed (called from downed() in 84-coop.js): true = someone else is moving me ---- */
@@ -274,10 +346,11 @@ function holderPos(pid){if(pid===myId())return[P.x,P.y,P.z];const R=remotes.get(
 /* ---- every frame ---- */
 function updateGrab(dt){
   if(!S.started)return;
-  if(!S.ko&&(S.inCart!=null||MYBODY.hands.size)){S.inCart=null;MYBODY.hands.clear()}   // back on my feet
+  if(!S.ko&&S.inCart!=null)S.inCart=null;   // back on my feet
+  stepMeHeld(dt);
   // input: hold R / right mouse to grab what you're aiming at; let go to drop
   const want=(KEYS['r']||grabMouse)&&!S.ko&&!uiOpen()&&!inTent();
-  if(want&&GRAB_ST.id==null&&!grabHeldBefore){const t=aimTarget(tuneOr('env.grabReach',SIM.GRAB.REACH));if(t)grabTarget(t)}
+  if(want&&GRAB_ST.id==null&&!grabHeldBefore){const t=pickGrab();if(t)grabTarget(t);else toast('Nothing to grab here. Aim at loot, the wheelbarrow or a knocked-out friend and hold R.','',2200)}
   grabHeldBefore=want;
   if(!want&&GRAB_ST.id!=null&&!grabByUse)releaseGrab(false);
   const gt=targetOf(GRAB_ST.id);
@@ -287,9 +360,10 @@ function updateGrab(dt){
   // my hands and my rope
   if(GRAB_ST.id!=null){
     const t=targetOf(GRAB_ST.id),h=myHand();
-    if(!t.isBody&&iOwn(t))t.hands.set(myId(),{h,t:performance.now()});
+    if(t.isCrew)t.b.handAt=h;
+    else if(!t.isBody&&iOwn(t))t.hands.set(myId(),{h,t:performance.now()});
     else if((GRAB_ST.handT-=dt)<=0){GRAB_ST.handT=0.1;wsSend({t:'phand',id:t.id,h:h.map(v=>+v.toFixed(2))})}
-    if(t.isBody&&P.moving)drainStam(tune('stam.carry')*dt);
+    if((t.isBody||t.isCrew)&&P.moving)drainStam(tune('stam.carry')*dt);
   }
   if(ROPE_ST.id!=null){
     const t=targetOf(ROPE_ST.id),h=ropeHand(),d=Math.hypot(t.x-P.x,t.z-P.z);
@@ -324,10 +398,22 @@ function updateGrab(dt){
   // bodies: beams and ropes to downed friends (and to me, while I'm down)
   for(const b of BODIES.values()){const t=targetOf(b.id);if(!t){BODIES.delete(b.pid);continue}
     bi=drawHolders(t,t.x,t.y+0.35,t.z,bi);for(const pid of t.ropes){const hp=holderPos(pid);if(hp)drawRope(ri++,hp[0],hp[1]+1.0,hp[2],t.x,t.y+0.35,t.z)}}
+  {const t=GRAB_ST.id!=null&&GRAB_ST.id<=CREW_GRAB_ID?targetOf(GRAB_ST.id):null;if(t){const l=grabBeamLine(bi++),a=l.geometry.attributes.position;a.setXYZ(0,P.x,P.y+1.25,P.z);a.setXYZ(1,t.x,t.y+0.9,t.z);a.needsUpdate=true;l.visible=true}}   // a crew member in your hands
   if(S.ko){for(const pid of MYBODY.grab){const hp=holderPos(pid);if(hp){const l=grabBeamLine(bi++),a=l.geometry.attributes.position;a.setXYZ(0,hp[0],hp[1]+1.25,hp[2]);a.setXYZ(1,P.x,P.y+0.35,P.z);a.needsUpdate=true;l.visible=true}}
     for(const pid of MYBODY.ropes){const hp=holderPos(pid);if(hp)drawRope(ri++,hp[0],hp[1]+1.0,hp[2],P.x,P.y+0.35,P.z)}}
   for(let i=bi;i<grabBeams.length;i++)grabBeams[i].visible=false;
   for(let i=ri;i<ropeLines.length;i++)ropeLines[i].visible=false;
+}
+/* what R would grab right now, for the prompt (78-hud.js): the crosshair first, else the nearest thing in front of you */
+function grabHint(){
+  if(GRAB_ST.id!=null&&GRAB_ST.id<0&&!S.ko){const t=targetOf(GRAB_ST.id);return t?`Holding ${tName(t)}: let go to put them down · click: throw`:null}
+  if(GRAB_ST.id!=null||S.ko||S.inTruck||inTent())return null;
+  const t=pickGrab();if(!t)return null;
+  if(t.isCrew)return`Grab ${t.b.d.n} (carry or throw them)`;
+  if(t.isBody)return t.standing?`Grab ${tName(t)} (drag them; two of you can lift them)`:`Grab ${tName(t)} (knocked out): carry them inside the fence to wake them up`;
+  if(isCart(t))return t.tip?'Grab the wheelbarrow and set it back up':'Grab the wheelbarrow and push it';
+  const m=massOf(t),crew=1+(t.grab||[]).length,heavy=m>tuneGrab('fmax')*crew/9.82;
+  return`Grab the ${tName(t)} (${t.val!=null?t.val:SIM.HEAVY[t.type]} gold, ${m} kg${heavy?(crew>1?`: too heavy even with ${crew} of you`:': too heavy to lift alone, drag it or get help'):''})`;
 }
 function drawHolders(t,x,y,z,bi){
   for(const pid of t.grab){
@@ -340,7 +426,8 @@ function drawHolders(t,x,y,z,bi){
 /* how fast you can walk while holding something (or pulling it on a rope): light things don't slow you, the safe alone crawls */
 function grabSpeed(sp){
   let f=1;
-  const g=targetOf(GRAB_ST.id);if(g){const n=Math.max(1,(g.grab||[]).length+(g.ropes||[]).length);f=Math.min(f,clamp(0.3+0.7*tuneGrab('fmax')*n/9.82/massOf(g),0.3,1))}
+  const g=targetOf(GRAB_ST.id);if(g){const n=Math.max(1,(g.grab||[]).length+(g.ropes||[]).length);f=Math.min(f,clamp(0.3+0.7*tuneGrab('fmax')*n/9.82/massOf(g),0.3,1));
+    f*=clamp(1-(grabLag(g)-0.5)/1.3,0.08,1)}   // the leash: it's fallen behind your hands, so you lean into it and slow down (instead of it slipping out)
   const r=ROPE_ST.taut?targetOf(ROPE_ST.id):null;if(r&&!isCart(r)){const n=Math.max(1,(r.grab||[]).length+(r.ropes||[]).length);f=Math.min(f,clamp(0.25+0.75*tuneGrab('fmax')*n/9.82/massOf(r),0.25,1))}
   return sp*f;
 }
@@ -348,7 +435,7 @@ let grabMouse=false,grabHeldBefore=false,grabByUse=false;
 canvas.addEventListener('mousedown',e=>{if(e.button===2&&S.started&&!uiOpen())grabMouse=true;if(e.button===0&&GRAB_ST.id!=null){releaseGrab(true);digHeld=false}});
 addEventListener('mouseup',e=>{if(e.button===2)grabMouse=false});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{if(GRAB_ST.id==null)return;e.preventDefault();GRAB_ST.dist=clamp(GRAB_ST.dist-(e.deltaY>0?0.25:-0.25),1.4,4)},{passive:false});
+canvas.addEventListener('wheel',e=>{if(GRAB_ST.id==null)return;e.preventDefault();GRAB_ST.dist=clamp(GRAB_ST.dist-(e.deltaY>0?0.2:-0.2),FP?1.2:0.9,FP?3.6:2.8)},{passive:false});
 /* F on a prop (touch screens, or anyone used to the old haul): toggles a grab */
 function useProp(pr){if(GRAB_ST.id===pr.id){releaseGrab(false);return}if(grabTarget(pr))grabByUse=true}
 

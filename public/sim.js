@@ -55,9 +55,9 @@
   // the rope (84-grab.js, X): slack up to L m, then it pulls like a pair of hands from wherever you are, up to MAX m away
   const ROPE = { L: 4.5, MAX: 7.5, K: 900 };
   // the crew's wheelbarrow: holds CAP things (loot or a downed friend), parks by the main gate, tips if you hit a bump fast
-  const CART = { CAP: 3, HOME: { x: -8, z: 31 }, TIP_SPEED: 3.2, TIP_STEP: 0.32 };
-  const GRAB = { K: 1400, DAMP: 70, FMAX: 700, SNAP: 4.2, THROW: 7.5, REACH: 4.5 };
-  const DMG = { MIN: 2.4, RATE: 0.06, COOL: 0.25 };   // landings faster than MIN m/s chip value off
+  const CART = { CAP: 3, HOME: { x: -8, z: 31 }, TIP_SPEED: 5.2, TIP_STEP: 0.32 };   // TIP_SPEED: above a walk (4.3 m/s): run it into a hole's edge and it goes over
+  const GRAB = { K: 1400, DAMP: 70, FMAX: 900, SNAP: 5, THROW: 7.5, REACH: 4.5 };   // FMAX: one camper lifts ~92 kg (the 120 kg safe takes two)
+  const DMG = { MIN: 4.8, RATE: 0.06, COOL: 0.25 };   // landings faster than MIN m/s chip value off (4.8: a drop from about 1.2 m; setting something down from your hands doesn't)
   // Tower optics are shared with the renderer, so the light a player sees is the light that can spot them.
   const TOWERS = [
     { x: -39, z: 28, a: -2.35 }, { x: 29, z: 28, a: 2.35 },

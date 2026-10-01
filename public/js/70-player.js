@@ -66,7 +66,7 @@ function updatePlayer(dt){
   }else{
     P.digT=0.3;
     if(ml>0.1){
-      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(S.carry!=null)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
+      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(GRAB_ST.id!=null||ROPE_ST.taut)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
@@ -74,7 +74,7 @@ function updatePlayer(dt){
       if(ZONE_STEP||northClimb(P.x,P.z)){const q=zoneStep(P.x,P.z,nx,nz,P.y);nx=q[0];nz=q[1]}   // other maps, and the trench and wall at the lake's north edge: ledges too tall to walk up (88-zones.js, 88-north.js)
       P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;
       if(sprint)drainStam(tune('stam.sprint')*dt);
-      if(S.carry!=null){drainStam(tune('stam.carry')*dt);if(S.stam<=0&&!GOD){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500);logEv('carryDrop',{why:'stamina'})}}
+      if(S.carry!=null){const g=PROPS.get(S.carry),share=g?clamp(massOf(g)/Math.max(1,(g.grab||[]).length)/90,0.15,1.3):1;drainStam(tune('stam.carry')*share*dt);/* a light thing (or a heavy one shared) hardly tires you */if(S.stam<=0&&!GOD){S.carry=null;toast('Too tired to hold on. You let go.','bad',2500);logEv('carryDrop',{why:'stamina'})}}
     }else P.anim=0;
   }
   // knockback (a twister throwing you) is now fully handled by twSt/twStep above; P.kx/P.kz are only ever

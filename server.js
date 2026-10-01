@@ -539,7 +539,8 @@ wss.on('connection', (ws, req) => {
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js), ... 2048 talking on the walkie, 4096 owns a walkie (86-walkie.js)
         c.f = num(m.f, 0, 8191, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
-        if (!(c.f & 2) && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
+        const gotUp = c.wasDown && !(c.f & 2); c.wasDown = !!(c.f & 2); // (only as they get up: a friend can grab you on your feet, 84-grab.js)
+        if (gotUp && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
           if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }
           c.body = null; c.cartId = null; broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });
         }
@@ -623,6 +624,12 @@ wss.on('connection', (ws, req) => {
         const owner = id >= 0 ? T.o.owner : T.c.id;
         if (m.t === 'pyeet' && owner !== c.id && clients.has(owner)) { const d = Array.isArray(m.d) ? m.d.slice(0, 3).map(v => num(v, -1, 1, 0)) : [0, 0, 0]; send(clients.get(owner), { t: 'pyeet', id, pid: c.id, d }); }
         broadcast({ t: 'pown', id, owner, grab: T.o.grab, ropes: T.o.ropes });
+        break;
+      }
+      case 'pfree': { // wriggled out of everyone's hands (public/js/84-grab.js stepMeHeld): only when you're on your feet
+        if (c.f & 2 || !c.body) return;
+        c.body.grab = []; c.body.ropes = [];
+        broadcast({ t: 'pown', id: -c.id, owner: c.id, grab: [], ropes: [] });
         break;
       }
       case 'phand': {
@@ -1114,7 +1121,7 @@ function dirStartMonster(d, tx, tz) {
 // Grab targets (see 'pgrab'): a prop, or the body of a downed camper (negative id). o holds its grab/ropes lists.
 function grabTarget(id) {
   if (id >= 0) { const p = world.props[id]; return p ? { o: p, x: p.x, z: p.z } : null; }
-  const b = clients.get(-id); if (!b || !b.joined || !((b.f & 2) || Date.now() - b.dnAt < 2000)) return null;
+  const b = clients.get(-id); if (!b || !b.joined) return null; // a downed camper, or one on their feet (grab anyone, R.E.P.O.-style; they can wriggle free: 'pfree')
   b.body = b.body || { grab: [], ropes: [] }; return { o: b.body, c: b, x: b.x, z: b.z };
 }
 function unloadFromCart(id) {
