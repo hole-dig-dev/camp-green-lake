@@ -21,7 +21,7 @@ const COOP_TXT={
   tentdoor:s=>`Go inside ${TENTS[s.ti].name}`,
   exit:()=>'Step back outside',
   bunk:s=>S.inBed===s.bi?'Get up':'Lie down and sleep',
-  office:()=>"Read the Warden's ledger",
+  office:()=>"Read the Warden's ledger and the note on her desk",
 };
 const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),heat:$('#affHeat'),burn:$('#affBurn'),poison:$('#affPoison'),hunger:$('#affHunger')},hpWrap:$('#hpWrap'),quota:$('#quota'),lvK:$('#lvK'),xp:$('#xpBar'),batt:$('#batt')};
 function updateHUD(){
@@ -280,4 +280,14 @@ function drawMap(){
   mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}   // javelina herd (server-run, see 83-javelinas.js)
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
   drawMapEdgeIndicators(W,night);
+}
+
+/* ---- your coordinates, above the Field map button: X east, Y north (the map's up), whole metres. The Warden's note on
+   the old town uses the same numbers (89-town.js). Down in the buried town there's no lake to measure from. ---- */
+const mapCoordsEl=$('#mapCoords');let mapCoordsTxt='';
+const coordXY=(x,z)=>[Math.round(x),Math.round(-z)];
+function updateCoords(){
+  if(!mapCoordsEl)return;
+  const t=S.inTown?'Underground':(([X,Y])=>`X ${X} · Y ${Y}`)(coordXY(P.x,P.z));
+  if(t!==mapCoordsTxt){mapCoordsTxt=t;mapCoordsEl.textContent=t}
 }

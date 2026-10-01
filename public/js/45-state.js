@@ -164,7 +164,7 @@ function use(){
   else if(s.id==='warden')openDialog('warden');
   else if(s.id==='store')openShop();
   else if(s.id==='cards')openCards();
-  else if(s.id==='office')toast('The Warden\'s ledgers cover every camper, every hole, and every found object.','',4000);
+  else if(s.id==='office')readWardenNote();   // her ledgers, and a note on the old town (89-town.js)
   else if(s.id==='bot')openDialog('bot',s.bot);
   else if(s.id==='tentdoor')enterTent(s.ti);
   else if(s.id==='exit')exitTent();

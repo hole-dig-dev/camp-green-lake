@@ -118,7 +118,7 @@ function fpEye(v){
   return v.set(v.x-Math.sin(P.yaw)*FP_EYE_FWD,v.y,v.z-Math.cos(P.yaw)*FP_EYE_FWD);
 }
 function updateCamera(dt){
-  if(S.inTruck==='drive'&&!FP){if(me&&me.fpOn)fpBody(false);truckCamera(dt);return}   // chase camera behind the pickup (87-truck.js)
+  if(S.inTruck&&!FP){if(me&&me.fpOn)fpBody(false);truckCamera(dt);return}   // in the pickup: the camera orbits it with the mouse (87-truck.js)
   if(FP){
     if(me&&me.model){fpBody(true);P.fa=P.yaw+Math.PI;   // the body faces where you look
       // the eyes ride the animation, but only fp.bob of the way: all the head's dip into a scoop is a lot to look through

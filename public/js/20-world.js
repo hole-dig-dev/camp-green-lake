@@ -108,6 +108,7 @@ TENTS.forEach((t,ti)=>{
     addF(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
     addF(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
     spots.push({m:'WardenDesk',x:dx,y:Y,z:dz,ry:Math.PI});   // chair on the +z side, facing the visitor spot at t.desk
+    spots.push({m:'WardenNote',x:dx+0.3,y:Y+0.845,z:dz-0.45,ry:Math.PI});   // her note on the old town (89-town.js), the right way up for whoever's at the desk
     tentSolid(list,dx,dz,3.2,1.8);t.desk={x:dx,z:dz-1.8};
     add(3.2,1.6,0.12,0x322b25,t.x-3.2,Y+1.6,t.z+4);
     add(3.0,1.1,0.12,0xbca16c,t.x-3.2,Y+1.6,t.z+3.9);

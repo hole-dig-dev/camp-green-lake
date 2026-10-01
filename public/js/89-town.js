@@ -3,8 +3,9 @@
    The layout is in public/sim.js (TOWN, townLayout): Main Street, a buried street cavern with three big buildings on each
    side, and seven more buildings off it, joined by timber-shored tunnels. The town is the same every day; only the loot
    is new. It's built off the lake map at x 2000, the way the tent rooms sit underground, so nothing on the lake reaches you.
-   Getting in:  dig an 8 ft hole (long shovel) inside the old town (SIM.OLD_TOWN, the cracked ground with old timbers
-                sticking out), or with some luck anywhere else. The floor gives way: stand in the hole and press F.
+   Getting in:  dig an 8 ft hole (long shovel) at the middle of the old town (SIM.OLD_TOWN, the cracked ground with old
+                timbers sticking out; the X/Y on the Warden's note). Only there, and you always land in the same place
+                (JT: fixed while we build the level). The floor gives way: stand in the hole and press F.
    Down there:  it's dark (bring the flashlight). Some tunnels are crawlspaces (crouch, C). Finds lie around (F picks them
                 up); Kate's vault has gold bars. Everyone who breaks through shares the same town.
    Getting out: climb a shaft (F under it) or the old well. You can't alone: a friend down here crouching next to you boosts
@@ -122,6 +123,14 @@ function shaftMark(k,b){
   if(b.ladder){const l=box(0.5,TW.H,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2,p.z);townGroup.add(l)}
 }
 
+/* ---- the Warden's note (on her desk: 20-world.js, art/blender/wardennote.py): where to dig. The coordinates are the
+   ones the map shows (78-hud.js coordXY); that's the only spot that breaks through, and you land on Main Street by the
+   stairwell (sim.js townBreaks, townBreachSpot). ---- */
+function readWardenNote(){
+  const[X,Y]=coordXY(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z);
+  toast(`The Warden's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 8 ft. Floor gives. Don't tell Mr. Sir." (Your coordinates are above the Field map button.)`,'gold',9000);
+  logEv('note',{});
+}
 /* ---- the old town on the lake: a clue (cracked, darker ground and old timbers poking out) ---- */
 {
   const O=SIM.OLD_TOWN,g=new T.Group();scene.add(g);
