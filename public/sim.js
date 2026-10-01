@@ -33,6 +33,10 @@
   // gold dig (Greg, 2026-09-30): the crew starts with bare hands and has to earn every tool, so the Warden's quota starts
   // tiny and grows every day: always a race (Greg: "b"). It's paid out of the crew wallet at curfew. Was (60 + 40 * day).
   const quotaFor = (day, n) => Math.round((3 + 3 * day) * (1 + 0.6 * Math.max(0, n - 1)));
+  // Greg's gold dig (docs/plans/2026-09-30-gold-dig-design.md). On, it switches off (Greg, 2026-10-01): the safes and heavy
+  // carried finds, the KB tube quest, the curse, and the Warden's moods. Everything else of JT's game stays. JT: set it
+  // to false to see those back.
+  const GOLD_DIG = true;
   // the crew's tools (public/js/49-tools.js): real objects, one per purchase, held by whoever picked them up. Bought from
   // the crew wallet at the Supply Depot; each extra camper makes them half as dear again (Greg), so a big crew can't rush
   // the ladder. L: litres of dirt it carries (a container).
@@ -734,6 +738,7 @@
     inspection: { name: 'Inspection day', desc: 'The Warden walks the lake all day. Look busy.' },
   };
   function rollMood(day, curse) {
+    if (GOLD_DIG) return 'normal';   // no Warden's moods in the gold dig
     if (day <= 1) return 'normal';
     const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
     const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 1 + c, stingy: 1 + c, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
@@ -741,7 +746,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { TOOLS, toolCost, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { GOLD_DIG, TOOLS, toolCost, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,

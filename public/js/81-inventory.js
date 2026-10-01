@@ -146,7 +146,7 @@ function renderInventory(full){
   const list=invVisible();
   if(!list.some(e=>e.id===invSel))invSel=list[0]?list[0].id:null;
   const sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
-  $('#invSeeds').textContent=S.seeds;
+  $('#invSeeds').textContent=fmtG(S.seeds);
   $('#invFlavor').textContent=`Sack ${S.sack.length} / ${sackMax()} · worth ${sum} seeds`;
   if(full)buildInvTabs();
   const focusId=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#invList')?document.activeElement.dataset.item:null;

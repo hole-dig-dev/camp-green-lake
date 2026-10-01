@@ -446,6 +446,7 @@ function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y
 function runInfo() { const n = Math.max(world.run.peak, joined().length, 1); return { t: 'run', day: world.run.day, bank: world.run.bank, quota: SIM.quotaFor(world.run.day, n) * (world.run.mood === 'digday' ? 2 : 1), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
 // the curse (sim.js CURSE): the crew's, 0-100. why: shown to everyone
 function addCurse(d, why) {
+  if (SIM.GOLD_DIG) return;   // no curse in the gold dig (sim.js GOLD_DIG)
   const was = world.run.curse || 0; world.run.curse = Math.max(0, Math.min(100, was + d)); dirty = true;
   if (Math.round(world.run.curse) === Math.round(was)) return;
   LOG.log('curse', { d, curse: Math.round(world.run.curse), why }); broadcast({ t: 'curse', d, curse: Math.round(world.run.curse), why }); broadcast(runInfo());

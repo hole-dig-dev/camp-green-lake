@@ -130,7 +130,7 @@ function cyItems(rnd){
   const pick=()=>{let r=rnd()*WS;for(const[k,v]of W)if((r-=v)<0)return k;return 'can'};
   const out=[],clear=z=>!CY_STEPS.some(L=>Math.abs(L.z-z)<3)&&Math.abs(CY_FALL.z-z)>3;
   for(let i=0;i<90;i++){const z=CY_Z1+25+rnd()*(CY_Z0-CY_Z1-40);if(!clear(z))continue;out.push({type:pick(),x:cyX(z)+(rnd()*2-1)*cyW(z)*0.75,z,depth:0.3+rnd()*1.1})}
-  for(let i=0;i<4;i++){const z=CY_Z1+60+rnd()*(CY_Z0-CY_Z1-120);if(!clear(z))continue;out.push({type:rnd()<0.5?'safe':'strongbox',x:cyX(z)+(rnd()*2-1)*cyW(z)*0.5,z,depth:1.3})}   // haul these over the ledges together
+  if(!SIM.GOLD_DIG)for(let i=0;i<4;i++){const z=CY_Z1+60+rnd()*(CY_Z0-CY_Z1-120);if(!clear(z))continue;out.push({type:rnd()<0.5?'safe':'strongbox',x:cyX(z)+(rnd()*2-1)*cyW(z)*0.5,z,depth:1.3})}   // haul these over the ledges together
   return out;
 }
 

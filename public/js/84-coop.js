@@ -29,13 +29,13 @@ function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.string
 function payTeam(v){if(!(v>0))return;if(online())wsSend({t:'sell',v});else{v*=RUN.mood==='digday'?2:1;setRun({day:RUN.day,bank:RUN.bank+v,quota:RUN.quota});saveRun()}}
 function setRun(m){
   const was=RUN.bank;RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e7,0)|0;RUN.quota=num(m.quota,1,1e7,100)|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
-  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('The crew wallet has enough for the Warden\'s quota. She takes it at curfew: spend carefully until then.','gold',5500);sfx.gold()}
+  if(S.started&&was<RUN.quota&&RUN.bank>=RUN.quota){toast('The crew has enough gold for the Warden\'s quota. She takes it at curfew: spend carefully until then.','gold',5500);sfx.gold()}
 }
 function graceDay(){toast('You got here late, so the Warden did not check the quota today. Tomorrow she will.','',6000)}
-function quotaMet(){toast(`QUOTA PAID. The Warden took her seeds out of the crew wallet and keeps you for day ${RUN.day}. Tomorrow she wants ${RUN.quota}. +100 XP`,'gold',7000);addXP(100)}
+function quotaMet(){toast(`QUOTA PAID. The Warden took her gold and keeps you for day ${RUN.day}. Tomorrow she wants ${fmtG(RUN.quota)}. +100 XP`,'gold',7000);addXP(100)}
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew sold ${bank} of the ${quota} seeds the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  $('#firedText').textContent=`The crew had ${fmtG(bank)} of the ${fmtG(quota)} of gold the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
   // a new run: seeds and gear are gone, your level stays
   Object.assign(S,{sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null,gold:0,load:{L:0,g:0}});saveSession();   // (the crew wallet, S.seeds, is the server's: it starts the new run at 0)
 }

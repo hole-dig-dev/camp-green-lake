@@ -10,14 +10,14 @@
        (GOLD_SPOT); a sifting screen catches them all.
      * fine gold (fineGold): dust too fine to see. It only comes out in a gold pan at the water truck, so the dirt has
        to go into a pan or bucket and be carried to camp (49-tools.js loadDirt and the 'pan' spot).
-   - Your pouch (S.gold) is counted in seeds' worth. Mr. Sir buys it (80-ui.js), into the crew wallet. */
+   - Gold you find goes straight into the crew's gold (addGold below): the crew's money IS gold. */
 const GOLD_BASE=0.006;      // chance 10 L of barren ground holds a piece you could see
 const GOLD_RICH=0.16;       // extra chance, right on a paystreak at full depth
 const GOLD_NUGGET=0.03;     // of those pieces, this share is a nugget
-const FLAKE_VAL=2;          // seeds Mr. Sir pays for a visible flake
-const NUGGET_VAL=40;        // ...and for a nugget
+const FLAKE_VAL=2;          // a visible fleck: 0.02 g (the crew's gold counts hundredths of a gram)
+const NUGGET_VAL=40;        // a nugget: 0.4 g
 const GOLD_SPOT=0.35;       // by eye (no screen), you spot this share of the pieces that come up
-const FINE_L=1.5;           // seeds of fine gold in a litre of paystreak dirt at full depth (only a pan gets it out)
+const FINE_L=1.5;           // hundredths of a gram of fine gold in a litre of paystreak dirt at full depth (only a pan gets it out)
 const FINE_BASE=0.03;       // the trace of fine gold even barren ground has, as a share of a paystreak's
 const STREAK_W=0.055;       // paystreak width, in noise units (~25 m across on the lake)
 /* how rich the ground is here: 0 (barren) to 1 (the middle of a paystreak) */
@@ -41,17 +41,22 @@ function goldSift(h,litres){
     if(now-goldMissedT>45000){goldMissedT=now;toast(nugget?'Something heavy glinted in that dirt and tumbled back into the pile. A sifting screen would have caught it.':'A glint in the dirt, gone before you could pick it out. A sifting screen catches every fleck.','',3600)}
     logEv('goldMissed',{val,x:+h.x.toFixed(1),z:+h.z.toFixed(1),d:+h.d.toFixed(2)});return;
   }
-  S.gold=(S.gold||0)+val;
+  addGold(val);   // straight into the crew's gold
   const y=groundAt(h.x,h.z)+0.5;puff(h.mx,y,h.mz,h.mx,h.mz,3);
-  if(nugget){sfx.gold();addXP(15);toast(`A gold nugget! Worth ${val} seeds to Mr. Sir. (${Math.round(S.gold)} in your pouch)`,'gold',4200)}
-  else{sfx.find();addXP(1);const now=performance.now();if(now-goldTold>8000){goldTold=now;toast(`A fleck of gold you can see. (${Math.round(S.gold)} seeds' worth in your pouch)`,'good',1800)}}
-  logEv('gold',{val,total:+S.gold.toFixed(1),x:+h.x.toFixed(1),z:+h.z.toFixed(1),d:+h.d.toFixed(2),rich:+goldRich(h.x,h.z).toFixed(2)});
+  if(nugget){sfx.gold();addXP(15);toast(`A gold nugget! ${fmtG(val)}. The crew has ${fmtG(S.seeds)}.`,'gold',4200)}
+  else{sfx.find();addXP(1);const now=performance.now();if(now-goldTold>8000){goldTold=now;toast(`A fleck of gold: ${fmtG(val)}. The crew has ${fmtG(S.seeds)}.`,'good',1800)}}
+  logEv('gold',{val,total:S.seeds,x:+h.x.toFixed(1),z:+h.z.toFixed(1),d:+h.d.toFixed(2),rich:+goldRich(h.x,h.z).toFixed(2)});
 }
 /* bare hands only: picking through a handful, you also turn up the camp's old junk now and then (sell it to Mr. Sir) */
 const HAND_JUNK=0.012,HAND_JUNK_TYPES=['cap','cap','can','can','spoon','arrow'];
 function handFind(h){
   if(Math.random()>=tuneOr('gold.handJunk',HAND_JUNK)||S.sack.length>=sackMax())return;
   const k=HAND_JUNK_TYPES[Math.floor(Math.random()*HAND_JUNK_TYPES.length)];S.sack.push(k);sfx.find();
-  toast(`In the dirt: ${LOOT[k].name.toLowerCase()} (${LOOT[k].val} seeds to Mr. Sir).`,'',2400);logEv('handFind',{type:k,x:+h.x.toFixed(1),z:+h.z.toFixed(1)});
+  toast(`In the dirt: ${LOOT[k].name.toLowerCase()}. Mr. Sir trades ${fmtG(LOOT[k].val)} of gold for it.`,'',2400);logEv('handFind',{type:k,x:+h.x.toFixed(1),z:+h.z.toFixed(1)});
 }
-const goldValue=()=>S.gold||0;
+/* the crew's money is gold (Greg, 2026-10-01: "A"): the wallet counts hundredths of a gram (RUN.bank, S.seeds), and gold
+   you find goes straight into it, no selling step. A visible fleck is 0.02 g, a nugget 0.4 g, a pan-load ~0.01 g. */
+const fmtG=u=>(Math.max(0,u)/100).toFixed(2)+' g';
+let goldFrac=0;   // what's under a hundredth of a gram, waiting to add up
+function addGold(u){goldFrac+=u;const whole=Math.floor(goldFrac);if(whole>0){goldFrac-=whole;S.seeds+=whole}}
+const goldValue=()=>0;

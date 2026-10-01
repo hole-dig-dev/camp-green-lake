@@ -134,7 +134,7 @@ function buildShopGrid(){
     const small=document.createElement('small');small.textContent=shopCatLabel(it.cat)+' · '+it.desc;
     copy.append(strong,small);
     const meta=document.createElement('span');meta.className='shop-item__meta';
-    const price=document.createElement('span');price.className='shop-item__price';price.textContent=it.cost+' seeds';
+    const price=document.createElement('span');price.className='shop-item__price';price.textContent=fmtG(it.cost);
     const state=document.createElement('span');state.className='shop-item__state';
     meta.append(price,state);body.append(copy,meta);
     b.append(icon,body);
@@ -170,13 +170,13 @@ function renderShopDetail(){
     if(eff.note){const n=document.createElement('p');n.className='shop-detail__note';n.textContent=eff.note;box.appendChild(n)}
   }
   const priceRow=document.createElement('p');priceRow.className='shop-detail__price';
-  priceRow.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>${it.cost} seeds`;
+  priceRow.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>${fmtG(it.cost)}`;
   box.appendChild(priceRow);
   const btn=document.createElement('button');btn.type='button';btn.id='shopBuyBtn';btn.className='ui-button ui-button--primary';
   if(st.kind==='owned'){btn.textContent='Already issued';btn.disabled=true}
   else if(st.kind==='full'){btn.textContent='Battery full';btn.disabled=true}
-  else if(st.kind==='short'){btn.textContent=`Need ${st.need} more seeds`;btn.disabled=true}
-  else{btn.textContent=`Buy for ${it.cost} seeds`;btn.disabled=false;btn.onclick=()=>openShopConfirm(it.id)}
+  else if(st.kind==='short'){btn.textContent=`Need ${fmtG(st.need)} more gold`;btn.disabled=true}
+  else{btn.textContent=`Buy for ${fmtG(it.cost)}`;btn.disabled=false;btn.onclick=()=>openShopConfirm(it.id)}
   box.appendChild(btn);
   if(it.justBought){const badge=document.createElement('span');badge.className='ui-badge ui-badge--brass shop-detail__issued';badge.textContent='Issued';box.appendChild(badge)}
 }
@@ -185,7 +185,7 @@ function openShopConfirm(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   shopConfirming=true;
   const box=$('#shopConfirm');box.hidden=false;box.innerHTML='';
-  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} seeds. Balance after: ${S.seeds-it.cost}.`;
+  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${fmtG(it.cost)}. The crew keeps ${fmtG(S.seeds-it.cost)}.`;
   const row=document.createElement('div');row.className='shop-confirm__row';
   const yes=document.createElement('button');yes.type='button';yes.id='shopConfirmBuy';yes.className='ui-button ui-button--primary';yes.textContent='Confirm purchase';yes.onclick=()=>buyShopItem(id);
   const no=document.createElement('button');no.type='button';no.className='ui-button ui-button--quiet';no.textContent='Cancel';no.onclick=hideShopConfirm;
@@ -200,12 +200,12 @@ function hideShopConfirm(){
    when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
-  if(it.tool){hideShopConfirm();if(buyTool(it.id))$('#shopFeedback').textContent=`${it.name} paid for from the crew wallet. It's on the ground out front.`;renderShop();return}   // a crew tool: the server takes the seeds and puts it out front (49-tools.js)
+  if(it.tool){hideShopConfirm();if(buyTool(it.id))$('#shopFeedback').textContent=`${it.name} paid for with the crew\'s gold. It\'s on the ground out front.`;renderShop();return}   // a crew tool: the server takes the seeds and puts it out front (49-tools.js)
   S.seeds-=it.cost;
   if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen')S.water=waterMax()}
   sfx.coin();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
-  $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} seeds left.`;
+  $('#shopFeedback').textContent=`${it.name} issued. The crew has ${fmtG(S.seeds)} left.`;
   animateShopSeeds();renderShop();
   setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);
 }
@@ -256,7 +256,7 @@ function pollShopGamepad(){
 function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
 function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
 
-function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail()}
+function renderShop(){$('#shopSeeds').textContent=fmtG(S.seeds);updateShopCardStates();renderShopDetail()}
 function openShop(){
   shopOpen=true;clerk.waveT=1.6;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
   buildShopTabs();buildShopGrid();

@@ -66,17 +66,17 @@ function dropTool(){
 }
 function buyTool(k){
   const cost=SIM.toolCost(k,remotes.size+1);
-  if(S.seeds<cost){toast(`The crew needs ${cost} seeds for a ${SIM.TOOLS[k].name.toLowerCase()}. The wallet has ${S.seeds}.`,'bad',3000);return false}
+  if(S.seeds<cost){toast(`The crew needs ${fmtG(cost)} of gold for a ${SIM.TOOLS[k].name.toLowerCase()}. It has ${fmtG(S.seeds)}.`,'bad',3000);return false}
   if(online())wsSend({t:'buyTool',k});
   else{RUN.bank-=cost;saveRun();const id=1+Math.max(0,...TOOLS_W.keys());setTools([...TOOLS_W.values(),{id,k,x:15.5+(Math.random()-0.5)*1.6,z:38.6,h:0}]);toolBoughtMsg({k,n:S.name,cost})}
   return true;
 }
-function toolBoughtMsg(m){const k=String(m.k);if(!SIM.TOOLS[k])return;sfx.coin();toast(`${cleanName(m.n)||'The crew'} bought a ${SIM.TOOLS[k].name.toLowerCase()} (${num(m.cost,0,1e6,0)|0} seeds from the crew wallet). It's on the ground at the Supply Depot window.`,'gold',5000)}
+function toolBoughtMsg(m){const k=String(m.k);if(!SIM.TOOLS[k])return;sfx.coin();toast(`${cleanName(m.n)||'The crew'} bought a ${SIM.TOOLS[k].name.toLowerCase()} (${fmtG(num(m.cost,0,1e6,0)|0)} of the crew's gold). It's on the ground at the Supply Depot window.`,'gold',5000)}
 /* server messages (65-net.js) */
 function toolsMsg(m){
   if(m.t==='tools')setTools(m.tools);
   else if(m.t==='toolBought')toolBoughtMsg(m);
-  else if(m.t==='toolNo')toast(`Not enough in the crew wallet: that costs ${num(m.cost,0,1e6,0)|0}, and the crew has ${num(m.bank,0,1e7,0)|0}.`,'bad',3500);
+  else if(m.t==='toolNo')toast(`Not enough gold: that costs ${fmtG(num(m.cost,0,1e6,0)|0)}, and the crew has ${fmtG(num(m.bank,0,1e7,0)|0)}.`,'bad',3500);
 }
 
 /* ---- carrying dirt, and washing it at the water truck ---- */
@@ -105,9 +105,9 @@ function updateTools(dt){
     if(panT<=0){   // one pan-load washed
       const l=Math.min(SIM.TOOLS.pan.L,S.load.L),g=S.load.g*(l/S.load.L);
       S.load.L-=l;S.load.g-=g;if(S.load.L<0.01){S.load.L=0;S.load.g=0}
-      S.gold+=g;sfx.splash();if(g>=0.5)sfx.find();
-      toast(g>=1?`You swirl the pan: ${g.toFixed(1)} seeds' worth of fine gold settles out. (${Math.round(goldValue())} in your pouch)`:'You swirl the pan. Mud, sand, a few specks of nothing much.',g>=1?'good':'',2600);
-      logEv('pan',{L:+l.toFixed(1),g:+g.toFixed(2),pouch:+S.gold.toFixed(1)});
+      addGold(g);sfx.splash();if(g>=0.5)sfx.find();
+      toast(g>=0.5?`You swirl the pan: ${(g/100).toFixed(3)} g of fine gold settles out. The crew has ${fmtG(S.seeds)}.`:'You swirl the pan. Mud, sand, a few specks of nothing much.',g>=0.5?'good':'',2600);
+      logEv('pan',{L:+l.toFixed(1),g:+g.toFixed(2),crew:S.seeds});
       if(S.load.L>0)panT=tune('gold.panTime');   // straight on to the next pan-load
     }
   }

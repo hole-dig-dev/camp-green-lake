@@ -4,7 +4,8 @@
 // The gold dig (public/js/48-gold.js and the realistic digging in 45-state.js), in a real browser against a real server:
 // first person from the start, a shovelful moves a real shovelful of dirt and costs stamina, a 5 ft hole takes a couple
 // of hundred of them, the spoil pile holds what came out, paystreaks have gold and barren ground almost none, the
-// sifting screen catches what bare hands miss, Mr. Sir buys the pouch, and the day-1 quota starts tiny.
+// sifting screen catches what bare hands miss, found gold is the crew's money, Mr. Sir trades junk for gold, and the
+// day-1 quota starts tiny.
 // Screenshots go to tests/out/.
 //
 // Usage: node tests/gold.mjs
@@ -91,16 +92,18 @@ try {
   { const h = gold.richHand, share = h.caught / (h.caught + h.missed);
     check('bare hands catch about a third of it; the screen catches it all', share > 0.15 && share < 0.6 && gold.richScreen.missed === 0, { share: +share.toFixed(2), ...gold }); }
 
-  // --- Mr. Sir buys the pouch ---
+  // --- found gold is the crew's money; Mr. Sir trades junk for gold ---
+  await page.waitForTimeout(6000);   // let the crew's gold settle after all that sifting (the server rate-limits wallet changes)
   const sold = await page.evaluate(async () => {
-    S.gold = 25; const seeds0 = S.seeds, val = Math.round(goldValue());   // the pouch counts seeds' worth
+    S.sack = ['can']; const seeds0 = S.seeds, val = LOOT.can.val;
     openDialog('sir'); await new Promise(r => setTimeout(r, 300));
-    const b = [...document.querySelectorAll('button')].find(e => /some gold/i.test(e.textContent)); if (b) b.click();
+    const b = [...document.querySelectorAll('button')].find(e => /found some stuff/i.test(e.textContent)); if (b) b.click();
     for (let i = 0; i < 20 && S.seeds - seeds0 < val; i++) await new Promise(r => setTimeout(r, 250));   // the crew wallet comes back from the server
-    return { button: !!b, gold: S.gold, paid: S.seeds - seeds0, val };
+    return { button: !!b, sack: S.sack.length, paid: S.seeds - seeds0, val, shown: document.querySelector('#seeds').textContent };
   });
   await page.evaluate(() => closeDialog());
-  check('Mr. Sir buys the gold pouch, into the crew wallet', sold.button && sold.gold === 0 && sold.paid === sold.val && sold.val === 25, sold);
+  check('Mr. Sir trades gold for junk, into the crew\'s gold (shown in grams)', sold.button && sold.sack === 0 && sold.paid === sold.val && / g$/.test(sold.shown), sold);
+  check('found gold goes straight into the crew\'s gold', await page.evaluate(() => { const s0 = S.seeds; addGold(40); return S.seeds === s0 + 40; }));
   check('the shop sells a sifting screen', await page.evaluate(() => SHOP.some(s => s.id === 'screen')));
   check('day 1 quota is tiny, and grows every day', await page.evaluate(() => SIM.quotaFor(1, 1) <= 8 && SIM.quotaFor(5, 1) > SIM.quotaFor(1, 1)));
 

@@ -12,6 +12,7 @@ const moodOf=()=>RUN.mood||'normal';
 let moodShownDay=-1,sneakT=25;
 function moodAnnounce(){
   if(!S.started||moodShownDay===RUN.day)return;moodShownDay=RUN.day;
+  if(SIM.GOLD_DIG){toast(`Day ${RUN.day}. The Warden wants ${fmtG(RUN.quota)} of gold by curfew.`,'',7000);return}   // no moods in the gold dig: just what she wants today
   const M=SIM.MOODS[moodOf()];if(!M)return;
   toast(`Day ${RUN.day}. The Warden's mood: ${M.name}. ${M.desc}`,moodOf()==='normal'?'':'bad',8000);
 }
@@ -21,7 +22,7 @@ function moodHud(){
   const c=Math.round(RUN.curse||0),row=$('#curseRow');if(row){row.hidden=c<=0;$('#curseV').textContent=c+'%';row.classList.toggle('hot',c>=40)}
 }
 /* solo: the same rules the server runs */
-function soloCurse(d,why){if(online())return;const was=RUN.curse||0;RUN.curse=clamp(was+d,0,100);saveRun();curseNote(d,Math.round(RUN.curse),why);moodHud()}
+function soloCurse(d,why){if(online()||SIM.GOLD_DIG)return;const was=RUN.curse||0;RUN.curse=clamp(was+d,0,100);saveRun();curseNote(d,Math.round(RUN.curse),why);moodHud()}
 function curseNote(d,c,why){if(!S.started||!why||why==='dawn')return;toast(d>0?`The curse grows (${c}%): ${why}.`:`The curse eases (${c}%): ${why}.`,d>0?'bad':'good',4500)}
 function curseKo(){if(online())wsSend({t:'koCurse'});else soloCurse(tune('curse.ko'),'you got knocked out')}
 let moodLastT=-1;

@@ -60,6 +60,13 @@ Greg reshaped the start of the game, Needle In A Haystack style:
 
 Each extra camper makes digging gear half as dear again (`SIM.toolCost`, and the Supply Depot's dig category).
 
+## Gold is the money (Greg, 2026-10-01: "A")
+- The crew wallet counts **hundredths of a gram** (`fmtG`). Found gold goes **straight into it**: no pouch, no selling.
+  A visible fleck is 0.02 g, a nugget 0.4 g, a pan-load of good dirt ~0.01 g. Tools: pan 0.25 g, bucket 0.40 g,
+  shovel 0.80 g. Day-1 quota: 0.06 g. Mr. Sir trades gold dust for junk.
+- **Switched off** (Greg) behind `SIM.GOLD_DIG`: safes and heavy carried finds, the KB tube quest, the curse, the
+  Warden's moods. Everything else of JT's game stays.
+
 ## Built in step 1 (bare hands, the pan, the wallet)
 - **The crew wallet:** `S.seeds` *is* the crew's money now (`RUN.bank`, the server's `world.run.bank`).
   - Every "seeds += n" in JT's game (a finished hole, blackjack, the KB reward, the Supply Depot) changes the crew

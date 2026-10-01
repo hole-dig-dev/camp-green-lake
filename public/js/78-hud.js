@@ -27,8 +27,8 @@ const hq={stam:$('#stamFill'),room:$('#stamRoom'),aff:{injury:$('#affInjury'),he
 function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} campers asleep`}
   else sleepEl.style.display='none';
-  hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`${RUN.bank} / ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
+  hud.seeds.textContent=fmtG(S.seeds);   // the crew's gold (48-gold.js)
+  hq.quota.textContent=`${fmtG(RUN.bank)} / ${fmtG(RUN.quota)}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   let curWarn=false;
@@ -49,7 +49,7 @@ function updateHUD(){
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
-  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=(S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty'))+(S.gold>=0.5?` · gold ${Math.round(S.gold)}`:'')+(toolCap()?` · dirt ${Math.round(S.load.L)}/${toolCap()} L`:'');   // the gold pouch (48-gold.js), and the dirt in your pan or bucket (49-tools.js)
+  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=(S.sack.length?`${S.sack.length}/${sackMax()} · ${val} seeds`:(S.hasKB?'Gold tube':'empty'))+(toolCap()?` · dirt ${Math.round(S.load.L)}/${toolCap()} L`:'');   // the gold pouch (48-gold.js), and the dirt in your pan or bucket (49-tools.js)
   hud.onions.textContent=S.onions+(S.onionT>0?` · ${Math.ceil(S.onionT)}s left`:'');
   hw.onionRow.hidden=!(S.onions>0||S.onionT>0);
   hw.battRow.hidden=!(S.light||S.batt<30);

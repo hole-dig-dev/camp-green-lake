@@ -99,7 +99,7 @@ function scoop(){
   if(!shovel&&!S.toldHands){S.toldHands=true;toast('No shovel yet: you scrape up the dirt with your hands and pick through it. Sell what you find to Mr. Sir. The crew can buy a gold pan, then a shovel.','',7000)}
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
-  if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.seeds+=3;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across. +3 seeds`,'good');sfx.coin()}
+  if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Five feet deep, five feet across.`,'good');sfx.coin()}
   for(const it of items){
     if(it.found)continue;const dx=it.x-h.x,dz=it.z-h.z;
     if(dx*dx+dz*dz<(h.r*0.9)**2&&it.depth>h.d&&it.depth-h.d<HINT_AHEAD)hintFind(it,h);   // the shovel clinks on it a scoop or two early
@@ -112,7 +112,7 @@ function scoop(){
 /* carried finds: about 1 in 3 ordinary finds is too big for the sack (more from deeper down), and comes up as a crate,
    a tool bundle or a jug that has to be carried to Mr. Sir, worth more than the sack version. Sliders: F2 > Finds. */
 function carryFind(it){
-  const L=LOOT[it.type];if(L.key||L.heavy||S.inTown)return null;
+  const L=LOOT[it.type];if(SIM.GOLD_DIG||L.key||L.heavy||S.inTown)return null;   // (no carried finds in the gold dig)
   const p=tune('loot.carryOdds')+tune('loot.carryDeep')*clamp((it.depth-0.3)/1.15,0,1);if(Math.random()>=p)return null;
   const type=L.val<=12?'tools':L.val<=30?'crate':'jug';
   return{type,val:clamp(Math.round(L.val*tune('loot.carryValue')+10),5,SIM.HEAVY[type])};
@@ -129,7 +129,7 @@ function foundItem(it,h){
   if(it.type==='kb'){S.hasKB=true;sfx.gold();toast('A gold tube marked "KB"! The Warden will want this. Take it to her cabin.','gold',6000);shout(2);return}
   if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} seeds). It won't fit in your sack. Grab it with F and haul it to Mr. Sir's pickup, just inside the main gate. Two campers carry it much faster.`,'gold',7000);
     if(online())wsSend({t:'prop',item:it.id,type:it.type,x:h.mx,z:h.mz});else addProp(it.id,it.type,h.mx,h.mz);return}
-  S.sack.push(it.type);sfx.find();sfx.clank();addXP(4+L.val/4);toast(`Found: ${L.name} (worth ${L.val} seeds). Sell it to Mr. Sir.`+(L.val>=40?' A rare one!':''),L.val>=40?'gold':'',3200);
+  S.sack.push(it.type);sfx.find();sfx.clank();addXP(4+L.val/4);toast(`Found: ${L.name}. Mr. Sir trades ${fmtG(L.val)} of gold for it.`+(L.val>=40?' A rare one!':''),L.val>=40?'gold':'',3200);
 }
 
 /* ---------- interactions ---------- */

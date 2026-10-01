@@ -91,12 +91,12 @@ try {
   // --- scrape into the pan, wash it at the water truck ---
   const load = await p1.evaluate(s => { P.x = s.x + 4; P.z = s.z + 1.1; P.y = groundAt(P.x, P.z); P.fa = Math.PI; S.stam = 100; for (let i = 0; i < 4; i++) scoop(); return { L: +S.load.L.toFixed(2), g: +S.load.g.toFixed(2), cap: toolCap() }; }, hands.spot);
   check('scraped dirt goes into the pan, up to its 4 L', load.L === load.cap && load.cap === 4 && load.g > 0, load);
-  await p1.evaluate(() => { TUNE_OVR['gold.panTime'] = { v: 1 }; P.x = 7.3; P.z = 38.2; P.y = groundAt(P.x, P.z); P.yaw = Math.PI * 0.5; S.gold = 0; const s = nearSpot(); window.__spot = s && s.id; use(); });
+  await p1.evaluate(() => { TUNE_OVR['gold.panTime'] = { v: 1 }; P.x = 7.3; P.z = 38.2; P.y = groundAt(P.x, P.z); P.yaw = Math.PI * 0.5; window.__seeds0 = S.seeds + goldFrac; const s = nearSpot(); window.__spot = s && s.id; use(); });
   // (the pan-load time is 1 s above, not 8: headless frames are slow)
   check('at the water truck, F washes the pan', await p1.evaluate(() => window.__spot === 'pan'));
   await waitFor(p1, () => S.load.L === 0, 120000, 'the pan to be washed');
-  const washed = await p1.evaluate(l => ({ gold: +S.gold.toFixed(2), expect: l.g }), load);
-  check('washing the pan turns its dirt into gold in your pouch', Math.abs(washed.gold - washed.expect) < 0.05 && washed.gold > 0, washed);
+  const washed = await p1.evaluate(l => ({ gold: +(S.seeds + goldFrac - window.__seeds0).toFixed(2), expect: l.g }), load);
+  check('washing the pan turns its dirt into the crew\'s gold', Math.abs(washed.gold - washed.expect) < 0.05 && washed.gold > 0, washed);
   await p1.setViewportSize({ width: 1280, height: 720 }); await p1.waitForTimeout(2500);
   await p1.screenshot({ path: path.join(OUT, 'tools-water-truck-1280.png') });
 

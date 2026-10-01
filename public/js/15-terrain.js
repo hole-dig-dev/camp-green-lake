@@ -69,12 +69,12 @@ function pickType(f){const w=WEIGHTS.map(([k,v],i)=>[k,v*(1+f*i*0.9)]);let r=rng
 function spotAround(minD,maxD,pw,minPre){for(let k=0;k<400;k++){const a=rng()*Math.PI*2,d=minD+(maxD-minD)*Math.pow(rng(),pw);const x=Math.cos(a)*d,z=20+Math.sin(a)*d;if(Math.max(Math.abs(x),Math.abs(z))>EDGE-6||nearCampZone(x,z))continue;if(holeNear(x,z,minPre))continue;return{x,z}}return{x:-80,z:-80}}
 const items=[];
 for(let i=0;i<5000;i++){const p=spotAround(14,EDGE*1.35,1.35,1.7);items.push({id:i,type:pickType(clamp(Math.hypot(p.x,p.z-20)/450,0,1)),x:p.x,z:p.z,depth:0.3+rng()*1.15,found:false})}
-{const p=spotAround(120,320,1,2.5);items.push({id:items.length,type:'kb',x:p.x,z:p.z,depth:1.2,found:false})}
+if(!SIM.GOLD_DIG){const p=spotAround(120,320,1,2.5);items.push({id:items.length,type:'kb',x:p.x,z:p.z,depth:1.2,found:false})}   // the KB tube quest (off in the gold dig)
 let SUITCASE;
 {const p=spotAround(220,480,1,2.8);SUITCASE={id:items.length,type:'suitcase',x:p.x,z:p.z,depth:2.3,found:false};items.push(SUITCASE)}
 const SEARCH={x:SUITCASE.x+(rng()-0.5)*9,z:SUITCASE.z+(rng()-0.5)*9,r:10};
 /* heavy finds, buried deeper than a plain shovel reaches (you need the long-handled shovel) */
-for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:items.length,type:rng()<0.4?'safe':'strongbox',x:p.x,z:p.z,depth:1.6+rng()*0.9,found:false})}
+if(!SIM.GOLD_DIG)for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:items.length,type:rng()<0.4?'safe':'strongbox',x:p.x,z:p.z,depth:1.6+rng()*0.9,found:false})}   // safes and strongboxes (off in the gold dig)
 
 /* ---------- terrain: detailed chunks stream in around you; one coarse mesh covers the distance ---------- */
 /* PERF: level of detail. Chunks within NEAR_R of the player are built at full detail (a point every RES = 0.4 m).

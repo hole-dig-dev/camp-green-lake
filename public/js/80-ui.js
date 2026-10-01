@@ -26,10 +26,11 @@ function reportKB(){
 function sirNode(first){
   const back=()=>sirNode(false),opts=[],sum=S.sack.reduce((s,t)=>s+LOOT[t].val,0);
   if(S.water<waterMax()-2)opts.push({label:'Can I fill my canteen?'+(RUN.mood==='stingy'?` (${Math.max(0,3-(S.refills||0))} left today)`:''),go:()=>{if(RUN.mood==='stingy'&&(S.refills||0)>=3)return reply('Mr. Sir','Three refills. That\'s the rule today. Go suck on a rock.',back);S.refills=(S.refills||0)+1;S.water=waterMax();sfx.splash();return reply('Mr. Sir','Drink up. Then get back out there. The sun doesn\'t care about your feelings.',back)}});
-  if(S.gold>0){const gv=Math.round(goldValue());opts.push({label:`I've got some gold. (${S.gold} flake${S.gold>1?'s':''}, worth ${gv} seeds)`,go:()=>{logEv('sellGold',{flakes:S.gold,value:gv});S.gold=0;sfx.coin();payTeam(gv);addXP(gv/2);toast(`Mr. Sir weighed your gold: ${gv} seeds into the crew wallet.`,'good');return reply('Mr. Sir',pick(['Gold. Huh. The Warden\'ll want to know where you found it.','That\'s not much gold for a whole day\'s digging.','Keep your mouth shut about this, camper.']),back)}})}   // the gold pouch (48-gold.js)
-  if(S.sack.length)opts.push({label:`I found some stuff. (${S.sack.length} item${S.sack.length>1?'s':''}, worth ${sum} seeds)`,go:()=>{S.sack=[];sfx.coin();payTeam(sum);addXP(sum/2);toast(`Mr. Sir paid ${sum} seeds into the crew wallet.`,'good');return reply('Mr. Sir',pick(['This isn\'t a Girl Scout camp. But fine. Here\'s your seeds.','Don\'t spit your seeds on my truck.','Keep \'em coming, camper.']),back)}});
+  if(false){const gv=Math.round(goldValue());   // (the gold pouch is gone: found gold goes straight into the crew's gold, 48-gold.js)
+opts.push({label:`I've got some gold. (${S.gold} flake${S.gold>1?'s':''}, worth ${gv} seeds)`,go:()=>{logEv('sellGold',{flakes:S.gold,value:gv});S.gold=0;sfx.coin();payTeam(gv);addXP(gv/2);toast(`Mr. Sir weighed your gold: ${gv} seeds into the crew wallet.`,'good');return reply('Mr. Sir',pick(['Gold. Huh. The Warden\'ll want to know where you found it.','That\'s not much gold for a whole day\'s digging.','Keep your mouth shut about this, camper.']),back)}})}   // the gold pouch (48-gold.js)
+  if(S.sack.length)opts.push({label:`I found some stuff. (${S.sack.length} item${S.sack.length>1?'s':''}: he'll trade ${fmtG(sum)} of gold)`,go:()=>{S.sack=[];sfx.coin();payTeam(sum);addXP(sum/2);toast(`Mr. Sir weighed out ${fmtG(sum)} of gold dust for your junk. Into the crew's gold.`,'good');return reply('Mr. Sir',pick(['This isn\'t a Girl Scout camp. But fine. Here\'s your seeds.','Don\'t spit your seeds on my truck.','Keep \'em coming, camper.']),back)}});
   if(S.hasKB)opts.push({label:'I found a gold tube marked KB.',go:()=>reply('Mr. Sir','That ain\'t mine. The Warden will want that. Her cabin\'s the one with the trees.',back)});
-  opts.push({label:'Can I have some of your sunflower seeds?',go:()=>{if(!DLG.used.sirSeeds&&Math.random()<0.5){DLG.used.sirSeeds=1;S.seeds+=3;sfx.coin();return reply('Mr. Sir','Fine. Three. You tell anybody, you dig two holes tomorrow. (+3 seeds)',back)}return reply('Mr. Sir','These are MY seeds. I quit smoking for these seeds.',back)}});
+  opts.push({label:'Can I have some of your sunflower seeds?',go:()=>{if(!DLG.used.sirSeeds&&Math.random()<0.5){DLG.used.sirSeeds=1;sfx.coin();return reply('Mr. Sir','Fine. Three. You tell anybody, you dig two holes tomorrow.',back)}return reply('Mr. Sir','These are MY seeds. I quit smoking for these seeds.',back)}});
   opts.push({label:'Why do we dig holes all day?',go:()=>({name:'Mr. Sir',text:'Builds character. Dig a hole every day in the hot sun and you come out a better kid.',opts:[{label:'Is that the real reason?',go:()=>reply('Mr. Sir','You ask a lot of questions for somebody holding a shovel. Go ask the Warden. Actually, don\'t.',back)},{label:'Got it. Character.',go:back},LEAVE]})});
   opts.push(LEAVE);
   return{name:'Mr. Sir',text:first?pick(['What do you want, camper? Make it quick.','You look thirsty. Good.','Talk fast. The truck leaves when I say it leaves.']):'Anything else?',opts};
@@ -100,7 +101,7 @@ function syncHand(el,cards,hideIdx){
 function bjSay(t){$('#bjSay').textContent='X-Ray: "'+t+'"'}
 const BJ_STATUS={bet:'Betting',play:'Your turn',dealer:"X-Ray's turn",done:'Result'};
 function renderBJ(){
-  $('#bjSeeds').textContent=S.seeds;
+  $('#bjSeeds').textContent=fmtG(S.seeds);
   const hide=BJ.phase==='play'?1:-1;
   syncHand($('#bjDealer'),BJ.dealer,hide);syncHand($('#bjYou'),BJ.you,-1);
   $('#bjDealerTot').textContent=BJ.dealer.length?String(hide===1?handVal([BJ.dealer[0]]):handVal(BJ.dealer)):'';
