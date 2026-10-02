@@ -98,12 +98,12 @@ function playerLook(name,ci){
    CGL_SteelBlue material (art: blender/camper); each camper with one gets their own darker copy of it. */
 const SPADE_SHARP={color:0x2b3036,metal:0.85,rough:0.28};
 /* the gold-plated shovel (JT 2026-10-01, pure flex: 88-gear.js, p.goldShovel): its steel goes polished gold */
-const SPADE_GOLD={color:0xd8a93a,metal:0.95,rough:0.22};
+const SPADE_GOLD={color:0xf0c040,metal:0.35,rough:0.3};   /* not full metal: there's no environment map, so a mirror-metal blade renders near black */
 function spadeLook(p,sharp){
   if(!p)return;sharp=!!sharp;const gold=!!p.goldShovel,vm=p===me&&typeof VM_SHOVEL!=='undefined'?VM_SHOVEL:[],key=(p.model?'m':'b')+sharp+gold+vm.length;if(p.spadeLook===key)return;p.spadeLook=key;
   for(const n of[...(p.shovelMeshes||[]),...vm]){const m=n.userData.steel0||(n.material&&n.material.name==='CGL_SteelBlue'?n.material:null);if(!m)continue;
     n.userData.steel0=m;
-    if(gold){if(!n.userData.steelGold){const c=m.clone();c.color.setHex(SPADE_GOLD.color);if('metalness'in c)c.metalness=SPADE_GOLD.metal;if('roughness'in c)c.roughness=SPADE_GOLD.rough;n.userData.steelGold=c}n.material=n.userData.steelGold}
+    if(gold){if(!n.userData.steelGold){const c=m.clone();c.color.setHex(SPADE_GOLD.color);if(c.emissive){c.emissive.setHex(0x7a5a10);c.emissiveIntensity=0.55}   /* a faint warm glow: gold even in the shade */if('metalness'in c)c.metalness=SPADE_GOLD.metal;if('roughness'in c)c.roughness=SPADE_GOLD.rough;n.userData.steelGold=c}n.material=n.userData.steelGold}
     else if(sharp){if(!n.userData.steelSharp){const c=m.clone();c.color.setHex(SPADE_SHARP.color);if('metalness'in c)c.metalness=SPADE_SHARP.metal;if('roughness'in c)c.roughness=SPADE_SHARP.rough;n.userData.steelSharp=c}n.material=n.userData.steelSharp}
     else n.material=m}
 }
