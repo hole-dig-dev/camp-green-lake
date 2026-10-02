@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/security.mjs && node tests/town-layout.mjs && node tests/camper-rig.mjs && node tests/hat-assets.mjs && node tests/face-assets.mjs && node tests/glasses-assets.mjs && node tests/clothes-assets.mjs && node tests/footwear-assets.mjs && node tests/smoke.mjs",
+    "test": "node --test tests/security.mjs && node tests/town-layout.mjs && node tests/camper-rig.mjs && node tests/hat-assets.mjs && node tests/face-assets.mjs && node tests/glasses-assets.mjs && node tests/clothes-assets.mjs && node tests/footwear-assets.mjs && node tests/upgrades-assets.mjs && node tests/smoke.mjs",
     "split": "node scripts/split-client.mjs --write",
     "split:check": "node scripts/split-client.mjs --check"
   },
