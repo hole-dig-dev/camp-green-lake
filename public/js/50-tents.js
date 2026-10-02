@@ -54,6 +54,10 @@ const SHOP=[
   {id:'hopper2',name:'Hopper collar',desc:'Planks on top of your hopper: holds 50 holes and sifts twice as fast (a hole every 4 seconds).',cost:220,cat:'dig',icon:'bucket',needs:'hopper'},
   {id:'hopper3',name:'Motorized dry washer',desc:'A towering steel bin on legs and a gas motor on the blower: holds 120 holes and sifts a hole every 1.5 seconds.',cost:500,cat:'dig',icon:'bucket',needs:'hopper2'},
   {id:'pipe',name:'Sand pipe (5 m)',desc:'Clear pipe for a sand pipeline from the sifter out into the lake. F at the sifter\'s connector (or the pipeline\'s end) and walk: a section goes down every 5 m. Dump your bucket in the intake at the far end and the sand rides down to the sifter. Boulders, sinkholes and mines crack it: hold F on a crack to fix it.',cost:15,stack:'pipe',cat:'dig',icon:'bucket',needs:'bucket'},
+  {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
+  {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
+  {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
+  {id:'pipeSteel',name:'Reinforced pipe',desc:'For the whole camp: steel-banded pipe. Boulders, sinkholes, mines and dynamite never crack the pipeline again.',cost:400,cat:'camp',camp:true,icon:'bucket'},
   {id:'canteen',name:'Big canteen',desc:'Tier 2 canteen: holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
@@ -69,7 +73,7 @@ const SHOP=[
 const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds','tonic','medkit','walkie']);
 function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg':''}" src="icons/${path}.png" alt="">`}
 function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
-const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'}];
+const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'},{id:'camp',label:'Camp'}];
 const shopCatLabel=id=>(SHOP_CATS.find(c=>c.id===id)||{}).label||'';
 let shopOpen=false,shopCat='all',shopSel='pan',shopConfirming=false,shopPrevFocus=null,shopGpTimer=null;
 const shopGp={dir:null,t:0,a:false,b:false};
@@ -99,6 +103,7 @@ function shopEffect(it){
 }
 function shopStatus(it){
   if(it.id==='battery'&&S.batt>=100)return{kind:'full'};
+  if(it.camp&&campHas(it.id))return{kind:'owned'};   /* a camp upgrade (84-camp.js): the crew's */
   if(!it.stack&&(S.up[it.id]||SHOP.some(o=>o.needs===it.id&&S.up[o.id])))return{kind:'owned'};   // a tier 2 you've traded up from counts as owned
   if(it.needs&&!S.up[it.needs])return{kind:'locked',need:SHOP.find(o=>o.id===it.needs).name};
   if(S.seeds<it.cost)return{kind:'short',need:it.cost-S.seeds};
@@ -212,6 +217,7 @@ function hideShopConfirm(){
    when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
+  if(it.camp){campBuy(it);sfx.coin();hideShopConfirm();it.justBought=performance.now();toast(`Bought for the camp: ${it.name}`,'good',2400);$('#shopFeedback').textContent=`${it.name}: the whole camp has it now. ${S.seeds} gold left.`;animateShopSeeds();renderShop();setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);return}
   const undo=()=>{if(it.stack==='onions')S.onions=Math.max(0,S.onions-1);else if(it.stack&&it.stack!=='batt')S[it.stack]=Math.max(0,(S[it.stack]||0)-1);else if(!it.stack)delete S.up[it.id]};
   walletSpend(it.cost,undo,it.name);   /* the crew wallet, checked by the server (84-spend.js) */
   if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}

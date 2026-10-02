@@ -361,7 +361,14 @@ function mineTick(now) {
   }
 }
 /* the sand pipeline (public/js/88-pipeline.js): one for the camp, saved with the world, gone when the crew's fired */
-function pipeW() { if (!world.pipe || typeof world.pipe !== 'object' || !Array.isArray(world.pipe.nodes)) world.pipe = { nodes: [], broken: {} }; if (!world.pipe.broken || typeof world.pipe.broken !== 'object') world.pipe.broken = {}; return world.pipe; }
+function pipeW() {
+  if (!world.pipe || typeof world.pipe !== 'object' || !Array.isArray(world.pipe.nodes)) world.pipe = { nodes: [], broken: {} };
+  if (!world.pipe.broken || typeof world.pipe.broken !== 'object') world.pipe.broken = {};
+  const p = world.pipe;
+  // a tree since branches (JT 2026-10-01): every node names its parent; runs are keyed by the child. Old chains: convert.
+  if (p.nodes.length > 1 && p.nodes[1].p === undefined) { p.nodes.forEach((n, i) => { n.p = i - 1; }); const b = {}; for (const k in p.broken) if (p.broken[k]) b[+k + 1] = true; p.broken = b; }
+  return p;
+}
 /* may this hazard or mob happen? The F2 Hazards tab (public/js/88-hazards.js): ALL off for testing, single ones back on */
 function hazOnS(k) { return tuneS('haz.all', 1) >= 0.5 || tuneS('haz.on.' + k, 0) >= 0.5; }
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
@@ -547,6 +554,7 @@ wss.on('connection', (ws, req) => {
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       mines: MINES, // landmines (public/js/88-mines.js)
       pipe: pipeW(), // the sand pipeline (public/js/88-pipeline.js)
+      camp: world.camp || {}, // the camp's upgrades (public/js/84-camp.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -915,21 +923,28 @@ wss.on('connection', (ws, req) => {
         // A camper laying the sand pipeline (public/js/88-pipeline.js) put a joint down where they're standing, ~5 m on
         // from the last one. Node 0 is the sifter's connector socket.
         const p = pipeW(), x = num(m.x, -600, 600, NaN), z = num(m.z, -600, 600, NaN); if (!Number.isFinite(x) || !Number.isFinite(z)) return;
-        if (!p.nodes.length) p.nodes.push({ x: r2(SIM.GOLD.SIFTER.x - 1.9), z: r2(SIM.GOLD.SIFTER.z) });
-        const e = p.nodes[p.nodes.length - 1], d = Math.hypot(x - e.x, z - e.z);
+        if (!p.nodes.length) p.nodes.push({ x: r2(SIM.GOLD.SIFTER.x - 1.9), z: r2(SIM.GOLD.SIFTER.z), p: -1 });
+        const pi = Number.isInteger(m.p) && m.p >= 0 && m.p < p.nodes.length ? m.p : p.nodes.length - 1, e = p.nodes[pi], d = Math.hypot(x - e.x, z - e.z);
         if (d < 2 || d > 7 || Math.hypot(c.x - x, c.z - z) > 4 || p.nodes.length > tuneS('pipe.max', 60) + 1) { send(c, { t: 'pipe', ...p }); return; }   // put them right
-        p.nodes.push({ x: r2(x), z: r2(z) }); dirty = true; broadcast({ t: 'pipe', by: c.id, ...p }); break;
+        p.nodes.push({ x: r2(x), z: r2(z), p: pi }); dirty = true; broadcast({ t: 'pipe', by: c.id, ...p }); break;
       }
       case 'pipeBreak': {   // a boulder, sinkhole or mine cracked a run (worked out client-side, like those hazards)
-        const p = pipeW(), i = num(m.i, 0, 1e4, -1) | 0; if (i < 0 || i >= p.nodes.length - 1 || p.broken[i]) return;
+        const p = pipeW(), i = num(m.i, 0, 1e4, -1) | 0; if (i < 1 || i >= p.nodes.length || p.broken[i] || (world.camp && world.camp.pipeSteel)) return; // i: the run's child node; reinforced pipe doesn't crack
         p.broken[i] = true; dirty = true; LOG.log('pipeBreak', { i, by: c.n }); broadcast({ t: 'pipe', ...p }); break;
       }
       case 'pipeFix': {   // held F at the crack for pipe.fixTime: they have to be standing by it
         const p = pipeW(), i = num(m.i, 0, 1e4, -1) | 0; if (!p.broken[i]) return;
-        const a = p.nodes[i], b = p.nodes[i + 1]; if (!a || !b || Math.min(Math.hypot(c.x - a.x, c.z - a.z), Math.hypot(c.x - b.x, c.z - b.z), Math.hypot(c.x - (a.x + b.x) / 2, c.z - (a.z + b.z) / 2)) > 5) return;
+        const b = p.nodes[i], a = b && p.nodes[b.p]; if (!a || !b || Math.min(Math.hypot(c.x - a.x, c.z - a.z), Math.hypot(c.x - b.x, c.z - b.z), Math.hypot(c.x - (a.x + b.x) / 2, c.z - (a.z + b.z) / 2)) > 5) return;
         delete p.broken[i]; dirty = true; LOG.log('pipeFix', { i, by: c.n }); broadcast({ t: 'pipe', ...p }); break;
       }
-      case 'pipeFlow': broadcast({ t: 'pipeFlow' }, c.id); break;   // someone sent sand down it: everyone sees the plug go
+      case 'pipeFlow': broadcast({ t: 'pipeFlow', leaf: num(m.leaf, 1, 1e4, 1) | 0 }, c.id); break;
+      case 'campBuy': { // a camp upgrade (public/js/84-camp.js), paid from the crew wallet by walletSpend just before this
+        if (m.rid != null && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return;
+        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel'].includes(id)) return;
+        const camp = world.camp || (world.camp = {});
+        if (camp[id]) { world.run.bank += num(m.cost, 0, 2000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
+        camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
+      }   // someone sent sand down it: everyone sees the plug go
       case 'mineHit': {
         // Someone stepped on a landmine (public/js/88-mines.js): you, or a D Tent camper on the client that runs the crew
         // (m.crew: his name). Yours has to be under your feet; the crew's we take on trust (the crew lives client-side).
