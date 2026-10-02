@@ -11,7 +11,7 @@ const UFO={obj:null,beam:null,anims:[],parts:null,head:null,loading:false};
 function ufoLoad(){if(UFO.loading)return;UFO.loading=true;modelParts('UFO').then(p=>{UFO.parts=p}).catch(()=>{});modelParts('AlienHead').then(p=>{UFO.head=p}).catch(()=>{})}
 function ufoMesh(){
   const g=new T.Group();if(UFO.parts)for(const pt of UFO.parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;g.add(m)}
-  const beam=new T.Mesh(new T.CylinderGeometry(0.6,3.2,1,24,1,true),new T.MeshBasicMaterial({color:0xbff7ff,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));
+  const beam=new T.Mesh(new T.CylinderGeometry(0.6,3.2,1,24,1,true),new T.MeshBasicMaterial({color:0x8dff6a,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide})   /* a green tractor beam */);
   beam.position.y=-0.5;g.add(beam);g.userData.beam=beam;scene.add(g);return g;
 }
 function ufoSound(on){if(!AC)return;tone(on?180:240,1.2,'sine',0.05,on?420:90);setTimeout(()=>tone(on?260:200,1,'triangle',0.035,on?520:110),200)}
