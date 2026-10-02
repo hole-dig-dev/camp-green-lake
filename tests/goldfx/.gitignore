@@ -1,0 +1,6 @@
+out/*
+!out/before-pan-grid.jpg
+!out/before-sift-grid.jpg
+!out/after-pan-grid.jpg
+!out/after-sift-grid.jpg
+!out/README.md

@@ -11,6 +11,7 @@ globals()['__file__']=os.path.join(HERE,'sifter.py')
 exec(open(os.path.join(HERE,'cgl_blender.py')).read())
 from mathutils import Vector
 OUT=os.path.join(ART,'glb');rnd=random.Random(1849)
+PREVIEW=globals().get('SIFTER_PREVIEW',True)
 def J(a=1.0):return rnd.uniform(-a,a)
 def M_(n,c,r=0.9,m=0.0):return ('s_'+n,c,r,m)
 WOOD=[M_('wood1',(0x8a,0x68,0x46)),M_('wood2',(0x74,0x56,0x3a)),M_('wood3',(0x66,0x4c,0x34))]
@@ -31,8 +32,9 @@ B('floor',(sl,W,0.03),(0,0,0),WOOD[0],p=tray)
 for s in(-1,1):B(f'side{s}',(sl,0.04,0.2),(0,s*(W/2+0.02),0.09),WOOD[1],p=tray)
 for k in range(9):B(f'riffle{k}',(0.03,W,0.04),(-sl/2+0.35+k*0.2,0,0.035),TIN if k%2 else IRON,p=tray,bv=0.003)   # the riffles: the gold catches behind them
 for k in range(7):B(f'cloth{k}',(0.16,W-0.02,0.005),(-sl/2+0.45+k*0.26,0,0.018),CANVAS,p=tray,bv=0)               # the cloth under them
-for k in range(14):B(f'sand{k}',(0.12+J(0.04),0.14+J(0.05),0.02),(-sl/2+0.3+k*0.13+J(0.03),J(0.18),0.06),SAND,p=tray,bv=0.008)
-for k in range(5):cyl(f'fleck{k}',0.012,0.006,(-sl/2+0.5+k*0.33,J(0.2),0.06),GOLD,verts=6,bevel=0,parent=tray)
+# Sand is animated in 89-goldfx.js; keep the later assets' seeded variation stable.
+for _ in range(61):rnd.random()
+
 # legs: tall at the hopper end, short at the pan end, cross-braced
 for x,h in((X0+0.08,Z0),(X1-0.08,Z1)):
     for s in(-1,1):B(f'leg{x:.1f}{s}',(0.07,0.07,h),(x,s*(W/2+0.05),h/2),WOOD[2],p=r)
@@ -44,7 +46,7 @@ for s in(-1,1):
     B(f'hopS{s}',(0.62,0.04,0.42),(hx,s*0.33,hz),WOOD[0],rot=(-s*0.25,0,0),p=r)   # flared: wider at the top
     B(f'hopE{s}',(0.04,0.66,0.42),(hx+s*0.3,0,hz),WOOD[0],rot=(0,s*0.25,0),p=r)
 for k in range(7):tube(f'bar{k}',(hx-0.36,-0.33+k*0.11,hz+0.22),(hx+0.36,-0.33+k*0.11,hz+0.22),0.012,IRON,r,v=6)
-B('hopsand',(0.5,0.5,0.06),(hx,0,hz-0.05),SAND,p=r,bv=0.02)
+# The hopper fills and drains during the pour.
 # the blower: a drum and crank on the -Y side, a canvas hose up under the tray
 bx_,by_=-0.35,-0.75
 cyl('drum',0.26,0.34,(bx_,by_,0.42),RED,verts=16,rot=(math.pi/2,0,0),bevel=0.01,parent=r)
@@ -58,7 +60,8 @@ for i in range(len(pts)-1):tube(f'hose{i}',pts[i],pts[i+1],0.07,CANVAS,r,v=10)
 # the catch pan at the low end, and a tailings pile
 cyl('pan',0.3,0.06,(X1+0.32,0,0.04),TIN,verts=20,r2=0.22,bevel=0.004,parent=r)
 cyl('pansand',0.2,0.02,(X1+0.32,0,0.06),SAND,verts=16,bevel=0,parent=r)
-for k in range(6):cyl(f'nug{k}',0.018+J(0.006),0.012,(X1+0.32+J(0.12),J(0.12),0.075),GOLD,verts=6,bevel=0,parent=r)
+# No decorative gold: the batch only reveals gold after it reaches the catch pan.
+for _ in range(18):rnd.random()
 bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=(X1+0.1,0.62,0));o=bpy.context.active_object;o.name='tailings';o.scale=(0.55,0.4,0.22)
 bpy.ops.object.transform_apply(scale=True);_finish(o,SAND,0,r)
 # a bucket waiting by the hopper, and the sign
@@ -69,7 +72,20 @@ B('signpost',(0.06,0.06,1.6),(X1-0.25,0.47,0.8),WOOD[2],p=r)   # behind the boar
 B('signboard',(0.9,0.04,0.32),(X1-0.25,0.52,1.5),WOOD[0],p=r)
 text('signtxt','SIFTER',(X1-0.25,0.545,1.52),0.2,('ink','ink',0.8),rot=(math.pi/2,0,math.pi),parent=r)   # on the +Y face: the yard side (game -z)
 text('signtxt2','SAND IN · GOLD OUT',(X1-0.25,0.545,1.39),0.07,('ink','ink',0.8),rot=(math.pi/2,0,math.pi),parent=r)
-studio(elev=24,azim=-40,lens=40,floor=False);frame(margin=1.1);render(res=(900,600),samples=16)
+# Export the moving tray separately, in the same origin/frame as Sifter.
+bpy.context.view_layer.update()
+dg=bpy.context.evaluated_depsgraph_get()
+tray_parts=[(o.name,bpy.data.meshes.new_from_object(o.evaluated_get(dg)),o.matrix_world.copy()) for o in tray.children if o.type=='MESH']
+for o in list(tray.children):bpy.data.objects.remove(o,do_unlink=True)
+bpy.data.objects.remove(tray,do_unlink=True)
+scene('SifterTray');tr=root('SifterTray')
+for n,me,mw in tray_parts:
+    me.transform(mw);o=bpy.data.objects.new(n,me);_link(o);o.parent=tr
+p=export_glb(os.path.join(OUT,'SifterTray.glb'));print('SifterTray',p[1],p[2])
+scene('Sifter',fresh=False)
+instance('tray_preview','SifterTray')
+studio(elev=24,azim=-40,lens=40,floor=False);frame(margin=1.1)
+if PREVIEW:render(res=(900,600),samples=16)
 p=export_glb(os.path.join(OUT,'Sifter.glb'));print('Sifter',p[1],p[2])
 
 # ---- the crew's bucket (public/js/30-npcs.js): each D Tent camper fills one digging, carries it by the bail to the
@@ -81,7 +97,8 @@ for k in range(3):B(f'clod{k}',(0.06,0.05,0.03),(J(0.06),J(0.06),0.305),SAND,p=r
 for s_ in(-1,1):cyl(f'lug{s_}',0.02,0.02,(s_*0.15,0,0.25),IRON,verts=6,rot=(0,math.pi/2,0),bevel=0,parent=r)
 tube('bailL',(-0.15,0,0.25),(-0.08,0,0.39),0.007,IRON,r,v=5);tube('bailT',(-0.08,0,0.39),(0.08,0,0.39),0.007,IRON,r,v=5);tube('bailR',(0.08,0,0.39),(0.15,0,0.25),0.007,IRON,r,v=5)
 cyl('grip',0.014,0.1,(0,0,0.395),WOOD[1],verts=8,rot=(0,math.pi/2,0),bevel=0,parent=r)
-studio(elev=24,azim=-40,lens=50,floor=False);frame(margin=1.2);render(res=(600,600),samples=16)
+studio(elev=24,azim=-40,lens=50,floor=False);frame(margin=1.2)
+if PREVIEW:render(res=(600,600),samples=16)
 p=export_glb(os.path.join(OUT,'CampBucket.glb'));print('CampBucket',p[1],p[2])
 
 # ---- the sifter's crank (arm + handle), on its own so the game can turn it while the blower runs. Origin on the axle;
@@ -90,7 +107,8 @@ scene('SifterCrank');r=root('SifterCrank')
 tube('crankarm',(0,0,0),(0.18,0,0.14),0.018,IRON,r)
 tube('handle',(0.18,0,0.14),(0.18,-0.12,0.14),0.025,WOOD[1],r)
 cyl('hub',0.035,0.03,(0,0,0),IRON,verts=10,rot=(math.pi/2,0,0),bevel=0,parent=r)
-studio(elev=20,azim=-40,lens=60,floor=False);frame(margin=1.4);render(res=(400,400),samples=8)
+studio(elev=20,azim=-40,lens=60,floor=False);frame(margin=1.4)
+if PREVIEW:render(res=(400,400),samples=8)
 p=export_glb(os.path.join(OUT,'SifterCrank.glb'));print('SifterCrank',p[1],p[2])
 
 # ---- the gold pan (the store's first tool; panning at the wash tub, 91-goldfx.js). A shallow, wide steel pan with
@@ -107,7 +125,8 @@ bpy.ops.mesh.primitive_torus_add(major_radius=0.2,minor_radius=0.006,major_segme
 for k in range(3):   # the riffles: three ridges round one side of the wall
     z=0.026+k*0.014;rr=0.13+k*0.025
     for j in range(7):a=math.pi*0.55+j*0.13;B(f'riffle{k}_{j}',(0.03,0.006,0.005),(math.cos(a)*rr,math.sin(a)*rr,z),PANSTEEL,rot=(0.5,0,a+math.pi/2),p=r,bv=0)
-studio(elev=40,azim=-30,lens=60,floor=False);frame(margin=1.3);render(res=(500,500),samples=12)
+studio(elev=40,azim=-30,lens=60,floor=False);frame(margin=1.3)
+if PREVIEW:render(res=(500,500),samples=12)
 p=export_glb(os.path.join(OUT,'GoldPan.glb'));print('GoldPan',p[1],p[2])
 
 # ---- the wash tub by the water drums: a half barrel of muddy water you pan in. Origin at the bottom's centre; water at 0.4 m.
@@ -119,6 +138,7 @@ for z in(0.08,0.4):cyl(f'hoop{z}',0.455,0.035,(0,0,z),IRON,verts=24,bevel=0,pare
 cyl('tubfloor',0.42,0.03,(0,0,0.03),WOOD[2],verts=20,bevel=0,parent=r)
 cyl('water',0.415,0.02,(0,0,0.4),TUBWATER,verts=24,bevel=0,parent=r)
 for k in range(4):B(f'slop{k}',(0.25+J(0.1),0.2+J(0.08),0.01),(J(0.6)+0.55,J(0.6),0.006),SAND,rot=(0,0,J(3)),p=r,bv=0.004)   # spilled sand round the foot
-studio(elev=30,azim=-30,lens=50,floor=False);frame(margin=1.2);render(res=(500,500),samples=12)
+studio(elev=30,azim=-30,lens=50,floor=False);frame(margin=1.2)
+if PREVIEW:render(res=(500,500),samples=12)
 p=export_glb(os.path.join(OUT,'WashTub.glb'));print('WashTub',p[1],p[2])
 bpy.ops.wm.save_mainfile()
