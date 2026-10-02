@@ -105,7 +105,7 @@ function scoop(){
   }
   const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0);
-  if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)){S.seeds+=1;sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
+  if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,FP?2:6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Bucket: ${Math.floor(S.bucket*10)/10} of ${bucketMax()} holes of sand.`,'good');sfx.thud()}
@@ -146,7 +146,7 @@ let panBusy=false;
 function washPan(){   // the gold pan (no bucket yet): wash your sand at the drums
   if(panBusy||gfxBusy())return;const holes=S.bucket;panBusy=true;
   const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);   // what's in it is decided now; the pan shows it (89-goldfx.js)
-  const pay=()=>{panBusy=false;S.bucket=0;S.seeds+=r.gold;addXP(4+r.gold/2);
+  const pay=()=>{panBusy=false;S.bucket=0;S.seeds+=r.gold;foundGold(r.gold);addXP(4+r.gold/2);
     if(r.nugget||r.luck>1.4)sfx.gold();else sfx.coin();toast(`${r.nugget?'A NUGGET in the pan! ':''}You wash ${r.gold} gold out of your pan.`,r.nugget?'gold':'good',3800);logEv('pan',{holes:+holes.toFixed(2),gold:r.gold})};
   if(!gfxStart('pan',{gold:r.gold},pay))pay();
 }
@@ -165,7 +165,7 @@ function siftBucket(){
   const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);
   const go=()=>{   // after the bucket's gone through (89-goldfx.js)
     siftBusy=false;S.bucket=0;
-    S.seeds+=r.gold;addXP(5+r.gold/2);
+    S.seeds+=r.gold;foundGold(r.gold);addXP(5+r.gold/2);
     const how=r.nugget?'A NUGGET! ':r.luck>1.4?'A rich batch! ':r.luck<0.7?'Thin sand. ':'';
     if(r.nugget||r.luck>1.4){sfx.gold()}else sfx.coin();
     toast(`${how}The sifter shakes ${r.gold} gold out of ${Math.round(holes*10)/10} holes of sand.`,r.nugget||r.luck>1.4?'gold':'good',4200);

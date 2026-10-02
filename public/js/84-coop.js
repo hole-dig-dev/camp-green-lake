@@ -22,35 +22,30 @@ function setHat(p,l){
   const c=[0,0xd9c27a,0x222222,0xd4af37][t];const br=cyl(0.42,0.42,0.04,10,c),cr=cyl(0.2,0.24,0.2,8,c);cr.position.y=0.12;h.add(br,cr);
 }
 
-/* ---- the crew bank (the gold rush, 2026-09-30): gold a camper deposits with the Warden (80-ui.js wardenNode), shared by
+/* ---- the crew bank (the gold rush, 2026-09-30): since 2026-10-01 the crew wallet (84-wallet.js): all the gold anyone has, shared by
    the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
 const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Warden's, out of the bank at curfew   // curse/mood: 81-mood.js
 function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
-/* put v of your own gold in the crew bank */
-function depositGold(v){
-  v=Math.min(S.seeds,Math.floor(v));if(!(v>0))return 0;
-  S.seeds-=v;sfx.coin();addXP(Math.min(40,v/5));
-  if(online())wsSend({t:'deposit',v});else{RUN.bank+=v;saveRun()}
-  toast(`You put ${v} gold in the crew bank.`,'good',3000);return v;
-}
 function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A camper')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A camper'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function newDay(m){m=m||{};toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
-/* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. */
+function newDay(m){m=m||{};{const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
+/* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. (The crew wallet, S.seeds,
+   is the server's: it starts the new run at 0, so it isn't wiped here.) */
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  Object.assign(S,{seeds:0,bucket:0,hopper:0,pipe:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  Object.assign(S,{bucket:0,hopper:0,pipe:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
-  if(RUN.bank<q&&played>=180){const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
-  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q}:{grace:true});
+  if(RUN.bank<q&&played>=180){RUN.lastFound=RUN.found||{};RUN.found={};const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
+  const found=RUN.found||{};RUN.found={};RUN.lastFound=found;
+  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
 }
 
 /* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
@@ -74,7 +69,7 @@ function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Pendanski paid ${v} gold for the ${name}.`+(who.length>1?' Split between everyone who carried it.':''),'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
+  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));foundGold(Math.round(v/Math.max(1,who.length)));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}

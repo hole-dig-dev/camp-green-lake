@@ -39,15 +39,15 @@ check('no crew until you hire them',await A.evaluate(()=>bots.every(b=>b.state==
 // the quota. Day 1: you've only just got here, so a grace day
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 let d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota,t:[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|')}));
-check('day 1, only just got here: a grace day (nothing taken), day 2 wants 37 a camper',d.day===2&&d.quota===59&&/let the quota slide/.test(d.t),JSON.stringify({...d,t:undefined}));
+check("day 1 at curfew: the Warden takes her 24 out of the crew wallet (one wallet: what you found pays it), day 2 wants 37 a camper",d.day===2&&d.quota===59&&/took her 24/.test(d.t)&&/Found today: Alpha/.test(d.t),JSON.stringify(d));
 // day 2: a full day played, the bank covers it
 await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);
-await A.evaluate(()=>{S.seeds+=100;depositGold(70)});await A.waitForTimeout(500);const bank2=await A.evaluate(()=>RUN.bank);
+await A.evaluate(()=>{S.seeds+=100});   /* one crew wallet: no depositing, it's all the crew's */await A.waitForTimeout(500);const bank2=await A.evaluate(()=>RUN.bank);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota}));
 check('day 2 at curfew: the Warden takes 59 out of the bank',d.day===3&&d.bank===bank2-59,`bank ${bank2} -> ${JSON.stringify(d)}`);
-// day 3: short
-await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);
+// day 3: short (the crew spent it all)
+await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);await A.evaluate(()=>{S.seeds=0});await A.waitForTimeout(800);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 const f=await A.evaluate(()=>({fired:!$('#fired').hidden,text:$('#firedText').textContent,gold:S.seeds,shovel:!!S.up.shovel}));
 check('short on day 3: fired, everything gone',f.fired&&f.gold===0&&!f.shovel,JSON.stringify(f));

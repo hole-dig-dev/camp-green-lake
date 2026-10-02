@@ -3,7 +3,7 @@
 const {browser,player,lookAt}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(!!ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 (async()=>{const b=await browser(),errs=[];const A=await player(b,PORT,'Alpha',errs),B=await player(b,PORT,'Bravo',errs);
-await A.evaluate(()=>{tuneSet('haz.mineEvery',0.5);tuneSet('haz.mineMax',3)});
+await A.evaluate(()=>{tuneSet('haz.mines',1);tuneSet('haz.mineEvery',0.5);tuneSet('haz.mineMax',3)});
 await A.evaluate(()=>{P.x=0;P.z=-40;P.y=groundAt(0,-40)});await B.evaluate(()=>{P.x=6;P.z=-42;P.y=groundAt(6,-42)});
 await A.waitForTimeout(25000);   // the first one comes ~20 s after the server starts, then every ~0.5 s
 const ms=await A.evaluate(()=>[...MINES.values()].map(m=>({id:m.id,x:m.x,z:m.z,camp:SIM.inCamp(m.x,m.z)})));
