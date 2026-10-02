@@ -9,12 +9,12 @@
    Friends see it: pos flag 2048 = talking on the walkie (65-net.js); a tonic or kit is an emote ('tonic'/'medkit').
    Voice: two campers who both own a walkie (flag 4096) hear each other at any distance; out of earshot it comes over
    the radio, filtered, with a squelch as they key up and let go (86-voice.js radioPair / RADIO_*). */
-const HELD_MODEL={walkie:'SupplyWalkie',tonic:'SupplyTonic',medkit:'SupplyMedkit',bucket:'CampBucket'};   // bucket: the D Tent crew's (30-npcs.js)
-const HELD_GRIP={walkie:0.059,tonic:0.055,medkit:0.155,bucket:0.395};   // grip height above each model's origin (supplies.py GRIP)
-const HELD_SIZE={walkie:1.7,tonic:1.6,medkit:1.3,bucket:1.1};        // × real size: the camper's chunky hands (~10 cm across) would swallow a life-size radio
+const HELD_MODEL={walkie:'SupplyWalkie',tonic:'SupplyTonic',medkit:'SupplyMedkit',bucket:'CampBucket',dynamite:'DynamiteHeld',disarm:'DisarmKit',grapple:'GrappleHook'};   // the last three: Sol's upgrade tools (88-dynamite.js, 88-disarm.js, 88-gear.js), grip at their origin   // bucket: the D Tent crew's (30-npcs.js)
+const HELD_GRIP={walkie:0.059,tonic:0.055,medkit:0.155,bucket:0.395,dynamite:0,disarm:0,grapple:0};   // grip height above each model's origin (supplies.py GRIP)
+const HELD_SIZE={walkie:1.7,tonic:1.6,medkit:1.3,bucket:1.1,dynamite:1.4,disarm:1.3,grapple:1.25};        // × real size: the camper's chunky hands (~10 cm across) would swallow a life-size radio
 const HELD_POSE={walkie:'Radio',tonic:'Drink'};           // the clip whose left arm + head go over the body's clip
 const HELD_BONES=['armL','forearmL','head'];
-const HOLD_SECS={tonic:1.7,medkit:1.5};
+const HOLD_SECS={tonic:1.7,medkit:1.5,dynamite:0.9,disarm:1.6,grapple:1.6};
 const WALKIE_CHAT_SECS=2.5;   // a typed message: the walkie comes up for this long
 const HELD_BLEND=0.22;        // seconds to raise / lower the arm
 const HELD_PARTS={};          // key -> [{geometry,material}] once its model is in
@@ -124,7 +124,10 @@ const FPH={g:null,k:null,hand:null,parts:{}};
 const FPH_POSE={   // where it sits, m from the eye (x right, y up, -z ahead); r: its turn (x, y, z); hand: your fist on it
   walkie:{p:[-0.26,-0.19,-0.46],r:[0.12,0.55,0.18],hand:true},
   tonic:{p:[0.12,-0.15,-0.42],r:[0.1,-0.35,-0.15],tip:0.5,hand:true},  // tip: how far it tilts towards you as you drink
-  medkit:{p:[-0.28,-0.2,-0.6],r:[0.45,0.5,0.05]},                     // hung by its handle: the lid and handle peek up from the bottom
+  medkit:{p:[-0.28,-0.2,-0.6],r:[0.45,0.5,0.05]},
+  dynamite:{p:[0.2,-0.2,-0.45],r:[0.15,-0.5,0.1],hand:true},   // lit, about to go
+  disarm:{p:[0.04,-0.27,-0.5],r:[0.7,0.1,0]},                  // the kit open in front of you
+  grapple:{p:[0.22,-0.2,-0.5],r:[0.05,-0.25,0],hand:true},                     // hung by its handle: the lid and handle peek up from the bottom
 };
 function heldFP(k,m){
   const on=FP&&me.model&&me.fpOn&&k&&FPH_POSE[k]&&HELD_PARTS[k];
