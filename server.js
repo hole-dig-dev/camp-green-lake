@@ -662,7 +662,7 @@ wss.on('connection', (ws, req) => {
         const v = num(m.v, 0, bot ? MAX_CREW_DEPOSIT : MAX_DEPOSIT, 0) | 0; if (!v) return;
         world.run.bank += v; dirty = true;
         LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank, bot });
-        broadcast({ t: 'deposit', id: c.id, n: c.n, v, bot });
+        broadcast({ t: 'deposit', id: c.id, n: c.n, v, bot, pipe: m.pipe === true || undefined }); // pipe: it came down the sand pipeline (public/js/88-pipeline.js)
         broadcast(runInfo());
         break;
       }

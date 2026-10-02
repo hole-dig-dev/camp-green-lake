@@ -36,7 +36,7 @@ function invEntries(){
   if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',art:'gear/medkit',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
   out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Supply Depot sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
-  out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water truck or from Mr. Sir. Sleeping in your bunk tops it up too.',
+  out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water drums in camp. Sleeping in your bunk tops it up too.',
     meta:`${Math.round(S.water)} / ${waterMax()}`,state:S.water<waterMax()*0.25?'Low':'Water'});
   // gear from the store: owned ones first, the rest greyed out with where to get them
   const gear=SHOP.filter(it=>!it.stack);

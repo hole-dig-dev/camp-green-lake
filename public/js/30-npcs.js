@@ -4,7 +4,7 @@
 const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e});
 sir.g.position.set(1.2,baseH(1.2,34),34);sir.g.rotation.y=Math.PI;scene.add(sir.g);
 const sirL=makeLabel(sir.g,'Mr. Sir','npc');
-/* the gold rush (2026-09-30): Mr. Sir is gone from camp. Water's free at the drums by the water truck and Mr. Pendanski
+/* the gold rush (2026-09-30): Mr. Sir is gone from camp. Water's free at the water drums and Mr. Pendanski
    buys your finds. (He's kept, hidden, for the disco and his lake walks in 83-roster.js.) */
 sir.g.visible=false;sirL.el.remove();labeled.splice(labeled.indexOf(sirL),1);
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
@@ -25,7 +25,7 @@ function updateClerk(dt){
   clerk.waveT=Math.max(0,clerk.waveT-dt);animPerson(clerk,clerk.waveT>0?9:0,dt);
 }
 const SPOTS=[
-  {id:'water',x:SIM.GOLD.WATER.x,z:SIM.GOLD.WATER.z,r:SIM.GOLD.WATER.r},   // the water drums by the water truck: fill up, as often as you like
+  {id:'water',x:SIM.GOLD.WATER.x,z:SIM.GOLD.WATER.z,r:SIM.GOLD.WATER.r},   // the water drums: fill up, as often as you like
   {id:'sift',x:SIM.GOLD.SIFTER.x,z:SIM.GOLD.SIFTER.z,r:SIM.GOLD.SIFT_R},   // the sifter: your bucket of sand in, gold out (45-state.js siftBucket)
   {id:'store',x:16,z:41.2,r:3.4},
   {id:'warden',x:-34,z:40,r:2.0},
@@ -68,7 +68,7 @@ const crewSifts=b=>crewHas(b,'bucket')||crewHas(b,'bucket2')||crewHas(b,'bucket3
 const crewDepth=b=>crewHas(b,'shovel')?FIVE_FT:SIM.HANDS.depth;   // how deep his holes go
 const crewThirst=b=>crewHas(b,'canteen3')?0.35:crewHas(b,'canteen')?0.65:1;   // how long and how often he stops for water
 /* his own health, stamina and water (JT 2026-10-01: the crew panel, 78-hud.js). Digging tires him and dries him out;
-   rests bring his stamina back; low on water, he walks in to the drums by the water truck to fill up (a bigger canteen
+   rests bring his stamina back; low on water, he walks in to the water drums to fill up (a bigger canteen
    holds more, so fewer trips). Health only drops when an animal gets him (crewKO); the nurse puts it right. */
 const crewWaterMax=b=>100*(crewHas(b,'canteen3')?2.3:crewHas(b,'canteen')?1.6:1);
 const CREW_WATER_LOW=0.3;   // under this share of his canteen he goes for water at his next rest
@@ -367,7 +367,7 @@ function updateBots(dt,now){
       let dr=Math.atan2(fx-g.position.x,fz-g.position.z)-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
       animPerson(b.p,0,dt);
       if(i===0){b.waitT=(b.waitT||0)+dt;if(!humanAtSifter()||b.waitT>10){b.state='sifting';b.t=3.6;b.puffT=0}}
-    }else if(b.state==='drink'){   // to the drums by the water truck, fill up, back out
+    }else if(b.state==='drink'){   // to the water drums, fill up, back out
       const W=SIM.GOLD.WATER,k=bots.indexOf(b),wx=W.x+1.2+Math.cos(k*1.05)*0.9,wz=W.z-1.6+Math.sin(k*1.05)*0.6;
       if(b.t==null){if(!walkTo(b,wx,wz,dt,2.4))continue;b.t=2.2;if(nearCam(wx,wz,25))sfx.splash()}
       animPerson(b.p,5,dt);   // the Drink clip

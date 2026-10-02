@@ -126,7 +126,7 @@ function towerLampMount(parts){
   placeModel('ServiceGate',{x:FENCE_X1,y:baseH(FENCE_X1,39),z:39,ry:-Math.PI/2}).then(()=>hideProc(serviceGateSign)).catch(()=>{});
   // yard: the water truck (cab toward the gate, tap on the tents' side as before), flagpole, path lamps, the Warden's oaks,
   // and the crate stacks + mess tables from 22-security.js
-  placeModel('WaterTruck',{x:5,y:baseH(5,36),z:36,ry:-Math.PI/2}).then(()=>hideProc(WATER_TRUCK_PROC)).catch(()=>{});
+  if(WATER_TRUCK_ON)placeModel('WaterTruck',{x:5,y:baseH(5,36),z:36,ry:-Math.PI/2}).then(()=>hideProc(WATER_TRUCK_PROC)).catch(()=>{});
   placeModel('FlagPole',{x:-4,y:baseH(-4,38),z:38,ry:0}).then(()=>FLAG_PROC.forEach(hideProc)).catch(()=>{});
   instanceModel('LampPost',LAMP_POSTS).then(()=>hideProc(LAMP_PROC)).catch(()=>{});
   instanceModel('OakTree',OAKS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:o.x*0.7,s:o.s}))).then(()=>OAKS.forEach(o=>hideProc(o.g))).catch(()=>{});

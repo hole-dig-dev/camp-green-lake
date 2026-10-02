@@ -83,6 +83,7 @@ const TUNE_DEFS=[
   {key:'dmg.Scorpion',tab:'Damage',label:'Scorpion sting (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'hp.thirst',tab:'Damage',label:'Thirst: health lost per second once your water runs out',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
   {key:'gold.hopperSpeed',tab:'Gold',label:'Sifter hopper speed (× its tier\'s rate: 8 s, 4 s, 1.5 s a hole)',def:1,kind:'mul',range:5,unit:'×'},
+  {key:'pipe.toBank',tab:'Gold',label:'Sand pipeline: its gold goes to the crew bank (off: to whoever dumped the sand)',def:1,kind:'flag'},
   {key:'pipe.speed',tab:'Gold',label:'Sand pipeline: how fast sand rides down it',def:10,kind:'mul',range:4,unit:' m/s'},
   {key:'pipe.fixTime',tab:'Gold',label:'Sand pipeline: hold F this long to fix a crack',def:15,kind:'mul',range:4,unit:' s'},
   {key:'pipe.max',tab:'Gold',label:'Sand pipeline: longest it can go (5 m sections)',def:60,kind:'lin',span:200,min:2,max:400,unit:''},

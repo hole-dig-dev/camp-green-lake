@@ -137,7 +137,7 @@ function buildMapCache(night){
   g.fillStyle=night?'#4f5c4f':'#8d8f69';for(const t of TENTS)g.fillRect(ccx(t.x-t.hw),ccz(t.z-t.hd),ccs(t.hw*2),ccs(t.hd*2));
   g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Warden's cabin
   g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
-  g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4));   // water truck
+  if(WATER_TRUCK_ON){g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4))}   // water truck (out for now: 20-world.js)
 }
 /* stable per-player color (index into the same CAMPER_COLORS table the 3D avatars use) + initials,
    for the remote-player minimap markers (docs/ui-redesign-spec.md section 3, "People") */
