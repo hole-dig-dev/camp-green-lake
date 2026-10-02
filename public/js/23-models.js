@@ -21,6 +21,7 @@ function gameMat(m){
   // (and decodes textures) as linear light, which would come out much darker. Convert back so a model's paint
   // matches the palette it was built from.
   const g=new T.MeshStandardMaterial({color:m.color.clone().convertLinearToSRGB(),map:m.map||null,flatShading:true,roughness:Math.max(0.55,m.roughness),metalness:0});
+  if(m.emissive&&(m.emissive.r+m.emissive.g+m.emissive.b)>0.001){g.emissive=m.emissive.clone().convertLinearToSRGB();g.emissiveIntensity=m.emissiveIntensity??1;if(m.emissiveMap)g.emissiveMap=m.emissiveMap}   /* what Blender lit stays lit: the soda machine's panel, the gravity boots' soles */
   if(m.vertexColors)g.vertexColors=true;
   if(m.transparent){g.transparent=true;g.opacity=m.opacity;g.depthWrite=false}   // the peach jar's glass   // rocks carry their strata/sun-bleach as vertex colours
   if(m.map){m.map.encoding=T.LinearEncoding;g.alphaTest=0.45;g.transparent=false;g.side=T.DoubleSide;m.map.anisotropy=4}
