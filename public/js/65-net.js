@@ -82,7 +82,7 @@ function onMsg(m){
       // event director state: whether it's running, and any of its events already in progress (twister can't be
       // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
-      if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string')spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
+      if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string'&&hazOn(e.k))spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
       javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
       rosterSnapshot(m.rost||[],m.rostToday); // and the day's roster (83-roster.js)
       truckHello(m.truck); // Mr. Sir's pickup (87-truck.js)
@@ -145,6 +145,7 @@ function onMsg(m){
     case 'grabbed':removeBag(num(m.id,0,1e9,-1));if(Array.isArray(m.items))takeBag(m.items.slice(0,12),cleanName(m.n));break;
     case 'revived':revived(cleanName(m.by)||'A friend');break;
     case 'mines':minesSet(m.list);break;   /* landmines (88-mines.js) */
+    case 'tunehaz':hazTuneFrom(m.o);break;   /* someone flipped a switch in F2 Hazards (88-hazards.js) */
     case 'mine':mineAdd(m.m);break;
     case 'pipe':if(!PIPE.laying||m.by!==net.id)pipeSet(m);break;   /* the sand pipeline changed (88-pipeline.js) */
     case 'pipeFlow':pipeSlug(false,0);break;
@@ -162,7 +163,7 @@ function onMsg(m){
       // means the password was right: remember it and start (or resume) the game for real.
       if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
       break;
-    case 'env':spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
+    case 'env':if(m.dir===true&&!hazOn(m.k))break;spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
     case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
     case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;

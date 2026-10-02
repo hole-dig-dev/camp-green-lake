@@ -21,6 +21,28 @@ const TUNE_DEFS=[
   {key:'light.falloff',tab:'Flashlight',label:'Fades with distance (0 none, 2 real)',def:1.2,kind:'lin',span:1.2,min:0,max:3,unit:''},
   {key:'light.drain',tab:'Flashlight',label:'Battery drain (a full battery lasts 100/this seconds)',def:0.6,kind:'mul',range:4,zero:true,unit:'/s'},
   {key:'light.townSee',tab:'Flashlight',label:'Underground: how far you see with it on (off: 12 m)',def:26,kind:'mul',range:3,unit:' m'},
+  // ---- hazards and mobs: one switch for testing (88-hazards.js). Off: nothing spawns and what's out goes away; then
+  //      switch single ones back on, or spawn one right now.
+  {key:'haz.all',tab:'Hazards',label:'ALL hazards and mobs (off for testing: nothing spawns, what\'s out there goes away)',def:1,kind:'flag'},
+  {key:'haz.on.twister',tab:'Hazards',label:'Twisters: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.twister',tab:'Hazards',label:'Twisters: spawn one now, near you',kind:'action',run:()=>hazNow('twister')},
+  {key:'haz.on.landslide',tab:'Hazards',label:'Landslides: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.landslide',tab:'Hazards',label:'Landslides: spawn one now, near you',kind:'action',run:()=>hazNow('landslide')},
+  {key:'haz.on.tumbleweed',tab:'Hazards',label:'Giant tumbleweeds: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.tumbleweed',tab:'Hazards',label:'Giant tumbleweeds: spawn one now, near you',kind:'action',run:()=>hazNow('tumbleweed')},
+  {key:'haz.on.haboob',tab:'Hazards',label:'Dust storms (haboobs): on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.haboob',tab:'Hazards',label:'Dust storms (haboobs): spawn one now, near you',kind:'action',run:()=>hazNow('haboob')},
+  {key:'haz.on.sinkhole',tab:'Hazards',label:'Sinkholes: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.sinkhole',tab:'Hazards',label:'Sinkholes: spawn one now, near you',kind:'action',run:()=>hazNow('sinkhole')},
+  {key:'haz.on.mines',tab:'Hazards',label:'Landmines: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.on.javelinas',tab:'Hazards',label:'Javelina herds: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.javelinas',tab:'Hazards',label:'Javelina herds: spawn one now, near you',kind:'action',run:()=>hazNow('javelinas')},
+  {key:'haz.on.lion',tab:'Hazards',label:'The mountain lion: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.lion',tab:'Hazards',label:'The mountain lion: spawn one now, near you',kind:'action',run:()=>hazNow('lion')},
+  {key:'haz.on.vultures',tab:'Hazards',label:'Vultures: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.now.vultures',tab:'Hazards',label:'Vultures: spawn one now, near you',kind:'action',run:()=>hazNow('vultures now')},
+  {key:'haz.on.lizards',tab:'Hazards',label:'Yellow-spotted lizards: on anyway (while ALL is off)',def:0,kind:'flag'},
+  {key:'haz.on.night',tab:'Hazards',label:'Night patrols and Madame Zeroni: on anyway (while ALL is off)',def:0,kind:'flag'},
   // ---- gear: ideas to try (86-backsack.js)
   {key:'gear.backsack',tab:'Gear',label:'Clear backsack instead of a bucket (worn on your back, the sand rises as you dig)',def:0,kind:'flag'},
   // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
@@ -196,6 +218,8 @@ const TUNE_BY=Object.fromEntries(TUNE_DEFS.filter(d=>d.kind!=='action').map(d=>[
 const TUNE_KEY='cgl-tune';
 let TUNE_OVR={};   // key -> {v, def}: only the knobs the tester has moved
 function tune(key){const o=TUNE_OVR[key];return o?o.v:TUNE_BY[key].def}
+/* may this hazard or mob happen? (88-hazards.js) */
+function hazOn(k){return tune('haz.all')>=0.5||tune('haz.on.'+k)>=0.5}
 function tuneOr(key,fallback){return TUNE_BY[key]?tune(key):fallback}
 
 /* slider position (-1..1, 0 = default) <-> value */

@@ -343,7 +343,7 @@ truckWasOn = truckOn(); if (truckWasOn) Object.assign(TRUCK, TRUCK_GATE_PARK); /
    saved: a restart clears the lake. Off with the F2 flag haz.mines. */
 const MINES = []; let mineSeq = 1, mineNextT = Date.now() + 20000;
 function mineTick(now) {
-  if (tuneS('haz.mines', 1) < 0.5 || (world.zone || 'lake') !== 'lake') { if (MINES.length) { MINES.length = 0; broadcast({ t: 'mines', list: [] }); } return; }
+  if (tuneS('haz.mines', 1) < 0.5 || !hazOnS('mines') || (world.zone || 'lake') !== 'lake') { if (MINES.length) { MINES.length = 0; broadcast({ t: 'mines', list: [] }); } return; }
   if (now < mineNextT) return;
   mineNextT = now + tuneS('haz.mineEvery', 25) * 1000 * (0.6 + Math.random() * 0.8);
   if (MINES.length >= tuneS('haz.mineMax', 12)) return;
@@ -360,6 +360,8 @@ function mineTick(now) {
 }
 /* the sand pipeline (public/js/88-pipeline.js): one for the camp, saved with the world, gone when the crew's fired */
 function pipeW() { if (!world.pipe || typeof world.pipe !== 'object' || !Array.isArray(world.pipe.nodes)) world.pipe = { nodes: [], broken: {} }; if (!world.pipe.broken || typeof world.pipe.broken !== 'object') world.pipe.broken = {}; return world.pipe; }
+/* may this hazard or mob happen? The F2 Hazards tab (public/js/88-hazards.js): ALL off for testing, single ones back on */
+function hazOnS(k) { return tuneS('haz.all', 1) >= 0.5 || tuneS('haz.on.' + k, 0) >= 0.5; }
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -394,7 +396,8 @@ function saveTune(req, res) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFile(TUNE_FILE + '.tmp', JSON.stringify(clean, null, 1), err => {
       if (err) { res.writeHead(500); return res.end('save failed'); }
-      TUNE_S = clean; if (truckOn() !== truckWasOn) { truckWasOn = truckOn(); truckPark(); } else broadcast(truckMsg()); // the flag moved: to its spot by the service gate, or back by Mr. Sir
+      TUNE_S = clean; broadcast({ t: 'tunehaz', o: Object.fromEntries(Object.entries(clean).filter(([k]) => k.startsWith('haz.'))) }); // the hazards switch is everyone's at once (public/js/88-hazards.js)
+      if (truckOn() !== truckWasOn) { truckWasOn = truckOn(); truckPark(); } else broadcast(truckMsg()); // the flag moved: to its spot by the service gate, or back by Mr. Sir
       fs.rename(TUNE_FILE + '.tmp', TUNE_FILE, () => { securityHeaders(res, false); res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}'); });
     });
   });
@@ -1270,7 +1273,7 @@ function tickRoster(t, dt, players) {
   rostOn = on;
 }
 function tickJavelinas(t, dt, players) {
-  JAV.noNatural = dirState.enabled; // the event director owns natural herds while it's on (sim.js stepJavelinas)
+  JAV.noNatural = dirState.enabled || !hazOnS('javelinas'); if (!hazOnS('javelinas')) JAV.list.length = 0; // the event director owns natural herds while it's on (sim.js stepJavelinas)
   const jev = []; SIM.stepJavelinas(JAV, players, t, dt, jev); truckRams(Date.now(), jev); // Mr. Sir's pickup running into things
   for (const e of jev) {
     if (e.k === 'javBite') LOG.log('javBite', { id: e.id, dmg: e.dmg });
@@ -1336,9 +1339,9 @@ setInterval(() => {
   for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
-  if ((world.zone || 'lake') === 'lake') SIM.stepMonsters(MON, players, t, dt, ev, { mood: world.run.mood }); else { MON.trucks = []; MON.zer = null; } // police and Zeroni are the lake's (88-zones.js)
+  if ((world.zone || 'lake') === 'lake' && hazOnS('night')) SIM.stepMonsters(MON, players, t, dt, ev, { mood: world.run.mood }); else { MON.trucks = []; MON.zer = null; } // police and Zeroni are the lake's (88-zones.js)
   if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
-  LION.noNatural = dirState.enabled; // ditto for the lion's own pre-curfew window
+  LION.noNatural = dirState.enabled || !hazOnS('lion'); if (!hazOnS('lion')) LION.active = false; // ditto for the lion's own pre-curfew window
   SIM.stepLion(LION, players, t, dt, ev);
   for (const e of ev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -1367,6 +1370,7 @@ setInterval(() => {
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
   for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0, rate: tuneS('mon.events', 1) })) {
+    if (!hazOnS(d.kind)) continue; // switched off in F2 Hazards (public/js/88-hazards.js)
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });
     else { const tp = clients.get(d.targetId); dirStartMonster(d, tp ? tp.x : d.x, tp ? tp.z : d.z); }

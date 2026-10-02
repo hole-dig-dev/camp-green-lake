@@ -294,7 +294,7 @@ function updateTumbleweeds(dt){
   tbCoolT=Math.max(0,tbCoolT-dt);
   const T0=twNow(),k=Math.floor(T0/TB_WIN),fx=S.started?P.x:0,fz=S.started?P.z:12;
   const ci=Math.floor(fx/TB_CELL),cj=Math.floor(fz/TB_CELL);
-  if(!DIRECTOR_ON&&!ZONE_H)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){   // natural gusts: only when the event director is off (it owns the budget)
+  if(!DIRECTOR_ON&&!ZONE_H&&hazOn('tumbleweed'))for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){   // natural gusts: only when the event director is off (it owns the budget)
     const pl=tbPlan(i,j,kk);if(!pl||tbSeen.has(pl.id))continue;
     const e=(T0-pl.t0)/1000;if(e<0||e>TB_LIFE)continue;
     tbSeen.set(pl.id,kk);

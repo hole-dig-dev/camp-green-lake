@@ -257,7 +257,7 @@ function lsRender(dt){
 function updateLandslides(dt){
   const T0=twNow(),k=Math.floor(T0/LS_WIN),fx=S.started?P.x:0,fz=S.started?P.z:12;
   const ci=Math.floor(fx/LS_CELL),cj=Math.floor(fz/LS_CELL);
-  if(!DIRECTOR_ON&&!ZONE_H)for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){ // director owns natural landslides when on -- see public/director.js
+  if(!DIRECTOR_ON&&!ZONE_H&&hazOn('landslide'))for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++)for(const kk of[k-1,k]){ // director owns natural landslides when on -- see public/director.js
     const pl=lsPlan(i,j,kk);if(!pl||lsSeen.has(pl.id))continue;
     const e=(T0-pl.t0)/1000;if(e<0||e>LS_LIFE)continue;
     lsSeen.set(pl.id,kk);spawnLandslide(pl.x,pl.z,pl.seed,pl.t0);
