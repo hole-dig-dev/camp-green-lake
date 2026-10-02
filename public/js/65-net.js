@@ -62,7 +62,7 @@ function onMsg(m){
     case 'hello':{
       // the crew is in another map whose script is still loading: handle this hello once it has (88-zones.js)
       if(typeof m.zone==='string'&&m.zone!=='lake'&&(typeof ZONES==='undefined'||!ZONES[m.zone])){HELLO_LATER=m;break}
-      minesSet(m.mines);pipeSet(m.pipe);campSet(m.camp);pilesSet(m.piles);scaresSet(m.scares);crewWardSet(m.crewWard);veinSet(m.vein?{...m.vein,quiet:true}:null);   /* the sand pipeline (88-pipeline.js) */   /* the landmines out on the lake (88-mines.js) */
+      minesSet(m.mines);pipeSet(m.pipe);campSet(m.camp);pilesSet(m.piles);scaresSet(m.scares);crewWardSet(m.crewWard);veinSet(m.vein?{...m.vein,quiet:true}:null);eotdSet(m.eotd);   /* the sand pipeline (88-pipeline.js) */   /* the landmines out on the lake (88-mines.js) */
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
@@ -160,7 +160,8 @@ function onMsg(m){
     case 'scares':scaresSet(m.list);break;
     case 'crewWard':crewWardSet(m.all);break;
     case 'crewSoda':crewSoda(String(m.n||''));break;
-    case 'vein':veinSet(m);break;   /* a rich vein (88-vein.js) */   /* a soda for a crew member (88-morale.js) */   /* someone dressed a crew member (81-wardrobe.js) */   /* scarecrows (88-gear.js) */   /* the camp's upgrades (84-camp.js) */
+    case 'vein':veinSet(m);break;
+    case 'eotd':eotdSet(m.st);break;   /* Employee of the Day standings (88-eotd.js) */   /* a rich vein (88-vein.js) */   /* a soda for a crew member (88-morale.js) */   /* someone dressed a crew member (81-wardrobe.js) */   /* scarecrows (88-gear.js) */   /* the camp's upgrades (84-camp.js) */
     case 'mineBoom':mineBoom(num(m.id,0,1e9,0),num(m.x,-2000,2000,0),num(m.z,-2000,2000,0),cleanName(m.by)||'Someone');break;
     case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;

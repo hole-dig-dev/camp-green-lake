@@ -226,6 +226,7 @@ const CREW_NURSE={x:-1.5,z:33};   // where they come round, just inside the gate
 const CREW_HOLD=new Set(['held','flung','tossed','down','ko']);
 function crewToss(b,vx,vy,vz,why){
   if(!OUTDOOR.has(b.state))return;moraleHit(b,why);   /* 88-morale.js */
+  eotdCrewThrown(b);   /* Employee of the Day: most thrown around (88-eotd.js) */
   leaveSiftQ(b);b.preToss=b.state;b.tossWhy=why;b.state='tossed';b.v={x:vx,y:vy,z:vz};b.t=0;b.handAt=null;
   if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],dy:['WHO LIT THAT?!','My ears are ringing!','Fire in the hole... me!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Warden\'s house from here!']}[why]||['WHOA!']),2200);
   logEv('crewToss',{n:b.d.n,why});
