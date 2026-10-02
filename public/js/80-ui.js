@@ -56,6 +56,7 @@ function botNode(b,first){
     DLG.used[k]=now;const it=hintNear(['fossil','arrow','jar','shoe','spoon'],28);
     if(!it)return reply(name,'Nothing around here. Try farther out.',back);
     return reply(name,`I saw the ground glint about ${stepsTo(Math.hypot(it.x-P.x,it.z-P.z))} steps ${compass(it.x-P.x,it.z-P.z)} of here. Maybe a ${LOOT[it.type].name.toLowerCase()}. Maybe nothing.`,back)}});
+  if(S.soda>0&&crewHired(b))opts.push({label:`Here, have a soda. (Morale ${Math.round(moraleOf(b))}%. You have ${S.soda}.)`,go:()=>{giveSoda(b);return reply(name,pick(['Ahh. Sweet, sweet soda.','For me? You\'re all right.','Now that\'s what I needed.']),back)}});   /* 88-morale.js */
   for(const sp of T2.special)opts.push({label:sp.label,go:()=>sp.go(back)});
   opts.push({label:'How deep is your hole?',go:()=>reply(name,b.hole.d>=FIVE_FT?'Done. Five by five. Don\'t fall in.':`About ${(b.hole.d*FT).toFixed(1)} feet. ${name==='Zach'?'Almost done.':'Long way to go.'}`,back)});
   opts.push(LEAVE);

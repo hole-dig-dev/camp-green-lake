@@ -973,7 +973,7 @@ wss.on('connection', (ws, req) => {
       case 'pipeFlow': broadcast({ t: 'pipeFlow', leaf: num(m.leaf, 1, 1e4, 1) | 0 }, c.id); break;
       case 'campBuy': { // a camp upgrade (public/js/84-camp.js), paid from the crew wallet by walletSpend just before this
         if (m.rid != null && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return;
-        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel'].includes(id)) return;
+        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine'].includes(id)) return;
         const camp = world.camp || (world.camp = {});
         if (camp[id]) { world.run.bank += num(m.cost, 0, 2000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
         camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
@@ -1020,6 +1020,9 @@ wss.on('connection', (ws, req) => {
       case 'crewWard': { // dressing a crew member (public/js/81-wardrobe.js)
         if (!CREW_NAMES.includes(m.n)) return; const all = world.crewWard || (world.crewWard = {});
         all[m.n] = wardS(m.w); dirty = true; broadcast({ t: 'crewWard', all }); break;
+      }
+      case 'giveSoda': { // a camper handed a crew member a soda (public/js/88-morale.js): every screen's copy of him drinks it
+        if (!CREW_NAMES.includes(m.n) || !withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return; broadcast({ t: 'crewSoda', n: m.n, by: c.n }); break;
       }
       case 'ward': { c.w = wardS(m.w); broadcast({ t: 'ward', id: c.id, w: c.w }, c.id); break; } // changed clothes (public/js/81-wardrobe.js)
       case 'bonk': {
