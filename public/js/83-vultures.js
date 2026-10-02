@@ -170,10 +170,10 @@ function vPersonPose(dt,k){
 
 /* ---- transitions ---- */
 function underThreatNow(){
-  return S.started&&!S.ko&&!twSt&&!inTent()&&!inCamp(P.x,P.z)&&S.hp<HP_MAX*tune('vulture.thresh')&&nightF()<VULTURE_NIGHT_CUTOFF&&vulturesEnabled&&hazOn('vultures')&&vCool<=0;
+  return S.started&&!S.ko&&!twSt&&!inTent()&&!inCamp(P.x,P.z)&&S.hp<HP_MAX*tune('vulture.thresh')&&nightF()<VULTURE_NIGHT_CUTOFF&&vulturesEnabled&&hazOn('vultures')&&!gravOn()&&!scareNear(P.x,P.z)&&vCool<=0;   /* gravity boots, a scarecrow nearby (88-gear.js) */
 }
 function vCancelCheck(){
-  return !vulturesEnabled||!hazOn('vultures')||S.ko||twSt||inTent()||(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)||inCamp(P.x,P.z)||S.hp>=HP_MAX*tune('vulture.clear')||nightF()>=VULTURE_NIGHT_CUTOFF;
+  return !vulturesEnabled||!hazOn('vultures')||gravOn()||scareNear(P.x,P.z)||S.ko||twSt||inTent()||(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)||inCamp(P.x,P.z)||S.hp>=HP_MAX*tune('vulture.clear')||nightF()>=VULTURE_NIGHT_CUTOFF;
 }
 function vCancelToIdle(){vSt=0;vStT=0;vGraceT=0;vShadow.material.opacity=0;vPoolFree('me')}
 function startWarn(){

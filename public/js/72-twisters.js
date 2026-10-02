@@ -144,6 +144,7 @@ function twPush(tw,d,dt){
    No movement control here - the wind has you. Keeps a live ref to the twister (twGrab) but falls back to the last
    known spot (twCenter/twStrength) if it despawns mid-grab, so a twister expiring never leaves you stuck. */
 function twStart(tw,d){
+  if(gravOn()){if(performance.now()-(twStart.told||0)>6000){twStart.told=performance.now();toast('Your gravity boots hold you to the ground. The twister howls past.','good',2600)}return}   /* 88-gear.js */
   twSt=1;twStT=0;twGrab=tw.id;twCenter={x:tw.x,z:tw.z};twStrength=tw.s;twSuckR0=Math.max(d,0.6);
   twSpiralA=Math.atan2(P.z-tw.z,P.x-tw.x);P.moving=false;P.anim=0;digHeld=false;
   logEv('twSuckUp',{x:+P.x.toFixed(1),z:+P.z.toFixed(1),twx:+tw.x.toFixed(1),twz:+tw.z.toFixed(1),s:+tw.s.toFixed(2)});

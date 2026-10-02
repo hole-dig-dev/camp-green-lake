@@ -87,7 +87,8 @@ addEventListener('keydown',e=>{
     else digHeld=true;
   }
   if(k==='f')use();
-  if(k==='y')throwDynamite();   /* 88-dynamite.js */
+  if(k==='y')throwDynamite();
+  if(k==='u')plantScarecrow();   /* 88-gear.js */   /* 88-dynamite.js */
   if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise an onion (81-badges.js)
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();

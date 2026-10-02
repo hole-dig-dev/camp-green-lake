@@ -48,8 +48,7 @@ function wardApply(p){
     const rigid=(k,dir)=>{const i=w[k];if(!(i>=0))return;const d=wardList(k)[i];if(!d)return;
       wardAsset(dir,d.slug).then(g=>{if(p.wardSeq!==seq)return;hide(k);const s=g.scene.clone(true);s.traverse(n=>{if(n.isMesh){n.castShadow=true}});head.add(s);if(p===me&&me.fpOn)s.userData.fpWas=true;p.wardObjs.push(s);wardFP(p,s)}).catch(()=>{})};
     rigid('hat','hats');rigid('face','faces');rigid('glasses','glasses');
-    const skinned=(k,dir,i,slotOk)=>{if(!(i>=0))return;const d=wardList(k)[i];if(!d)return;
-      wardAsset(dir,d.slug).then(g=>{if(p.wardSeq!==seq)return;
+    const wardSkinned=(g,k,slotOk=()=>true)=>{if(p.wardSeq!==seq)return;
         const src=T.SkeletonUtils?T.SkeletonUtils.clone(g.scene):g.scene.clone(true);src.updateMatrixWorld(true);
         const grp=new T.Group();grp.name='Ward_'+k;const meshes=[];src.traverse(n=>{if(n.isSkinnedMesh)meshes.push(n)});
         for(const n of meshes){let meta=n;while(meta&&!meta.userData.slot)meta=meta.parent;const slot=meta?meta.userData.slot:null;if(!slotOk(slot))continue;
@@ -59,9 +58,10 @@ function wardApply(p){
           n.bind(new T.Skeleton(match.map(x=>x.bone),match.map(x=>x.inv.clone())),orig.bindMatrix.clone());
           const mats=[].concat(n.material).map(mt=>{if(mt.skinning)return mt;const c=mt.clone();c.skinning=true;return c});n.material=Array.isArray(n.material)?mats:mats[0];
           n.frustumCulled=false;n.castShadow=true;n.receiveShadow=true}
-        if(!grp.children.length)return;hide(k);m.add(grp);p.wardObjs.push(grp);wardFP(p,grp)}).catch(()=>{})};
+        if(!grp.children.length)return;hide(k);m.add(grp);p.wardObjs.push(grp);wardFP(p,grp)};
+    const skinned=(k,dir,i,slotOk)=>{if(!(i>=0))return;const d=wardList(k)[i];if(!d)return;wardAsset(dir,d.slug).then(g=>wardSkinned(g,k,slotOk)).catch(()=>{})};
     for(const k of['torso','arms','legs']){const i=w[k];skinned(k,'clothes',i,s=>s===k)}
-    skinned('shoes','footwear',w.shoes,()=>true);
+    if(p.gravBoots)wardAsset('footwear','gravity-boots').then(g=>wardSkinned(g,'shoes')).catch(()=>{});else skinned('shoes','footwear',w.shoes,()=>true);   /* gravity boots win (88-gear.js) */
   });
 }
 /* first person: your own new pieces go where the rest of your body is (70-player.js fpBody) */
