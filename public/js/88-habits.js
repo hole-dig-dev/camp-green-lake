@@ -10,7 +10,7 @@ const LUNCH_AT=12,LUNCH_T=22,GREET_R=4,GREET_EVERY=90;
 const HAB={lunchDay:-1};
 function crewChatter(b){
   const r=botRng(),n=b.d.n,others=bots.filter(o=>o!==b&&crewHired(o)),ctx=[];
-  const mx=crewBucketMax(b);if(mx>0&&(b.bucket||0)>=mx*0.8)ctx.push('Almost a full bucket.','One more hole and I\'m off to the sifter.');
+  const mx=crewBucketMax(b);if(mx>0&&(b.bucket||0)>=mx*0.8)ctx.push(crewPack(b)?'This pack weighs a ton.':'Almost a full bucket.','One more hole and I\'m off to the sifter.');
   if(SIFTQ.length>=3)ctx.push('The sifter line\'s a mile long.','Who\'s hogging the sifter?');
   if(typeof moraleOf==='function'&&moraleOf(b)<40)ctx.push('Why do I even bother.','I want a soda.');
   if(typeof VEIN!=='undefined'&&VEIN.on)ctx.push('Did you see the ground glittering out there?','Somebody\'s getting rich today. Not me.');

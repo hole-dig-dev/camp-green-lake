@@ -60,7 +60,7 @@ const CREW_HOLES=5;   // a crew member's bucket, until someone buys him a bigger
 /* his upgrades from the store's "The crew" side (sim.js CREW_SHOP; the server keeps them, 65-net.js 'crew') */
 const CREW_UP={};
 const crewHas=(b,id)=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n][id]);
-const crewBucketMax=b=>crewHas(b,'bucket3')?SIM.GOLD.buckets[2]:crewHas(b,'bucket2')?SIM.GOLD.buckets[1]:crewHas(b,'bucket')?SIM.GOLD.buckets[0]:SIM.PAN;   // no bucket: his gold pan (one hole of sand)
+const crewBucketMax=b=>crewPack(b)?BACKSACK_HOLES[crewPackTier(b)-1]:crewHas(b,'bucket3')?SIM.GOLD.buckets[2]:crewHas(b,'bucket2')?SIM.GOLD.buckets[1]:crewHas(b,'bucket')?SIM.GOLD.buckets[0]:SIM.PAN;   // no bucket: his gold pan (one hole of sand)
 /* hired or not (JT 2026-10-01: start with no crew; hire them in the store). A new hand shows up with bare hands and a pan,
    like you: shallow holes, washed at the water drums. A shovel and a bucket (the sifter) are up to you. */
 const crewHired=b=>crewHas(b,'hired');
@@ -86,11 +86,11 @@ function crewActivity(b){
   if(s==='dig')return b.water<=0?'Digging, parched':b.stam<15?'Digging, worn out':'Digging';
   if(s==='rest')return b.stam<45?'Catching his breath':'Taking a breather';
   if(s==='walk'||s==='return')return'Walking to a new spot';
-  if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):b.errand==='lunch'?'Going in for lunch':curfewSoon()?'Heading in for the night':'Going to D Tent';
+  if(s==='gateout'||s==='gatein')return b.errand==='sift'?(crewPack(b)?'Hauling his pack in':'Taking his bucket in'):b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):b.errand==='lunch'?'Going in for lunch':curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(isAbducted(b))return'Abducted by a UFO?!';
-  if(s==='sifting')return'Sifting his bucket';
+  if(s==='sifting')return crewPack(b)?'Sifting his pack':'Sifting his bucket';
   if(s==='lunch')return'Lunch at the mess tables';
   if(s==='disarming')return'Disarming a landmine';
   if(s==='dig'&&moraleOf(b)<MORALE_LOW)return'Digging (fed up: slower)';
@@ -186,7 +186,8 @@ function crewBucket(b,show){
   b.gb.position.set(x,baseH(x,z),z);
 }
 function crewHands(b){
-  const has=crewBucketMax(b)>0,carry=has&&CREW_CARRY.has(b.state)&&b.p.g.visible,held=b.p.held&&b.p.held.k==='bucket'&&b.p.held.t>0;   // no bucket bought for him: nothing to carry
+  const pack=crewPack(b);b.p.bk=pack&&b.p.g.visible?+clamp((b.bucket||0)/crewBucketMax(b),0,1).toFixed(3):-1;b.p.bt=crewPackTier(b);   /* the clear backsack on his back (86-backsack.js) */
+  const has=crewBucketMax(b)>0&&!pack,carry=has&&CREW_CARRY.has(b.state)&&b.p.g.visible,held=b.p.held&&b.p.held.k==='bucket'&&b.p.held.t>0;   // no bucket bought for him: nothing to carry
   if(carry&&!held)holdProp(b.p,'bucket');else if(!carry&&held)releaseProp(b.p,'bucket');
   crewBucket(b,has&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible);
 }
@@ -378,7 +379,7 @@ function updateBots(dt,now){
         if(b.stam<45){b.t=2;continue}   // still catching his breath
         if(b.water<crewWaterMax(b)*CREW_WATER_LOW){b.errand='water';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,pick(['I need water.','Canteen\'s dry. Back in a minute.','So thirsty...']),2600)}
         else if(b.bucket>=crewBucketMax(b)-1e-6&&!crewSifts(b)){b.errand='pan';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,pick(['Pan\'s full. Off to wash it.','Got a pan of sand. Back soon.']),2600)}
-        else if(b.bucket>=crewBucketMax(b)-1e-6){b.errand='sift';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
+        else if(b.bucket>=crewBucketMax(b)-1e-6){b.errand='sift';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,crewPack(b)?pick(['Pack\'s full. Off to the sifter.','That\'s a full backsack. Sifter time.','Can barely stand up with this pack. Sifter.']):pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
         else if(botRng()<0.12*crewThirst(b)){b.state='gateout';b.tx=gateX(b);b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
         else{const sp=crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.tx=sp.x;b.tz=sp.z;b.state='walk'}else b.t=4}
       }

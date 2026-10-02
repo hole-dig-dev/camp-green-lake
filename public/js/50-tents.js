@@ -307,7 +307,7 @@ function renderCrewShop(){
   for(const n of SIM.CREW){const b=bots.find(o=>o.d.n===n),h=document.createElement('div');h.className='crew-h';h.textContent=n;
     const sm=document.createElement('small');sm.textContent=!b||!crewHired(b)?'not hired':crewSifts(b)?`bucket ${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:`pan ${Math.round((b.bucket||0)*100)}%`;h.appendChild(sm);grid.appendChild(h)}
   for(const it of[CREW_HIRE_ITEM,...SIM.CREW_SHOP]){const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost;
-    const c=document.createElement('div');c.className='crew-item'+(it.id==='hire'?' crew-item--hire':'');const t=document.createElement('b');t.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc;const p=document.createElement('em');p.textContent=(it.id==='hire'?'next hire: ':'')+cost+' gold';c.append(t,d,p);grid.appendChild(c);
+    const c=document.createElement('div');c.className='crew-item'+(it.id==='hire'?' crew-item--hire':'');const tx=crewItemText(it),t=document.createElement('b');t.textContent=tx.name;const d=document.createElement('span');d.textContent=tx.desc;const p=document.createElement('em');p.textContent=(it.id==='hire'?'next hire: ':'')+cost+' gold';c.append(t,d,p);grid.appendChild(c);
     for(const n of SIM.CREW){const st=crewItemState(n,it),cell=document.createElement('div');cell.className='crew-cell';const btn=document.createElement('button');btn.type='button';btn.className='crew-buy';
       const key=n+'|'+it.id;btn.dataset.key=key;btn.setAttribute('aria-label',`${it.name} for ${n}`);
       if(st.k==='owned'){btn.textContent=it.id==='hire'?'✓ On the crew':'✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
@@ -336,7 +336,7 @@ function crewMsg(m){
   const key=m.n+'|'+m.id;
   if(m.refund&&crewPending.has(key)){S.seeds+=crewPending.get(key);crewPending.delete(key);toast(`Someone already bought ${m.n} that. Your gold's back.`,'',3000)}
   else if(m.byId===myId())crewPending.delete(key);   // my own purchase, confirmed
-  else if(m.by&&m.n&&S.started){if(m.id==='hire')toast(`${m.by} hired ${m.n}.`,'gold',3000);else{const it=SIM.CREW_SHOP.find(o=>o.id===m.id);if(it)toast(`${m.by} bought ${m.n} a ${it.name.toLowerCase()}.`,'gold',3000)}}
+  else if(m.by&&m.n&&S.started){if(m.id==='hire')toast(`${m.by} hired ${m.n}.`,'gold',3000);else{const it=SIM.CREW_SHOP.find(o=>o.id===m.id);if(it)toast(`${m.by} bought ${m.n} a ${crewItemText(it).name.toLowerCase()}.`,'gold',3000)}}
   if(shopOpen)renderShop();
 }
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
