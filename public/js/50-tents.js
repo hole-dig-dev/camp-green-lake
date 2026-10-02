@@ -332,7 +332,7 @@ function crewBuy(n,it){
 /* the server's word on the crew's kit (on joining, and after anyone buys something) */
 function crewMsg(m){
   const up=m.up&&typeof m.up==='object'?m.up:{};for(const k of Object.keys(CREW_UP))delete CREW_UP[k];
-  for(const n of SIM.CREW)if(up[n]&&typeof up[n]==='object'){CREW_UP[n]={};for(const k of['hired',...SIM.CREW_SHOP.map(i=>i.id)])if(up[n][k]===true)CREW_UP[n][k]=true}
+  for(const n of SIM.CREW)if(up[n]&&typeof up[n]==='object'){CREW_UP[n]={};for(const k of['hired','abducted','alien',...SIM.CREW_SHOP.map(i=>i.id)])if(up[n][k]===true)CREW_UP[n][k]=true}   /* abducted / alien: 88-ufo.js */
   const key=m.n+'|'+m.id;
   if(m.refund&&crewPending.has(key)){S.seeds+=crewPending.get(key);crewPending.delete(key);toast(`Someone already bought ${m.n} that. Your gold's back.`,'',3000)}
   else if(m.byId===myId())crewPending.delete(key);   // my own purchase, confirmed

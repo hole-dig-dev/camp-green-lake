@@ -161,7 +161,8 @@ function onMsg(m){
     case 'crewWard':crewWardSet(m.all);break;
     case 'crewSoda':crewSoda(String(m.n||''));break;
     case 'vein':veinSet(m);break;
-    case 'eotd':eotdSet(m.st);break;   /* Employee of the Day standings (88-eotd.js) */   /* a rich vein (88-vein.js) */   /* a soda for a crew member (88-morale.js) */   /* someone dressed a crew member (81-wardrobe.js) */   /* scarecrows (88-gear.js) */   /* the camp's upgrades (84-camp.js) */
+    case 'eotd':eotdSet(m.st);break;
+    case 'ufo':{const n=String(m.n||'');if(m.phase==='take')ufoTake(n);else if(m.phase==='drop')ufoDrop(n);break}   /* the UFO easter egg (88-ufo.js) */   /* Employee of the Day standings (88-eotd.js) */   /* a rich vein (88-vein.js) */   /* a soda for a crew member (88-morale.js) */   /* someone dressed a crew member (81-wardrobe.js) */   /* scarecrows (88-gear.js) */   /* the camp's upgrades (84-camp.js) */
     case 'mineBoom':mineBoom(num(m.id,0,1e9,0),num(m.x,-2000,2000,0),num(m.z,-2000,2000,0),cleanName(m.by)||'Someone');break;
     case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;

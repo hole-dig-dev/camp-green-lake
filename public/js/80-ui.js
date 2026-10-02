@@ -49,6 +49,7 @@ const BOT_TALK={
     {label:'Want me to teach you to read?',go:back=>reply('Zach','...Yes. I would like that. Maybe after we\'re done digging. One letter every day.',back)}]},
 };
 function botNode(b,first){
+  if(isAlien(b))return alienNode(b);   /* "I'm Zach." (88-ufo.js) */
   const T2=BOT_TALK[b.d.n],back=()=>botNode(b,false),opts=[],name=b.d.n;
   opts.push({label:'Found anything good out here?',go:()=>{
     const k='hint'+name,now=performance.now();
