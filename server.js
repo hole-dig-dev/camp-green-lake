@@ -542,7 +542,7 @@ function broadcast(msg, exceptId) {
   const s = JSON.stringify(msg);
   for (const c of clients.values()) if (c.joined && c.id !== exceptId) send(c, s);
 }
-function joined() { return [...clients.values()].filter(c => c.joined); }
+function joined() { return [...clients.values()].filter(c => c.joined && !c.spectator); } // spectators (public/js/96-spectate.js) watch, they don't play
 function broadcastSleep() { const js = joined(); broadcast({ t: 'sleepstat', asleep: js.filter(c => c.sleeping).length, total: js.length }); }
 // If it's night and every connected camper is asleep in a bunk, everyone skips straight to dawn (06:00, clock t=0).
 // This mirrors the host clock change above: set world.clock, then broadcast it the same way.
@@ -593,7 +593,7 @@ wss.on('connection', (ws, req) => {
       got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
-      peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
+      peers: [...clients.values()].filter(p => p.joined && !p.spectator && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       mines: MINES, // landmines (public/js/88-mines.js)
       pipe: pipeW(), // the sand pipeline (public/js/88-pipeline.js)
@@ -654,7 +654,7 @@ wss.on('connection', (ws, req) => {
       const pr = world.players[c.n.toLowerCase()];
       if (pr) send(c, { t: 'prog', xp: pr.xp });
       if (!c.joined) {
-        c.joined = true; clearTimeout(joinTimer); LOG.log('join', { id: c.id, n: c.n }); broadcast({ t: 'join', ...peerInfo(c) }, c.id);
+        c.spectator = m.spec === true; c.joined = true; clearTimeout(joinTimer); LOG.log('join', { id: c.id, n: c.n, spectator: c.spectator }); if (!c.spectator) broadcast({ t: 'join', ...peerInfo(c) }, c.id); // a spectator (public/js/96-spectate.js): nobody sees them
         const r = world.recent[c.n.toLowerCase()];
         if (m.fresh === true && r && Date.now() - r.at < RECENT_MS) send(c, { t: 'restore', sc: r.sc, x: r.x, z: r.z });
         world.run.peak = Math.max(world.run.peak, joined().length); dirty = true;
@@ -1347,7 +1347,7 @@ wss.on('connection', (ws, req) => {
       if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
     }
     truckLeave(c.id);
-    if (c.joined) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); else checkSummit(); }
+    if (c.joined && !c.spectator) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); else checkSummit(); }
   });
 });
 

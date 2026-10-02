@@ -89,7 +89,7 @@ function onMsg(m){
       townHello(m); // breaches into the buried town, and what's been taken down there today (89-town.js)
       lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
-      renderOnline();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
+      renderOnline();if(SPECON()&&!S.started)specJoin();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
       maybeResume();break;
     }
     // A reconnect (including the join-timeout closing an idle title screen) re-sends 'needpass'; only prefill
