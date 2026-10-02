@@ -85,6 +85,9 @@ function pipeClear(ax,az,bx,bz){
     if(t0<=t1)return false}
   return true;
 }
+/* how far (x, z) is from the nearest run of pipe (the crew don't dig under it or walk along it: 29-nav.js, 30-npcs.js) */
+function pipeNear(x,z){let m=Infinity;for(let i=1;i<PIPE.nodes.length;i++){const b=PIPE.nodes[i],a=PIPE.nodes[b.p];if(!a)continue;
+  if(Math.min(a.x,b.x)-m>x||Math.max(a.x,b.x)+m<x||Math.min(a.z,b.z)-m>z||Math.max(a.z,b.z)+m<z)continue;m=Math.min(m,pipeSegDist(i,x,z))}return m}
 /* ---- breaking and fixing (runs keyed by their child node) ---- */
 function pipeSegDist(c,x,z){const b=PIPE.nodes[c],a=PIPE.nodes[b.p],dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz||1,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/l2,0,1);return Math.hypot(a.x+dx*t-x,a.z+dz*t-z)}
 const pipeOut=c=>{let s=0;for(const i of pipeChain(c)){const n=PIPE.nodes[i];if(n.p>=0)s+=Math.hypot(n.x-PIPE.nodes[n.p].x,n.z-PIPE.nodes[n.p].z)}return s};   // how far out along the pipe from the sifter

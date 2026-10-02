@@ -105,12 +105,16 @@ function crewActivity(b){
   if(s==='held'||s==='flung')return'Being carried about';
   return s;
 }
-const CREW_GATE={x:0,out:25,in:30};   // the main gate: just outside, just inside
-const GATE_LANE=4;                    // keep this clear either side of the path out of the gate (x 0)
+/* the main gate: its middle, just outside, just inside. From the fence itself (20-world.js), so the crew follow the
+   layout if the gate or the fence moves */
+const CREW_GATE={x:(GATE_X0+GATE_X1)/2,out:FENCE_Z0-2.2,in:FENCE_Z0+2.8};
+const GATE_LANE=(GATE_X1-GATE_X0)/3;  // keep this clear either side of the path out of the gate
 function crewDigOK(x,z,b){
   if(inCamp(x,z)||Math.max(Math.abs(x),Math.abs(z))>EDGE-6)return false;
-  if(Math.hypot(Math.max(-40-x,0,x-30),Math.max(27-z,0,z-56))<CAMP_NODIG+1.5)return false;   // well past the white line (10-core.js)
-  if(Math.abs(x)<GATE_LANE&&z>0&&z<27)return false;   // not in the way out of the gate
+  if(Math.hypot(Math.max(FENCE_X0-x,0,x-FENCE_X1),Math.max(FENCE_Z0-z,0,z-FENCE_Z1))<CAMP_NODIG+1.5)return false;   // well past the white line (10-core.js)
+  if(Math.abs(x-CREW_GATE.x)<GATE_LANE&&z>FENCE_Z0-27&&z<FENCE_Z0)return false;   // not in the way out of the gate
+  if(typeof pipeNear==='function'&&pipeNear(x,z)<1.5)return false;   // not under the sand pipeline (88-pipeline.js)
+  if(colliders.some(c=>x>c.x0-1.2&&x<c.x1+1.2&&z>c.z0-1.2&&z<c.z1+1.2))return false;   // not up against anything built there
   if(holeNear(x,z,2.9))return false;                    // fresh ground: no hole (anyone's) here yet
   for(const o of bots)if(o!==b&&(o.state==='walk'?Math.hypot(o.tx-x,o.tz-z)<3:o.hole&&Math.hypot(o.hole.x-x,o.hole.z-z)<3))return false;   // or about to be
   return true;
@@ -159,8 +163,8 @@ function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
 const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink','disarming','lunch']);
 /* ---- the sifter queue: the first in line sifts (beside the hopper), the rest wait in a line behind ---- */
 const SIFTQ=[];
-const SIFT_SLOTS=[[9.8,37.7],[11.2,36.9],[12.5,36.4],[13.8,35.9],[15.1,35.4],[16.4,35.0],[17.7,34.6]];
-let SIFT_FREE=null;const siftSlot=i=>{if(!SIFT_FREE)SIFT_FREE=SIFT_SLOTS.map(([x,z])=>{const p=navFree(x,z,0.3);return[p.x,p.z]});return SIFT_FREE[Math.min(i,SIFT_FREE.length-1)]};   /* clear of the camp's things (29-nav.js) */
+const SIFT_SLOTS=[[-0.8,-1.5],[0.6,-2.3],[1.9,-2.8],[3.2,-3.3],[4.5,-3.8],[5.8,-4.2],[7.1,-4.6]].map(([dx,dz])=>[SIM.GOLD.SIFTER.x+dx,SIM.GOLD.SIFTER.z+dz]);   // the queue, from the sifter wherever it stands
+let SIFT_FREE=null,SIFT_FREE_N=-1;const siftSlot=i=>{if(!SIFT_FREE||SIFT_FREE_N!==colliders.length){SIFT_FREE_N=colliders.length;SIFT_FREE=null}if(!SIFT_FREE)SIFT_FREE=SIFT_SLOTS.map(([x,z])=>{const p=navFree(x,z,0.3);return[p.x,p.z]});return SIFT_FREE[Math.min(i,SIFT_FREE.length-1)]};   /* clear of the camp's things (29-nav.js) */
 function leaveSiftQ(b){const i=SIFTQ.indexOf(b);if(i>=0)SIFTQ.splice(i,1)}
 function humanAtSifter(){   // a camper using the sifter right now: the crew waits for them
   const G=SIM.GOLD.SIFTER,near=(x,z)=>Math.hypot(x-G.x,z-G.z)<SIM.GOLD.SIFT_R;
@@ -210,7 +214,10 @@ function walkTo(b,x,z,dt,speed,y){   // true once there. Outdoors he follows a p
   g.position.y=y!==undefined?y:groundAt(g.position.x,g.position.z);animPerson(b.p,speed>3?4:1,dt,0,speed>3?1:undefined);return false;
 }
 /* each crew member has his own lane through the main gate, so they don't all stand on the same spot */
-const gateX=b=>CREW_GATE.x+(bots.indexOf(b)-2.5)*0.75;
+const gateX=b=>{const x=CREW_GATE.x+(bots.indexOf(b)-2.5)*0.75;
+  if(typeof pipeNear!=='function'||!PIPE.nodes.length)return x;   /* a pipe laid through the gate: his lane steps off it */
+  for(const dx of[0,0.6,-0.6,1.2,-1.2,1.8,-1.8])if(Math.abs(x+dx-CREW_GATE.x)<(GATE_X1-GATE_X0)/2-0.6&&pipeNear(x+dx,CREW_GATE.out)>0.5&&pipeNear(x+dx,CREW_GATE.in)>0.5)return x+dx;
+  return x};
 function goIndoor(b,path,then){b.state='indoor';b.path=path;b.then=then}
 /* ---- grabbed (84-grab.js, hold R on one of them): you can pick a crew member up and carry them about, or throw them.
    They aren't networked, so only you see it. Let go and they land, grumble, and get back to work. ---- */
@@ -237,7 +244,7 @@ function crewHeldStep(b,dt){
    another matter: a lizard, javelina, the lion or a snake/scorpion/hatchling that gets to one knocks him out. His
    bucket spills, and he wakes up in the nurse's office (back at camp) and has to walk out again. A slowdown, nothing
    worse. Like the rest of the crew, all of this happens on your screen only. ---- */
-const CREW_NURSE={x:-1.5,z:33};   // where they come round, just inside the gate
+const CREW_NURSE={x:CREW_GATE.x-1.5,z:FENCE_Z0+5.8};   // where they come round, just inside the gate
 const CREW_HOLD=new Set(['held','flung','tossed','down','ko']);
 function crewToss(b,vx,vy,vz,why){
   if(!OUTDOOR.has(b.state))return;moraleHit(b,why);   /* 88-morale.js */
