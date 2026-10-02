@@ -50,6 +50,9 @@ const SHOP=[
   {id:'bucket',name:'Bucket',desc:'Carries 5 holes of sand to the sifter in camp. Much more gold per trip than the pan.',cost:45,cat:'dig',icon:'bucket'},
   {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:60,cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'bucket3',name:'Huge bucket',desc:'Tier 3 bucket: holds 15 holes of sand.',cost:140,cat:'dig',icon:'bucket',needs:'bucket2'},
+  {id:'hopper',name:'Sifter hopper',desc:'Dump your sand at the sifter and go straight back to digging: the hopper holds 20 holes and sifts a hole every 8 seconds on its own. The gold comes to you.',cost:90,cat:'dig',icon:'bucket',needs:'bucket'},
+  {id:'hopper2',name:'Hopper collar',desc:'Planks on top of your hopper: holds 50 holes and sifts twice as fast (a hole every 4 seconds).',cost:220,cat:'dig',icon:'bucket',needs:'hopper'},
+  {id:'hopper3',name:'Motorized dry washer',desc:'A towering steel bin on legs and a gas motor on the blower: holds 120 holes and sifts a hole every 1.5 seconds.',cost:500,cat:'dig',icon:'bucket',needs:'hopper2'},
   {id:'canteen',name:'Big canteen',desc:'Tier 2 canteen: holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
@@ -79,6 +82,9 @@ function shopEffect(it){
     case 'detector': return {label:'Detection range',from:'No detector',to:'7 m range'};
     case 'canteen': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(100+bonus)+'',to:(160+bonus)+''}}
     case 'canteen3': {const bonus=myLevel()>=4?20:0;return {label:'Water capacity',from:(160+bonus)+'',to:(230+bonus)+''}}
+    case 'hopper': return {label:'At the sifter',from:'Stand and sift each bucket',to:'Dump and go: 20 holes, a hole every 8 s'};
+    case 'hopper2': return {label:'Hopper',from:'20 holes, a hole every 8 s',to:'50 holes, a hole every 4 s'};
+    case 'hopper3': return {label:'Hopper',from:'50 holes, a hole every 4 s',to:'120 holes, a hole every 1.5 s'};
     case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' hole, washed at the water drums'};
     case 'shovel': return {label:'Digging',from:'Bare hands, 1.5 ft deep',to:'Shovel, 3x faster, 5 ft deep'};
     case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: 1 hole':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
