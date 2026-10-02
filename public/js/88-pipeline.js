@@ -19,39 +19,48 @@
    PipeSection (1 m along +X, stretched to each run), PipeJoint, PipeCrack, PipeSlug, PipeIntake. The sand's way
    through the connector into the hopper comes from public/models/PipeInletPath.json (sifter frame; art/blender/sifter.py). */
 const PIPE_RUN=5,PIPE_AX=0.24,PIPE_INTAKE_OFF=0.35;
-const PIPE={nodes:[],broken:{},g:null,parts:{},dirty:true,laying:false,fixT:0,fixI:-1,slugs:[],inlet:null,checkT:0};
+/* The pipeline is a tree (JT 2026-10-01, late game: branches): nodes[i]={x,z,p}, p its parent (node 0, the sifter's
+   socket, has none). A run is a node and its parent; runs are keyed by the child's index (broken[c]). Every node no
+   other hangs off is an intake. Camp upgrades (84-camp.js): pipeTee lets you branch from any joint, pipeSteel never
+   cracks, pipePump pushes sand through faster. */
+const PIPE={nodes:[],broken:{},g:null,parts:{},dirty:true,laying:false,layFrom:-1,fixT:0,fixI:-1,slugs:[],inlet:null,checkT:0};
 for(const n of['PipeSection','PipeJoint','PipeCrack','PipeSlug','PipeIntake'])modelParts(n).then(p=>{PIPE.parts[n]=p;PIPE.dirty=true}).catch(()=>{});
+/* the camp upgrades' pieces: loaded once the camp has them */
+const pipeLazy=n=>{if(PIPE.parts[n]||PIPE.lazy?.[n])return;(PIPE.lazy||(PIPE.lazy={}))[n]=1;modelParts(n).then(p=>{PIPE.parts[n]=p;PIPE.dirty=true}).catch(()=>{})};
 fetch('models/PipeInletPath.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.points))PIPE.inlet=j.points}).catch(()=>{});
-const pipeSocket=()=>{const G=SIM.GOLD.SIFTER;return{x:G.x-1.9,z:G.z}};
-const pipeNodes=()=>PIPE.nodes.length?PIPE.nodes:[pipeSocket()];
+const pipeSocket=()=>{const G=SIM.GOLD.SIFTER;return{x:G.x-1.9,z:G.z,p:-1}};
 const pipeY=(x,z)=>baseH(x,z);   // the undug ground: a run bridges a hole dug under it
-function pipeSet(d){if(!d)return;PIPE.nodes=Array.isArray(d.nodes)?d.nodes.map(n=>({x:+n.x,z:+n.z})):[];PIPE.broken={};for(const k in d.broken||{})if(d.broken[k])PIPE.broken[k]=true;PIPE.dirty=true}
+const pipeRuns=()=>{const r=[];for(let c=1;c<PIPE.nodes.length;c++)r.push(c);return r};
+const pipeLeaves=()=>{const N=PIPE.nodes,has=new Set();for(let c=1;c<N.length;c++)has.add(N[c].p);const L=[];for(let c=1;c<N.length;c++)if(!has.has(c))L.push(c);return L};
+const pipeChain=c=>{const out=[];let i=c,g=0;while(i>=0&&g++<999){out.push(i);i=PIPE.nodes[i].p}return out};   // a node, its parent, ... node 0
+function pipeSet(d){if(!d)return;PIPE.nodes=Array.isArray(d.nodes)?d.nodes.map((n,i)=>({x:+n.x,z:+n.z,p:i===0?-1:Number.isInteger(n.p)?n.p:i-1})):[];PIPE.broken={};for(const k in d.broken||{})if(d.broken[k])PIPE.broken[k]=true;PIPE.dirty=true}
 function pipeMesh(n){const parts=PIPE.parts[n];if(!parts)return null;const g=new T.Group();for(const pt of parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=!pt.material.transparent;m.receiveShadow=true;g.add(m)}return g}
 const _pX=new T.Vector3(1,0,0),_pD=new T.Vector3();
-/* (re)build the pipeline's meshes: runs, joints, cracks, the intake */
+/* (re)build the pipeline's meshes: runs, joints, cracks, intakes, the pump */
 function pipeBuild(){
   PIPE.dirty=false;if(!PIPE.g){PIPE.g=new T.Group();scene.add(PIPE.g)}PIPE.g.clear();
-  const N=PIPE.nodes;if(N.length<2)return;
-  for(let i=0;i<N.length-1;i++){
-    const a=N[i],b=N[i+1],ya=pipeY(a.x,a.z),yb=pipeY(b.x,b.z);_pD.set(b.x-a.x,yb-ya,b.z-a.z);const L=_pD.length();if(L<0.01)continue;_pD.normalize();
-    const s=pipeMesh('PipeSection');if(s){s.position.set(a.x,ya,a.z);s.quaternion.setFromUnitVectors(_pX,_pD);s.scale.set(L,1,1);PIPE.g.add(s)}
-    if(PIPE.broken[i]){const c=pipeMesh('PipeCrack');if(c){c.position.set((a.x+b.x)/2,(ya+yb)/2,(a.z+b.z)/2);c.rotation.y=Math.atan2(-(b.z-a.z),b.x-a.x);PIPE.g.add(c)}}
+  const N=PIPE.nodes;if(N.length<2)return;if(campHas('pipeSteel'))pipeLazy('PipeSectionSteel');if(campHas('pipePump'))pipeLazy('PipePump');const steel=campHas('pipeSteel')&&PIPE.parts.PipeSectionSteel;
+  for(let c=1;c<N.length;c++){
+    const a=N[N[c].p],b=N[c],ya=pipeY(a.x,a.z),yb=pipeY(b.x,b.z);_pD.set(b.x-a.x,yb-ya,b.z-a.z);const L=_pD.length();if(L<0.01)continue;_pD.normalize();
+    const s=pipeMesh(steel?'PipeSectionSteel':'PipeSection');if(s){s.position.set(a.x,ya,a.z);s.quaternion.setFromUnitVectors(_pX,_pD);s.scale.set(L,1,1);PIPE.g.add(s)}
+    if(PIPE.broken[c]){const k=pipeMesh('PipeCrack');if(k){k.position.set((a.x+b.x)/2,(ya+yb)/2,(a.z+b.z)/2);k.rotation.y=Math.atan2(-(b.z-a.z),b.x-a.x);PIPE.g.add(k)}}
+    const j=pipeMesh('PipeJoint');if(j){j.position.set(b.x,yb,b.z);j.rotation.y=Math.atan2(-(b.z-a.z),b.x-a.x);PIPE.g.add(j)}
   }
-  for(let i=1;i<N.length;i++){const a=N[i-1],b=N[i],j=pipeMesh('PipeJoint');if(!j)continue;j.position.set(b.x,pipeY(b.x,b.z),b.z);j.rotation.y=Math.atan2(-(b.z-a.z),b.x-a.x);PIPE.g.add(j)}
-  const a=N[N.length-2],b=N[N.length-1],it=pipeMesh('PipeIntake');
-  if(it){const dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;const x=b.x+dx/l*PIPE_INTAKE_OFF,z=b.z+dz/l*PIPE_INTAKE_OFF;it.position.set(x,pipeY(b.x,b.z),z);it.rotation.y=Math.atan2(-dz,dx);PIPE.g.add(it)}
+  for(const c of pipeLeaves()){const a=N[N[c].p],b=N[c],it=pipeMesh('PipeIntake');if(!it)continue;const dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;it.position.set(b.x+dx/l*PIPE_INTAKE_OFF,pipeY(b.x,b.z),b.z+dz/l*PIPE_INTAKE_OFF);it.rotation.y=Math.atan2(-dz,dx);PIPE.g.add(it)}
+  if(campHas('pipePump')){const pm=pipeMesh('PipePump');if(pm){const G=SIM.GOLD.SIFTER;pm.position.set(G.x,baseH(G.x,G.z),G.z);pm.rotation.y=G.ry||0;PIPE.g.add(pm)}}
 }
-/* ---- laying it ---- */
-function pipeEnd(){const N=pipeNodes();return N[N.length-1]}
-function pipeLayStart(){
+const pipeIntakeAt=c=>{const N=PIPE.nodes,a=N[N[c].p],b=N[c],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;return{x:b.x+dx/l*PIPE_INTAKE_OFF,z:b.z+dz/l*PIPE_INTAKE_OFF}};
+/* ---- laying it: from the socket, an intake, or (with tee fittings) any joint ---- */
+function pipeLayStart(from){
   if(S.pipe<1){toast('You need pipe: 5 m sections at the Supply Depot.','',3000);return}
-  PIPE.laying=true;PIPE.trail=[];if(!PIPE.nodes.length){PIPE.nodes=[pipeSocket()]}
+  if(!PIPE.nodes.length)PIPE.nodes=[pipeSocket()];
+  PIPE.laying=true;PIPE.trail=[];PIPE.layFrom=from==null?0:from;
   toast(`Laying pipe: walk where you want it (a joint every ${PIPE_RUN} m, ${S.pipe} section${S.pipe>1?'s':''} left). F to stop.`,'good',4000);
 }
 function pipeLayStop(why){if(!PIPE.laying)return;PIPE.laying=false;if(PIPE.line)PIPE.line.visible=false;toast(why||(PIPE.nodes.length>1?'Pipe laid. Dump your sand in the intake at its end.':'You stop laying pipe.'),'',3000)}
 function pipeLayStep(){
   if(S.ko||twSt||inTent()||S.inTown){pipeLayStop('You drop the pipe.');return}
-  const e=pipeEnd(),d=Math.hypot(P.x-e.x,P.z-e.z);
+  const e=PIPE.nodes[PIPE.layFrom],d=Math.hypot(P.x-e.x,P.z-e.z);
   if(!PIPE.line){PIPE.line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3()]),new T.LineBasicMaterial({color:0xfff2c0}));PIPE.line.frustumCulled=false;scene.add(PIPE.line)}
   PIPE.line.visible=true;PIPE.line.geometry.setFromPoints([new T.Vector3(e.x,pipeY(e.x,e.z)+PIPE_AX,e.z),new T.Vector3(P.x,pipeY(P.x,P.z)+PIPE_AX,P.z)]);
   const tr=PIPE.trail||(PIPE.trail=[]),lt=tr[tr.length-1];if(!lt||Math.hypot(P.x-lt.x,P.z-lt.z)>0.3)tr.push({x:P.x,z:P.z});
@@ -63,9 +72,9 @@ function pipeLayStep(){
      (the pipe follows you round buildings, through the gate; it never goes through anything solid) */
   let n=null;for(let i=tr.length-1;i>=0;i--){const t=tr[i],dd=Math.hypot(t.x-e.x,t.z-e.z);if(dd>PIPE_RUN+0.4||dd<2)continue;if(pipeClear(e.x,e.z,t.x,t.z)){n=dd>PIPE_RUN?{x:e.x+(t.x-e.x)/dd*PIPE_RUN,z:e.z+(t.z-e.z)/dd*PIPE_RUN}:{x:t.x,z:t.z};break}}
   if(!n){if(performance.now()-(PIPE.blockT||0)>4000){PIPE.blockT=performance.now();toast('The pipe can\'t go through that. Walk back toward the last joint and go round.','bad',3000)}return}
-  n={x:+n.x.toFixed(2),z:+n.z.toFixed(2)};{const dn=Math.hypot(n.x-e.x,n.z-e.z);PIPE.trail=tr.filter(t=>Math.hypot(t.x-e.x,t.z-e.z)>dn)}
-  PIPE.nodes.push(n);S.pipe--;PIPE.dirty=true;sfx.clank();if(online())wsSend({t:'pipeAdd',x:n.x,z:n.z});
-  logEv('pipeAdd',{x:n.x,z:n.z,n:PIPE.nodes.length});
+  n={x:+n.x.toFixed(2),z:+n.z.toFixed(2),p:PIPE.layFrom};{const dn=Math.hypot(n.x-e.x,n.z-e.z);PIPE.trail=tr.filter(t=>Math.hypot(t.x-e.x,t.z-e.z)>dn)}
+  PIPE.nodes.push(n);PIPE.layFrom=PIPE.nodes.length-1;S.pipe--;PIPE.dirty=true;sfx.clank();if(online())wsSend({t:'pipeAdd',x:n.x,z:n.z,p:n.p});
+  logEv('pipeAdd',{x:n.x,z:n.z,p:n.p,n:PIPE.nodes.length});
   if(S.pipe<1)pipeLayStop('Out of pipe. Buy more at the Supply Depot, then F at the intake to carry on.');
 }
 /* nothing solid (20-world.js colliders: buildings, the fence, rocks...) across a straight run from a to b */
@@ -76,56 +85,57 @@ function pipeClear(ax,az,bx,bz){
     if(t0<=t1)return false}
   return true;
 }
-/* ---- breaking and fixing ---- */
-function pipeSegDist(i,x,z){const a=PIPE.nodes[i],b=PIPE.nodes[i+1],dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz||1,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/l2,0,1);return Math.hypot(a.x+dx*t-x,a.z+dz*t-z)}
-function pipeBreak(i,why){
-  if(PIPE.broken[i]||i<0||i>=PIPE.nodes.length-1)return;PIPE.broken[i]=true;PIPE.dirty=true;
-  if(online())wsSend({t:'pipeBreak',i});logEv('pipeBreak',{i,why});
-  const a=PIPE.nodes[i],b=PIPE.nodes[i+1];if(nearCam((a.x+b.x)/2,(a.z+b.z)/2,40)){sfx.clank();puff((a.x+b.x)/2,pipeY(a.x,a.z)+0.3,(a.z+b.z)/2,(a.x+b.x)/2,(a.z+b.z)/2,8)}
-  toast(`The pipeline's cracked (${why==='mine'?'a landmine':why==='rock'?'a boulder':why==='sink'?'a sinkhole':'something'}), ${Math.round(pipeAlong(i+0.5))} m out from the sifter. Hold F on the crack to fix it.`,'bad',4200);
+/* ---- breaking and fixing (runs keyed by their child node) ---- */
+function pipeSegDist(c,x,z){const b=PIPE.nodes[c],a=PIPE.nodes[b.p],dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz||1,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/l2,0,1);return Math.hypot(a.x+dx*t-x,a.z+dz*t-z)}
+const pipeOut=c=>{let s=0;for(const i of pipeChain(c)){const n=PIPE.nodes[i];if(n.p>=0)s+=Math.hypot(n.x-PIPE.nodes[n.p].x,n.z-PIPE.nodes[n.p].z)}return s};   // how far out along the pipe from the sifter
+function pipeBreak(c,why){
+  if(PIPE.broken[c]||c<1||c>=PIPE.nodes.length||campHas('pipeSteel'))return;PIPE.broken[c]=true;PIPE.dirty=true;   /* reinforced pipe never cracks */
+  if(online())wsSend({t:'pipeBreak',i:c});logEv('pipeBreak',{i:c,why});
+  const b=PIPE.nodes[c],a=PIPE.nodes[b.p];if(nearCam((a.x+b.x)/2,(a.z+b.z)/2,40)){sfx.clank();puff((a.x+b.x)/2,pipeY(a.x,a.z)+0.3,(a.z+b.z)/2,(a.x+b.x)/2,(a.z+b.z)/2,8)}
+  toast(`The pipeline's cracked (${why==='mine'?'a landmine':why==='rock'?'a boulder':why==='sink'?'a sinkhole':why==='dynamite'?'dynamite':'something'}), ${Math.round(pipeOut(c)-2.5)} m out from the sifter. Hold F on the crack to fix it.`,'bad',4200);
 }
-function pipeBlast(x,z,r){for(let i=0;i<PIPE.nodes.length-1;i++)if(pipeSegDist(i,x,z)<r)pipeBreak(i,'mine')}   // 88-mines.js mineBoom
-function pipeAlong(f){let s=0;const N=PIPE.nodes;for(let i=0;i<N.length-1&&i<f;i++){const l=Math.hypot(N[i+1].x-N[i].x,N[i+1].z-N[i].z);s+=l*Math.min(1,f-i)}return s}
+function pipeBlast(x,z,r,why){for(const c of pipeRuns())if(pipeSegDist(c,x,z)<r)pipeBreak(c,why||'mine')}   // 88-mines.js mineBoom, dynamite
 function pipeHazards(){
-  const N=PIPE.nodes;if(N.length<2)return;
-  if(typeof lsBoulders!=='undefined')for(const b of lsBoulders){if(b.fadeT>0||b.y-baseH(b.x,b.z)>b.r+0.5)continue;for(let i=0;i<N.length-1;i++)if(!PIPE.broken[i]&&pipeSegDist(i,b.x,b.z)<b.r+0.15)pipeBreak(i,'rock')}
-  if(typeof SINK_LIVE!=='undefined')for(const sh of SINK_LIVE.values()){if(sh.stage!=='open'&&sh.stage!=='settled')continue;for(let i=0;i<N.length-1;i++)if(!PIPE.broken[i]&&pipeSegDist(i,sh.x,sh.z)<sh.r*0.9)pipeBreak(i,'sink')}
+  if(PIPE.nodes.length<2||campHas('pipeSteel'))return;
+  if(typeof lsBoulders!=='undefined')for(const b of lsBoulders){if(b.fadeT>0||b.y-baseH(b.x,b.z)>b.r+0.5)continue;for(const c of pipeRuns())if(!PIPE.broken[c]&&pipeSegDist(c,b.x,b.z)<b.r+0.15)pipeBreak(c,'rock')}
+  if(typeof SINK_LIVE!=='undefined')for(const sh of SINK_LIVE.values()){if(sh.stage!=='open'&&sh.stage!=='settled')continue;for(const c of pipeRuns())if(!PIPE.broken[c]&&pipeSegDist(c,sh.x,sh.z)<sh.r*0.9)pipeBreak(c,'sink')}
 }
-function pipeNearCrack(r){let best=-1,bd=r;for(let i=0;i<PIPE.nodes.length-1;i++){if(!PIPE.broken[i])continue;const d=pipeSegDist(i,P.x,P.z);if(d<bd){bd=d;best=i}}return best}
-/* ---- the sand going down it ---- */
-function pipePath(){   // world points from the intake to the hopper: the runs backwards, then the connector
-  const N=PIPE.nodes,pts=[];for(let i=N.length-1;i>=0;i--)pts.push(new T.Vector3(N[i].x,pipeY(N[i].x,N[i].z)+PIPE_AX,N[i].z));
-  const G=SIM.GOLD.SIFTER,gy=baseH(G.x,G.z),inl=PIPE.inlet||[];   /* no connector path yet: the sand goes in at the socket */
+function pipeNearCrack(r){let best=-1,bd=r;for(const c of pipeRuns()){if(!PIPE.broken[c])continue;const d=pipeSegDist(c,P.x,P.z);if(d<bd){bd=d;best=c}}return best}
+/* ---- the sand going down it: from an intake, joint by joint to node 0, then the connector into the hopper ---- */
+function pipePath(leaf){
+  const pts=[];for(const i of pipeChain(leaf)){const n=PIPE.nodes[i];pts.push(new T.Vector3(n.x,pipeY(n.x,n.z)+PIPE_AX,n.z))}
+  const G=SIM.GOLD.SIFTER,gy=baseH(G.x,G.z),inl=PIPE.inlet||[];
   for(let k=1;k<inl.length;k++)pts.push(new T.Vector3(G.x+inl[k][0],gy+inl[k][1],G.z+inl[k][2]));
   return pts;
 }
-function pipeSlug(mine,holes){
-  const pts=pipePath();if(pts.length<2)return;let len=0;const cum=[0];for(let i=1;i<pts.length;i++){len+=pts[i].distanceTo(pts[i-1]);cum.push(len)}
+function pipeSlug(mine,holes,leaf){
+  if(!(leaf>=1&&leaf<PIPE.nodes.length))return;
+  const pts=pipePath(leaf);if(pts.length<2)return;let len=0;const cum=[0];for(let i=1;i<pts.length;i++){len+=pts[i].distanceTo(pts[i-1]);cum.push(len)}
   /* the slug's axis is PIPE_AX above its origin: hang it from a group at the axis so it turns about the pipe's centre in the bends */
-  const s=pipeMesh('PipeSlug');let m=null;if(s){s.position.y=-PIPE_AX;m=new T.Group();m.add(s);scene.add(m)}PIPE.slugs.push({mine,holes,pts,cum,len,s:0,m});
+  const s=pipeMesh('PipeSlug');let m=null;if(s){s.position.y=-PIPE_AX;m=new T.Group();m.add(s);scene.add(m)}PIPE.slugs.push({mine,holes,pts,cum,len,s:0,m,chain:pipeChain(leaf)});
 }
-function pipeDump(){
+function pipeDump(leaf){
   if(carrier()!=='bucket'){toast('The pipe takes a bucket of sand. (Pan sand: wash it at the water drums.)','',3200);return}
   if(S.bucket<0.05){toast(`Your ${backsackOn()?'backsack':'bucket'}'s empty. Dig, then dump it here: it goes down the pipe to the sifter.`,'',3200);return}
-  const br=Object.keys(PIPE.broken).map(Number).filter(i=>i<PIPE.nodes.length-1);
-  if(br.length){const i=Math.max(...br);toast(`The pipe's cracked ${Math.round(pipeAlong(PIPE.nodes.length-1)-pipeAlong(i+0.5))} m back toward camp. Fix it first: hold F on the crack.`,'bad',4000);return}
-  const holes=S.bucket;S.bucket=0;sfx.scoop();pipeSlug(true,holes);if(online())wsSend({t:'pipeFlow'});
-  toast(`Down the pipe it goes: ${Math.round(holes*10)/10} holes of sand to the sifter.`,'good',3000);logEv('pipeDump',{holes:+holes.toFixed(2)});
+  const cracked=pipeChain(leaf).filter(c=>PIPE.broken[c]);
+  if(cracked.length){toast(`The pipe's cracked ${Math.round(pipeOut(leaf)-pipeOut(cracked[0])+2.5)} m back toward camp. Fix it first: hold F on the crack.`,'bad',4000);return}
+  const holes=S.bucket;S.bucket=0;sfx.scoop();pipeSlug(true,holes,leaf);if(online())wsSend({t:'pipeFlow',leaf});
+  toast(`Down the pipe it goes: ${Math.round(holes*10)/10} holes of sand to the sifter.`,'good',3000);logEv('pipeDump',{holes:+holes.toFixed(2),leaf});
 }
 function pipeArrive(holes){
   let rest=holes;const cap=hopperCap();
   if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));S.hopper+=put;rest-=put}
-  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
+  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
     toast(`Your sand came through the pipeline: the sifter shakes ${r.gold} gold out of it.`+(holes-rest>0.01?` (${Math.round((holes-rest)*10)/10} holes went in your hopper.)`:''),r.nugget?'gold':'good',3800)}
   else toast(`Your sand came through the pipeline into your hopper (${Math.floor(S.hopper)}/${cap}).`,'good',3000);
   logEv('pipeArrive',{holes:+holes.toFixed(2)});
 }
 function pipeSlugStep(sl,dt){
-  sl.s+=dt*tune('pipe.speed');
+  sl.s+=dt*tune('pipe.speed')*(campHas('pipePump')?2.5:1);   /* the booster pump */
   let i=1;while(i<sl.cum.length-1&&sl.cum[i]<sl.s)i++;
-  const nRuns=PIPE.nodes.length-1,run=nRuns-i;   // the run it's in (runs are walked backwards)
-  if(run>=0&&run<nRuns&&PIPE.broken[run]){   // a crack: the sand spills out there
-    const a=PIPE.nodes[run],b=PIPE.nodes[run+1],x=(a.x+b.x)/2,z=(a.z+b.z)/2;puff(x,pipeY(x,z)+0.3,z,x,z,12);
+  const run=i-1<sl.chain.length-1?sl.chain[i-1]:-1;   // the run it's in: from chain[i-1] to its parent
+  if(run>=1&&PIPE.broken[run]){   // a crack: the sand spills out there
+    const b=PIPE.nodes[run],a=PIPE.nodes[b.p],x=(a.x+b.x)/2,z=(a.z+b.z)/2;puff(x,pipeY(x,z)+0.3,z,x,z,12);
     if(sl.mine)toast(`Your sand spilled out of a crack in the pipe (${Math.round(sl.holes*10)/10} holes lost). Hold F on the crack to fix it.`,'bad',4000);
     return false}
   if(sl.s>=sl.len){if(sl.mine)pipeArrive(sl.holes);const G=SIM.GOLD.SIFTER;if(nearCam(G.x,G.z,40))puff(G.x-0.85,baseH(G.x,G.z)+1.9,G.z,G.x-0.85,G.z,5);return false}
@@ -139,13 +149,18 @@ function pipeSpot(){
   if(PIPE.laying)return{id:'pipe',label:`Stop laying pipe (${S.pipe} section${S.pipe===1?'':'s'} left)`,use:()=>pipeLayStop()};
   const ci=pipeNearCrack(2.6);
   if(ci>=0)return{id:'pipeFix',label:PIPE.fixI===ci&&PIPE.fixT>0?`Fixing the pipe… ${Math.floor(PIPE.fixT/tune('pipe.fixTime')*100)}%`:'Hold F to fix the cracked pipe',use:()=>{}};
-  const N=PIPE.nodes,G=SIM.GOLD.SIFTER,atSifter=(P.x-G.x)**2+(P.z-G.z)**2<SIM.GOLD.SIFT_R**2;
-  if(N.length>1){const e=N[N.length-1],a=N[N.length-2],dx=e.x-a.x,dz=e.z-a.z,l=Math.hypot(dx,dz)||1,ix=e.x+dx/l*PIPE_INTAKE_OFF,iz=e.z+dz/l*PIPE_INTAKE_OFF;
-    if((P.x-ix)**2+(P.z-iz)**2<2.4*2.4){
-      if(S.bucket>0.05&&carrier()==='bucket')return{id:'pipe',label:`Dump your ${backsackOn()?'backsack':'bucket'} down the pipeline (${Math.floor(S.bucket*10)/10} holes of sand)`,use:pipeDump};
-      if(S.pipe>0)return{id:'pipe',label:`Lay more pipe from here (${S.pipe} section${S.pipe===1?'':'s'})`,use:pipeLayStart};
-      return{id:'pipe',label:'The pipeline intake (dump sand here: it goes to the sifter)',use:pipeDump}}}
-  else if(S.pipe>0&&!(atSifter&&S.bucket>0.05)){const s=pipeSocket();if((P.x-s.x)**2+(P.z-s.z)**2<2.2*2.2)return{id:'pipe',label:`Lay a sand pipeline from the sifter (${S.pipe} section${S.pipe===1?'':'s'})`,use:pipeLayStart}}
+  const N=PIPE.nodes,G=SIM.GOLD.SIFTER,atSifter=(P.x-G.x)**2+(P.z-G.z)**2<SIM.GOLD.SIFT_R**2,ss=S.pipe===1?'':'s';
+  /* an intake */
+  let best=-1,bd=2.4*2.4;for(const c of pipeLeaves()){const it=pipeIntakeAt(c),d=(P.x-it.x)**2+(P.z-it.z)**2;if(d<bd){bd=d;best=c}}
+  if(best>=1){
+    if(S.bucket>0.05&&carrier()==='bucket')return{id:'pipe',label:`Dump your ${backsackOn()?'backsack':'bucket'} down the pipeline (${Math.floor(S.bucket*10)/10} holes of sand)`,use:()=>pipeDump(best)};
+    if(S.pipe>0)return{id:'pipe',label:`Lay more pipe from here (${S.pipe} section${ss})`,use:()=>pipeLayStart(best)};
+    return{id:'pipe',label:'The pipeline intake (dump sand here: it goes to the sifter)',use:()=>pipeDump(best)}}
+  /* a joint, to branch from (tee fittings) */
+  if(S.pipe>0&&campHas('pipeTee')){let j=-1,jd=1.6*1.6;for(let c=1;c<N.length;c++){const d=(P.x-N[c].x)**2+(P.z-N[c].z)**2;if(d<jd){jd=d;j=c}}
+    if(j>=1)return{id:'pipe',label:`Branch the pipeline from this joint (${S.pipe} section${ss})`,use:()=>pipeLayStart(j)}}
+  /* the sifter's socket: the first run, or (with tee fittings) another line out of it */
+  if(S.pipe>0&&!(atSifter&&S.bucket>0.05)&&(N.length<2||campHas('pipeTee'))){const s=pipeSocket();if((P.x-s.x)**2+(P.z-s.z)**2<2.2*2.2)return{id:'pipe',label:N.length<2?`Lay a sand pipeline from the sifter (${S.pipe} section${ss})`:`Another line out of the sifter (${S.pipe} section${ss})`,use:()=>pipeLayStart(0)}}
   return null;
 }
 function updatePipeline(dt){

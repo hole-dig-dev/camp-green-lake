@@ -30,17 +30,17 @@ await A.waitForTimeout(4500);
 const bank1=await A.evaluate(()=>RUN.bank);check('it reaches the sifter: the gold goes in the crew wallet',bank1>bank0&&await A.evaluate(()=>PIPE.slugs.length===0),'wallet '+bank0+' -> '+bank1);
 // a mine blast cracks it; sand can't go through; hold F to fix
 await A.evaluate(()=>{const N=PIPE.nodes;pipeBlast((N[2].x+N[3].x)/2,(N[2].z+N[3].z)/2,1.5)});await A.waitForTimeout(800);
-check('a blast cracks the run it hits (for everyone)',await A.evaluate(()=>PIPE.broken[2]===true)&&await B.evaluate(()=>PIPE.broken[2]===true));
+check('a blast cracks the run it hits (for everyone)',await A.evaluate(()=>PIPE.broken[3]===true)&&await B.evaluate(()=>PIPE.broken[3]===true));
 await A.evaluate(()=>{S.bucket=3});await A.keyboard.press('f');await A.waitForTimeout(300);
 check('cracked: the intake refuses the sand',await A.evaluate(()=>S.bucket===3));
 await A.evaluate(()=>{const N=PIPE.nodes;P.x=(N[2].x+N[3].x)/2+1;P.z=(N[2].z+N[3].z)/2;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(300);
 await lookAt(A,await A.evaluate(()=>(PIPE.nodes[2].x+PIPE.nodes[3].x)/2),0.3,await A.evaluate(()=>(PIPE.nodes[2].z+PIPE.nodes[3].z)/2));await A.waitForTimeout(500);await A.screenshot({path:SP+'/pipe_crack.png'});
 check('next to the crack: hold F to fix',await A.evaluate(()=>nearSpot().id==='pipeFix'));
-await A.keyboard.down('f');await A.waitForTimeout(1500);check('half way it isn\'t fixed yet',await A.evaluate(()=>PIPE.broken[2]===true&&PIPE.fixT>0.5));
+await A.keyboard.down('f');await A.waitForTimeout(1500);check('half way it isn\'t fixed yet',await A.evaluate(()=>PIPE.broken[3]===true&&PIPE.fixT>0.5));
 await A.waitForTimeout(2200);await A.keyboard.up('f');await A.waitForTimeout(500);
-check('held long enough: fixed for everyone',await A.evaluate(()=>!PIPE.broken[2])&&await B.evaluate(()=>!PIPE.broken[2]));
+check('held long enough: fixed for everyone',await A.evaluate(()=>!PIPE.broken[3])&&await B.evaluate(()=>!PIPE.broken[3]));
 // a landslide boulder rolling over a run cracks it
 await A.evaluate(()=>{const N=PIPE.nodes;lsBoulders.push({r:1.2,x:(N[4].x+N[5].x)/2,y:baseH(N[4].x,N[4].z)+1.2,z:(N[4].z+N[5].z)/2,fadeT:0,vx:0,vy:0,vz:0,simT:0,settledT:0,dodeca:false,bg:0,stagger:0,seed:1,rot:0,bounces:0,pace:0,impT:0,impX:0,impZ:0,_target:0});pipeHazards();lsBoulders.pop()});await A.waitForTimeout(400);
-check('a boulder on a run cracks it',await A.evaluate(()=>PIPE.broken[4]===true));
+check('a boulder on a run cracks it',await A.evaluate(()=>PIPE.broken[5]===true));
 await A.evaluate(()=>{lsBoulders.length=0;tuneSet('haz.mines',1);tuneSet('pipe.fixTime',15)});
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)?0:1)})();
