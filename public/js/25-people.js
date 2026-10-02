@@ -159,6 +159,7 @@ function upgradePerson(p){
   p.g.rotation.x=0;p.g.add(m);p.model=m;p.cur=null;p.lastT=performance.now();
   setClip(p,'Idle',0);stepMixer(p,0);
   if(p.hatT)modelHat(p,p.hatT);
+  if(p.ward)wardApply(p);   /* the Wardrobe's picks (81-wardrobe.js) */
 }
 /* level-reward hats on the model: recolor the camper's own hat (cowboy hats stay staff-only, so hair gets a
    bucket hat), and the top tier puts a pig on their head */
@@ -177,7 +178,7 @@ function modelHat(p,t){
     const head=m.getObjectByName('head');if(!head)return;
     const g=new T.Group(),b=box(0.3,0.22,0.42,0xf2a0b0),hd=box(0.2,0.18,0.14,0xf2a0b0),sn=box(0.09,0.06,0.04,0xd97a8e);
     b.position.y=0.12;hd.position.set(0,0.16,0.26);sn.position.set(0,0.14,0.34);g.add(b,hd,sn);
-    g.scale.setScalar(1/MODEL_SCALE);g.position.set(0,0.68,0);head.add(g);p.pig=g;
+    g.scale.setScalar(1/MODEL_SCALE);g.position.set(0,0.68,0);head.add(g);p.pig=g;if(p.ward&&p.ward.hat>=0)g.visible=false;
   }
 }
 function stepMixer(p,dt){

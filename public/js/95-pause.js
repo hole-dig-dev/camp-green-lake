@@ -117,6 +117,7 @@ $('#pOptions').onclick=()=>{renderOptions();showPauseScreen('options')};
 $('#pOptBack').onclick=()=>showPauseScreen('main');
 $('#pControlsBtn').onclick=()=>{renderControlsList();showPauseScreen('controls')};
 $('#pCtrlBack').onclick=()=>showPauseScreen('main');
+$('#pWardBtn').onclick=()=>{closePause();openWardrobe()};
 $('#pBadgesBtn').onclick=()=>{renderBadges();showPauseScreen('badges')};
 $('#pBadgesBack').onclick=()=>showPauseScreen('main');
 function askConfirm(title,text,yesLabel,onYes){

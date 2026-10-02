@@ -31,7 +31,7 @@ function startGame(resume){
   }
   S.name=cleanName(nickIn.value)||'Caveman';try{localStorage.setItem('cgl-nick',S.name)}catch(e){}
   S.color=resume&&resume.S&&Number.isInteger(resume.S.color)?clamp(resume.S.color,0,CAMPER_COLORS.length-1):Math.floor(hash2(S.name.length*31+S.name.charCodeAt(0),Date.now()%9973)*CAMPER_COLORS.length);
-  me=makePerson(Object.assign(playerLook(S.name,S.color),{suit:JUMPSUITS[mySuit()].c}));scene.add(me.g);me.suitIdx=mySuit();   // jumpsuit colour: 81-badges.js
+  me=makePerson(Object.assign(playerLook(S.name,S.color),{suit:JUMPSUITS[mySuit()].c}));scene.add(me.g);me.suitIdx=mySuit();me.ward=MY_WARD;   // jumpsuit colour: 81-badges.js
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
   $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
