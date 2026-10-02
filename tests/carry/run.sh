@@ -1,6 +1,6 @@
 #!/bin/bash
 # The grab / carry suite (JT 2026-09-30: carrying should feel natural). 29 checks, real keys, two browsers, ~3 min.
-#   bash tests/carry/run.sh [port] [screenshot-dir] [script: suite.cjs | crew-hazards.cjs (the D Tent crew vs the weather and the animals) | crew-store.cjs | crew-panel.cjs | start-with-nothing.cjs | hire-crew.cjs | backsack.cjs | hopper.cjs | mines.cjs | pipeline.cjs | hazards.cjs | wardrobe.cjs | wallet-spend.cjs | pipeline-late.cjs | dynamite.cjs | disarm-dog.cjs | gear.cjs | crew-dress-morale.cjs | vein.cjs | soda.cjs | eotd.cjs]
+#   bash tests/carry/run.sh [port] [screenshot-dir] [script: suite.cjs | crew-hazards.cjs (the D Tent crew vs the weather and the animals) | crew-store.cjs | crew-panel.cjs | start-with-nothing.cjs | hire-crew.cjs | backsack.cjs | hopper.cjs | mines.cjs | pipeline.cjs | hazards.cjs | wardrobe.cjs | wallet-spend.cjs | pipeline-late.cjs | dynamite.cjs | disarm-dog.cjs | gear.cjs | crew-dress-morale.cjs | vein.cjs | soda.cjs | eotd.cjs | hover.cjs]
 # A fresh server on a scratch data dir with the event director off (no tumbleweeds carrying the test camper away).
 cd "$(dirname "$0")/../.." || exit 1
 P=${1:-4450};OUT=${2:-tests/out};D=$(mktemp -d);echo '{"director":{"on":false}}' > $D/world.json;echo '{"haz.mines":{"v":0,"def":1}}' > $D/tune.json;   # no landmines going off under the carry tests (mines.cjs turns them on)

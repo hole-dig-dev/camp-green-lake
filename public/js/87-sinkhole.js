@@ -126,7 +126,7 @@ function sinkStillOccupied(sh){
 function inSinkhole(){
   if(!S.started||S.ko||inTent())return null;
   if(sinkTrapped){const live=SINK_LIVE.get(sinkTrapped.id)===sinkTrapped&&(sinkTrapped.stage==='open'||sinkTrapped.stage==='settled'||sinkTrapped.stage==='filling');if(live)return sinkTrapped;sinkTrapped=null}
-  if(!P.grounded)return null;
+  if(!P.grounded||floating())return null;   /* floating over it on the hoverboard (88-hover.js) */
   for(const sh of SINK_LIVE.values()){
     if(sh.stage!=='open'&&sh.stage!=='settled'&&sh.stage!=='filling')continue;
     if(Math.hypot(P.x-sh.x,P.z-sh.z)<sh.r*0.82&&holeDepthHere()>SINK_TRAP_DEPTH)return sh;
