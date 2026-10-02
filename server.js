@@ -571,6 +571,7 @@ wss.on('connection', (ws, req) => {
       camp: world.camp || {}, // the camp's upgrades (public/js/84-camp.js)
       piles: Object.values(world.piles || {}), // loose sand from dynamite (public/js/88-dynamite.js)
       scares: world.scares || [], // scarecrows (public/js/88-gear.js)
+      crewWard: world.crewWard || {}, // what the crew are wearing (public/js/81-wardrobe.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -763,6 +764,7 @@ wss.on('connection', (ws, req) => {
         }
         const n = CREW_NAMES.includes(m.n) && world.crew[m.n] && world.crew[m.n].hired ? m.n : null, it = SIM.CREW_SHOP.find(i => i.id === m.id); if (!n || !it) return;
         const up = world.crew[n];
+        if (it.use) { LOG.log('crewBuy', { id: c.id, n: c.n, crew: n, item: it.id, cost: it.cost }); broadcast({ t: 'crewSoda', n, by: c.n }); break; } // a consumable (the soda, public/js/88-morale.js)
         if (up[it.id] || (it.needs && !up[it.needs])) { send(c, { t: 'crew', up: world.crew, refund: it.cost, n, id: it.id }); return; } // someone beat you to it: your gold back
         up[it.id] = true; dirty = true;
         LOG.log('crewBuy', { id: c.id, n: c.n, crew: n, item: it.id, cost: it.cost });
@@ -999,6 +1001,10 @@ wss.on('connection', (ws, req) => {
         MINES.splice(i, 1); LOG.log('mineBoom', { by: crew || c.n, x: k.x, z: k.z });
         broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: crew || c.n });
         break;
+      }
+      case 'crewWard': { // dressing a crew member (public/js/81-wardrobe.js)
+        if (!CREW_NAMES.includes(m.n)) return; const all = world.crewWard || (world.crewWard = {});
+        all[m.n] = wardS(m.w); dirty = true; broadcast({ t: 'crewWard', all }); break;
       }
       case 'ward': { c.w = wardS(m.w); broadcast({ t: 'ward', id: c.id, w: c.w }, c.id); break; } // changed clothes (public/js/81-wardrobe.js)
       case 'bonk': {

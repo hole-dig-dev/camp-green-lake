@@ -293,7 +293,7 @@ const crewHiredCount=()=>SIM.CREW.filter(n=>CREW_UP[n]&&CREW_UP[n].hired).length
 function crewItemState(n,it){const up=CREW_UP[n]||{};
   if(it.id==='hire'){if(up.hired)return{k:'owned'};const c=SIM.crewHirePrice(crewHiredCount());return S.seeds<c?{k:'short',need:c-S.seeds}:{k:'buy'}}
   if(!up.hired)return{k:'locked',need:'hire'};
-  if(up[it.id]||SIM.CREW_SHOP.some(o=>o.needs===it.id&&up[o.id]))return{k:'owned'};
+  if(!it.use&&(up[it.id]||SIM.CREW_SHOP.some(o=>o.needs===it.id&&up[o.id])))return{k:'owned'};   /* it.use: a consumable (the soda) */
   if(it.needs&&!up[it.needs])return{k:'locked',need:SIM.CREW_SHOP.find(o=>o.id===it.needs).name};
   if(S.seeds<it.cost)return{k:'short',need:it.cost-S.seeds};return{k:'buy'}}
 function renderCrewShop(){
@@ -319,7 +319,7 @@ function crewBuy(n,it){
   const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost,key=it.id==='hire'?'hired':it.id;
   const rid=walletSpend(cost,()=>{if(CREW_UP[n])delete CREW_UP[n][key];crewPending.delete(n+'|'+it.id);renderCrewShop()},it.id==='hire'?`hiring ${n}`:`${n}'s ${it.name.toLowerCase()}`);   /* 84-spend.js */
   sfx.coin();clerk.waveT=1.6;addXP(cost/5);logEv('crewBuy',{crew:n,item:it.id,cost});
-  (CREW_UP[n]=CREW_UP[n]||{})[key]=true;   // straight away on your screen; the server's 'crew' confirms it
+  if(!it.use)(CREW_UP[n]=CREW_UP[n]||{})[key]=true;   // straight away on your screen; the server's 'crew' confirms it (a soda's drunk, not kept)
   if(online()){crewPending.set(n+'|'+it.id,cost);wsSend({t:'crewBuy',n,id:it.id,cost,rid})}
   else try{localStorage.setItem('cgl-crew',JSON.stringify(CREW_UP))}catch(e){}
   $('#crewFeedback').textContent=it.id==='hire'?`${n} is on the crew. ${S.seeds} gold left.`:`${it.name} for ${n}. ${S.seeds} gold left.`;toast(it.id==='hire'?`You hired ${n}. He's on his way in.`:`You bought ${n} a ${it.name.toLowerCase()}.`,'good',2500);

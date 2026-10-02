@@ -306,9 +306,9 @@ function crewPanelBuild(){
   const box=$('#crewRows');box.textContent='';crewRowEls.length=0;
   const none=document.createElement('div');none.className='crew-none';none.id='crewNone';none.textContent='No crew yet. Hire them at the Supply Depot window (The crew tab).';box.appendChild(none);
   for(const b of bots){const r=document.createElement('div');r.className='crew-row';
-    r.innerHTML=`<div class="crew-row__top"><b></b><span class="crew-row__doing"></span><span class="crew-bk"></span></div><div class="crew-bars"><div class="crew-bar crew-bar--hp" title="Health"><i></i></div><div class="crew-bar crew-bar--st" title="Stamina"><i></i></div><div class="crew-bar crew-bar--wt" title="Water"><i></i></div></div>`;
+    r.innerHTML=`<div class="crew-row__top"><b></b><span class="crew-row__doing"></span><span class="crew-bk"></span></div><div class="crew-bars"><div class="crew-bar crew-bar--hp" title="Health"><i></i></div><div class="crew-bar crew-bar--st" title="Stamina"><i></i></div><div class="crew-bar crew-bar--wt" title="Water"><i></i></div><div class="crew-bar crew-bar--mo" title="Morale (88-morale.js): low, and he digs slower. A soda cheers him up."><i></i></div></div>`;
     r.querySelector('b').textContent=b.d.n;box.appendChild(r);
-    crewRowEls.push({r,bk:r.querySelector('.crew-bk'),doing:r.querySelector('.crew-row__doing'),hp:r.querySelector('.crew-bar--hp i'),st:r.querySelector('.crew-bar--st i'),wt:r.querySelector('.crew-bar--wt i')})}
+    crewRowEls.push({r,bk:r.querySelector('.crew-bk'),doing:r.querySelector('.crew-row__doing'),hp:r.querySelector('.crew-bar--hp i'),st:r.querySelector('.crew-bar--st i'),wt:r.querySelector('.crew-bar--wt i'),mo:r.querySelector('.crew-bar--mo i')})}
 }
 function updateCrewPanel(dt){
   const el=$('#crewPanel'),show=crewPanelOn&&S.started&&!ZONE_H&&!PAUSE.open&&!fieldMapOpen;
@@ -321,5 +321,5 @@ function updateCrewPanel(dt){
     if(E.doing.textContent!==txt)E.doing.textContent=txt;
     E.r.classList.toggle('is-bad',b.state==='ko'||b.state==='tossed'||b.water<=0);
     const bk=crewSifts(b)?`${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:`pan ${Math.round((b.bucket||0)*100)}%`;if(E.bk.textContent!==bk)E.bk.textContent=bk;
-    E.hp.style.width=clamp(b.hp??100,0,100)+'%';E.st.style.width=clamp(b.stam??100,0,100)+'%';E.wt.style.width=clamp((b.water??cap)/cap*100,0,100)+'%'});
+    E.hp.style.width=clamp(b.hp??100,0,100)+'%';E.st.style.width=clamp(b.stam??100,0,100)+'%';E.wt.style.width=clamp((b.water??cap)/cap*100,0,100)+'%';E.mo.style.width=clamp(moraleOf(b),0,100)+'%'});
 }
