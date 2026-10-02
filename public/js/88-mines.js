@@ -29,7 +29,7 @@ function mineBoom(id,x,z,by){
   for(let k=0;k<4;k++)puff(x,y+0.2,z,x+(Math.random()-0.5)*0.4,z+(Math.random()-0.5)*0.4,14);
   if(nearCam(x,z,90)){mineBoomSfx(clamp(1-near/90,0.15,1));if(near<25)hurtFx=Math.max(hurtFx,0.6*(1-near/25))}
   logEv('mineBoom',{x:+x.toFixed(1),z:+z.toFixed(1),by:by||''});
-  const R=tune('haz.mineBlast'),L=tune('haz.mineLaunch');
+  const R=tune('haz.mineBlast'),L=tune('haz.mineLaunch');pipeBlast(x,z,R);   /* cracks the sand pipeline (88-pipeline.js) */
   if(S.started&&!S.ko&&!twSt&&!inTent()&&!S.inTown&&near<R){
     let dx=P.x-x,dz=P.z-z,l=Math.hypot(dx,dz);if(l<0.15){const a=Math.random()*Math.PI*2;dx=Math.cos(a);dz=Math.sin(a);l=1}
     const k=1-0.5*near/R;   // dead centre: the full throw; the edge of the blast: half

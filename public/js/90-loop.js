@@ -49,7 +49,7 @@ function frame(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
   updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateThumbHaze();updateWatchtowers();
-  updateEmotes(dt);updateWalkie(dt);updateHopper(dt);updateMines(dt);updateGrab(dt);updateRoster(dt);updateBots(dt,now);updateClerk(dt);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateTruck(dt);updateNorth(dt);updateCoords();updateCrewPanel(dt);updateRagdolls(dt);updateParts(dt);updatePops(dt);updateHoles(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);updateZones(dt);
+  updateEmotes(dt);updateWalkie(dt);updateHopper(dt);updateMines(dt);updatePipeline(dt);updateGrab(dt);updateRoster(dt);updateBots(dt,now);updateClerk(dt);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateTruck(dt);updateNorth(dt);updateCoords();updateCrewPanel(dt);updateRagdolls(dt);updateParts(dt);updatePops(dt);updateHoles(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);updateZones(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   updateHaboob(dt);updateMood(dt);updateTown(dt);   // updateTown: the buried town is dark (89-town.js)   // final blend on top of whatever fog/sky/light the day-night/disco/win code left this frame (see 75-haboob.js)
   updateFootsteps(dt);updateAudioScene();
