@@ -47,7 +47,7 @@ const BOTDEF=[
   {n:'Randy',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','It\'s Randy. Randall if you\'re the Warden.']},
   {n:'Stan',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
   {n:'Pete',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
-  {n:'Larry',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','Mr. Sir is coming. Look busy.']},
+  {n:'Larry',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','The Warden\'s watching. Look busy.']},
   {n:'Zach',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
@@ -86,11 +86,12 @@ function crewActivity(b){
   if(s==='dig')return b.water<=0?'Digging, parched':b.stam<15?'Digging, worn out':'Digging';
   if(s==='rest')return b.stam<45?'Catching his breath':'Taking a breather';
   if(s==='walk'||s==='return')return'Walking to a new spot';
-  if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):curfewSoon()?'Heading in for the night':'Going to D Tent';
+  if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):b.errand==='lunch'?'Going in for lunch':curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(isAbducted(b))return'Abducted by a UFO?!';
   if(s==='sifting')return'Sifting his bucket';
+  if(s==='lunch')return'Lunch at the mess tables';
   if(s==='disarming')return'Disarming a landmine';
   if(s==='dig'&&moraleOf(b)<MORALE_LOW)return'Digging (fed up: slower)';
   if(s==='drink')return b.wash?'Washing his pan':'Filling his canteen';
@@ -154,7 +155,7 @@ function botBedPath(b){   // walk to beside your bunk (they run along the west w
 }
 function botIndoorSpot(b){return b.d.n==='Jim Bob'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
 function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
-const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink','disarming']);
+const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink','disarming','lunch']);
 /* ---- the sifter queue: the first in line sifts (beside the hopper), the rest wait in a line behind ---- */
 const SIFTQ=[];
 const SIFT_SLOTS=[[9.8,37.7],[11.2,36.9],[12.5,36.4],[13.8,35.9],[15.1,35.4],[16.4,35.0],[17.7,34.6]];
@@ -297,7 +298,7 @@ function updateBots(dt,now){
       animPerson(b.p,0,dt);continue;
     }
     const asleep=b.state==='inside'&&(b.d.n!=='Jim Bob'||b.xraySleeps);
-    b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
+    b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,crewChatter(b))}   /* 88-habits.js: his own lines, and what's going on */
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
     if(!crewHired(b)){if(b.state!=='away'){leaveSiftQ(b);b.state='away';g.position.set(g.position.x,-200,g.position.z);if(b.gb)b.gb.visible=false}g.visible=false;b.L.el.style.display='none';continue}   // not on the crew (yet)
     if(b.ufo)continue;   /* a UFO has him (88-ufo.js drives him) */
@@ -308,6 +309,7 @@ function updateBots(dt,now){
     crewNeeds(b,dt);spadeLook(b.p,crewHas(b,'spade'));b.p.noShovel=!crewHas(b,'shovel');
     if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
     if(b.state==='disarming'){g.visible=true;crewDisarmStep(b,dt);continue}
+    if(b.state==='lunch'){g.visible=true;crewLunchStep(b,dt);continue}   /* at the mess tables (88-habits.js) */
     if(crewBeingDressed(b)){animPerson(b.p,0,dt);continue}   /* standing for the Wardrobe (81-wardrobe.js) */   /* stopped by a landmine with his kit (88-disarm.js) */
     if(b.state==='tossed'||b.state==='down'||b.state==='ko'){g.visible=true;animPerson(b.p,b.state==='tossed'?7:3,dt);crewHurtStep(b,dt);continue}
     if(OUTDOOR.has(b.state)&&!siren)crewHazards(b);
@@ -408,6 +410,7 @@ function updateBots(dt,now){
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=crewDepth(b)?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
       else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=gateX(b);b.tz=30}
       else if(d<0.1&&b.state==='gatein'&&b.errand==='sift'){b.state='siftq';SIFTQ.push(b);b.waitT=0}
+      else if(d<0.1&&b.state==='gatein'&&b.errand==='lunch'){b.state='lunch';b.t=null}
       else if(d<0.1&&b.state==='gatein'&&(b.errand==='water'||b.errand==='pan')){b.state='drink';b.wash=b.errand==='pan';b.t=null}
       else if(d<0.1&&b.state==='gatein'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
       else if(d<0.1&&b.state==='gotent'){g.position.set(D_ENTRY.x,TENT_FLOOR_Y,D_ENTRY.z);goIndoor(b,[RACK[bots.indexOf(b)].front],'rack')}   // in through the flap, straight to the rack
