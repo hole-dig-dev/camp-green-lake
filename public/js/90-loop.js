@@ -47,7 +47,7 @@ function updateLogReport(dt){
 function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
-  if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else titleCamera(dt);
+  if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else if(SPEC.on&&SPEC.joined)updateSpectator(dt);else titleCamera(dt);   /* spectator mode (96-spectate.js) */
   updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateThumbHaze();updateWatchtowers();
   updateEmotes(dt);updateWalkie(dt);updateHopper(dt);updateMines(dt);updatePipeline(dt);updateDynamite(dt);updateDisarm(dt);updateDogs(dt);updateGear(dt);updateMorale(dt);updateVein(dt);updateSparks(dt);updateEotd(dt);updateHover(dt);updateUfo(dt);updateHazardSwitch();updateGrab(dt);updateRoster(dt);updateBots(dt,now);updateClerk(dt);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateTruck(dt);updateNorth(dt);updateCoords();updateCrewPanel(dt);updateRagdolls(dt);updateParts(dt);updatePops(dt);updateHoles(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);updateZones(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
@@ -55,7 +55,7 @@ function frame(now){
   updateFootsteps(dt);updateAudioScene();
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
-  const fx=S.started?P.x:0,fz=S.started?P.z:12;
+  const spec=!S.started&&SPEC.on&&SPEC.joined,fx=S.started?P.x:spec?camera.position.x:0,fz=S.started?P.z:spec?camera.position.z:12;
   streamChunks(fx,fz);farU.uFocus.value.set(fx,fz);flushTerrain();updateViewmodel();stars.position.copy(camera.position);
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);

@@ -55,6 +55,7 @@ startBtn.onclick=()=>{
     wsSend({t:'join',n:cleanName(nickIn.value)||'Caveman',v:2,host:HOST||undefined,p:PASS});
     return;
   }
+  if(SPEC.on){specStart();return}   /* spectator mode (96-spectate.js) */
   startGame();
 };
 addEventListener('pointerdown',()=>{if(AC&&AC.state==='suspended')AC.resume()});
