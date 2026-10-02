@@ -90,6 +90,7 @@ function crewActivity(b){
   if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(s==='sifting')return'Sifting his bucket';
+  if(s==='disarming')return'Disarming a landmine';
   if(s==='drink')return b.wash?'Washing his pan':'Filling his canteen';
   if(s==='away')return'Not hired';
   if(s==='gatebackin'||s==='gatebackout')return'Heading back out';
@@ -151,7 +152,7 @@ function botBedPath(b){   // walk to beside your bunk (they run along the west w
 }
 function botIndoorSpot(b){return b.d.n==='Jim Bob'&&!b.xraySleeps?D_TENT.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
 function rackShovel(b,on){b.p.stowed=on;RACK[bots.indexOf(b)].mesh.visible=on}
-const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink']);
+const OUTDOOR=new Set(['dig','rest','walk','return','gateout','gatein','gotent','gatebackin','gatebackout','siftq','sifting','drink','disarming']);
 /* ---- the sifter queue: the first in line sifts (beside the hopper), the rest wait in a line behind ---- */
 const SIFTQ=[];
 const SIFT_SLOTS=[[9.8,37.7],[11.2,36.9],[12.5,36.4],[13.8,35.9],[15.1,35.4],[16.4,35.0],[17.7,34.6]];
@@ -289,6 +290,7 @@ function updateBots(dt,now){
       b.hole.d=crewDepth(b);b.state='gatebackout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Reporting for work.','Where do I dig?','I\'m on the crew? Okay.']),3000)}
     crewNeeds(b,dt);spadeLook(b.p,crewHas(b,'spade'));b.p.noShovel=!crewHas(b,'shovel');
     if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
+    if(b.state==='disarming'){g.visible=true;crewDisarmStep(b,dt);continue}   /* stopped by a landmine with his kit (88-disarm.js) */
     if(b.state==='tossed'||b.state==='down'||b.state==='ko'){g.visible=true;animPerson(b.p,b.state==='tossed'?7:3,dt);crewHurtStep(b,dt);continue}
     if(OUTDOOR.has(b.state)&&!siren)crewHazards(b);
     if(SIFTQ.includes(b)&&b.state!=='siftq'&&b.state!=='sifting')leaveSiftQ(b);   // sent off by something else (the party, a sinkhole rescue)

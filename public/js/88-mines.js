@@ -20,7 +20,7 @@ function mineMesh(m){
   for(const pt of MINE_PARTS){const mat=pt.material.clone();mat.transparent=true;mat.opacity=0;mat.depthWrite=false;const mm=new T.Mesh(pt.geometry,mat);mm.receiveShadow=true;g.add(mm)}
   g.position.set(m.x,groundAt(m.x,m.z),m.z);g.rotation.y=(m.id*2.39)%6.28;g.visible=false;scene.add(g);m.obj=g;
 }
-function mineAdd(d){if(!d||MINES.has(d.id))return;const m={id:d.id,x:+d.x,z:+d.z,obj:null};MINES.set(m.id,m);mineMesh(m)}
+function mineAdd(d){if(!d||MINES.has(d.id))return;const m={id:d.id,x:+d.x,z:+d.z,obj:null,marked:d.marked===true};MINES.set(m.id,m);mineMesh(m)}
 function mineDrop(id){const m=MINES.get(id);if(!m)return;if(m.obj)scene.remove(m.obj);MINES.delete(id)}
 function minesSet(list){for(const id of[...MINES.keys()])mineDrop(id);for(const d of list||[])mineAdd(d)}
 /* KABOOM: the fx for everyone, and a launch for whoever's inside the blast */
@@ -61,7 +61,7 @@ function updateMines(dt){
   const see=tune('haz.mineSee');
   for(const m of MINES.values()){
     const d=Math.hypot(P.x-m.x,P.z-m.z);
-    if(m.obj){const o=clamp((2*see-d)/see,0,1);m.obj.position.y=groundAt(m.x,m.z);m.obj.visible=o>0.01&&!S.inTown;if(m.obj.visible)for(const c of m.obj.children)c.material.opacity=o}
+    if(m.obj){const o=m.marked?clamp((tune('mine.markSee')-d)/6,0,1):clamp((2*see-d)/see,0,1);   /* a dog-marked one shows from much further (88-dog.js) */m.obj.position.y=groundAt(m.x,m.z);m.obj.visible=o>0.01&&!S.inTown;if(m.obj.visible)for(const c of m.obj.children)c.material.opacity=o}
     // you: on your feet, on the surface (not down a hole next to it), not already flying
     if(S.started&&!S.ko&&!twSt&&!inTent()&&!S.inTown&&d<0.55&&Math.abs(P.y-groundAt(m.x,m.z))<0.35)mineHit(m);
     else if(m.obj&&m.y0!=null&&m.y0-m.obj.position.y>0.06&&d<3)mineHit(m);   /* someone dug into it: that sets it off too */
