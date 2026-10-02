@@ -338,6 +338,26 @@ const TUNE_FILE = path.join(DATA_DIR, 'tune.json'), TUNE_MAX_BYTES = 16384, TUNE
 let TUNE_S = {};
 try { TUNE_S = JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')) || {}; } catch (e) { /* none saved yet */ }
 truckWasOn = truckOn(); if (truckWasOn) Object.assign(TRUCK, TRUCK_GATE_PARK); // the pickup's flag was on at startup: it waits by the service gate
+/* Landmines (JT 2026-10-01; public/js/88-mines.js): every ~haz.mineEvery seconds one goes down on the lakebed outside
+   the fence, 8-45 m from a camper who's out there (so they turn up where people dig), up to haz.mineMax at once. Not
+   saved: a restart clears the lake. Off with the F2 flag haz.mines. */
+const MINES = []; let mineSeq = 1, mineNextT = Date.now() + 20000;
+function mineTick(now) {
+  if (tuneS('haz.mines', 1) < 0.5 || (world.zone || 'lake') !== 'lake') { if (MINES.length) { MINES.length = 0; broadcast({ t: 'mines', list: [] }); } return; }
+  if (now < mineNextT) return;
+  mineNextT = now + tuneS('haz.mineEvery', 25) * 1000 * (0.6 + Math.random() * 0.8);
+  if (MINES.length >= tuneS('haz.mineMax', 12)) return;
+  const outs = joined().filter(c => !c.town && c.room == null && !SIM.inCamp(c.x, c.z));
+  if (!outs.length) return;
+  const o = outs[Math.floor(Math.random() * outs.length)];
+  for (let i = 0; i < 20; i++) {
+    const a = Math.random() * Math.PI * 2, d = 8 + Math.random() * 37, x = o.x + Math.cos(a) * d, z = o.z + Math.sin(a) * d;
+    if (Math.abs(x) > 590 || Math.abs(z) > 590 || SIM.inCamp(x, z) || SIM.nearCampZone(x, z)) continue;
+    if (joined().some(c => Math.hypot(c.x - x, c.z - z) < 5)) continue;   // never right under someone
+    if (Object.keys(world.holes).some(h => { const [hx, hz] = h.split('|').map(Number); return Math.hypot(hx - x, hz - z) < 2; })) continue;   // nor in a hole
+    const k = { id: mineSeq++, x: r2(x), z: r2(z) }; MINES.push(k); broadcast({ t: 'mine', m: k }); return;
+  }
+}
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -516,6 +536,7 @@ wss.on('connection', (ws, req) => {
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
+      mines: MINES, // landmines (public/js/88-mines.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -858,6 +879,16 @@ wss.on('connection', (ws, req) => {
         if (m.t === 'revive') { o.dnAt = 0; o.f &= ~2; }
         LOG.log(m.t, { id: o.id, n: o.n, by: c.n, x: r1(o.x), z: r1(o.z) });
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
+        break;
+      }
+      case 'mineHit': {
+        // Someone stepped on a landmine (public/js/88-mines.js): you, or a D Tent camper on the client that runs the crew
+        // (m.crew: his name). Yours has to be under your feet; the crew's we take on trust (the crew lives client-side).
+        const i = MINES.findIndex(k => k.id === (num(m.id, 0, 1e9, -1) | 0)); if (i < 0) return;
+        const k = MINES[i], crew = typeof m.crew === 'string' ? String(m.crew).slice(0, 24) : null;
+        if (!crew && Math.hypot(c.x - k.x, c.z - k.z) > 4) return;
+        MINES.splice(i, 1); LOG.log('mineBoom', { by: crew || c.n, x: k.x, z: k.z });
+        broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: crew || c.n });
         break;
       }
       case 'bonk': {
@@ -1266,6 +1297,7 @@ function endOfDay() {
 }
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
+  mineTick(now);
   const t = SIM.clockT(world.clock, now);
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)

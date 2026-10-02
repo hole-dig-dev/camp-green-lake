@@ -107,6 +107,12 @@ const TUNE_DEFS=[
   {key:'rag.knockTime',tab:'Ragdoll',label:'Knocked flat for',def:1.4,kind:'mul',range:3,unit:' s'},
   {key:'rag.getup',tab:'Ragdoll',label:'Getting back up takes',def:1.4,kind:'mul',range:3,unit:' s'},
   {key:'rag.twister',tab:'Environment',label:'Twister throw strength',def:1,kind:'mul',range:2.5,unit:'×'},
+  {key:'haz.mines',tab:'Environment',label:'Landmines on the lakebed (88-mines.js)',def:1,kind:'flag'},
+  {key:'haz.mineMax',tab:'Environment',label:'Landmines: most out at once',def:12,kind:'lin',span:30,min:1,max:60,unit:''},
+  {key:'haz.mineEvery',tab:'Environment',label:'Landmines: a new one about every',def:25,kind:'mul',range:4,unit:' s'},
+  {key:'haz.mineSee',tab:'Environment',label:'Landmines: fully visible within (they fade in from twice this)',def:1.6,kind:'mul',range:3,unit:' m'},
+  {key:'haz.mineBlast',tab:'Environment',label:'Landmines: blast radius (everyone inside flies)',def:3.5,kind:'mul',range:3,unit:' m'},
+  {key:'haz.mineLaunch',tab:'Environment',label:'Landmines: how far it throws you',def:1,kind:'mul',range:3,unit:'×'},
   {key:'rag.bonk',tab:'Environment',label:'Shovel bonk launch',def:1,kind:'mul',range:3,zero:true,unit:'×'},
   // ---- the environment: hazards and reach. Random things (each twister's strength, each tumbleweed's size and speed)
   // stay random; these scale them, or set the fixed parts.

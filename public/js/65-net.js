@@ -62,6 +62,7 @@ function onMsg(m){
     case 'hello':{
       // the crew is in another map whose script is still loading: handle this hello once it has (88-zones.js)
       if(typeof m.zone==='string'&&m.zone!=='lake'&&(typeof ZONES==='undefined'||!ZONES[m.zone])){HELLO_LATER=m;break}
+      minesSet(m.mines);   /* the landmines out on the lake (88-mines.js) */
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
@@ -143,6 +144,9 @@ function onMsg(m){
     case 'bagGone':removeBag(num(m.id,0,1e9,-1));break;
     case 'grabbed':removeBag(num(m.id,0,1e9,-1));if(Array.isArray(m.items))takeBag(m.items.slice(0,12),cleanName(m.n));break;
     case 'revived':revived(cleanName(m.by)||'A friend');break;
+    case 'mines':minesSet(m.list);break;   /* landmines (88-mines.js) */
+    case 'mine':mineAdd(m.m);break;
+    case 'mineBoom':mineBoom(num(m.id,0,1e9,0),num(m.x,-2000,2000,0),num(m.z,-2000,2000,0),cleanName(m.by)||'Someone');break;
     case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'sinkpulled':addXP(SINK_RESCUE_XP);toast(`You helped pull ${cleanName(m.by)||'a friend'} out of the sinkhole! +${SINK_RESCUE_XP} XP`,'good',2800);sfx.thud();logEv('sinkRescuer',{by:cleanName(m.by)||''});break;
