@@ -14,6 +14,7 @@ const z1=await zach(B);check('gone: abducted, nowhere on the lake',z1.ab&&!z1.vi
 await A.evaluate(()=>jumpTo(SIM.DAYMS-2500));await A.waitForTimeout(6000+8000+9000);
 const z2=await zach(B);check('the next day: back, as an alien, working again',!z2.ab&&z2.alien&&z2.vis&&!z2.ufo,JSON.stringify(z2));
 check('all he says: "I\'m Zach."',await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach');const n=botNode(b,true);return n.text==="I'm Zach."&&n.name==='Glorb Glorb'&&n.opts.length>2}));
+check('anything he\'d say comes out "I\'m Zach."',await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach');say(b.L,'Taking a breather.',1000);const t=b.L.el.innerText||b.L.el.textContent;return /I'm Zach\./.test(t)&&!/breather/.test(t)}),await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach');return b.L.el.innerText}));
 // ufo back: right now
 await A.evaluate(()=>runCommand('ufo pete'));await A.waitForTimeout(12000);
 await A.evaluate(()=>runCommand('ufo back'));await A.waitForTimeout(9000);
