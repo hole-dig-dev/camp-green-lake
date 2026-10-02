@@ -190,6 +190,7 @@ function nearSpot(){
     const pr=propNear(2.4);if(pr)return{id:'prop',pr};
     const b=bagNear(2);if(b)return{id:'bag',b};
   }
+  {const d=disarmSpot();if(d)return d}   /* beside a landmine with the kit (88-disarm.js) */
   {const p=pipeSpot();if(p)return p}   /* the sand pipeline: lay it, dump into it, fix it (88-pipeline.js) */
   for(const s of SPOTS){
     const roomSpot=s.id==='exit'||s.id==='bunk'||s.id==='cards'||s.id==='office';
@@ -214,6 +215,7 @@ function use(){
   if(s.use){s.use();return}   // a spot that brings its own action (another map's rope anchor: 88-zones.js)
   if(s.id==='water'){fillCanteen();return}
   if(s.id==='sift'){siftBucket();return}
+  if(s.id==='disarm')return;   // hold F: 88-disarm.js
   else if(s.id==='warden')openDialog('warden');
   else if(s.id==='store')openShop();
   else if(s.id==='cards')openCards();

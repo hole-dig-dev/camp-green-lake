@@ -18,6 +18,7 @@
     { id: 'spade', name: 'Sharpened spade', desc: 'He digs 60% faster.', cost: 50, needs: 'shovel' },
     { id: 'canteen', name: 'Big canteen', desc: 'Fewer water breaks: shorter rests, fewer trips back to the tent.', cost: 35 },
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
+    { id: 'disarm', name: 'Mine disarm kit', desc: 'He spots landmines in his way and stops to disarm them, instead of walking into them.', cost: 50 },
     { id: 'onions', name: 'Sack of onions', desc: 'He eats them all day. Lizards leave him alone.', cost: 45 },
   ];
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
