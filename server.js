@@ -371,12 +371,26 @@ function pipeW() {
 }
 /* may this hazard or mob happen? The F2 Hazards tab (public/js/88-hazards.js): ALL off for testing, single ones back on */
 function hazOnS(k) { return tuneS('haz.all', 1) >= 0.5 || tuneS('haz.on.' + k, 0) >= 0.5; }
+/* rich veins (public/js/88-vein.js): every ~vein.every minutes a patch of the lake turns rich for vein.time minutes */
+let VEIN = null, veinNextT = Date.now() + 3 * 60000;
+function veinMsg() { return VEIN && Date.now() < VEIN.until ? { t: 'vein', on: true, x: VEIN.x, z: VEIN.z, r: VEIN.r, left: VEIN.until - Date.now() } : { t: 'vein', on: false }; }
+function veinTick(now) {
+  if (VEIN && now >= VEIN.until) { VEIN = null; broadcast(veinMsg()); }
+  const every = tuneS('vein.every', 8); if (VEIN || !(every > 0) || (world.zone || 'lake') !== 'lake' || now < veinNextT) return;
+  veinNextT = now + every * 60000 * (0.75 + Math.random() * 0.5);
+  if (!joined().length) return;
+  for (let i = 0; i < 30; i++) {
+    const a = Math.random() * Math.PI * 2, d = 45 + Math.random() * 110, x = Math.round(5 + Math.cos(a) * d), z = Math.round(40 + Math.sin(a) * d);
+    if (Math.abs(x) > 560 || Math.abs(z) > 560 || SIM.inCamp(x, z) || SIM.nearCampZone(x, z)) continue;
+    VEIN = { x, z, r: 12, until: now + tuneS('vein.time', 10) * 60000 }; LOG.log('vein', { x, z }); broadcast(veinMsg()); return;
+  }
+}
 /* dynamite going off (public/js/88-dynamite.js): a crater, a mound of loose sand, and any landmine close by goes too */
 let DYN_SEQ = 1;
 function dynBoomS(id, x, z) {
   const piles = world.piles || (world.piles = {});
   const ids = Object.keys(piles); if (ids.length >= 20) delete piles[ids[0]]; // the oldest mound goes
-  const pile = { id, x, z, sand: tuneS('dyn.sand', 8) }; piles[id] = pile; dirty = true;
+  const pile = { id, x, z, sand: tuneS('dyn.sand', 8), rich: !!(VEIN && Date.now() < VEIN.until && Math.hypot(x - VEIN.x, z - VEIN.z) < VEIN.r) }; piles[id] = pile; dirty = true;
   broadcast({ t: 'dynBoom', id, x, z, pile });
   for (const [ox, oz, d] of [[0, 0, 1.3], [0.9, 0, 0.9], [-0.9, 0, 0.9], [0, 0.9, 0.9], [0, -0.9, 0.9]]) { // the crater
     const hx = r1(x + ox), hz = r1(z + oz), k = hx + '|' + hz; if ((world.holes[k] || 0) >= d) continue;
@@ -572,6 +586,7 @@ wss.on('connection', (ws, req) => {
       piles: Object.values(world.piles || {}), // loose sand from dynamite (public/js/88-dynamite.js)
       scares: world.scares || [], // scarecrows (public/js/88-gear.js)
       crewWard: world.crewWard || {}, // what the crew are wearing (public/js/81-wardrobe.js)
+      vein: veinMsg(), // a rich vein, if one's on (public/js/88-vein.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -1109,6 +1124,10 @@ wss.on('connection', (ws, req) => {
         broadcastSleep();
         maybeSkipNight();
         break;
+      case 'veinNow': { // the console's 'vein' (host only): a rich vein 25 m ahead of you, right now (public/js/88-vein.js)
+        if (!c.host) return; const x = Math.round(num(m.x, -560, 560, c.x)), z = Math.round(num(m.z, -560, 560, c.z)); if (SIM.inCamp(x, z)) return;
+        VEIN = { x, z, r: 12, until: Date.now() + tuneS('vein.time', 10) * 60000 }; LOG.log('vein', { x, z, by: c.n }); broadcast(veinMsg()); break;
+      }
       case 'env': {
         // An environmental hazard spawned from the in-game console (e.g. "twister"). Host only (verified below)
         // — everyone else's console can't reach here at all — plus a rate limit against a compromised host client.
@@ -1414,7 +1433,7 @@ function endOfDay() {
 }
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
-  mineTick(now);
+  mineTick(now); veinTick(now);
   const t = SIM.clockT(world.clock, now);
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)

@@ -104,7 +104,7 @@ function scoop(){
     sfx.thud();return;
   }
   const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
-  const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0);
+  const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
   if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,FP?2:6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)

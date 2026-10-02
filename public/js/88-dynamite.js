@@ -20,12 +20,12 @@ function throwDynamite(){
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa),x=P.x+fx*4,z=P.z+fz*4;
   if(inCamp(x,z)||nearCampNoDig(x,z)||inCamp(P.x,P.z)){toast('Not in camp! Out on the lake bed, past the white line.','bad',2600);return}
   S.dynamite--;sfx.hiss();showSupply('dynamite');   /* in your hand for a moment (86-walkie.js) */logEv('dynThrow',{x:+x.toFixed(1),z:+z.toFixed(1)});
-  if(online())wsSend({t:'dyn',x:+x.toFixed(2),z:+z.toFixed(2)});else{const id=DYN.localId++;dynLit({id,x,z,by:S.name});setTimeout(()=>dynBoom({id,x,z,pile:{id,x,z,sand:DYN_SAND}}),tune('dyn.fuse')*1000)}
+  if(online())wsSend({t:'dyn',x:+x.toFixed(2),z:+z.toFixed(2)});else{const id=DYN.localId++;dynLit({id,x,z,by:S.name});setTimeout(()=>dynBoom({id,x,z,pile:{id,x,z,sand:DYN_SAND,rich:inVein(x,z)}}),tune('dyn.fuse')*1000)}
   toast('Fire in the hole!','',1800);
 }
 function dynLit(m){const f={id:m.id,x:+m.x,z:+m.z,t:0,obj:null,by:m.by};DYN.fuses.set(f.id,f);dynMesh(f,'Dynamite')}
 function dynBoom(m){
-  const f=DYN.fuses.get(m.id);if(f){if(f.obj)scene.remove(f.obj);DYN.fuses.delete(m.id)}
+  const f=DYN.fuses.get(m.id);if(f){if(f.obj)scene.remove(f.obj);DYN.fuses.delete(m.id);veinDynamite(f)}
   const x=+m.x,z=+m.z,y=groundAt(x,z),near=Math.hypot(P.x-x,P.z-z);
   for(let k=0;k<6;k++)puff(x,y+0.2,z,x+(Math.random()-0.5)*0.6,z+(Math.random()-0.5)*0.6,16);
   if(nearCam(x,z,120)){mineBoomSfx(clamp(1.2-near/120,0.2,1));if(near<30)hurtFx=Math.max(hurtFx,0.7*(1-near/30))}
@@ -37,7 +37,7 @@ function dynBoom(m){
 }
 /* the loose sand */
 function pileSet(d){if(!d)return;let q=DYN.piles.get(d.id);if(!(d.sand>0.01)){if(q){if(q.obj)scene.remove(q.obj);DYN.piles.delete(d.id)}return}
-  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null};DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{q.sand=+d.sand;dynPileLook(q)}}
+  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null,rich:d.rich===true};DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{q.sand=+d.sand;dynPileLook(q)}}
 function pilesSet(list){for(const q of DYN.piles.values())if(q.obj)scene.remove(q.obj);DYN.piles.clear();for(const d of list||[])pileSet(d)}
 function pileTake(q,v,who){
   q.sand=Math.max(0,q.sand-v);dynPileLook(q);DYN.take.set(q.id,(DYN.take.get(q.id)||0)+v);
@@ -52,7 +52,7 @@ function updateDynamite(dt){
     /* you: walk into it with room in your bucket / pack / pan */
     if(!S.ko&&!twSt&&carrier()&&Math.hypot(P.x-q.x,P.z-q.z)<DYN_PILE_R&&S.bucket<bucketMax()-1e-3){
       const v=Math.min(rate,q.sand,bucketMax()-S.bucket);if(!q.told){q.told=true;toast('Loose sand! It pours straight into your '+(carrier()==='pan'?'pan':backsackOn()?'backsack':'bucket')+'.','good',2200)}
-      fillBucket(v*FIVE_FT);pileTake(q,v);if(Math.random()<dt*6)sfx.scoop()}
+      fillBucket(v*FIVE_FT);pileTake(q,v);if(q.rich)veinPay(v);if(Math.random()<dt*6)sfx.scoop()}
     /* the crew (one client runs them) */
     if(crewPaysHere())for(const b of bots){if(!b.p.g.visible||!OUTDOOR.has(b.state)||!crewHired(b))continue;const g=b.p.g.position;if(Math.hypot(g.x-q.x,g.z-q.z)>DYN_PILE_R)continue;
       const mx=crewBucketMax(b),v=Math.min(rate,q.sand,mx-(b.bucket||0));if(v>1e-4){b.bucket=(b.bucket||0)+v;pileTake(q,v)}}
