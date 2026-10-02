@@ -54,6 +54,7 @@ const SHOP=[
   {id:'hopper2',name:'Hopper collar',desc:'Planks on top of your hopper: holds 50 holes and sifts twice as fast (a hole every 4 seconds).',cost:220,cat:'dig',icon:'bucket',needs:'hopper'},
   {id:'hopper3',name:'Motorized dry washer',desc:'A towering steel bin on legs and a gas motor on the blower: holds 120 holes and sifts a hole every 1.5 seconds.',cost:500,cat:'dig',icon:'bucket',needs:'hopper2'},
   {id:'pipe',name:'Sand pipe (5 m)',desc:'Clear pipe for a sand pipeline from the sifter out into the lake. F at the sifter\'s connector (or the pipeline\'s end) and walk: a section goes down every 5 m. Dump your bucket in the intake at the far end and the sand rides down to the sifter. Boulders, sinkholes and mines crack it: hold F on a crack to fix it.',cost:15,stack:'pipe',cat:'dig',icon:'bucket',needs:'bucket'},
+  {id:'dynamite',name:'Dynamite',desc:'Y: light a stick and toss it. Blows a crater, throws anyone close (the crew too) and leaves a mound of loose sand: walk into it and your bucket fills itself. Not in camp.',cost:30,stack:'dynamite',cat:'dig',icon:'bucket'},
   {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
@@ -162,7 +163,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);

@@ -30,16 +30,22 @@ function mineBoom(id,x,z,by){
   if(nearCam(x,z,90)){mineBoomSfx(clamp(1-near/90,0.15,1));if(near<25)hurtFx=Math.max(hurtFx,0.6*(1-near/25))}
   logEv('mineBoom',{x:+x.toFixed(1),z:+z.toFixed(1),by:by||''});
   const R=tune('haz.mineBlast'),L=tune('haz.mineLaunch');pipeBlast(x,z,R);   /* cracks the sand pipeline (88-pipeline.js) */
+  blastLaunch(x,z,R,L,'mn',by===S.name?'BOOM! You stepped on a landmine.':`BOOM! ${by||'Someone'} set off a landmine right next to you.`);
+}
+/* everyone inside a blast flies: you (the twister's tumble, 72-twisters.js) and the D Tent crew (crewToss). k: the
+   centre throws full, the edge half. Shared by landmines and dynamite (88-dynamite.js). */
+function blastLaunch(x,z,R,L,why,msg){
+  const near=Math.hypot(P.x-x,P.z-z);
   if(S.started&&!S.ko&&!twSt&&!inTent()&&!S.inTown&&near<R){
     let dx=P.x-x,dz=P.z-z,l=Math.hypot(dx,dz);if(l<0.15){const a=Math.random()*Math.PI*2;dx=Math.cos(a);dz=Math.sin(a);l=1}
     const k=1-0.5*near/R;   // dead centre: the full throw; the edge of the blast: half
     P.kx=dx/l*16*L*k;P.kz=dz/l*16*L*k;P.vy=20*Math.min(2,L)*k;P.grounded=false;digHeld=false;
     twRagX=(Math.random()*2-1)*12;twRagY=(Math.random()*2-1)*9;twRagZ=(Math.random()*2-1)*11;twSt=2;twStT=0;
-    toast(by===S.name?'BOOM! You stepped on a landmine.':`BOOM! ${by||'Someone'} set off a landmine right next to you.`,'',3200);
+    if(msg)toast(msg,'',3200);
   }
   for(const b of bots){if(!b.p.g.visible)continue;const g=b.p.g.position,d=Math.hypot(g.x-x,g.z-z);if(d>=R)continue;
     let dx=g.x-x,dz=g.z-z,l=Math.hypot(dx,dz);if(l<0.15){const a=Math.random()*Math.PI*2;dx=Math.cos(a);dz=Math.sin(a);l=1}
-    const k=1-0.5*d/R;crewToss(b,dx/l*16*L*k,20*Math.min(2,L)*k,dz/l*16*L*k,'mn')}
+    const k=1-0.5*d/R;crewToss(b,dx/l*16*L*k,20*Math.min(2,L)*k,dz/l*16*L*k,why)}
 }
 function mineBoomSfx(v){
   noise(1.4,260,0.6,0.9*v);tone(55,0.9,'sine',0.7*v,22);
