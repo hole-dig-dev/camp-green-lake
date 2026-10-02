@@ -16,11 +16,11 @@
      pipe.fixTime seconds to fix it.
    Models (art/blender/pipe.py, gear.blend; the sifter's connector is in Sifter.glb, art/blender/sifter.py):
    PipeSection (1 m along +X, stretched to each run), PipeJoint, PipeCrack, PipeSlug, PipeIntake. The sand's way
-   through the connector into the hopper comes from public/data/PipeInletPath.json (sifter frame), if it's there. */
+   through the connector into the hopper comes from public/models/PipeInletPath.json (sifter frame; art/blender/sifter.py). */
 const PIPE_RUN=5,PIPE_AX=0.24,PIPE_INTAKE_OFF=0.35;
 const PIPE={nodes:[],broken:{},g:null,parts:{},dirty:true,laying:false,fixT:0,fixI:-1,slugs:[],inlet:null,checkT:0};
 for(const n of['PipeSection','PipeJoint','PipeCrack','PipeSlug','PipeIntake'])modelParts(n).then(p=>{PIPE.parts[n]=p;PIPE.dirty=true}).catch(()=>{});
-fetch('data/PipeInletPath.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.points))PIPE.inlet=j.points}).catch(()=>{});
+fetch('models/PipeInletPath.json').then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.points))PIPE.inlet=j.points}).catch(()=>{});
 const pipeSocket=()=>{const G=SIM.GOLD.SIFTER;return{x:G.x-1.9,z:G.z}};
 const pipeNodes=()=>PIPE.nodes.length?PIPE.nodes:[pipeSocket()];
 const pipeY=(x,z)=>baseH(x,z);   // the undug ground: a run bridges a hole dug under it
@@ -85,7 +85,8 @@ function pipePath(){   // world points from the intake to the hopper: the runs b
 }
 function pipeSlug(mine,holes){
   const pts=pipePath();if(pts.length<2)return;let len=0;const cum=[0];for(let i=1;i<pts.length;i++){len+=pts[i].distanceTo(pts[i-1]);cum.push(len)}
-  const m=pipeMesh('PipeSlug');if(m)scene.add(m);PIPE.slugs.push({mine,holes,pts,cum,len,s:0,m});
+  /* the slug's axis is PIPE_AX above its origin: hang it from a group at the axis so it turns about the pipe's centre in the bends */
+  const s=pipeMesh('PipeSlug');let m=null;if(s){s.position.y=-PIPE_AX;m=new T.Group();m.add(s);scene.add(m)}PIPE.slugs.push({mine,holes,pts,cum,len,s:0,m});
 }
 function pipeDump(){
   if(carrier()!=='bucket'){toast('The pipe takes a bucket of sand. (Pan sand: wash it at the water drums.)','',3200);return}
@@ -113,7 +114,7 @@ function pipeSlugStep(sl,dt){
     return false}
   if(sl.s>=sl.len){if(sl.mine)pipeArrive(sl.holes);const G=SIM.GOLD.SIFTER;if(nearCam(G.x,G.z,40))puff(G.x-0.85,baseH(G.x,G.z)+1.9,G.z,G.x-0.85,G.z,5);return false}
   if(sl.m){const a=sl.pts[i-1],b=sl.pts[i],u=clamp((sl.s-sl.cum[i-1])/((sl.cum[i]-sl.cum[i-1])||1),0,1);
-    sl.m.position.lerpVectors(a,b,u);sl.m.position.y-=PIPE_AX;_pD.subVectors(b,a).normalize();sl.m.quaternion.setFromUnitVectors(_pX,_pD)}
+    sl.m.position.lerpVectors(a,b,u);_pD.subVectors(b,a).normalize();sl.m.quaternion.setFromUnitVectors(_pX,_pD)}
   return true;
 }
 /* ---- spots for F (45-state.js nearSpot), and the per-frame work ---- */
