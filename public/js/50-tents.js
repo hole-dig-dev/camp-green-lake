@@ -61,6 +61,8 @@ const SHOP=[
   {id:'grav',name:'Gravity boots',desc:'Late-game iron soles: twisters can\'t suck you up, giant tumbleweeds can\'t roll you up, vultures can\'t lift you. Blasts still throw you. You walk a bit slower in them.',cost:350,cat:'survival',icon:'rope'},
   {id:'grapple',name:'Grapple hook',desc:'Down a sinkhole or a hole too deep to climb? Hold F: the hook catches the rim and hauls you out. No waiting for a friend.',cost:150,cat:'survival',icon:'rope'},
   {id:'goldShovel',name:'Gold-plated shovel',desc:'Pure flex. Your shovel\'s steel goes polished gold, and everyone can see it.',cost:500,cat:'dig',icon:'shovel',needs:'shovel'},
+  {id:'soda',name:'Soda',desc:'For the crew: talk to a crew member (F) and hand him one. +45 morale, drunk on the spot. Buy a few.',cost:15,stack:'soda',cat:'supplies',icon:'onion'},
+  {id:'sodaMachine',name:'Soda vending machine',desc:'For the whole camp, by the water drums: a fed-up crew member takes himself off for a soda break and comes back at full morale. No more handing them out.',cost:300,cat:'camp',camp:true,icon:'bucket'},
   {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
@@ -169,7 +171,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'||it.stack==='scarecrow'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'||it.stack==='scarecrow'||it.stack==='soda'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);

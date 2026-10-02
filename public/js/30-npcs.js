@@ -86,7 +86,7 @@ function crewActivity(b){
   if(s==='dig')return b.water<=0?'Digging, parched':b.stam<15?'Digging, worn out':'Digging';
   if(s==='rest')return b.stam<45?'Catching his breath':'Taking a breather';
   if(s==='walk'||s==='return')return'Walking to a new spot';
-  if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?'Going in for water':curfewSoon()?'Heading in for the night':'Going to D Tent';
+  if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(s==='sifting')return'Sifting his bucket';
@@ -376,7 +376,7 @@ function updateBots(dt,now){
       const W=SIM.GOLD.WATER,k=bots.indexOf(b),wx=W.x+1.2+Math.cos(k*1.05)*0.9,wz=W.z-1.6+Math.sin(k*1.05)*0.6;
       if(b.t==null){if(!walkTo(b,wx,wz,dt,2.4))continue;b.t=2.2;if(nearCam(wx,wz,25))sfx.splash()}
       animPerson(b.p,5,dt);   // the Drink clip
-      if((b.t-=dt)<=0){b.water=crewWaterMax(b);b.t=null;b.errand=null;
+      if((b.t-=dt)<=0){b.water=crewWaterMax(b);b.t=null;b.errand=null;if(campHas('sodaMachine')){b.morale=100;if(b.soda&&nearCam(wx,wz,30))say(b.L,pick(['Ahh. Back to it.','That hit the spot.']),2200)}b.soda=false;   /* the soda machine by the drums (88-morale.js) */
         /* his pan, washed at the drums: the gold goes in the crew bank (a water-only trip leaves his sand be) */
         if(b.wash){if(b.bucket>0.05){const r=SIM.siftGold(b.bucket,botRng,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);crewDeposit(b,r.gold);say(b.L,pick(['A bit of color. Crew bank.','Washed out. Into the bank.']),2600)}b.bucket=0}
         b.wash=false;b.state='gatebackin';b.tx=CREW_GATE.x;b.tz=CREW_GATE.in}
