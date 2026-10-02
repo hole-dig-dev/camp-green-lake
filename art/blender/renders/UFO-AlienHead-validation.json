@@ -1,0 +1,144 @@
+{
+  "fit": {
+    "gpu": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+    "attached": true,
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ],
+    "forward": "eyes at positive game Z",
+    "hidden": [
+      "CGLCamper_Brow-1",
+      "CGLCamper_Brow1",
+      "CGLCamper_Bucket_HatBand",
+      "CGLCamper_Bucket_HatBrim",
+      "CGLCamper_Bucket_HatCrown",
+      "CGLCamper_Cowboy_HatBand",
+      "CGLCamper_Cowboy_HatBrim",
+      "CGLCamper_Cowboy_HatCrown",
+      "CGLCamper_DesertCap_Bill",
+      "CGLCamper_DesertCap_HatCrown",
+      "CGLCamper_DesertCap_HatNeckFlap",
+      "CGLCamper_Eye-1",
+      "CGLCamper_Eye1",
+      "CGLCamper_Hair_HairCap",
+      "CGLCamper_Head",
+      "CGLCamper_Mouth",
+      "CGLCamper_Nose",
+      "CGLCamper_Shades_ShadesBar"
+    ],
+    "neckBounds": {
+      "min": [
+        -0.1321677267551422,
+        -0.10000003407685673,
+        -0.13556666672229728
+      ],
+      "max": [
+        0.1321677267551422,
+        0.05999998281686175,
+        0.13556667880196122
+      ]
+    },
+    "fitByBody": [
+      {
+        "body": "average",
+        "covered": true,
+        "neckWidth": 0.2643354535102844,
+        "neckDepth": 0.2711333455242585
+      },
+      {
+        "body": "slim",
+        "covered": true,
+        "neckWidth": 0.2643354535102844,
+        "neckDepth": 0.2711333455242585
+      },
+      {
+        "body": "stocky",
+        "covered": true,
+        "neckWidth": 0.2643354535102844,
+        "neckDepth": 0.2711333455242585
+      },
+      {
+        "body": "tall",
+        "covered": true,
+        "neckWidth": 0.2643354535102844,
+        "neckDepth": 0.2711333455242585
+      },
+      {
+        "body": "short",
+        "covered": true,
+        "neckWidth": 0.2643354535102844,
+        "neckDepth": 0.2711333455242585
+      }
+    ]
+  },
+  "animation": [
+    {
+      "clip": "Idle",
+      "attached": true,
+      "localOrigin": [
+        0,
+        0,
+        0
+      ],
+      "finite": true
+    },
+    {
+      "clip": "Walk",
+      "attached": true,
+      "localOrigin": [
+        0,
+        0,
+        0
+      ],
+      "finite": true
+    },
+    {
+      "clip": "Dig",
+      "attached": true,
+      "localOrigin": [
+        0,
+        0,
+        0
+      ],
+      "finite": true
+    }
+  ],
+  "game": {
+    "gpu": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+    "crewMember": "Randy",
+    "headAttached": true,
+    "emission": {
+      "cgl_ufo_rim_emerald_green": [
+        0.1411817493554066,
+        0.9019622637132785,
+        0.3019669805581441
+      ],
+      "cgl_ufo_rim_lime_green": [
+        0.6000049901793983,
+        0.9999999999999999,
+        0.21177056952850692
+      ],
+      "cgl_ufo_rim_leaf_green": [
+        0.2862806707473665,
+        0.8235319904448569,
+        0.21569216714603984
+      ],
+      "cgl_ufo_tractor_emitter": [
+        0.40784922988260974,
+        0.9999999999999999,
+        0.34118268385129236
+      ]
+    },
+    "reviewGround": {
+      "x": -8,
+      "z": -6
+    }
+  }
+}
