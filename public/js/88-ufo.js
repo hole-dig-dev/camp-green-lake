@@ -10,7 +10,7 @@
 const UFO={obj:null,beam:null,anims:[],parts:null,head:null,loading:false};
 function ufoLoad(){if(UFO.loading)return;UFO.loading=true;modelParts('UFO').then(p=>{UFO.parts=p}).catch(()=>{});modelParts('AlienHead').then(p=>{UFO.head=p}).catch(()=>{})}
 function ufoMesh(){
-  const g=new T.Group();if(UFO.parts)for(const pt of UFO.parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;g.add(m)}
+  const g=new T.Group();if(UFO.parts){g.userData.model=true;for(const pt of UFO.parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;g.add(m)}}
   const beam=new T.Mesh(new T.CylinderGeometry(0.6,3.2,1,24,1,true),new T.MeshBasicMaterial({color:0x8dff6a,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide})   /* a green tractor beam */);
   beam.position.y=-0.5;g.add(beam);g.userData.beam=beam;scene.add(g);return g;
 }
@@ -34,9 +34,12 @@ function ufoDrop(n){
 const _ue=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 function ufoStep(a,dt){
   a.t+=dt;const u=a.u,beam=u.userData.beam,hov=a.y0+14,b=a.b,g=b.p.g;u.rotation.y+=dt*1.6;
+  if(!u.userData.model&&UFO.parts){u.userData.model=true;for(const pt of UFO.parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;u.add(m)}}   /* the saucer's model arrives (first time it's loaded) */
   const T1=3,T2=4,T3=7,T4=10;   // arrive, beam on, the lift (or the drop), leave
   if(a.t<T1){const k=_ue(a.t/T1);u.position.set(lerp(a.x+(a.kind==='take'?30:-30),a.x,k),lerp(a.y0+60,hov,k),lerp(a.z+(a.kind==='take'?-20:20),a.z,k))}
   const beamOn=a.t>=T1&&a.t<T3+0.4;beam.material.opacity=beamOn?0.28+0.08*Math.sin(a.t*12):Math.max(0,beam.material.opacity-dt);beam.scale.y=hov-a.y0;beam.position.y=-(hov-a.y0)/2;
+  /* it lights what it falls on, like the watchtower searchlights (47-searchlight-glow.js UFO_U) */
+  UFO_U.uUFOGain.value=beam.material.opacity*3;UFO_U.uUFOPos.value.copy(u.position);UFO_U.uUFOCos.value=Math.cos(Math.atan2(3.4,Math.max(1,hov-a.y0)));
   if(a.kind==='take'){
     if(a.t>=T2&&a.t<T3){const k=_ue((a.t-T2)/(T3-T2));g.visible=true;g.position.set(a.x,lerp(a.y0,hov-1.5,k),a.z);g.rotation.y+=dt*3;animPerson(b.p,7,dt)}
     if(a.t>=T3&&!a.gone){a.gone=true;g.visible=false;g.position.y=-200;b.state='away';if(CREW_UP[a.n])CREW_UP[a.n].abducted=true}
@@ -45,7 +48,7 @@ function ufoStep(a,dt){
     if(a.t>=T3&&!a.landed){a.landed=true;g.position.set(a.x,a.y0,a.z);b.state='return';b.tx=b.hole?b.hole.x:a.x;b.tz=b.hole?b.hole.z:a.z;b.ufo=false;say(b.L,`I'm ${a.n}.`,3500)}
   }
   if(a.t>=T3)u.position.set(u.position.x+dt*(a.t-T3)*12,u.position.y+dt*(a.t-T3)*14,u.position.z);
-  if(a.t>=T4){scene.remove(u);if(a.kind==='take')b.ufo=false;return false}
+  if(a.t>=T4){scene.remove(u);UFO_U.uUFOGain.value=0;if(a.kind==='take')b.ufo=false;return false}
   return true;
 }
 /* the alien look: his own body, the alien head on the head bone, green skin (kept up every frame: the
