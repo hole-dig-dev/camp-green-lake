@@ -170,9 +170,11 @@ function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,0.9*s,0.9*s);OAKS.push({x,z,s,g})}
 const OAKS=[];   // the Warden's two oaks: 23-models.js swaps in the Blender tree
 oak(-36.5,38.5,1.1);oak(-24,38,1);
-/* water truck */
+/* water truck: out for now (JT 2026-10-01: it sat between the sifter and the main gate, where the sand pipeline runs).
+   WATER_TRUCK_ON=true brings it back (here, 23-models.js, the minimap in 78-hud.js). The water drums stay. */
+const WATER_TRUCK_ON=false;
 let WATER_TRUCK_PROC=null;
-{
+if(WATER_TRUCK_ON){
   const g=new T.Group();
   const cab=box(2.2,2,2,0xd8d2c2);cab.position.set(0,1.5,-2.4);g.add(cab);
   const glass=box(1.9,0.8,0.05,0x33444f);glass.position.set(0,2,-3.42);g.add(glass);

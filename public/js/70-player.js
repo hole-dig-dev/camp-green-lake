@@ -240,7 +240,7 @@ function updateHealth(dt){
   if(!paused){
     // heat: out of water, it builds; with water it goes away
     if(S.water<=0){
-      if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and your health is going. Fill up at the water drums in camp, by the water truck.','bad',5000)}
+      if(!S.thirsty){S.thirsty=true;toast('You\'re out of water and your health is going. Fill up at the water drums in camp, by the sifter.','bad',5000)}
       AFF.heat+=tune('hp.thirst')*dt;S.hurtT=0;hurtFx=Math.max(hurtFx,0.25);
     }else{S.thirsty=false;if(S.water>30)AFF.heat=Math.max(0,AFF.heat-tune('aff.heatRecover')*dt)}
     // sunburn: 10:00-17:00, out in the open

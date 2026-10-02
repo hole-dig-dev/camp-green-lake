@@ -49,7 +49,7 @@ function fillBucket(dd){   // dd: metres you just dug; a 5 ft hole is one hole o
   if(!(dd>0))return;const was=S.bucket,max=bucketMax(),c=carrier();
   if(!c){const now=performance.now();if(now-noCarrierT>25000){noCarrierT=now;toast('That sand\'s just going on the pile. A gold pan from the Supply Depot (10 gold) lets you take it to the water drums and wash it for gold.','',5500)}return}
   S.bucket=Math.min(max,S.bucket+dd/FIVE_FT);
-  if(S.bucket>=max-1e-6&&was<max-1e-6){sfx.coin();toast(c==='pan'?'Your pan\'s full. Wash it at the water drums by the water truck (F).':`Your bucket's full (${max} holes of sand). Take it back to the sifter in camp.`,'gold',5000)}
+  if(S.bucket>=max-1e-6&&was<max-1e-6){sfx.coin();toast(c==='pan'?'Your pan\'s full. Wash it at the water drums (F).':`Your bucket's full (${max} holes of sand). Take it back to the sifter in camp.`,'gold',5000)}
   else if(S.bucket>=max-1e-6){const now=performance.now();if(now-bucketWarnT>9000){bucketWarnT=now;toast(c==='pan'?'Your pan\'s full. Wash it at the water drums.':'Your bucket\'s full. The sand\'s just going on the pile. Sift it at camp.','',3000)}}
 }
 function digDepthMax(){return !S.up.shovel?SIM.HANDS.depth:S.up.long?EIGHT_FT:FIVE_FT}

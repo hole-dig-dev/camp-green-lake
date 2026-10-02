@@ -10,7 +10,8 @@
      Node 0 is the sifter's connector socket (sifter frame (-1.9, 0.24, 0)).
    - F at the intake with sand: it all goes down the pipe at pipe.speed m/s as a plug of sand you can watch through
      the clear pipe, through the connector into the sifter: into your hopper if you have one (86-hopper.js; what
-     doesn't fit is sifted straight away), else sifted on arrival, the gold yours.
+     doesn't fit is sifted straight away), else sifted on arrival, the gold yours. With pipe.toBank on (the default,
+     JT 2026-10-01) it's all sifted on arrival and the gold goes in the crew bank instead.
    - Boulders (74-landslide.js), open sinkholes (87-sinkhole.js) and mine blasts (88-mines.js pipeBlast) crack the runs
      they hit. A cracked run stops the sand (a plug that reaches it spills out there). Hold F next to the crack for
      pipe.fixTime seconds to fix it.
@@ -44,7 +45,7 @@ function pipeBuild(){
 function pipeEnd(){const N=pipeNodes();return N[N.length-1]}
 function pipeLayStart(){
   if(S.pipe<1){toast('You need pipe: 5 m sections at the Supply Depot.','',3000);return}
-  PIPE.laying=true;if(!PIPE.nodes.length){PIPE.nodes=[pipeSocket()]}
+  PIPE.laying=true;PIPE.trail=[];if(!PIPE.nodes.length){PIPE.nodes=[pipeSocket()]}
   toast(`Laying pipe: walk where you want it (a joint every ${PIPE_RUN} m, ${S.pipe} section${S.pipe>1?'s':''} left). F to stop.`,'good',4000);
 }
 function pipeLayStop(why){if(!PIPE.laying)return;PIPE.laying=false;if(PIPE.line)PIPE.line.visible=false;toast(why||(PIPE.nodes.length>1?'Pipe laid. Dump your sand in the intake at its end.':'You stop laying pipe.'),'',3000)}
@@ -53,12 +54,27 @@ function pipeLayStep(){
   const e=pipeEnd(),d=Math.hypot(P.x-e.x,P.z-e.z);
   if(!PIPE.line){PIPE.line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3()]),new T.LineBasicMaterial({color:0xfff2c0}));PIPE.line.frustumCulled=false;scene.add(PIPE.line)}
   PIPE.line.visible=true;PIPE.line.geometry.setFromPoints([new T.Vector3(e.x,pipeY(e.x,e.z)+PIPE_AX,e.z),new T.Vector3(P.x,pipeY(P.x,P.z)+PIPE_AX,P.z)]);
-  if(d<PIPE_RUN)return;
+  const tr=PIPE.trail||(PIPE.trail=[]),lt=tr[tr.length-1];if(!lt||Math.hypot(P.x-lt.x,P.z-lt.z)>0.3)tr.push({x:P.x,z:P.z});
+  let walked=0;for(let i=1;i<tr.length;i++)walked+=Math.hypot(tr[i].x-tr[i-1].x,tr[i].z-tr[i-1].z);
+  const clearNow=d>0.5&&pipeClear(e.x,e.z,P.x,P.z);PIPE.line.material.color.setHex(clearNow?0xfff2c0:0xff5533);
+  if(d<PIPE_RUN&&walked<PIPE_RUN+1.5)return;
   if(PIPE.nodes.length>=tune('pipe.max')+1){pipeLayStop(`That's as long as the pipeline goes (${tune('pipe.max')} sections).`);return}
-  const n={x:+(e.x+(P.x-e.x)/d*PIPE_RUN).toFixed(2),z:+(e.z+(P.z-e.z)/d*PIPE_RUN).toFixed(2)};
+  /* the next joint: the furthest point of the path you walked that's within a run's length and in a clear straight line
+     (the pipe follows you round buildings, through the gate; it never goes through anything solid) */
+  let n=null;for(let i=tr.length-1;i>=0;i--){const t=tr[i],dd=Math.hypot(t.x-e.x,t.z-e.z);if(dd>PIPE_RUN+0.4||dd<2)continue;if(pipeClear(e.x,e.z,t.x,t.z)){n=dd>PIPE_RUN?{x:e.x+(t.x-e.x)/dd*PIPE_RUN,z:e.z+(t.z-e.z)/dd*PIPE_RUN}:{x:t.x,z:t.z};break}}
+  if(!n){if(performance.now()-(PIPE.blockT||0)>4000){PIPE.blockT=performance.now();toast('The pipe can\'t go through that. Walk back toward the last joint and go round.','bad',3000)}return}
+  n={x:+n.x.toFixed(2),z:+n.z.toFixed(2)};{const dn=Math.hypot(n.x-e.x,n.z-e.z);PIPE.trail=tr.filter(t=>Math.hypot(t.x-e.x,t.z-e.z)>dn)}
   PIPE.nodes.push(n);S.pipe--;PIPE.dirty=true;sfx.clank();if(online())wsSend({t:'pipeAdd',x:n.x,z:n.z});
   logEv('pipeAdd',{x:n.x,z:n.z,n:PIPE.nodes.length});
   if(S.pipe<1)pipeLayStop('Out of pipe. Buy more at the Supply Depot, then F at the intake to carry on.');
+}
+/* nothing solid (20-world.js colliders: buildings, the fence, rocks...) across a straight run from a to b */
+function pipeClear(ax,az,bx,bz){
+  const m=0.18,dx=bx-ax,dz=bz-az;
+  for(const c of colliders){let t0=0,t1=1;
+    for(const[p,dp,lo,hi]of[[ax,dx,c.x0-m,c.x1+m],[az,dz,c.z0-m,c.z1+m]]){if(Math.abs(dp)<1e-9){if(p<lo||p>hi){t0=2;break}continue}let u=(lo-p)/dp,v=(hi-p)/dp;if(u>v)[u,v]=[v,u];t0=Math.max(t0,u);t1=Math.min(t1,v);if(t0>t1)break}
+    if(t0<=t1)return false}
+  return true;
 }
 /* ---- breaking and fixing ---- */
 function pipeSegDist(i,x,z){const a=PIPE.nodes[i],b=PIPE.nodes[i+1],dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz||1,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/l2,0,1);return Math.hypot(a.x+dx*t-x,a.z+dz*t-z)}
@@ -97,6 +113,10 @@ function pipeDump(){
   toast(`Down the pipe it goes: ${Math.round(holes*10)/10} holes of sand to the sifter.`,'good',3000);logEv('pipeDump',{holes:+holes.toFixed(2)});
 }
 function pipeArrive(holes){
+  if(tune('pipe.toBank')>=0.5){   /* JT: the pipeline's gold goes in the crew bank (F2 Gold: pipe.toBank) */
+    const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
+    if(online())wsSend({t:'deposit',v:r.gold,pipe:true});else{RUN.bank+=r.gold;saveRun();toast(`Your sand came through the pipeline: the sifter puts ${r.gold} gold in the crew bank.`,'gold',3600)}
+    logEv('pipeArrive',{holes:+holes.toFixed(2),bank:r.gold});return}
   let rest=holes;const cap=hopperCap();
   if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));S.hopper+=put;rest-=put}
   if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);S.seeds+=r.gold;addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();

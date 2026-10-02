@@ -9,14 +9,17 @@ await A.evaluate(so=>{S.up.pan=true;S.up.bucket=true;S.pipe=6;P.x=so.x-0.5;P.z=s
 check('at the sifter connector with pipe: F lays a pipeline',await A.evaluate(()=>{const s=nearSpot();return s&&s.id==='pipe'&&/Lay a sand pipeline/.test(s.label)}));
 await A.keyboard.press('f');await A.waitForTimeout(200);check('laying',await A.evaluate(()=>PIPE.laying));
 // walk out through the camp gate area toward the lake: teleport in small steps along a route (south, then out the gate)
-const route=await A.evaluate(so=>{const pts=[];for(let k=1;k<=26;k++)pts.push([so.x-k*0.2,so.z-k*1.0]);return pts},so);
+const route=await A.evaluate(so=>{const way=[[so.x,so.z],[5,37],[2,33],[0.3,30],[0,24],[0,13]],pts=[];   /* out through the main gate, like a camper would walk */
+  for(let i=1;i<way.length;i++){const[a,b]=[way[i-1],way[i]],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/0.8);for(let k=1;k<=n;k++)pts.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n])}return pts},so);
 for(const [x,z] of route){await A.evaluate(([x,z])=>{P.x=x;P.z=z;P.y=groundAt(x,z)},[x,z]);await A.waitForTimeout(60)}
 const st=await A.evaluate(()=>({n:PIPE.nodes.length,pipe:S.pipe,laying:PIPE.laying}));
-check('a joint every 5 m, a section each (26 m: 5 runs)',st.n===6&&st.pipe===1,JSON.stringify(st));
+check('a joint every ~5 m along the way you walked, a section each',st.n>=6&&st.pipe===6-(st.n-1),JSON.stringify(st));
+check('no run goes through anything solid (the fence: through the gate)',await A.evaluate(()=>{for(let i=0;i<PIPE.nodes.length-1;i++){const a=PIPE.nodes[i],b=PIPE.nodes[i+1];if(!pipeClear(a.x,a.z,b.x,b.z))return false}return true}));
+check('a building blocks a run; open ground doesn\'t; the water truck is gone',await A.evaluate(()=>!pipeClear(16,30,16,48)&&pipeClear(0,10,0,-10)&&pipeClear(2,36,8,36)&&!WATER_TRUCK_ON));
 await A.keyboard.press('f');await A.waitForTimeout(800);
 check('F stops; the server and the friend have the same pipeline',await A.evaluate(()=>!PIPE.laying)&&await B.evaluate(n=>PIPE.nodes.length===n,st.n),await B.evaluate(()=>PIPE.nodes.length));
 // dump at the intake
-const g0=await A.evaluate(()=>S.seeds);
+const g0=await A.evaluate(()=>S.seeds),bank0=await A.evaluate(()=>RUN.bank);
 await A.evaluate(()=>{const N=PIPE.nodes,e=N[N.length-1];P.x=e.x;P.z=e.z;P.y=groundAt(P.x,P.z);S.bucket=5});await A.waitForTimeout(300);
 check('the intake says dump',await A.evaluate(()=>/Dump your bucket down the pipeline/.test(nearSpot().label)));
 await A.keyboard.press('f');await A.waitForTimeout(400);
@@ -24,7 +27,9 @@ check('bucket empty, a plug of sand in the pipe (the friend sees one too)',await
 await B.evaluate(()=>{const N=PIPE.nodes,m=N[2];P.x=m.x+2.5;P.z=m.z+1.5;P.y=groundAt(P.x,P.z)});await B.waitForTimeout(400);
 await lookAt(B,(await B.evaluate(()=>PIPE.nodes[2].x)),0.4,(await B.evaluate(()=>PIPE.nodes[2].z)));await B.waitForTimeout(700);await B.screenshot({path:SP+'/pipe_flow.png'});
 await A.waitForTimeout(4500);
-const g1=await A.evaluate(()=>S.seeds);check('it reaches the sifter and pays you',g1>g0&&await A.evaluate(()=>PIPE.slugs.length===0),g0+' -> '+g1);
+const g1=await A.evaluate(()=>S.seeds),bank1=await A.evaluate(()=>RUN.bank);check('it reaches the sifter: the gold goes in the crew bank (default)',bank1>bank0&&g1===g0&&await A.evaluate(()=>PIPE.slugs.length===0),'bank '+bank0+' -> '+bank1+', yours '+g0+' -> '+g1);
+await A.evaluate(()=>{tuneSet('pipe.toBank',0);S.bucket=2});await A.keyboard.press('f');await A.waitForTimeout(5000);
+const g2=await A.evaluate(()=>S.seeds);check('pipe.toBank off: the gold is yours',g2>g1,g1+' -> '+g2);await A.evaluate(()=>tuneSet('pipe.toBank',1));
 // a mine blast cracks it; sand can't go through; hold F to fix
 await A.evaluate(()=>{const N=PIPE.nodes;pipeBlast((N[2].x+N[3].x)/2,(N[2].z+N[3].z)/2,1.5)});await A.waitForTimeout(800);
 check('a blast cracks the run it hits (for everyone)',await A.evaluate(()=>PIPE.broken[2]===true)&&await B.evaluate(()=>PIPE.broken[2]===true));
