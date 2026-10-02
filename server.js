@@ -664,7 +664,7 @@ wss.on('connection', (ws, req) => {
         c.x = num(m.x, -620, c.town ? SIM.TOWN.X + 60 : 620, c.x); c.y = num(m.y, c.town ? SIM.TOWN.Y - 5 : -5, ZONE_MAX_Y, c.y); c.z = num(m.z, -620, 620, c.z);
         c.r = num(m.r, -10, 10, c.r); c.a = num(m.a, 0, 10, 0) | 0; /* 10: sitting (86-sit.js) */ c.sc = num(m.sc, 0, 1e6, 0) | 0;
         c.wk = m.wk === true; // has a walkie-talkie (the 'chat' case)
-        c.sp = m.sp === true; c.lg = m.lg === true; c.sh = m.sh !== false; c.bk = num(m.bk, -1, 1, -1); c.bt = num(m.bt, 1, 3, 1) | 0; c.dg = m.dg === true; c.gv = m.gv === true; c.gs = m.gs === true; /* gravity boots, gold shovel (public/js/88-gear.js) */ /* dg: their mine-sniffing dog (public/js/88-dog.js) */ /* bk: the clear backsack's fill, -1 none (public/js/86-backsack.js) */ /* lg: the long-handled shovel's handle shows (25-people.js) */ // a sharpened spade: friends see its darker blade (public/js/25-people.js spadeLook)
+        c.sp = m.sp === true; c.lg = m.lg === true; c.sh = m.sh !== false; c.bk = num(m.bk, -1, 1, -1); c.bt = num(m.bt, 1, 3, 1) | 0; c.dg = m.dg === true; c.gv = m.gv === true; c.gs = m.gs === true; c.hv = m.hv === true; c.hs = m.hs === true; /* hv: on a hoverboard (public/js/88-hover.js) */ /* gravity boots, gold shovel (public/js/88-gear.js) */ /* dg: their mine-sniffing dog (public/js/88-dog.js) */ /* bk: the clear backsack's fill, -1 none (public/js/86-backsack.js) */ /* lg: the long-handled shovel's handle shows (25-people.js) */ // a sharpened spade: friends see its darker blade (public/js/25-people.js spadeLook)
         c.kt = m.kt === true; c.on = m.on === true; c.vy = num(m.vy, -100, 100, 0); // roster inputs (sim.js stepRoster)
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
@@ -678,7 +678,7 @@ wss.on('connection', (ws, req) => {
         c.cy = num(m.cy, -1, MAX_ITEM, -1) | 0; c.nz = num(m.nz, 0, 1, 0); c.lv = num(m.lv, 1, 99, 1) | 0;
         c.hp = num(m.hp, 0, 100, c.hp); // relayed so idle vultures can tell who's hurt (83-vultures.js) and for the mountain lion's targeting (lionScore in sim.js)
         world.recent[c.n.toLowerCase()] = { sc: c.sc, x: c.x, z: c.z, at: Date.now() };
-        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town, sp: c.sp, lg: c.lg, sh: c.sh, bk: c.bk, bt: c.bt, dg: c.dg, gv: c.gv, gs: c.gs }, c.id);
+        broadcast({ t: 'pos', id: c.id, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room, tn: c.town, sp: c.sp, lg: c.lg, sh: c.sh, bk: c.bk, bt: c.bt, dg: c.dg, gv: c.gv, gs: c.gs, hv: c.hv, hs: c.hs }, c.id);
         // position snapshot for the play-test log, ~2s per camper (not every message: that would flood the file)
         if (now - c.lastPosLogT >= 2000) {
           c.lastPosLogT = now;

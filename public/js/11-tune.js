@@ -90,6 +90,7 @@ const TUNE_DEFS=[
   {key:'dyn.blast',tab:'Gold',label:'Dynamite: blast radius (everyone inside flies)',def:4.5,kind:'mul',range:3,unit:' m'},
   {key:'dyn.sand',tab:'Gold',label:'Dynamite: holes of loose sand it leaves',def:8,kind:'mul',range:4,unit:' holes'},
   {key:'dyn.scoop',tab:'Gold',label:'Loose sand: how fast it pours into your bucket',def:2,kind:'mul',range:4,unit:' holes/s'},
+  {key:'gear.hoverSpeed',tab:'Gear',label:'Hoverboard: how fast you glide on it',def:1.2,kind:'lin',span:1,min:0.6,max:2.5,unit:'×'},
   {key:'gear.gravSlow',tab:'Gear',label:'Gravity boots: how fast you walk in them',def:0.85,kind:'lin',span:0.5,min:0.4,max:1,unit:'×'},
   {key:'pipe.speed',tab:'Gold',label:'Sand pipeline: how fast sand rides down it',def:10,kind:'mul',range:4,unit:' m/s'},
   {key:'pipe.fixTime',tab:'Gold',label:'Sand pipeline: hold F this long to fix a crack',def:15,kind:'mul',range:4,unit:' s'},

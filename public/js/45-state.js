@@ -81,7 +81,9 @@ function toast(msg,cls,ms){
 /* ---------- digging ---------- */
 let lastWarn=0;
 function scoop(){
-  if(S.inTown)return;   // no digging down in the buried town
+  if(S.inTown)return;
+  if(hoverOn()){const n=performance.now();if(n-(scoop.hoverT||0)>2500){scoop.hoverT=n;toast('Step off your hoverboard to dig (Z).','',1800)}return}
+  shoesDig();   /* hover shoes switch off quietly so you can dig in (88-hover.js) */   // no digging down in the buried town
   if(!inSinkhole()&&remoteNear(R=>R.f&32,SINK_RESCUE_R))return;   // E at a trapped friend's rim links hands (87-sinkhole.js), it doesn't dig
   if(vShoo())return;   // a well-timed swing while a vulture is diving close in front of you chases it off (83-vultures.js)
   if(rosterSwing())return;   // a hatchling, rattlesnake or scorpion in front of you: squash it (83-roster.js)

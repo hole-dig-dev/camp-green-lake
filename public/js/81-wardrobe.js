@@ -61,7 +61,7 @@ function wardApply(p){
         if(!grp.children.length)return;hide(k);m.add(grp);p.wardObjs.push(grp);wardFP(p,grp)};
     const skinned=(k,dir,i,slotOk)=>{if(!(i>=0))return;const d=wardList(k)[i];if(!d)return;wardAsset(dir,d.slug).then(g=>wardSkinned(g,k,slotOk)).catch(()=>{})};
     for(const k of['torso','arms','legs']){const i=w[k];skinned(k,'clothes',i,s=>s===k)}
-    if(p.gravBoots)wardAsset('footwear','gravity-boots').then(g=>wardSkinned(g,'shoes')).catch(()=>{});else skinned('shoes','footwear',w.shoes,()=>true);   /* gravity boots win (88-gear.js) */
+    if(p.hoverShoes)wardAsset('footwear','hover-shoes').then(g=>wardSkinned(g,'shoes')).catch(()=>{});else if(p.gravBoots)wardAsset('footwear','gravity-boots').then(g=>wardSkinned(g,'shoes')).catch(()=>{});else skinned('shoes','footwear',w.shoes,()=>true);   /* gravity boots win (88-gear.js) */
   });
 }
 /* first person: your own new pieces go where the rest of your body is (70-player.js fpBody) */

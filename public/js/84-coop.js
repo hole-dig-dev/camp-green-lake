@@ -89,7 +89,7 @@ function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LO
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
 function holeDepthHere(){return Math.max(0,baseH(P.x,P.z)-P.y)}
-function isTrapped(){return S.started&&!S.ko&&!inTent()&&!S.inTown&&P.grounded&&holeDepthHere()>1.8&&!inSinkhole()}   // a sinkhole has its own trapped state (87-sinkhole.js): no Space-climb, no rope, only a friend
+function isTrapped(){return S.started&&!S.ko&&!inTent()&&!S.inTown&&P.grounded&&!floating()&&holeDepthHere()>1.8&&!inSinkhole()}   // a sinkhole has its own trapped state (87-sinkhole.js): no Space-climb, no rope, only a friend
 function popOut(){
   const h=holeNear(P.x,P.z,HOLE_R*1.2);let dx=Math.sin(P.fa),dz=Math.cos(P.fa);
   if(h){const ex=P.x-h.x,ez=P.z-h.z,el=Math.hypot(ex,ez);if(el>0.05){dx=ex/el;dz=ez/el}P.x=h.x+dx*(h.r+0.7);P.z=h.z+dz*(h.r+0.7)}else{P.x+=dx*2;P.z+=dz*2}
