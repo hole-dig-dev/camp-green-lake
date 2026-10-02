@@ -210,7 +210,7 @@ function animModel(p,mode,dt,digPhase,speed){
   stepMixer(p,dt);
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
   if(p.held||p.heldW)heldPose(p,dt);   // walkie-talkie / tonic / first-aid kit in the left hand (86-walkie.js)
-  backsackLook(p);   /* the clear backsack, when the gear.backsack flag is on (86-backsack.js) */
+  backsackLook(p);   /* the clear backsack, if they wear one (86-backsack.js) */
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;

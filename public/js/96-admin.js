@@ -20,7 +20,7 @@ ADMIN.crew=(what,who)=>{adminSend({op:'crew',what,names:adminNames(who)})};
 ADMIN.crewKit=(who,items)=>{adminSend({op:'crew',what:'kit',names:adminNames(who),items})};
 ADMIN.fill=who=>{for(const b of bots)if(adminNames(who).includes(b.d.n))b.bucket=crewBucketMax(b)};
 ADMIN.morale=(who,v)=>{for(const b of bots)if(adminNames(who).includes(b.d.n))b.morale=clamp(+v,0,100)};
-const ADMIN_NEEDS={bucket2:'bucket',bucket3:'bucket2',canteen3:'canteen',spade:'shovel',goldShovel:'shovel',hopper2:'hopper',hopper3:'hopper2'};
+const ADMIN_NEEDS={pack:'bucket',pack2:'pack',pack3:'pack2',bucket2:'bucket',bucket3:'bucket2',canteen3:'canteen',spade:'shovel',goldShovel:'shovel',hopper2:'hopper',hopper3:'hopper2'};
 ADMIN.kit=items=>{if(items.includes('none'))S.up={};const add=k=>{S.up[k]=true;if(ADMIN_NEEDS[k])add(ADMIN_NEEDS[k])};for(const k of items)if(k!=='none')add(k);if(items.includes('canteen')||items.includes('canteen3'))S.water=waterMax()};
 ADMIN.camp=items=>adminSend({op:'camp',items});
 ADMIN.bank=v=>adminSend({op:'bank',v:Math.max(0,Math.round(+v))});

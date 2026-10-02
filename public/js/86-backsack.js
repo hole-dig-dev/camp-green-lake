@@ -1,9 +1,7 @@
 'use strict';
-/* public/js/86-backsack.js -- the clear backsack (JT 2026-10-01): a possible later stand-in for the bucket, behind the F2
-   flag gear.backsack (Gear tab, off by default; the bucket is untouched). With it on, the bucket you bought is worn as
-   a clear pack on your back instead, in three comically large tiers (JT): the bucket, bucket2 and bucket3 you buy
-   become backsacks of BACKSACK_HOLES 5, 10 and 20 holes (45-state.js bucketMax), and the sand inside rises hole by
-   hole, so everyone can see how full you are. The HUD meter says "Backsack".
+/* public/js/86-backsack.js -- the clear backsack (JT 2026-10-01): a clear pack worn on your back, in three comically
+   large tiers of BACKSACK_HOLES 5, 10 and 20 holes (45-state.js bucketMax), and the sand inside rises hole by hole, so
+   everyone can see how full you are. The HUD meter says "Backsack".
    Models are Blender's (art/blender/backsack.py, gear.blend): public/models/Backsack{1,2,3}.glb + BacksackSand{1,2,3}.glb
    (the sand, full, scaled up from its bottom as it fills).
    p.bk: fill 0..1, or -1 for none; p.bt: the tier. Yours from S; friends' from their pos fields bk, bt (65-net.js,
@@ -14,15 +12,18 @@ const BACKSACK={parts:{},sand:{},rest:null};
 const BACKSACK_HOLES=[5,10,20];
 for(const t of[1,2,3]){modelParts('Backsack'+t).then(p=>{BACKSACK.parts[t]=p}).catch(()=>{});modelParts('BacksackSand'+t).then(p=>{BACKSACK.sand[t]=p}).catch(()=>{})}
 const BK_AT=[0,1.06,-0.212];   // in the camper model's own space: its bottom edge, against the back of the torso (CGLCamper_Torso z -0.215)
-const backsackOn=()=>tune('gear.backsack')>=0.5;
-const myBackTier=()=>S.up.bucket3?3:S.up.bucket2?2:1;
-/* the D Tent crew wear them too (JT 2026-10-02): with the flag on, the bucket tiers you buy them are packs, 5 / 10 / 20 holes
-   (30-npcs.js crewBucketMax, crewHands), and the crew store calls them packs */
-const crewPack=b=>backsackOn()&&crewHas(b,'bucket');
-const crewPackTier=b=>crewHas(b,'bucket3')?3:crewHas(b,'bucket2')?2:1;
-const CREW_PACK_TEXT={bucket:{name:'Backsack',desc:'A clear pack on his back: he carries 5 holes of sand to the sifter, instead of washing one in his pan.'},
-  bucket2:{name:'Big backsack',desc:'Holds 10 holes of sand before he goes to sift, instead of 5.'},bucket3:{name:'Huge backsack',desc:'A comically huge pack: holds 20 holes of sand.'}};
-const crewItemText=it=>backsackOn()&&CREW_PACK_TEXT[it.id]||it;
+/* bought, like the buckets (JT 2026-10-02: "purchaseable upgrades for the crew just like players"): pack, pack2, pack3 in
+   the store (50-tents.js) and the crew store (sim.js CREW_SHOP), each needs a bucket first. You carry whichever of your
+   bucket and pack holds more; a pack that holds as much as the bucket is worn instead of it (hands free). */
+const packTier=u=>u&&u.pack3?3:u&&u.pack2?2:u&&u.pack?1:0;
+const packHoles=u=>{const t=packTier(u);return t?BACKSACK_HOLES[t-1]:0};
+const bucketHolesOf=u=>u.bucket3?SIM.GOLD.buckets[2]:u.bucket2?SIM.GOLD.buckets[1]:u.bucket?SIM.GOLD.buckets[0]:0;
+const wearsPack=u=>!!u&&packTier(u)>0&&packHoles(u)>=bucketHolesOf(u);
+const backsackOn=()=>wearsPack(S.up);
+const myBackTier=()=>packTier(S.up)||1;
+/* the D Tent crew the same (30-npcs.js crewBucketMax, crewHands) */
+const crewPack=b=>wearsPack(CREW_UP[b.d.n]);
+const crewPackTier=b=>packTier(CREW_UP[b.d.n])||1;
 function myBackFill(){return backsackOn()&&carrier()==='bucket'?+clamp(S.bucket/Math.max(1e-6,bucketMax()),0,1).toFixed(3):-1}
 /* where it sits on the spine bone: the bone's rest pose (MODEL.scene) undone, then BK_AT, turned so the straps face the back */
 function backsackRest(){

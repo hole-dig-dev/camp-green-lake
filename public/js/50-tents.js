@@ -50,6 +50,9 @@ const SHOP=[
   {id:'bucket',name:'Bucket',desc:'Carries 5 holes of sand to the sifter in camp. Much more gold per trip than the pan.',cost:45,cat:'dig',icon:'bucket'},
   {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:60,cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'bucket3',name:'Huge bucket',desc:'Tier 3 bucket: holds 15 holes of sand.',cost:140,cat:'dig',icon:'bucket',needs:'bucket2'},
+  {id:'pack',name:'Backsack',desc:'A clear pack worn on your back: 5 holes of sand, hands free, and everyone can see how full you are. You wear it once it holds at least as much as your bucket.',cost:90,cat:'dig',icon:'sack',needs:'bucket'},
+  {id:'pack2',name:'Big backsack',desc:'Tier 2 backsack: holds 10 holes of sand.',cost:180,cat:'dig',icon:'sack',needs:'pack'},
+  {id:'pack3',name:'Huge backsack',desc:'Tier 3, comically huge: holds 20 holes of sand, more than any bucket.',cost:340,cat:'dig',icon:'sack',needs:'pack2'},
   {id:'hopper',name:'Sifter hopper',desc:'Dump your sand at the sifter and go straight back to digging: the hopper holds 20 holes and sifts a hole every 8 seconds on its own. The gold comes to you.',cost:90,cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'hopper2',name:'Hopper collar',desc:'Planks on top of your hopper: holds 50 holes and sifts twice as fast (a hole every 4 seconds).',cost:220,cat:'dig',icon:'bucket',needs:'hopper'},
   {id:'hopper3',name:'Motorized dry washer',desc:'A towering steel bin on legs and a gas motor on the blower: holds 120 holes and sifts a hole every 1.5 seconds.',cost:500,cat:'dig',icon:'bucket',needs:'hopper2'},
@@ -104,7 +107,8 @@ function shopEffect(it){
     case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' hole, washed at the water drums'};
     case 'shovel': return {label:'Digging',from:'Bare hands, 1.5 ft deep',to:'Shovel, 3x faster, 5 ft deep'};
     case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: 1 hole':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
-    case 'bucket2': case 'bucket3':{const H=backsackOn()?BACKSACK_HOLES:SIM.GOLD.buckets,i=it.id==='bucket2'?1:2;return {label:backsackOn()?'Backsack holds':'Bucket holds',from:H[i-1]+' holes of sand',to:H[i]+' holes of sand'}}   /* the clear backsack alt: 5/10/20 (86-backsack.js) */
+    case 'bucket2': case 'bucket3':{const H=SIM.GOLD.buckets,i=it.id==='bucket2'?1:2;return {label:'Bucket holds',from:H[i-1]+' holes of sand',to:H[i]+' holes of sand'}}
+    case 'pack': case 'pack2': case 'pack3':{const t=it.id==='pack'?1:it.id==='pack2'?2:3;return {label:'You carry',from:bucketMax()+' holes of sand',to:Math.max(bucketMax(),BACKSACK_HOLES[t-1])+' holes, on your back'}}   /* 86-backsack.js */
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
     case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
     case 'onion': return {label:'Lizard ward',from:`${S.onions} on hand`,to:'45 s protection per onion'};
@@ -307,7 +311,7 @@ function renderCrewShop(){
   for(const n of SIM.CREW){const b=bots.find(o=>o.d.n===n),h=document.createElement('div');h.className='crew-h';h.textContent=n;
     const sm=document.createElement('small');sm.textContent=!b||!crewHired(b)?'not hired':crewSifts(b)?`bucket ${Math.floor(b.bucket||0)}/${crewBucketMax(b)}`:`pan ${Math.round((b.bucket||0)*100)}%`;h.appendChild(sm);grid.appendChild(h)}
   for(const it of[CREW_HIRE_ITEM,...SIM.CREW_SHOP]){const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost;
-    const c=document.createElement('div');c.className='crew-item'+(it.id==='hire'?' crew-item--hire':'');const tx=crewItemText(it),t=document.createElement('b');t.textContent=tx.name;const d=document.createElement('span');d.textContent=tx.desc;const p=document.createElement('em');p.textContent=(it.id==='hire'?'next hire: ':'')+cost+' gold';c.append(t,d,p);grid.appendChild(c);
+    const c=document.createElement('div');c.className='crew-item'+(it.id==='hire'?' crew-item--hire':'');const t=document.createElement('b');t.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc;const p=document.createElement('em');p.textContent=(it.id==='hire'?'next hire: ':'')+cost+' gold';c.append(t,d,p);grid.appendChild(c);
     for(const n of SIM.CREW){const st=crewItemState(n,it),cell=document.createElement('div');cell.className='crew-cell';const btn=document.createElement('button');btn.type='button';btn.className='crew-buy';
       const key=n+'|'+it.id;btn.dataset.key=key;btn.setAttribute('aria-label',`${it.name} for ${n}`);
       if(st.k==='owned'){btn.textContent=it.id==='hire'?'✓ On the crew':'✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
@@ -336,7 +340,7 @@ function crewMsg(m){
   const key=m.n+'|'+m.id;
   if(m.refund&&crewPending.has(key)){S.seeds+=crewPending.get(key);crewPending.delete(key);toast(`Someone already bought ${m.n} that. Your gold's back.`,'',3000)}
   else if(m.byId===myId())crewPending.delete(key);   // my own purchase, confirmed
-  else if(m.by&&m.n&&S.started){if(m.id==='hire')toast(`${m.by} hired ${m.n}.`,'gold',3000);else{const it=SIM.CREW_SHOP.find(o=>o.id===m.id);if(it)toast(`${m.by} bought ${m.n} a ${crewItemText(it).name.toLowerCase()}.`,'gold',3000)}}
+  else if(m.by&&m.n&&S.started){if(m.id==='hire')toast(`${m.by} hired ${m.n}.`,'gold',3000);else{const it=SIM.CREW_SHOP.find(o=>o.id===m.id);if(it)toast(`${m.by} bought ${m.n} a ${it.name.toLowerCase()}.`,'gold',3000)}}
   if(shopOpen)renderShop();
 }
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
