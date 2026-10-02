@@ -226,6 +226,7 @@ function tbHit(w){
   tbStart(w);
 }
 function tbStart(w){
+  if(gravOn())return;   /* gravity boots: it bounces off you (88-gear.js) */
   tbSt=1;tbStT=0;tbGrab=w.id;tbMashN=0;tbMashT=0;tbSpaceWas=!!KEYS[' '];w.big=false;   // clear any stale bounce flag from before you grabbed on
   tbTheta0=w.rot;tbThetaOff=-Math.PI/2;tbRideR=w.r*TB_RIDE_FAC;   // start at the front -- it immediately rolls you up and over
   P.moving=false;P.anim=0;P.grounded=false;digHeld=false;

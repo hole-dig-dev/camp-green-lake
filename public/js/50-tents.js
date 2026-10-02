@@ -57,6 +57,10 @@ const SHOP=[
   {id:'dynamite',name:'Dynamite',desc:'Y: light a stick and toss it. Blows a crater, throws anyone close (the crew too) and leaves a mound of loose sand: walk into it and your bucket fills itself. Not in camp.',cost:30,stack:'dynamite',cat:'dig',icon:'bucket'},
   {id:'disarm',name:'Mine disarm kit',desc:'Stand just beside a landmine and hold F to disarm it. The scrap\'s worth a few gold. (The crew can have one too: the store\'s Crew side.)',cost:60,cat:'survival',icon:'rope'},
   {id:'dog',name:'Mine-sniffing dog',desc:'He trots along at your heel. A landmine anywhere near you, he runs over, sits by it and barks, and it\'s marked for everyone to see.',cost:120,cat:'survival',icon:'heart'},
+  {id:'scarecrow',name:'Scarecrow',desc:'U: plant it out on the lake bed. Vultures won\'t go for anyone within 25 m of it (vultures only). Everyone\'s protected.',cost:40,stack:'scarecrow',cat:'survival',icon:'heart'},
+  {id:'grav',name:'Gravity boots',desc:'Late-game iron soles: twisters can\'t suck you up, giant tumbleweeds can\'t roll you up, vultures can\'t lift you. Blasts still throw you. You walk a bit slower in them.',cost:350,cat:'survival',icon:'rope'},
+  {id:'grapple',name:'Grapple hook',desc:'Down a sinkhole or a hole too deep to climb? Hold F: the hook catches the rim and hauls you out. No waiting for a friend.',cost:150,cat:'survival',icon:'rope'},
+  {id:'goldShovel',name:'Gold-plated shovel',desc:'Pure flex. Your shovel\'s steel goes polished gold, and everyone can see it.',cost:500,cat:'dig',icon:'shovel',needs:'shovel'},
   {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
@@ -165,7 +169,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'||it.stack==='scarecrow'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);

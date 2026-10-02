@@ -20,7 +20,7 @@ const BIND_DEFS=[
   {id:'left',label:'Move left',def:'a'},{id:'right',label:'Move right',def:'d'},
   {id:'sprint',label:'Sprint',def:'shift'},{id:'jump',label:'Jump / climb out of a hole',def:' '},
   {id:'dig',label:'Dig (hold)',def:'e'},{id:'use',label:'Use / talk / buy / sell',def:'f'},
-  {id:'onion',label:'Eat an onion',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'detector',label:'Toggle the detector',def:'t'},
+  {id:'onion',label:'Eat an onion',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'place',label:'Plant a scarecrow',def:'u'},{id:'detector',label:'Toggle the detector',def:'t'},
   {id:'sound',label:'Mute sound',def:'m'},{id:'firstPerson',label:'First / third person',def:'v'},
   {id:'crouch',label:'Crouch',def:'c'},{id:'ping',label:'Ping the map',def:'g'},
   {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},

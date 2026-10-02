@@ -67,7 +67,7 @@ function updatePlayer(dt){
   }else{
     P.digT=0.3;
     if(ml>0.1){
-      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(GRAB_ST.id!=null||ROPE_ST.taut)sp=grabSpeed(sp);   // holding heavy loot (84-grab.js)
+      mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(GRAB_ST.id!=null||ROPE_ST.taut)sp=grabSpeed(sp);if(S.up.grav)sp*=tune('gear.gravSlow');   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
       nx=clamp(nx,-HALF+3,HALF-3);nz=clamp(nz,-HALF+3,HALF-3);
       for(const c of colliders){if(nx>c.x0-0.3&&nx<c.x1+0.3&&nz>c.z0-0.3&&nz<c.z1+0.3){const px=Math.min(nx-(c.x0-0.3),(c.x1+0.3)-nx),pz=Math.min(nz-(c.z0-0.3),(c.z1+0.3)-nz);if(px<pz)nx=nx<(c.x0+c.x1)/2?c.x0-0.3:c.x1+0.3;else nz=nz<(c.z0+c.z1)/2?c.z0-0.3:c.z1+0.3}}
