@@ -22,6 +22,6 @@ function updateMorale(dt){
   for(const b of bots){if(!crewHired(b))continue;b.morale=Math.min(100,moraleOf(b)+MORALE_REGEN*dt/60);
     /* the vending machine: off for a soda break (the water trip's path, 30-npcs.js; he drinks at the drums) */
     if(campHas('sodaMachine')&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible&&sodaStock()<1&&!b.toldEmpty){b.toldEmpty=true;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,'The soda machine\'s empty!',2600)}
-    if(campHas('sodaMachine')&&sodaStock()>0&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible){b.toldEmpty=false;b.errand='water';b.soda=true;b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick(['Soda break.','I need a soda. Back in a bit.','Machine. Now.']),2400)}
+    if(campHas('sodaMachine')&&sodaStock()>0&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible){b.toldEmpty=false;b.errand='water';b.soda=true;b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick(['Soda break.','I need a soda. Back in a bit.','Machine. Now.']),2400)}
     if(b.morale<MORALE_LOW-15&&b.p.g.visible&&OUTDOOR.has(b.state)&&Math.random()<dt/45&&nearCam(b.p.g.position.x,b.p.g.position.z,35))say(b.L,pick(MORALE_GRUMBLE),2600)}
 }
