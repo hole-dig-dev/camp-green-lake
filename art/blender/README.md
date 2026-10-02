@@ -11,6 +11,7 @@ lights and floor.
 | `finds.blend` | the dig-up finds, including the five-way variant scenes (`Can_1`..`Can_5`, `KB_v01`..`KB_v10`, ...) the final finds were picked from | `finds.py`, `finds2.py`, `finds3.py`, `heavy.py`, `kb.py`, `kbfinal.py` |
 | `creatures.blend` | lizard, javelina, mountain lion, vulture (rigged, with clips), plus their first-round variants (`Liz_1`..) | `creatures.py`, `beasts.py`, `rig.py`, `vulture.py` |
 | `town.blend` | the buried town: `TownStreet` (Main Street), `TownBldg_<key>` for 17 buildings at their real sizes with a doorway on every side, `TownDoorPlug`, `TownMouthPlug`, `TownShoring` and `TownJunkA/B/C` for the tunnels (whose cave walls the game digs along each path); colliders go to `glb/TownColliders.json` -> `public/data/` | `town.py` |
+| `employee-board.blend` | EmployeeBoard: yard notice board with four frames and eight separate canvas surfaces | `employee_board.py` ([dimensions, UVs and review](EMPLOYEE-BOARD.md)) |
 | `characters.blend` | `Camper`: the player/crew/staff camper (from JT's PC, rigged by `/blender/cgl_rig.py`, exported to `public/models/camper.glb`); `ARCHIVED_Camper_minipc`: the superseded minipc camper | `/blender/cgl_rig.py` |
 | `hats.blend` | Twenty original hat candidates, one scene per hat with the authored camper head as a fit reference; hat-only exports to `public/models/hats/` | `hat_options.py` |
 | `faces.blend` | Twenty cosmetic face sets on the same authored head and nose; reference head/nose excluded from face-only exports in `public/models/faces/` | `face_options.py` |
