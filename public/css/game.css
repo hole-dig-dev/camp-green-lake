@@ -234,10 +234,10 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .crew-row__top .crew-row__doing{flex:1 1 auto;min-width:0}
 .crew-row__doing{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crew-row.is-bad .crew-row__doing{color:#b3261e;font-weight:700}
-.crew-bars{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.crew-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
 .crew-bar{height:5px;border-radius:3px;background:rgba(0,0,0,.14);overflow:hidden}
 .crew-bar i{display:block;height:100%}
-.crew-bar--hp i{background:#c0392b}.crew-bar--st i{background:#d9b23a}.crew-bar--wt i{background:var(--water)}
+.crew-bar--hp i{background:#c0392b}.crew-bar--st i{background:#d9b23a}.crew-bar--wt i{background:var(--water)}.crew-bar--mo i{background:#8e5bb5}
 #online{font-size:13px;line-height:1.25;color:var(--ink);padding:0 2px;width:100%}
 #online b{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--ink-soft);display:block}
 .map-expand-btn{width:100%;justify-content:center;min-height:36px}

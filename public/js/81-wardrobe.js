@@ -77,29 +77,43 @@ function openWardrobe(){
   if(!el){el=document.createElement('div');el.id='wardrobe';el.className='ui-panel wardrobe';document.body.appendChild(el);
     el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k,d=+b.dataset.d;
       if(b.dataset.act==='done')return closeWardrobe();
-      if(b.dataset.act==='random'){const w={};for(const[k2]of WARD_KINDS)w[k2]=Math.floor(Math.random()*21)-1;setMyWard(w);return renderWardrobe()}
-      if(b.dataset.act==='reset'){setMyWard(wardDefault());return renderWardrobe()}
-      if(b.dataset.act==='outfit'){const n=wardList('torso').length,c=MY_WARD.torso;const v=((c+1+d+n+1)%(n+1))-1;setMyWard({...MY_WARD,torso:v,arms:v,legs:v});return renderWardrobe()}
-      if(k){const n=wardList(k).length,lo=k==='hat'?-2:-1,span=n-lo;const v=((MY_WARD[k]-lo+d+span)%span)+lo;setMyWard({...MY_WARD,[k]:v});renderWardrobe()}})}
+      if(b.dataset.act==='who'){const L=wardWhoList(),i=L.indexOf(WARD.who);WARD.who=L[(i+d+L.length)%L.length];return renderWardrobe()}
+      if(b.dataset.act==='random'){const w={};for(const[k2]of WARD_KINDS)w[k2]=Math.floor(Math.random()*21)-1;setCur(w);return renderWardrobe()}
+      if(b.dataset.act==='reset'){setCur(wardDefault());return renderWardrobe()}
+      const W=curWard();
+      if(b.dataset.act==='outfit'){const n=wardList('torso').length,c=W.torso;const v=((c+1+d+n+1)%(n+1))-1;setCur({...W,torso:v,arms:v,legs:v});return renderWardrobe()}
+      if(k){const n=wardList(k).length,lo=k==='hat'?-2:-1,span=n-lo;const v=((W[k]-lo+d+span)%span)+lo;setCur({...W,[k]:v});renderWardrobe()}})}
   el.hidden=false;releaseLock&&releaseLock();renderWardrobe();
 }
 function wardName(k,v){if(v===-2)return'No hat (hair)';if(v<0)return WARD_NONE[k];const d=wardList(k)[v];return d?String(v+1).padStart(2,'0')+' '+d.name:'…'}
 function renderWardrobe(){
   const el=document.getElementById('wardrobe');if(!el)return;
-  const row=(k,label)=>`<div class="ward-row"><span class="k">${label}</span><button type="button" data-k="${k}" data-d="-1" aria-label="Previous ${label}">◀</button><span class="v">${wardName(k,MY_WARD[k])}</span><button type="button" data-k="${k}" data-d="1" aria-label="Next ${label}">▶</button></div>`;
-  const same=MY_WARD.torso===MY_WARD.arms&&MY_WARD.arms===MY_WARD.legs;
-  el.innerHTML=`<h2>Wardrobe</h2><p class="ward-sub">Everyone sees what you pick.</p>`+row('hat','Hat')+row('face','Face')+row('glasses','Glasses')+
-    `<div class="ward-row"><span class="k">Whole outfit</span><button type="button" data-act="outfit" data-d="-1" aria-label="Previous outfit">◀</button><span class="v">${same?wardName('torso',MY_WARD.torso):'Mixed'}</span><button type="button" data-act="outfit" data-d="1" aria-label="Next outfit">▶</button></div>`+
+  const row=(k,label)=>`<div class="ward-row"><span class="k">${label}</span><button type="button" data-k="${k}" data-d="-1" aria-label="Previous ${label}">◀</button><span class="v">${wardName(k,curWard()[k])}</span><button type="button" data-k="${k}" data-d="1" aria-label="Next ${label}">▶</button></div>`;
+  const W=curWard(),same=W.torso===W.arms&&W.arms===W.legs,who=WARD.who||'You';
+  el.innerHTML=`<h2>Wardrobe</h2><p class="ward-sub">Everyone sees what you pick.${wardWhoList().length>1?' Dress your crew too.':''}</p>`+
+    (wardWhoList().length>1?`<div class="ward-row ward-who"><span class="k">Dressing</span><button type="button" data-act="who" data-d="-1" aria-label="Previous person">◀</button><span class="v">${who}</span><button type="button" data-act="who" data-d="1" aria-label="Next person">▶</button></div>`:'')+
+    row('hat','Hat')+row('face','Face')+row('glasses','Glasses')+
+    `<div class="ward-row"><span class="k">Whole outfit</span><button type="button" data-act="outfit" data-d="-1" aria-label="Previous outfit">◀</button><span class="v">${same?wardName('torso',W.torso):'Mixed'}</span><button type="button" data-act="outfit" data-d="1" aria-label="Next outfit">▶</button></div>`+
     row('torso','Top')+row('arms','Sleeves')+row('legs','Bottoms')+row('shoes','Shoes & boots')+
-    `<div class="ward-btns"><button type="button" data-act="random">Random</button><button type="button" data-act="reset">My own look</button><button type="button" data-act="done" class="primary">Done</button></div>`;
+    `<div class="ward-btns"><button type="button" data-act="random">Random</button><button type="button" data-act="reset">${WARD.who?'His own look':'My own look'}</button><button type="button" data-act="done" class="primary">Done</button></div>`;
 }
-function closeWardrobe(){if(!WARD.open)return;WARD.open=false;const el=document.getElementById('wardrobe');if(el)el.hidden=true;if(WARD.fpWas){FP=true}tryLock&&tryLock()}
+function closeWardrobe(){if(!WARD.open)return;WARD.open=false;WARD.who=null;const el=document.getElementById('wardrobe');if(el)el.hidden=true;if(WARD.fpWas){FP=true}tryLock&&tryLock()}
 /* while it's open: the camera in front of you, a little above, so you see what you're putting on */
 function updateWardrobeCam(){
   if(!WARD.open||!me)return;
   if(S.ko||uiOtherOpen()){closeWardrobe();return}
-  const a=P.fa,fx=Math.sin(a),fz=Math.cos(a),y=me.g.position.y;me.g.rotation.y=a;   /* face the way you face (P.fa), turned to the camera */
-  camera.position.set(me.g.position.x+fx*3.1-fz*0.9,y+1.55,me.g.position.z+fz*3.1+fx*0.9);camera.lookAt(me.g.position.x-fz*0.45,y+1.0,me.g.position.z+fx*0.45);
+  const bt=WARD.who&&bots.find(b=>b.d.n===WARD.who),g=bt?bt.p.g:me.g;
+  const a=bt?g.rotation.y:P.fa,fx=Math.sin(a),fz=Math.cos(a),y=g.position.y;if(!bt)me.g.rotation.y=a;   /* face the way you face (P.fa), turned to the camera; a crew member stands for it (dressing) */
+  camera.position.set(g.position.x+fx*3.1-fz*0.9,y+1.55,g.position.z+fz*3.1+fx*0.9);camera.lookAt(g.position.x-fz*0.45,y+1.0,g.position.z+fx*0.45);
 }
+/* ---- dressing the crew (JT 2026-10-01): their picks live on the server (world.crewWard), everyone sees them ---- */
+const CREW_WARD={};
+const wardWhoList=()=>[null,...bots.filter(b=>crewHired(b)&&b.p.g.visible).map(b=>b.d.n)];
+const curWard=()=>WARD.who?(CREW_WARD[WARD.who]||wardDefault()):MY_WARD;
+function setCur(w){if(WARD.who)setCrewWard(WARD.who,w);else setMyWard(w)}
+function setCrewWard(n,w){CREW_WARD[n]=wardClean(w);crewWardApply(n);if(online())wsSend({t:'crewWard',n,w:CREW_WARD[n]})}
+function crewWardApply(n){const b=bots.find(b=>b.d.n===n);if(b&&b.p){b.p.ward=CREW_WARD[n]||wardDefault();wardApply(b.p)}}
+function crewWardSet(all){for(const k of Object.keys(CREW_WARD))delete CREW_WARD[k];if(all&&typeof all==='object')for(const n in all)CREW_WARD[n]=wardClean(all[n]);for(const b of bots)crewWardApply(b.d.n)}
+const crewBeingDressed=b=>WARD.open&&WARD.who===b.d.n;   /* 30-npcs.js: he stands still for it */
 function uiOtherOpen(){return shopOpen||invOpen||DLG.open||BJ.open||PAUSE.open}
 command('wardrobe',{usage:'wardrobe',help:'Open the Wardrobe (hats, faces, glasses, outfits, shoes).',run(){openWardrobe();return'Wardrobe open.'}});

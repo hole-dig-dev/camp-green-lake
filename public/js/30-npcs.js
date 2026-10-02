@@ -91,6 +91,7 @@ function crewActivity(b){
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(s==='sifting')return'Sifting his bucket';
   if(s==='disarming')return'Disarming a landmine';
+  if(s==='dig'&&moraleOf(b)<MORALE_LOW)return'Digging (fed up: slower)';
   if(s==='drink')return b.wash?'Washing his pan':'Filling his canteen';
   if(s==='away')return'Not hired';
   if(s==='gatebackin'||s==='gatebackout')return'Heading back out';
@@ -224,12 +225,13 @@ function crewHeldStep(b,dt){
 const CREW_NURSE={x:-1.5,z:33};   // where they come round, just inside the gate
 const CREW_HOLD=new Set(['held','flung','tossed','down','ko']);
 function crewToss(b,vx,vy,vz,why){
-  if(!OUTDOOR.has(b.state))return;
+  if(!OUTDOOR.has(b.state))return;moraleHit(b,why);   /* 88-morale.js */
   leaveSiftQ(b);b.preToss=b.state;b.tossWhy=why;b.state='tossed';b.v={x:vx,y:vy,z:vz};b.t=0;b.handAt=null;
   if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],dy:['WHO LIT THAT?!','My ears are ringing!','Fire in the hole... me!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Warden\'s house from here!']}[why]||['WHOA!']),2200);
   logEv('crewToss',{n:b.d.n,why});
 }
 function crewKO(b,why){
+  if(b.state!=='ko')moraleHit(b,why==='bite'||/liz|bit/.test(String(why))?'bite':'ko');   /* 88-morale.js */
   if(!OUTDOOR.has(b.state)&&b.state!=='tossed'&&b.state!=='down')return;
   leaveSiftQ(b);b.state='ko';b.koWhy=why;b.hp=0;b.t=2.6;b.v={x:0,y:0,z:0};b.handAt=null;
   const had=b.bucket||0;b.bucket=0;b.errand=null;   // the bucket spills: that sand's gone
@@ -290,7 +292,8 @@ function updateBots(dt,now){
       b.hole.d=crewDepth(b);b.state='gatebackout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Reporting for work.','Where do I dig?','I\'m on the crew? Okay.']),3000)}
     crewNeeds(b,dt);spadeLook(b.p,crewHas(b,'spade'));b.p.noShovel=!crewHas(b,'shovel');
     if(b.state==='held'||b.state==='flung'){g.visible=true;crewHeldStep(b,dt);continue}
-    if(b.state==='disarming'){g.visible=true;crewDisarmStep(b,dt);continue}   /* stopped by a landmine with his kit (88-disarm.js) */
+    if(b.state==='disarming'){g.visible=true;crewDisarmStep(b,dt);continue}
+    if(crewBeingDressed(b)){animPerson(b.p,0,dt);continue}   /* standing for the Wardrobe (81-wardrobe.js) */   /* stopped by a landmine with his kit (88-disarm.js) */
     if(b.state==='tossed'||b.state==='down'||b.state==='ko'){g.visible=true;animPerson(b.p,b.state==='tossed'?7:3,dt);crewHurtStep(b,dt);continue}
     if(OUTDOOR.has(b.state)&&!siren)crewHazards(b);
     if(SIFTQ.includes(b)&&b.state!=='siftq'&&b.state!=='sifting')leaveSiftQ(b);   // sent off by something else (the party, a sinkhole rescue)
@@ -338,7 +341,7 @@ function updateBots(dt,now){
       const iv=b.d.rate>0.1?0.7:0.95,prev=b.dph;b.dph+=dt/iv;
       /* dirt leaves the shovel at the top of the toss and lands on this hole's pile */
       if(prev<0.72&&b.dph>=0.72&&nearCam(b.hole.x,b.hole.z,35)){const ux=b.hole.mx-g.position.x,uz=b.hole.mz-g.position.z,ul=Math.hypot(ux,uz)||1;puff(g.position.x+ux/ul*0.5,g.position.y+1.3,g.position.z+uz/ul*0.5,b.hole.mx,b.hole.mz,5)}
-      if(b.dph>=1){b.dph-=1;b.hole.d=Math.min(crewDepth(b),b.hole.d+b.d.rate*1.25*(crewHas(b,'shovel')?1:0.35)*(crewHas(b,'spade')?1.6:1)*(b.water<=0||b.stam<15?0.5:1));/* parched or worn out: half speed */touchHole(b.hole)}
+      if(b.dph>=1){b.dph-=1;b.hole.d=Math.min(crewDepth(b),b.hole.d+crewMoraleMul(b)*b.d.rate*1.25*(crewHas(b,'shovel')?1:0.35)*(crewHas(b,'spade')?1.6:1)*(b.water<=0||b.stam<15?0.5:1));/* parched or worn out: half speed */touchHole(b.hole)}
       /* stand in the hole with the dirt pile on the throwing side, and sink as it gets deeper */
       const ux=b.hole.mx-b.hole.x,uz=b.hole.mz-b.hole.z,ty=Math.atan2(-uz,ux);
       let dr=ty-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
