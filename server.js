@@ -1162,6 +1162,19 @@ wss.on('connection', (ws, req) => {
         world.crew[n].abducted = true; world.crew[n].alien = false; world.crew[n].abductedDay = world.run.day; dirty = true; LOG.log('ufo', { n, by: c.n });
         broadcast({ t: 'ufo', n, phase: 'take' }); setTimeout(() => broadcast({ t: 'crew', up: world.crew }), 11000); break;
       }
+      case 'adminSet': { // admin console commands (public/js/96-admin.js), host only: set up game states for testing
+        if (!c.host) return;
+        const items = Array.isArray(m.items) ? m.items.map(String).slice(0, 40) : [], names = Array.isArray(m.names) ? m.names.filter(n => CREW_NAMES.includes(n)) : [];
+        if (m.op === 'crew') {
+          for (const n of names) { const k = world.crew[n] || (world.crew[n] = {});
+            if (m.what === 'hire') k.hired = true; else if (m.what === 'fire') world.crew[n] = {};
+            else if (m.what === 'kit') { const keep = { hired: !!k.hired }; world.crew[n] = keep; const add = id => { const it = SIM.CREW_SHOP.find(i => i.id === id); if (!it) return; keep[id] = true; if (it.needs) add(it.needs); }; for (const it of items) add(it); } }
+          broadcast({ t: 'crew', up: world.crew });
+        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
+        else if (m.op === 'bank') { world.run.bank = num(m.v, 0, 1e9, 0) | 0; broadcast(runInfo()); }
+        else if (m.op === 'day') { world.run.day = num(m.v, 1, 999, 1) | 0; broadcast(runInfo()); }
+        dirty = true; LOG.log('admin', { by: c.n, op: m.op, what: m.what, names, items }); break;
+      }
       case 'veinNow': { // the console's 'vein' (host only): a rich vein 25 m ahead of you, right now (public/js/88-vein.js)
         if (!c.host) return; const x = Math.round(num(m.x, -560, 560, c.x)), z = Math.round(num(m.z, -560, 560, c.z)); if (SIM.inCamp(x, z)) return;
         VEIN = { x, z, r: 12, until: Date.now() + tuneS('vein.time', 10) * 60000 }; LOG.log('vein', { x, z, by: c.n }); broadcast(veinMsg()); break;
