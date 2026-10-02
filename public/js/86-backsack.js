@@ -16,6 +16,13 @@ for(const t of[1,2,3]){modelParts('Backsack'+t).then(p=>{BACKSACK.parts[t]=p}).c
 const BK_AT=[0,1.06,-0.212];   // in the camper model's own space: its bottom edge, against the back of the torso (CGLCamper_Torso z -0.215)
 const backsackOn=()=>tune('gear.backsack')>=0.5;
 const myBackTier=()=>S.up.bucket3?3:S.up.bucket2?2:1;
+/* the D Tent crew wear them too (JT 2026-10-02): with the flag on, the bucket tiers you buy them are packs, 5 / 10 / 20 holes
+   (30-npcs.js crewBucketMax, crewHands), and the crew store calls them packs */
+const crewPack=b=>backsackOn()&&crewHas(b,'bucket');
+const crewPackTier=b=>crewHas(b,'bucket3')?3:crewHas(b,'bucket2')?2:1;
+const CREW_PACK_TEXT={bucket:{name:'Backsack',desc:'A clear pack on his back: he carries 5 holes of sand to the sifter, instead of washing one in his pan.'},
+  bucket2:{name:'Big backsack',desc:'Holds 10 holes of sand before he goes to sift, instead of 5.'},bucket3:{name:'Huge backsack',desc:'A comically huge pack: holds 20 holes of sand.'}};
+const crewItemText=it=>backsackOn()&&CREW_PACK_TEXT[it.id]||it;
 function myBackFill(){return backsackOn()&&carrier()==='bucket'?+clamp(S.bucket/Math.max(1e-6,bucketMax()),0,1).toFixed(3):-1}
 /* where it sits on the spine bone: the bone's rest pose (MODEL.scene) undone, then BK_AT, turned so the straps face the back */
 function backsackRest(){
