@@ -1,0 +1,94 @@
+{
+  "renderer": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+  "localBounds": [
+    [
+      -0.1599999964237213,
+      -0.0820000022649765,
+      -0.4749999940395355
+    ],
+    [
+      0.1599999964237213,
+      0,
+      0.4749999940395355
+    ]
+  ],
+  "materials": [
+    {
+      "name": "cgl_hover_edge_cyan",
+      "emissive": [
+        0.26667277972472453,
+        0.8705901854368473,
+        0.9999999999999999
+      ],
+      "intensity": 1,
+      "opacity": 1,
+      "transparent": false
+    },
+    {
+      "name": "cgl_hover_pad_bluewhite",
+      "emissive": [
+        0.7098078524715303,
+        0.9333343751853431,
+        0.9999999999999999
+      ],
+      "intensity": 1,
+      "opacity": 1,
+      "transparent": false
+    },
+    {
+      "name": "cgl_hover_thruster_cyan",
+      "emissive": [
+        0.1372601376546571,
+        0.7333370008435554,
+        0.9999999999999999
+      ],
+      "intensity": 1,
+      "opacity": 1,
+      "transparent": false
+    },
+    {
+      "name": "cgl_hover_glow_disc",
+      "emissive": [
+        0.3709712965249355,
+        0.702209626527127,
+        0.8543079872727309
+      ],
+      "intensity": 1,
+      "opacity": 0.10999999940395355,
+      "transparent": true
+    }
+  ],
+  "deckTopWorldY": 0.10783971370566436,
+  "solidClearanceM": 0.025400000000000006,
+  "stance": "skate-style",
+  "feet": [
+    {
+      "name": "CGLCamper_L_Shoe",
+      "min": [
+        -19.567999998513812,
+        0.10783971370566431,
+        38.54420000047277
+      ],
+      "max": [
+        -19.37079999905432,
+        0.17583973971320083,
+        38.659800007633464
+      ]
+    },
+    {
+      "name": "CGLCamper_R_Shoe",
+      "min": [
+        -19.567999998513812,
+        0.10783971370566431,
+        38.340199992366536
+      ],
+      "max": [
+        -19.37079999905432,
+        0.17583973971320083,
+        38.45579999952723
+      ]
+    }
+  ],
+  "boardProjectedWidthAt15mPx": 53.08316520052212,
+  "reviewOnlyPlacement": true
+}

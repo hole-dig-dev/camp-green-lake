@@ -1,0 +1,33 @@
+{
+  "file": "Hoverboard.glb",
+  "bytes": 315680,
+  "triangles": 5676,
+  "blender_bounds": [
+    [
+      -0.1599999964237213,
+      -0.4749999940395355,
+      -0.0820000022649765
+    ],
+    [
+      0.1599999964237213,
+      0.4749999940395355,
+      0.0
+    ]
+  ],
+  "game_dimensions_m": {
+    "width": 0.3199999928474426,
+    "length": 0.949999988079071,
+    "total_depth": 0.0820000022649765
+  },
+  "shell_depth_m": 0.04,
+  "origin": "centre of deck top / feet at game Y=0",
+  "nose": "Blender -Y / game +Z",
+  "emissive_materials": [
+    "cgl_hover_edge_cyan",
+    "cgl_hover_thruster_cyan",
+    "cgl_hover_pad_bluewhite",
+    "cgl_hover_glow_disc"
+  ],
+  "solid_bottom_game_y": -0.0715,
+  "suggested_top_y_above_ground_m": 0.0969
+}

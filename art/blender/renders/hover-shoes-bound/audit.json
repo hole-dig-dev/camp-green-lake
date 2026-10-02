@@ -1,0 +1,45 @@
+{
+  "gpu": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+  "sharedBones": true,
+  "originalsHidden": true,
+  "sides": [
+    "L",
+    "R"
+  ],
+  "movement": {
+    "L": {
+      "Walk": 0.48197129461448773,
+      "Run": 0.9106346179758374,
+      "Sit": 0.5762219073058616,
+      "Dig": 0.13380871440211617
+    },
+    "R": {
+      "Walk": 0.249129161959186,
+      "Run": 0.6716650915068508,
+      "Sit": 0.5648253674828075,
+      "Dig": 0.23688128781585646
+    }
+  },
+  "emissiveMaterials": [
+    {
+      "name": "cgl_hover_sole_cyan",
+      "emissive": [
+        0.022219464209514653,
+        0.832905103140473,
+        1
+      ],
+      "intensity": 1
+    },
+    {
+      "name": "cgl_hover_thruster_cyan",
+      "emissive": [
+        0.16202937066555023,
+        0.9046611785888672,
+        1
+      ],
+      "intensity": 1
+    }
+  ],
+  "binder": "public/footwear-lab/viewer.js",
+  "headVisible": true
+}
