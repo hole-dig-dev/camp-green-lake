@@ -605,3 +605,19 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 
 /* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Warden's note */
 .map-coords{font:600 13px ui-monospace,Menlo,Consolas,monospace;text-align:center;padding:2px 0 4px;letter-spacing:0.02em;color:var(--ink,inherit)}
+
+/* the Wardrobe (81-wardrobe.js): a panel on the left; your camper faces you on the right */
+.wardrobe{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:40;width:min(360px,calc(100vw - 32px));padding:14px 14px 12px;
+  font-family:var(--ui);color:var(--ink);max-height:calc(100vh - 32px);overflow:auto}
+.wardrobe h2{font-family:var(--display);font-size:26px;margin:0;letter-spacing:.04em}
+.wardrobe .ward-sub{margin:2px 0 10px;color:var(--ink-soft);font-size:14px}
+.ward-row{display:grid;grid-template-columns:92px 36px 1fr 36px;align-items:center;gap:6px;padding:5px 0;border-top:1px solid var(--divider)}
+.ward-row .k{font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft)}
+.ward-row .v{text-align:center;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ward-row button,.ward-btns button{font-family:var(--ui);font-size:16px;font-weight:700;min-height:36px;border:2px solid var(--ink);border-radius:var(--r-control);
+  background:var(--canvas-2);color:var(--ink);cursor:pointer}
+.ward-row button:hover,.ward-btns button:hover{background:var(--canvas-deep)}
+.ward-btns{display:flex;gap:8px;margin-top:10px}
+.ward-btns button{flex:1;padding:0 8px}
+.ward-btns button.primary{background:var(--jump);color:#fff;border-color:var(--jump-deep)}
+@media (max-width:600px){.wardrobe{top:auto;bottom:12px;transform:none;max-height:55vh}}

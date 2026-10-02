@@ -504,7 +504,8 @@ function maybeSkipNight() {
   for (const c of js) c.sleeping = false;
   broadcastSleep();
 }
-function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
+function wardS(w) { const o = {}; for (const k of ['hat', 'face', 'glasses', 'torso', 'arms', 'legs', 'shoes']) o[k] = num(w && w[k], k === 'hat' ? -2 : -1, 19, -1) | 0; return o; } // the Wardrobe (public/js/81-wardrobe.js)
+function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, w: c.w, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
 function quotaNow() { return SIM.quotaFor(world.run.day, Math.max(world.run.peak || 1, joined().length, 1)); }
 function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, quota: quotaNow(), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
 // the curse (sim.js CURSE): the crew's, 0-100. why: shown to everyone
@@ -586,7 +587,7 @@ wss.on('connection', (ws, req) => {
         }
         c.authed = true; sendHello(); // now, and only now, does this socket learn about the world
       }
-      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0; c.u = num(m.u, 0, 9, 0) | 0; // u: jumpsuit (public/js/81-badges.js)
+      c.n = cleanName(m.n); c.c = num(m.c, 0, 7, 0) | 0; c.u = num(m.u, 0, 9, 0) | 0; c.w = wardS(m.w); // w: the Wardrobe (public/js/81-wardrobe.js); u: jumpsuit (public/js/81-badges.js)
       c.host = DEV_MODE || safeEqual(String(m.host || ''), HOST_TOKEN) || world.hostNames.includes(c.n.toLowerCase()); c.v = num(m.v, 0, 99, 0) | 0;
       send(c, { t: 'host', on: !!c.host });
       send(c, { t: 'curfew', v: SIM.CURFEW });
@@ -916,6 +917,7 @@ wss.on('connection', (ws, req) => {
         broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: crew || c.n });
         break;
       }
+      case 'ward': { c.w = wardS(m.w); broadcast({ t: 'ward', id: c.id, w: c.w }, c.id); break; } // changed clothes (public/js/81-wardrobe.js)
       case 'bonk': {
         // Shovel bonk: a harmless whack that sends a friend tumbling (public/js/71-bonk.js). You have to be standing
         // right next to them, on the same level (nobody bonks into or out of a tent interior), and neither of you downed.

@@ -14,7 +14,7 @@ try{
   HOST=localStorage.getItem('cgl-host')||'';PASS=localStorage.getItem('cgl-camp')||'';
 }catch(e){}
 if(PASS)campIn.value=PASS;
-function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
+function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),w:MY_WARD,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0)|(S.up&&S.up.walkie?4096:0);   // 2048: talking on the walkie, 4096: owns one (86-walkie.js, 86-voice.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
@@ -36,7 +36,7 @@ function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
-  const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;
+  const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;if(m.w)p.ward=wardClean(m.w);   /* their Wardrobe picks (81-wardrobe.js) */
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,8191,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,10,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
@@ -117,6 +117,7 @@ function onMsg(m){
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
     case 'breach':case 'tgot':townMsg(m);break;   // the buried town (89-town.js)
     case 'pown':case 'pst':case 'phand':case 'pyeet':case 'pcart':case 'pslip':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)
+    case 'ward':{const R=remotes.get(m.id);if(R){R.p.ward=wardClean(m.w);wardApply(R.p)}break}   /* a friend changed clothes (81-wardrobe.js) */
     case 'suit':{const R=remotes.get(m.id);if(R)paintSuit(R.p,num(m.u,0,JUMPSUITS.length-1,0)|0);break}
     case 'carried':if(Array.isArray(m.who)&&m.who.includes(myId())){badge('pallbearer');countUp('helps',10,'ladder');addXP(40)}break;
     case 'chatw':{const R=remotes.get(m.id);if(typeof m.s==='string'){const name=R?R.name:cleanName(m.n)||'Someone';toast(`📻 ${name}: ${m.s.slice(0,80)}`,'',6000);tone(900,0.05,'square',0.04)}break}
