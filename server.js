@@ -1171,6 +1171,15 @@ wss.on('connection', (ws, req) => {
             else if (m.what === 'kit') { const keep = { hired: !!k.hired }; world.crew[n] = keep; const add = id => { const it = SIM.CREW_SHOP.find(i => i.id === id); if (!it) return; keep[id] = true; if (it.needs) add(it.needs); }; for (const it of items) add(it); } }
           broadcast({ t: 'crew', up: world.crew });
         } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
+        else if (m.op === 'pipe') { const p = pipeW();   // lay pipe without walking it (the client checked nothing solid is in the way)
+          if (m.clear) { p.nodes = []; p.broken = {}; }
+          for (const a of (Array.isArray(m.add) ? m.add.slice(0, 200) : [])) {
+            if (!p.nodes.length) p.nodes.push({ x: r2(SIM.GOLD.SIFTER.x - 1.9), z: r2(SIM.GOLD.SIFTER.z), p: -1 });
+            const x = num(a.x, -600, 600, NaN), z = num(a.z, -600, 600, NaN), pi = Number.isInteger(a.p) && a.p >= 0 && a.p < p.nodes.length ? a.p : -1;
+            if (!Number.isFinite(x) || !Number.isFinite(z) || pi < 0 || p.nodes.length > tuneS('pipe.max', 60) + 1) break;
+            const d = Math.hypot(x - p.nodes[pi].x, z - p.nodes[pi].z); if (d < 2 || d > 7) break;
+            p.nodes.push({ x: r2(x), z: r2(z), p: pi }); }
+          broadcast({ t: 'pipe', ...p }); }
         else if (m.op === 'bank') { world.run.bank = num(m.v, 0, 1e9, 0) | 0; broadcast(runInfo()); }
         else if (m.op === 'day') { world.run.day = num(m.v, 1, 999, 1) | 0; broadcast(runInfo()); }
         dirty = true; LOG.log('admin', { by: c.n, op: m.op, what: m.what, names, items }); break;

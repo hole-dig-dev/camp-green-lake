@@ -7,7 +7,7 @@
    and a dog-marked landmine cost a lot. The route is string-pulled into a few straight legs.
    30-npcs.js walkTo follows it (re-planning when the target changes, every NAV_REPLAN s, or when he's stuck) and keeps
    a little personal space from the rest of the crew and from campers (navSeparate). */
-const NAV_CELL=0.5,NAV_PAD=14,NAV_R=0.38,NAV_MAX=420;   // metres; a box over NAV_MAX cells a side uses coarser cells
+const NAV_PIPE=2,NAV_CELL=0.5,NAV_PAD=14,NAV_R=0.38,NAV_MAX=420;   // metres; a box over NAV_MAX cells a side uses coarser cells
 function navSegClear(ax,az,bx,bz,m){
   const dx=bx-ax,dz=bz-az;
   for(const c of colliders){if(Math.max(ax,bx)<c.x0-m||Math.min(ax,bx)>c.x1+m||Math.max(az,bz)<c.z0-m||Math.min(az,bz)>c.z1+m)continue;
@@ -21,9 +21,10 @@ function navCost(x,z){
   let c=0;const h=holeNear(x,z,1.4);if(h&&h.d>0.4)c+=4;
   if(typeof SINK_LIVE!=='undefined')for(const sh of SINK_LIVE.values())if(sh.stage!=='warn'&&Math.hypot(x-sh.x,z-sh.z)<sh.r+1)c+=40;
   if(typeof MINES!=='undefined')for(const m of MINES.values())if(m.marked&&Math.hypot(x-m.x,z-m.z)<1.6)c+=60;
+  if(typeof pipeNear==='function'&&pipeNear(x,z)<0.45)c+=NAV_PIPE;   /* step over the sand pipeline, don't walk along it */
   return c;
 }
-const NAV_CAMP={x0:-50,x1:40,z0:18,z1:66};   // the fenced camp and round it: any route near it can go all the way round
+const NAV_CAMP={x0:FENCE_X0-10,x1:FENCE_X1+10,z0:FENCE_Z0-9,z1:FENCE_Z1+10};   // the fenced camp (20-world.js) and round it: any route near it can go all the way round
 function navPath(ax,az,bx,bz){
   if(navSegClear(ax,az,bx,bz,NAV_R)&&navCheap({x:ax,z:az},{x:bx,z:bz}))return[{x:bx,z:bz}];
   /* heading into something solid (a spot by the drums): route to the open ground next to it, then the last step */
@@ -59,7 +60,8 @@ function navPath(ax,az,bx,bz){
   return out;
 }
 /* a straight leg doesn't cut across anything costly the grid route went round (a hole, a crater) */
-function navCheap(a,b){const d=Math.hypot(b.x-a.x,b.z-a.z),n=Math.ceil(d/1.2);for(let s=1;s<n;s++){const u=s/n;if(navCost(a.x+(b.x-a.x)*u,a.z+(b.z-a.z)*u)>=4)return false}return true}
+function navCheap(a,b){const d=Math.hypot(b.x-a.x,b.z-a.z),n=Math.ceil(d/0.6);let onPipe=0;
+  for(let s=1;s<n;s++){const u=s/n,c=navCost(a.x+(b.x-a.x)*u,a.z+(b.z-a.z)*u);if(c>=4)return false;if(c>=NAV_PIPE&&++onPipe>2)return false}return true}   /* more than a step's worth along a pipe: not cheap */
 /* personal space: a walking crew member eases away from the others and from campers */
 function navSeparate(b,dt){
   const g=b.p.g.position;let px=0,pz=0;
