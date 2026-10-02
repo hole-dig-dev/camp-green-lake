@@ -1,7 +1,7 @@
 'use strict';
 /* public/js/88-ufo.js -- an easter egg (JT 2026-10-01): a UFO abducts a crew member; a day later it comes back and drops
    off an alien in his place who works just like him, and all he'll ever say is "I'm <name>." Console only for now:
-     ufo <name>   the saucer comes down over him, beams him up and flies off (any hired crew member if no name)
+     ufo <name>   he walks out onto the lake bed (from wherever he is), the saucer beams him up and flies off (any hired crew member if no name)
      ufo back     bring the abductee(s) back now (otherwise it happens at the next new day)
    The server keeps it (world.crew[n].abducted = the day he was taken, .alien once he's back) and tells everyone
    ('ufo' take/drop); each screen plays the saucer over its own copy of him (30-npcs.js leaves a crew member alone
@@ -15,20 +15,48 @@ function ufoMesh(){
 }
 function ufoSound(on){if(!AC)return;tone(on?180:240,1.2,'sine',0.05,on?420:90);setTimeout(()=>tone(on?260:200,1,'triangle',0.035,on?520:110),200)}
 const crewBot=n=>bots.find(b=>b.d.n===n);
-/* the abduction: down, beam, up he goes, away */
+/* the call (JT 2026-10-02: wherever he is, asleep in D Tent included, he heads out of camp first): he stops what he's
+   doing, says he hears something, walks out of the tent and through the gate onto the lake bed, and the saucer takes
+   him there, never over the camp. Grabbed, flung, disarming a mine or busy in a sinkhole: it waits for him.
+   UFO_LURE_MAX s and he goes wherever he's got to. b.ufoLure while it lasts (30-npcs.js keeps him on screen). */
+const UFO_LURE_MAX=90,UFO_LURE_Z=10;   // the spot: past the main gate (CREW_GATE.out 25), out on the lake bed
+const ufoInCamp=(x,z)=>inCamp(x,z)||nearCampNoDig(x,z);
+const ufoBusy=b=>b.state==='held'||b.state==='flung'||b.state==='disarming'||b.sinkOverride||(b.p.rag&&b.p.rag.on)||b.state==='away';
 function ufoTake(n){
-  ufoLoad();const b=crewBot(n);if(!b)return;const g=b.p.g.position,x=g.x,z=g.z,y0=groundAt(x,z);
-  if(!b.p.g.visible||b.state==='away'){if(CREW_UP[n])CREW_UP[n].abducted=true;return}   // off somewhere: he's just gone
+  ufoLoad();const b=crewBot(n);if(!b)return;
+  if(b.state==='away'&&!b.p.g.visible){if(CREW_UP[n])CREW_UP[n].abducted=true;return}   // not here at all: he's just gone
+  if(b.ufoLure||b.ufo)return;
+  b.ufoLure={t:0,go:false};logEv('ufoCall',{n,state:b.state});
+}
+function ufoLureStep(b,dt){
+  const L=b.ufoLure,g=b.p.g;L.t+=dt;
+  if(!L.go){if(ufoBusy(b)&&L.t<UFO_LURE_MAX)return;   /* let him land / finish first */
+    L.go=true;b.ufo=true;leaveSiftQ(b);b.errand=null;if(b.p.held&&b.p.held.k==='bucket')releaseProp(b.p,'bucket');
+    const inside=b.state==='inside'||b.state==='indoor'||g.position.y<TENT_FLOOR_Y+1,asleep=inside&&(curfewSoon()||clockT()>=DAYMS);
+    b.state='ufocall';   /* not 'inside' any more: 30-npcs.js would keep him hidden */
+    if(inside){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);g.rotation.y=Math.PI}   /* out of D Tent's door */
+    g.visible=true;b.L.el.style.display='';
+    const x=g.position.x,z=g.position.z;
+    if(ufoInCamp(x,z)||inside){L.tx=gateX(b)+(botRng()-0.5)*6;L.tz=UFO_LURE_Z-botRng()*4}else{L.tx=x;L.tz=z}
+    say(b.L,asleep?pick(['Wh... what\'s that light?','Mmf. Someone\'s calling me. Out there.']):inside?pick(['Do you guys hear that?','I gotta go... outside. Don\'t know why.']):ufoInCamp(x,z)?pick(['Something out on the lake is calling me.','Hang on. I need to be... out there.']):pick(['Uh... guys?','Is that a... no.','Not again!']),3200);
+    L.t=0}
+  const there=walkTo(b,L.tx,L.tz,dt,1.6);
+  if(there||L.t>UFO_LURE_MAX){b.ufoLure=null;ufoBeam(b)}
+}
+/* the abduction: down, beam, up he goes, away */
+function ufoBeam(b){
+  const n=b.d.n,g=b.p.g.position,x=g.x,z=g.z,y0=groundAt(x,z);
   const u=ufoMesh();u.position.set(x+30,y0+60,z-20);b.ufo=true;leaveSiftQ(b);
   if(nearCam(x,z,120)){ufoSound(true);toast(`What is THAT?! Something's hovering over ${n}!`,'bad',3500)}
-  say(b.L,pick(['Uh... guys?','Is that a... no.','Not again!']),2600);
-  UFO.anims.push({kind:'take',b,u,t:0,x,z,y0,n});logEv('ufoTake',{n});
+  UFO.anims.push({kind:'take',b,u,t:0,x,z,y0,n});logEv('ufoTake',{n,x:+x.toFixed(1),z:+z.toFixed(1),inCamp:ufoInCamp(x,z)});
 }
 function ufoDrop(n){
-  ufoLoad();const b=crewBot(n);if(!b)return;const h=b.hole||{x:0,z:15},x=h.x+1.5,z=h.z,y0=groundAt(x,z);
+  ufoLoad();const b=crewBot(n);if(!b)return;
+  if(b.ufoLure||UFO.anims.some(a=>a.b===b)){b.ufoDropAfter=true;return}   /* "ufo back" before he's even up there: right after */
+  const h=b.hole&&!ufoInCamp(b.hole.x,b.hole.z)?b.hole:{x:gateX(b),z:UFO_LURE_Z},x=h.x+1.5,z=h.z,y0=groundAt(x,z);
   const u=ufoMesh();u.position.set(x-30,y0+60,z+20);b.ufo=true;b.p.g.visible=false;
   if(S.started)toast(`The saucer's back over the lake... and it's dropping someone off.`,'gold',3500);if(nearCam(x,z,120))ufoSound(true);
-  UFO.anims.push({kind:'drop',b,u,t:0,x,z,y0,n});logEv('ufoDrop',{n});
+  UFO.anims.push({kind:'drop',b,u,t:0,x,z,y0,n});logEv('ufoDrop',{n,x:+x.toFixed(1),z:+z.toFixed(1),inCamp:ufoInCamp(x,z)});
 }
 const _ue=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
 function ufoStep(a,dt){
@@ -47,7 +75,7 @@ function ufoStep(a,dt){
     if(a.t>=T3&&!a.landed){a.landed=true;g.position.set(a.x,a.y0,a.z);b.state='return';b.tx=b.hole?b.hole.x:a.x;b.tz=b.hole?b.hole.z:a.z;b.ufo=false;say(b.L,`I'm ${a.n}.`,3500)}
   }
   if(a.t>=T3)u.position.set(u.position.x+dt*(a.t-T3)*12,u.position.y+dt*(a.t-T3)*14,u.position.z);
-  if(a.t>=T4){scene.remove(u);UFO_U.uUFOGain.value=0;if(a.kind==='take')b.ufo=false;return false}
+  if(a.t>=T4){scene.remove(u);UFO_U.uUFOGain.value=0;if(a.kind==='take'){b.ufo=false;if(b.ufoDropAfter){b.ufoDropAfter=false;if(CREW_UP[a.n]){CREW_UP[a.n].abducted=false;CREW_UP[a.n].alien=true}setTimeout(()=>ufoDrop(a.n),1500)}}return false}
   return true;
 }
 /* the alien look: his own body, head and neck (JT: "keep the head almost the same shape"), green skin, and Sol's
@@ -64,6 +92,7 @@ function alienLook(b){
 const isAlien=b=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n].alien);
 const isAbducted=b=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n].abducted);
 function updateUfo(dt){
+  if(!PARTY.on&&!ZONE_H)for(const b of bots)if(b.ufoLure)ufoLureStep(b,dt);
   for(let i=UFO.anims.length-1;i>=0;i--)if(!ufoStep(UFO.anims[i],dt))UFO.anims.splice(i,1);
   for(const b of bots)if(isAlien(b)&&b.p.g.visible)alienLook(b);
 }
