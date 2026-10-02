@@ -5,10 +5,11 @@
 #   Sifter   about 2.6 m long and 1.3 m wide; origin on the ground at its middle. The tray runs along Blender X, falling
 #            from the hopper (-X, ~1.5 m up) to the catch pan (+X). The blower sits on the -Y side (= game +z).
 # Run with the live Blender:  python3 bx.py sifter.py   (bx.py opens props.blend)
-import bpy,os,math,random
+import bpy,os,math,random,json,shutil
 HERE=os.path.dirname(bpy.data.filepath)
 globals()['__file__']=os.path.join(HERE,'sifter.py')
 exec(open(os.path.join(HERE,'cgl_blender.py')).read())
+exec(open(os.path.join(HERE,'pipeline_common.py')).read())
 from mathutils import Vector
 OUT=os.path.join(ART,'glb');rnd=random.Random(1849)
 PREVIEW=globals().get('SIFTER_PREVIEW',True)
@@ -72,6 +73,22 @@ B('signpost',(0.06,0.06,1.6),(X1-0.25,0.47,0.8),WOOD[2],p=r)   # behind the boar
 B('signboard',(0.9,0.04,0.32),(X1-0.25,0.52,1.5),WOOD[0],p=r)
 text('signtxt','SIFTER',(X1-0.25,0.545,1.52),0.2,('ink','ink',0.8),rot=(math.pi/2,0,math.pi),parent=r)   # on the +Y face: the yard side (game -z)
 text('signtxt2','SAND IN · GOLD OUT',(X1-0.25,0.545,1.39),0.07,('ink','ink',0.8),rot=(math.pi/2,0,math.pi),parent=r)
+# Permanent clear pipeline fitting. Keep all existing tray/crank frames unchanged.
+# Centreline is the single source of truth for both mesh and game inlet animation.
+inlet=inlet_points()
+hollow_path('pipeline_inlet',inlet,parent=r)
+ring_x('inlet_socket_band',-1.87,0.04,0.14,0.121,IRON,r)
+B('inlet_sleeper',(0.34,0.43,0.06),(-1.73,0,0.03),WOOD[2],p=r)
+B('inlet_saddle',(0.15,0.14,0.08),(-1.84,0,0.10),WOOD[1],p=r)
+B('inlet_stay',(0.04,0.04,1.92),(-1.6,0.19,0.96),IRON,p=r)
+for z in (0.72,1.65):
+    B('inlet_stay_tie',(0.04,0.22,0.035),(-1.6,0.11,z),IRON,p=r)
+    # Small bands on the upright keep a mostly clear view of sand ascending.
+    hollow_path('inlet_riser_band',[(-1.6,0,z-0.012),(-1.6,0,z+0.012)],
+                outer=0.137,inner=0.121,material=mat(*IRON),parent=r)
+game_path={'points':[[round(x,6),round(z,6),round(-y,6)] for x,y,z in inlet]}
+with open(os.path.join(OUT,'PipeInletPath.json'),'w') as f:json.dump(game_path,f,separators=(',',':'));f.write('\n')
+shutil.copy2(os.path.join(OUT,'PipeInletPath.json'),os.path.join(ART,'../../public/models/PipeInletPath.json'))
 # Export the moving tray separately, in the same origin/frame as Sifter.
 bpy.context.view_layer.update()
 dg=bpy.context.evaluated_depsgraph_get()
@@ -81,12 +98,19 @@ bpy.data.objects.remove(tray,do_unlink=True)
 scene('SifterTray');tr=root('SifterTray')
 for n,me,mw in tray_parts:
     me.transform(mw);o=bpy.data.objects.new(n,me);_link(o);o.parent=tr
-p=export_glb(os.path.join(OUT,'SifterTray.glb'));print('SifterTray',p[1],p[2])
+p=pipeline_export(os.path.join(OUT,'SifterTray.glb'),tr);print('SifterTray',p[1],p[2])
 scene('Sifter',fresh=False)
 instance('tray_preview','SifterTray')
 studio(elev=24,azim=-40,lens=40,floor=False);frame(margin=1.1)
 if PREVIEW:render(res=(900,600),samples=16)
-p=export_glb(os.path.join(OUT,'Sifter.glb'));print('Sifter',p[1],p[2])
+p=pipeline_export(os.path.join(OUT,'Sifter.glb'),r);print('Sifter',p[1],p[2])
+for name in ('Sifter','SifterTray'):
+    shutil.copy2(os.path.join(OUT,name+'.glb'),os.path.join(ART,'../../public/models'))
+# Inlet-only rebuild preserves all other prop scenes and their authored materials.
+# SifterCrank already has the same axle frame; it needs no rebuild for this fitting.
+if os.environ.get('SIFTER_ONLY')=='1':
+    bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath,compress=True)
+    raise SystemExit(0)
 
 # ---- the crew's bucket (public/js/30-npcs.js): each D Tent camper fills one digging, carries it by the bail to the
 #   sifter (86-walkie.js holds it like the first-aid kit). Origin at the bottom; the bail's top (the grip) at 0.40 m.
@@ -109,7 +133,8 @@ tube('handle',(0.18,0,0.14),(0.18,-0.12,0.14),0.025,WOOD[1],r)
 cyl('hub',0.035,0.03,(0,0,0),IRON,verts=10,rot=(math.pi/2,0,0),bevel=0,parent=r)
 studio(elev=20,azim=-40,lens=60,floor=False);frame(margin=1.4)
 if PREVIEW:render(res=(400,400),samples=8)
-p=export_glb(os.path.join(OUT,'SifterCrank.glb'));print('SifterCrank',p[1],p[2])
+p=pipeline_export(os.path.join(OUT,'SifterCrank.glb'),r);print('SifterCrank',p[1],p[2])
+shutil.copy2(p[0],os.path.join(ART,'../../public/models'))
 
 # ---- the gold pan (the store's first tool; panning at the wash tub, 91-goldfx.js). A shallow, wide steel pan with
 #   riffles on one side of the wall to trap the gold. Origin at the bottom's centre; rim up +Z, 0.07 m tall, 0.2 m radius.
