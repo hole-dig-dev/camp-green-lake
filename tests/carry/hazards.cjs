@@ -6,7 +6,7 @@ const R=[];const check=(n,ok,i)=>{R.push(!!ok);console.log((ok?'PASS ':'FAIL ')+
 check('by default everything is on',await A.evaluate(()=>HAZ_KINDS.every(k=>hazOn(k))));
 check('the F2 Hazards tab has the master switch, an on-anyway and a spawn-now for each',await A.evaluate(()=>TUNE_BY['haz.all']&&HAZ_KINDS.every(k=>TUNE_BY['haz.on.'+k])&&TUNE_DEFS.some(d=>d.key==='haz.now.twister')&&TUNE_DEFS.some(d=>d.key==='haz.now.javelinas')));
 // some things out there: mines (server), a javelina herd (server), lizards near you
-await A.evaluate(()=>{tuneSet('haz.mineEvery',0.5);P.x=40;P.z=-60;P.y=groundAt(40,-60)});
+await A.evaluate(()=>{tuneSet('haz.mines',1);tuneSet('haz.mineEvery',0.5);P.x=40;P.z=-60;P.y=groundAt(40,-60)});
 await A.evaluate(()=>runCommand('javelinas'));await A.waitForTimeout(23000);
 const before=await A.evaluate(()=>({mines:MINES.size,jav:JAVV.length,liz:lizards.some(L=>L.m.g.visible)}));
 check('before: mines and a herd are out',before.mines>0&&before.jav>0,JSON.stringify(before));

@@ -30,6 +30,6 @@ check('a sharpened spade: he digs ~60% faster',rate2>rate*1.35,`${rate.toFixed(2
 await B.evaluate(()=>{runCommand('give gold 400')});await B.waitForTimeout(300);
 await A.evaluate(()=>{S.seeds+=200;crewBuy('Larry',CREW_HIRE_ITEM)});await A.waitForTimeout(1000);const a1=await A.evaluate(()=>S.seeds),b1=await B.evaluate(()=>S.seeds);
 await Promise.all([A.evaluate(()=>crewBuy('Larry',SIM.CREW_SHOP.find(i=>i.id==='canteen'))),B.evaluate(()=>{shopOpen=true;crewBuy('Larry',SIM.CREW_SHOP.find(i=>i.id==='canteen'))})]);
-await A.waitForTimeout(1200);const spent=(a1-await A.evaluate(()=>S.seeds))+(b1-await B.evaluate(()=>S.seeds));
-check('two of you buying the same thing: only one pays',spent===35,`spent ${spent} between you`);
+await A.waitForTimeout(1200);const spent=a1-await A.evaluate(()=>S.seeds),sameB=b1-await B.evaluate(()=>S.seeds);   /* one crew wallet (84-wallet.js): both see the same pot */
+check('two of you buying the same thing: only one pays',spent===35&&sameB===35,`the wallet dropped ${spent} (Bravo sees ${sameB})`);
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)&&!errs.length?0:1)})();
