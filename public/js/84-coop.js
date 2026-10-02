@@ -37,7 +37,7 @@ function newDay(m){m=m||{};{const fl=foundLine(m.found);if(fl)setTimeout(()=>toa
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
   $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  Object.assign(S,{bucket:0,hopper:0,pipe:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){

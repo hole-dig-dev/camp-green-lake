@@ -62,7 +62,7 @@ function onMsg(m){
     case 'hello':{
       // the crew is in another map whose script is still loading: handle this hello once it has (88-zones.js)
       if(typeof m.zone==='string'&&m.zone!=='lake'&&(typeof ZONES==='undefined'||!ZONES[m.zone])){HELLO_LATER=m;break}
-      minesSet(m.mines);pipeSet(m.pipe);campSet(m.camp);   /* the sand pipeline (88-pipeline.js) */   /* the landmines out on the lake (88-mines.js) */
+      minesSet(m.mines);pipeSet(m.pipe);campSet(m.camp);pilesSet(m.piles);   /* the sand pipeline (88-pipeline.js) */   /* the landmines out on the lake (88-mines.js) */
       net.id=m.id;net.day=num(m.day,1,99999,1)|0;$('#dayTag').textContent='Day '+net.day;if(m.clock)setClock(m.clock);
       if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
@@ -151,7 +151,10 @@ function onMsg(m){
     case 'mine':mineAdd(m.m);break;
     case 'pipe':if(!PIPE.laying||m.by!==net.id)pipeSet(m);break;   /* the sand pipeline changed (88-pipeline.js) */
     case 'pipeFlow':pipeSlug(false,0,num(m.leaf,1,1e4,1)|0);break;
-    case 'camp':campSet(m.camp);break;   /* the camp's upgrades (84-camp.js) */
+    case 'camp':campSet(m.camp);break;
+    case 'dyn':dynLit({id:num(m.id,0,1e9,0)|0,x:num(m.x,-600,600,0),z:num(m.z,-600,600,0),by:cleanName(m.by)});break;   /* dynamite (88-dynamite.js) */
+    case 'dynBoom':dynBoom({id:num(m.id,0,1e9,0)|0,x:num(m.x,-600,600,0),z:num(m.z,-600,600,0),pile:m.pile});break;
+    case 'pile':pileSet(m.p);break;   /* the camp's upgrades (84-camp.js) */
     case 'mineBoom':mineBoom(num(m.id,0,1e9,0),num(m.x,-2000,2000,0),num(m.z,-2000,2000,0),cleanName(m.by)||'Someone');break;
     case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;

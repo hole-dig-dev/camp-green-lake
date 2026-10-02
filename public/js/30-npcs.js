@@ -94,7 +94,7 @@ function crewActivity(b){
   if(s==='away')return'Not hired';
   if(s==='gatebackin'||s==='gatebackout')return'Heading back out';
   if(s==='indoor'||s==='inside')return curfewSoon()||clockT()>=DAYMS?(b.d.n==='Jim Bob'&&!b.xraySleeps?'Dealing cards in D Tent':'Asleep'):'On a break in D Tent';
-  if(s==='tossed')return b.tossWhy==='mn'?'Blown sky-high by a landmine!':b.tossWhy==='tw'?'Caught in a twister!':b.tossWhy==='tb'?'Bowled over by a tumbleweed!':'Hit by a boulder!';
+  if(s==='tossed')return b.tossWhy==='dy'?'Blown up by dynamite!':b.tossWhy==='mn'?'Blown sky-high by a landmine!':b.tossWhy==='tw'?'Caught in a twister!':b.tossWhy==='tb'?'Bowled over by a tumbleweed!':'Hit by a boulder!';
   if(s==='down')return'Getting back up';
   if(s==='ko')return`Knocked out (${{liz:'lizard',jav:'javelina',lion:'mountain lion',bite:'bitten'}[b.koWhy]||'hurt'})`;
   if(s==='held'||s==='flung')return'Being carried about';
@@ -225,7 +225,7 @@ const CREW_HOLD=new Set(['held','flung','tossed','down','ko']);
 function crewToss(b,vx,vy,vz,why){
   if(!OUTDOOR.has(b.state))return;
   leaveSiftQ(b);b.preToss=b.state;b.tossWhy=why;b.state='tossed';b.v={x:vx,y:vy,z:vz};b.t=0;b.handAt=null;
-  if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Warden\'s house from here!']}[why]||['WHOA!']),2200);
+  if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],dy:['WHO LIT THAT?!','My ears are ringing!','Fire in the hole... me!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Warden\'s house from here!']}[why]||['WHOA!']),2200);
   logEv('crewToss',{n:b.d.n,why});
 }
 function crewKO(b,why){

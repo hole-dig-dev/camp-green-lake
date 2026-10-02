@@ -371,6 +371,20 @@ function pipeW() {
 }
 /* may this hazard or mob happen? The F2 Hazards tab (public/js/88-hazards.js): ALL off for testing, single ones back on */
 function hazOnS(k) { return tuneS('haz.all', 1) >= 0.5 || tuneS('haz.on.' + k, 0) >= 0.5; }
+/* dynamite going off (public/js/88-dynamite.js): a crater, a mound of loose sand, and any landmine close by goes too */
+let DYN_SEQ = 1;
+function dynBoomS(id, x, z) {
+  const piles = world.piles || (world.piles = {});
+  const ids = Object.keys(piles); if (ids.length >= 20) delete piles[ids[0]]; // the oldest mound goes
+  const pile = { id, x, z, sand: tuneS('dyn.sand', 8) }; piles[id] = pile; dirty = true;
+  broadcast({ t: 'dynBoom', id, x, z, pile });
+  for (const [ox, oz, d] of [[0, 0, 1.3], [0.9, 0, 0.9], [-0.9, 0, 0.9], [0, 0.9, 0.9], [0, -0.9, 0.9]]) { // the crater
+    const hx = r1(x + ox), hz = r1(z + oz), k = hx + '|' + hz; if ((world.holes[k] || 0) >= d) continue;
+    if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) continue;
+    world.holes[k] = d; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d });
+  }
+  for (let i = MINES.length - 1; i >= 0; i--) { const k = MINES[i]; if (Math.hypot(k.x - x, k.z - z) < tuneS('dyn.blast', 4.5)) { MINES.splice(i, 1); broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: 'Dynamite' }); } }
+}
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -555,6 +569,7 @@ wss.on('connection', (ws, req) => {
       mines: MINES, // landmines (public/js/88-mines.js)
       pipe: pipeW(), // the sand pipeline (public/js/88-pipeline.js)
       camp: world.camp || {}, // the camp's upgrades (public/js/84-camp.js)
+      piles: Object.values(world.piles || {}), // loose sand from dynamite (public/js/88-dynamite.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -945,6 +960,19 @@ wss.on('connection', (ws, req) => {
         if (camp[id]) { world.run.bank += num(m.cost, 0, 2000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
         camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
       }   // someone sent sand down it: everyone sees the plug go
+      case 'dyn': { // a lit stick of dynamite (public/js/88-dynamite.js): the server runs the fuse so everyone sees the same boom
+        if (!withinRate(c.dynTimes || (c.dynTimes = []), 3, 5000)) return;
+        const x = r2(num(m.x, -590, 590, NaN)), z = r2(num(m.z, -590, 590, NaN)); if (!Number.isFinite(x) || !Number.isFinite(z) || Math.hypot(c.x - x, c.z - z) > 10) return;
+        if (SIM.inCamp(x, z) || Math.hypot(Math.max(-40 - x, 0, x - 30), Math.max(27 - z, 0, z - 56)) < CAMP_NODIG) return; // never in camp or its no-dig strip
+        const id = DYN_SEQ++; LOG.log('dyn', { by: c.n, x, z }); broadcast({ t: 'dyn', id, x, z, by: c.n });
+        setTimeout(() => dynBoomS(id, x, z), tuneS('dyn.fuse', 3) * 1000); break;
+      }
+      case 'pileTake': { // someone (or the crew) scooping the loose sand
+        const q = (world.piles || {})[num(m.id, 0, 1e9, -1) | 0]; if (!q) return; const v = num(m.v, 0, 2, 0); if (!v) return;
+        q.sand = Math.max(0, Math.round((q.sand - v) * 1000) / 1000); dirty = true;
+        if (q.sand <= 0.01) delete world.piles[q.id];
+        broadcast({ t: 'pile', p: { id: q.id, x: q.x, z: q.z, sand: q.sand } }); break;
+      }
       case 'mineHit': {
         // Someone stepped on a landmine (public/js/88-mines.js): you, or a D Tent camper on the client that runs the crew
         // (m.crew: his name). Yours has to be under your feet; the crew's we take on trust (the crew lives client-side).
