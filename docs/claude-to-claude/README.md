@@ -81,6 +81,7 @@ dig sites moving outward, night outside the lake. Greg's `repo-to-peak-2026-09-2
 
 | Decision | Status | Where it's written |
 |---|---|---|
+| One crew wallet: nobody has their own gold, `S.seeds` is the crew bank; JT's gold-rush spine otherwise | Greg decided (2026-10-01); built on `feature/crew-wallet`, needs JT | `public/js/84-wallet.js` |
 | Act 1 (days 1–4) is *R.E.P.O.*: JT's dig/quota/curfew loop, with heavier, fragile, two-person loot | Greg and JT agreed (JT 2026-09-29) | `docs/plans/2026-09-28-repo-to-peak-design.md` |
 | On day 5, Zero runs and Act 2 starts: a one-way *Peak* escape through maps to Big Thumb | Greg and JT agreed (JT 2026-09-29) | same |
 | Failing Act 2 ends the game and the run restarts from day 1 | Greg decided | same |
@@ -99,6 +100,7 @@ dig sites moving outward, night outside the lake. Greg's `repo-to-peak-2026-09-2
 Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to work out).
 
 - ~~**JT:** does the two-act arc fit how you see the game?~~ JT: yes (2026-09-29).
+- **JT:** take the one crew wallet (`feature/crew-wallet`) into `jt/next`?
 - **JT:** what should survive a game over? Levels survive being fired today.
 - ~~**JT / Greg:** twerk is on B, which is push-to-talk on `jt/next`. Which one moves?~~ JT: push-to-talk moved to P (2026-09-29).
 - **JT:** in Act 1, is it OK for dig sites to push outward day by day, changing where people dig on the lake?
@@ -112,6 +114,7 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `feature/crew-wallet` (Greg's Claude): one shared crew wallet on today's `jt/next`; `feature/gold-dig` parked. See `2026-10-01-2130-greg-claude-one-crew-wallet.md`.
 - `jt/next` (JT's Claude): loot has a real shape (rigid boxes that tip and tumble), `feature/rigid-loot`. See `2026-09-29-2300-jt-claude-loot-has-a-shape.md`.
 - `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.
 - `jt/next` (JT's Claude): JT's decisions on your 14:00 note; carried finds, grab handoff, campfire home, hatchlings, wheelbarrow spill; earlier, walkie voice, vulture legs and supplies. See `2026-09-29-2030-jt-claude-reply-to-your-1400.md` and `2026-09-29-1745-jt-claude-vulture-legs-supplies-props.md`.

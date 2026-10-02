@@ -23,17 +23,9 @@ function reportKB(){
   toast('+100 gold. The Warden planted red flags around the search area. Check your map.','gold',7000);
   if(!S.up.long)setTimeout(()=>toast('Kate buried it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
-/* the crew bank (84-coop.js depositGold): pick how much of your own gold goes in */
-function depositNode(back){
-  const opts=[],have=S.seeds,amts=[...new Set([10,50,Math.floor(have/2),have].filter(v=>v>0&&v<=have))].sort((a,b)=>a-b);
-  for(const v of amts)opts.push({label:v===have?`All of it (${v} gold)`:v===Math.floor(have/2)&&v!==10&&v!==50?`Half (${v} gold)`:`${v} gold`,go:()=>{depositGold(v);return reply('The Warden',pick(['I\'ll keep it safe. Safer than you would.','Into the safe it goes. Now get back out there.','Good. The crew bank buys the big things. Not candy.']),back)}});
-  opts.push({label:'Never mind.',go:back});
-  return{name:'The Warden',text:`The crew bank has ${RUN.bank} gold. How much are you putting in?`,opts};
-}
 function wardenNode(first){
   const back=()=>wardenNode(false),opts=[];
-  if(S.seeds>0)opts.push({label:`Put gold in the crew bank. (You have ${S.seeds} gold.)`,go:()=>depositNode(back)});
-  opts.push({label:'How much is in the crew bank?',go:()=>reply('The Warden',`${RUN.bank} gold. Everyone's gold, for the big things the whole crew will use. Not for candy.`,back)});
+  opts.push({label:'How much is in the crew wallet?',go:()=>reply('The Warden',`${RUN.bank} gold. Everyone's gold: whatever any of you finds goes in, whatever any of you buys comes out, and I take my quota at curfew. Not for candy.`,back)});   // one crew wallet (84-wallet.js): nothing to deposit
   if(S.hasKB&&!S.reported)opts.push({label:'I found a gold tube marked KB.',go:()=>{reportKB();return reply('The Warden','Well, well. Where did you find this? Never mind. Dig inside my red flags. Nobody sleeps until you find it.',back)}});
   opts.push({label:'Where should I dig?',go:()=>reply('The Warden',S.revealed?(S.up.long?'Inside my flags. Did I stutter?':'Inside my flags. And it\'s deep, sugar. Buy a longer shovel.'):'Anywhere you like. If you find anything interesting, you bring it straight to me.',back)});
   opts.push({label:'Nice nail polish.',go:()=>({name:'The Warden',text:'Thank you. I make it myself. Want to know the secret ingredient?',opts:[{label:'...Sure?',go:()=>reply('The Warden','Rattlesnake venom. Completely harmless. Once it dries.',back)},{label:'No thanks.',go:back},LEAVE]})});
