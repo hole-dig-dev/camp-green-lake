@@ -39,10 +39,13 @@ function updateGear(dt){
   if(me){me.goldShovel=!!S.up.goldShovel;if(me.gravBoots!==!!S.up.grav){me.gravBoots=!!S.up.grav;me.ward=me.ward||MY_WARD;wardApply(me)}}
   /* the grapple: hold F while stuck */
   const k=(KEYS['f'])&&!uiOpen()?grappleStuck():null;
-  if(k){GRAP.t+=dt;digHeld=false;if(GRAP.t>=GRAP_T){GRAP.t=0;grappleDone(k)}}else if(GRAP.t>0)GRAP.t=Math.max(0,GRAP.t-dt*2);
+  if(k){GRAP.t+=dt;digHeld=false;if(performance.now()-(GRAP.shownT||0)>1400){GRAP.shownT=performance.now();showSupply('grapple')}if(GRAP.t>=GRAP_T){GRAP.t=0;grappleDone(k)}}else if(GRAP.t>0)GRAP.t=Math.max(0,GRAP.t-dt*2);
   if(GRAP.t>0||GRAP.fly>0){GRAP.fly=Math.max(0,GRAP.fly-dt);
     if(!GRAP.line){GRAP.line=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3()]),new T.LineBasicMaterial({color:0x8a6a44}));GRAP.line.frustumCulled=false;scene.add(GRAP.line)}
     const fx=Math.sin(P.fa),fz=Math.cos(P.fa),u=GRAP.fly>0?1:clamp(GRAP.t/GRAP_T*1.6,0,1),rx=P.x+fx*3*u,rz=P.z+fz*3*u;
-    GRAP.line.visible=true;GRAP.line.geometry.setFromPoints([new T.Vector3(P.x,P.y+1.3,P.z),new T.Vector3(rx,Math.max(groundAt(rx,rz),P.y)+0.4*u+0.2,rz)])}
-  else if(GRAP.line)GRAP.line.visible=false;
+    const ry=Math.max(groundAt(rx,rz),P.y)+0.4*u+0.2;GRAP.line.visible=true;GRAP.line.geometry.setFromPoints([new T.Vector3(P.x,P.y+1.3,P.z),new T.Vector3(rx,ry,rz)]);
+    if(!GRAP.parts&&!GRAP.loading){GRAP.loading=1;modelParts('GrappleHookHead').then(p=>{GRAP.parts=p}).catch(()=>{})}
+    if(GRAP.parts&&!GRAP.head){GRAP.head=new T.Group();for(const pt of GRAP.parts)GRAP.head.add(new T.Mesh(pt.geometry,pt.material));scene.add(GRAP.head)}
+    if(GRAP.head){GRAP.head.visible=true;GRAP.head.position.set(rx,ry,rz);GRAP.head.rotation.y=Math.atan2(-Math.cos(P.fa),Math.sin(P.fa))}}   /* the hook (Sol's GrappleHookHead: +X along the shaft) */
+  else{if(GRAP.line)GRAP.line.visible=false;if(GRAP.head)GRAP.head.visible=false}
 }

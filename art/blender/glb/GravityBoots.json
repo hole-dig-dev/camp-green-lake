@@ -1,0 +1,9 @@
+{
+  "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+  "slot": "footwear",
+  "bones": [
+    "shin.L",
+    "shin.R"
+  ],
+  "maxHeight": 0.365
+}

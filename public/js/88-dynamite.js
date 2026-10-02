@@ -19,7 +19,7 @@ function throwDynamite(){
   if(!(S.dynamite>0)){toast('No dynamite. The Supply Depot sells it.','',2500);return}
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa),x=P.x+fx*4,z=P.z+fz*4;
   if(inCamp(x,z)||nearCampNoDig(x,z)||inCamp(P.x,P.z)){toast('Not in camp! Out on the lake bed, past the white line.','bad',2600);return}
-  S.dynamite--;sfx.hiss();logEv('dynThrow',{x:+x.toFixed(1),z:+z.toFixed(1)});
+  S.dynamite--;sfx.hiss();showSupply('dynamite');   /* in your hand for a moment (86-walkie.js) */logEv('dynThrow',{x:+x.toFixed(1),z:+z.toFixed(1)});
   if(online())wsSend({t:'dyn',x:+x.toFixed(2),z:+z.toFixed(2)});else{const id=DYN.localId++;dynLit({id,x,z,by:S.name});setTimeout(()=>dynBoom({id,x,z,pile:{id,x,z,sand:DYN_SAND}}),tune('dyn.fuse')*1000)}
   toast('Fire in the hole!','',1800);
 }

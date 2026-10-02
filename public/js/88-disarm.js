@@ -37,6 +37,6 @@ function crewDisarmStep(b,dt){   /* 30-npcs.js updateBots, while b.state==='disa
 function updateDisarm(dt){
   crewDisarmCheck();
   const m=S.started&&(KEYS['f'])&&!uiOpen()?disarmTarget():null;
-  if(m){if(DIS.id!==m.id){DIS.id=m.id;DIS.t=0}DIS.t+=dt;digHeld=false;if(DIS.t>=tune('mine.disarmTime')){DIS.t=0;DIS.id=-1;disarmDone(m)}}
+  if(m){if(DIS.id!==m.id){DIS.id=m.id;DIS.t=0}DIS.t+=dt;digHeld=false;if(performance.now()-(DIS.shownT||0)>1400){DIS.shownT=performance.now();showSupply('disarm')}   /* the kit in your hands */if(DIS.t>=tune('mine.disarmTime')){DIS.t=0;DIS.id=-1;disarmDone(m)}}
   else if(DIS.t>0)DIS.t=Math.max(0,DIS.t-dt*2);
 }
