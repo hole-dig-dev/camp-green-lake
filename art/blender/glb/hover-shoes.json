@@ -1,0 +1,16 @@
+{
+  "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+  "slot": "footwear",
+  "bones": [
+    "shin.L",
+    "shin.R"
+  ],
+  "maxHeight": 0.2385,
+  "emissiveMaterials": [
+    "cgl_hover_sole_cyan",
+    "cgl_hover_thruster_cyan"
+  ],
+  "units": "metres",
+  "bindSpace": "original camper",
+  "gameplayIntent": "Hover 0.0254 m over terrain and holes; disable hover while digging."
+}
