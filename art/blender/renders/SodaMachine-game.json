@@ -1,0 +1,36 @@
+{
+  "placement": {
+    "x": 5.6,
+    "z": 34.2,
+    "ry": 3.141592653589793,
+    "groundY": -0.006384010307802386
+  },
+  "dimensions": [
+    0.8999999761581421,
+    1.899999976158142,
+    0.7586210072040558
+  ],
+  "min": [
+    5.150000011920929,
+    -0.006384010307802386,
+    33.82072435021401
+  ],
+  "max": [
+    6.049999988079071,
+    1.8936159658503398,
+    34.57934535741806
+  ],
+  "renderer": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+  "materialNames": [
+    "cgl_soda_shadow",
+    "cgl_soda_red",
+    "cgl_soda_sun_bleach",
+    "cgl_soda_trim",
+    "cgl_soda_lit_panel",
+    "cgl_soda_teal",
+    "cgl_soda_cream",
+    "cgl_soda_rust"
+  ],
+  "adapterPreservesEmission": false,
+  "longShotDistanceM": 15.000000000000002
+}
