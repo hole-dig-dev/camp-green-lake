@@ -26,6 +26,7 @@ try{
   H.faces.forEach(f=>f.scene.visible=false);H.hats.forEach(f=>f.scene.visible=false);
   const hidden=[];
   H.model.traverse(n=>{if(n.isMesh&&(/^CGLCamper_(Head|Nose|Eye|Brow|Mouth|Teeth)/.test(n.name)||/_(Bucket|Cowboy|DesertCap|Hair|Shades)_/.test(n.name))){n.visible=false;hidden.push(n.name)}});
+  H.model.traverse(n=>{if(n.isMesh&&n.material.name==='CGL_Skin')n.material.color.setHex(0x5fd04a)});
   const seen=new Set();alien.scene.traverse(n=>{if(n.isMesh)for(const m of[].concat(n.material)){if(!seen.has(m)){seen.add(m);m.color.convertLinearToSRGB()}}});
   const head=H.model.getObjectByName('head');head.add(alien.scene);H.model.updateMatrixWorld(true);
   // Measure the retained neck in HEAD space, from the actual GLB vertices.
@@ -87,6 +88,7 @@ try{
   b.p.mixer.stopAllAction();setClip(b.p,'Idle',0);b.p.mixer.update(.2);
   const m=b.p.model,head=m.getObjectByName('head');
   m.traverse(n=>{if(n.isMesh&&(/^CGLCamper_(Head|Nose|Eye|Brow|Mouth|Teeth)/.test(n.name)||/_(Bucket|Cowboy|DesertCap|Hair|Shades)_/.test(n.name)))n.visible=false});
+  m.traverse(n=>{if(n.isMesh&&n.material.name==='CGL_Skin')n.material.color.setHex(0x5fd04a)});
   for(const g of b.p.wardObjs||[])g.visible=false;
   const seen=new Set();gltf.scene.traverse(n=>{if(n.isMesh){n.castShadow=true;for(const mat of[].concat(n.material))if(!seen.has(mat)){seen.add(mat);mat.color.convertLinearToSRGB()}}});
   head.add(gltf.scene);m.updateMatrixWorld(true);
@@ -104,6 +106,7 @@ try{
   return {gpu:GPU_NAME,crewMember:b.d.n,headAttached:gltf.scene.parent===head,emission,reviewGround:at};
  });
  assert.ok(game.headAttached);assert.equal(Object.keys(game.emission).length,4);
+ assert.ok(Object.values(game.emission).every(([r,g,b])=>g>r&&g>b),'all UFO emissions must be green');
  await page.waitForTimeout(600);await page.screenshot({path:out+'/UFO-AlienHead-game.png'});
  await page.evaluate(()=>{const {reviewCam:c,at}=ufoReview;c.position.set(at.x+1.9,2.1,at.z+4);c.lookAt(at.x,1.45,at.z)});
  await page.waitForTimeout(200);await page.screenshot({path:out+'/AlienHead-game.png'});

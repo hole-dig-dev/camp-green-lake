@@ -17,14 +17,14 @@ STEEL = ('ufo_brushed_aluminium', (162, 179, 185), .38, .62)
 LIGHT_STEEL = ('ufo_machined_edges', (212, 224, 224), .29, .48)
 DARK = ('ufo_recesses', (36, 55, 62), .62, .25)
 GLASS = ('ufo_dome_glass', (148, 214, 219), .15, .0)
-CYAN = ('ufo_rim_cyan', (48, 225, 247), .28, .0)
-AMBER = ('ufo_rim_amber', (255, 172, 50), .28, .0)
-PINK = ('ufo_rim_magenta', (247, 95, 195), .28, .0)
-EMITTER = ('ufo_tractor_emitter', (144, 255, 211), .25, .0)
-SKIN = ('alien_grey_green', (149, 174, 151), .7, .0)
-LIDS = ('alien_eye_socket', (98, 126, 106), .68, .0)
+GREEN = ('ufo_rim_emerald_green', (36, 230, 77), .28, .0)
+LIME = ('ufo_rim_lime_green', (153, 255, 54), .28, .0)
+LEAF = ('ufo_rim_leaf_green', (73, 210, 55), .28, .0)
+EMITTER = ('ufo_tractor_emitter', (104, 255, 87), .25, .0)
+SKIN = ('alien_green', (95, 208, 74), .4, .0) # #5fd04a, matching game body skin
+LIDS = ('alien_eye_socket', (42, 137, 38), .48, .0)
 BLACK = ('alien_glossy_black_eyes', (8, 13, 15), .12, .0)
-INK = ('alien_nostrils_mouth', (41, 60, 48), .85, .0)
+INK = ('alien_nostrils_mouth', (16, 63, 20), .85, .0)
 GLINT = ('alien_eye_glints', (203, 232, 223), .16, .0)
 
 def smooth(o):
@@ -70,7 +70,7 @@ def glow():
     nt.links.new(rl.outputs['Image'],g.inputs['Image']);nt.links.new(g.outputs['Image'],c.inputs['Image'])
 
 scene('UFO'); ROOT=root('UFO')
-for spec in (CYAN,AMBER,PINK,EMITTER):
+for spec in (GREEN,LIME,LEAF,EMITTER):
     bs=mat(*spec).node_tree.nodes['Principled BSDF']
     bs.inputs['Emission Color'].default_value=srgb(spec[1])
     bs.inputs['Emission Strength'].default_value=1 # core glTF, compatible with r128
@@ -93,15 +93,15 @@ tor('canopy_chrome',1.045,1.062,.022,LIGHT_STEEL)
 lathe('glass_canopy',[(1.02,1.055),(1.006,1.19),(.94,1.37),(.79,1.56),
                      (.59,1.71),(.33,1.78),(0,1.80)],GLASS)
 cyl('cockpit_deck',.98,.035,(0,0,1.045),DARK,verts=64,bevel=0,parent=ROOT)
-ball('pilot_cranium',(0,.16,1.44),(.20,.16,.25),LIDS)
-ball('pilot_body',(0,.20,1.16),(.17,.12,.16),DARK)
+ball('pilot_cranium',(0,.16,1.44),(.20,.16,.25),SKIN)
+ball('pilot_body',(0,.20,1.16),(.17,.12,.16),SKIN)
 for s in (-1,1):
     eye=ball('pilot_eye',(s*.085,.007,1.44),(.075,.028,.09),BLACK,24,12)
     eye.rotation_euler.y=s*-.3
 box('pilot_console',(.58,.24,.15),(0,-.25,1.15),DARK,bevel=.025,parent=ROOT)
-for x in (-.16,0,.16):ball('console_lamp',(x,-.25,1.23),(.025,.025,.01),CYAN,12,8)
+for x in (-.16,0,.16):ball('console_lamp',(x,-.25,1.23),(.025,.025,.01),GREEN,12,8)
 for i in range(24):
-    a=math.tau*i/24; spec=(CYAN,AMBER,PINK)[i%3]
+    a=math.tau*i/24; spec=(GREEN,LIME,LEAF)[i%3]
     # Lights stand proud of the dark belt, facing outwards.
     socket=ball('rim_lamp_socket', (2.985*math.cos(a),2.985*math.sin(a),.60),(.035,.105,.079),DARK,16,8)
     socket.rotation_euler.z=a
@@ -111,13 +111,13 @@ for i in range(24):
 cyl('emitter_armour',.73,.11,(0,0,.085),DARK,verts=64,bevel=.016,parent=ROOT)
 tor('emitter_chrome',.68,.028,.028,LIGHT_STEEL)
 lathe('tractor_emitter',[(0,0),(.62,0),(.62,.014),(0,.014)],EMITTER,seg=64)
-for r in (.23,.43):tor('emitter_induction_ring',r,.009,.009,CYAN,64)
+for r in (.23,.43):tor('emitter_induction_ring',r,.009,.009,GREEN,64)
 for i in range(12):
     a=math.tau*i/12
     box('underside_radial_vent',(.34,.06,.025),(1.27*math.cos(a),1.27*math.sin(a),.202),DARK,
         rot=(0,0,a),bevel=.008,parent=ROOT)
 ufo=export('UFO',{'origin':'centre of underside emitter; game (0,0,0)',
-                  'emissive_materials':['cgl_'+s[0] for s in (CYAN,AMBER,PINK,EMITTER)]})
+                  'emissive_materials':['cgl_'+s[0] for s in (GREEN,LIME,LEAF,EMITTER)]})
 cam=studio(target=(0,0,.8),elev=20,azim=32,floor=False)
 glow();bpy.context.view_layer.update();frame(1.20)
 render('UFO',res=(1400,1000),samples=48)

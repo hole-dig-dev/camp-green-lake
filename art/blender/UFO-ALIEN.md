@@ -3,16 +3,23 @@
 Completed 2026-10-02 on `feature/sol-ufo`, in this checkout.
 
 `UFO.glb` is a 1950s saucer with a brushed aluminium disc, machined concentric seams,
-transparent cyan glass dome, little pilot and console, 24 alternating cyan/amber/magenta
+transparent cyan glass dome, green pilot, console, and 24 alternating emerald/lime/leaf-green
 rim lights and a green underside tractor emitter. Its diameter including lamps is
 6.118 m; its height is 1.800 m. The disc lies in game XZ, and its identity origin is the
 centre of the underside emitter at game Y=0. There is no geometry below that plane.
 The export contains 35,660 triangles and ten material primitives.
 
-`AlienHead.glb` has a bulbous grey-green cranium, raised sockets around glossy black
+`AlienHead.glb` has a bulbous saturated green cranium, raised sockets around glossy black
 almond eyes, tiny nostrils, a slit mouth and a thin upper neck. It contains 6,172
 triangles and five material primitives. Both GLBs are self-contained, texture-free
 rigid meshes; the authoring and public copies are byte-identical.
+
+JT's green revision matches the head and pilot skin to the game's `#5fd04a` body
+tint, with cranium roughness 0.4 for a shinier surface. Eye sockets are darker green;
+the glossy black almond eyes are unchanged. The UFO's four emissive materials are
+all green. Both assets were rebuilt in Blender, re-exported, re-rendered and
+re-checked in game. Exported triangle coordinates are identical to the prior
+version, preserving geometry, fit and origins.
 
 | Asset | Export and game copy (bytes each) | Game-space dimensions |
 | --- | ---: | --- |
@@ -42,9 +49,9 @@ game feature; this delivery follows the brief's asset scope and restriction on r
 
 The UFO's emissive material names are:
 
-- `cgl_ufo_rim_cyan`
-- `cgl_ufo_rim_amber`
-- `cgl_ufo_rim_magenta`
+- `cgl_ufo_rim_emerald_green`
+- `cgl_ufo_rim_lime_green`
+- `cgl_ufo_rim_leaf_green`
 - `cgl_ufo_tractor_emitter`
 
 These use core glTF `emissiveFactor` at strength one, compatible with the game's
@@ -92,23 +99,23 @@ Delivered file sizes (the report itself is excluded from the table):
 
 | File | Bytes |
 | --- | ---: |
-| `art/blender/ufo_alien.py` | 9,795 |
-| `art/blender/ufo-alien.blend` | 336,368 |
-| `scripts/preview-ufo-alien.mjs` | 9,366 |
+| `art/blender/ufo_alien.py` | 9,838 |
+| `art/blender/ufo-alien.blend` | 338,431 |
+| `scripts/preview-ufo-alien.mjs` | 9,667 |
 | `art/blender/glb/UFO.glb` | 943,368 |
 | `art/blender/glb/AlienHead.glb` | 147,188 |
 | `public/models/UFO.glb` | 943,368 |
 | `public/models/AlienHead.glb` | 147,188 |
 | `art/blender/renders/AlienHead-asset.json` | 528 |
-| `art/blender/renders/AlienHead-fit-body.png` | 33,224 |
-| `art/blender/renders/AlienHead-fit-front.png` | 59,265 |
-| `art/blender/renders/AlienHead-fit-side.png` | 51,725 |
-| `art/blender/renders/AlienHead-game.png` | 405,418 |
-| `art/blender/renders/AlienHead-side.png` | 990,074 |
-| `art/blender/renders/AlienHead.png` | 994,419 |
-| `art/blender/renders/UFO-AlienHead-game.png` | 514,667 |
-| `art/blender/renders/UFO-AlienHead-validation.json` | 3,077 |
-| `art/blender/renders/UFO-asset.json` | 444 |
-| `art/blender/renders/UFO-game-60m.png` | 444,383 |
-| `art/blender/renders/UFO-underside.png` | 1,415,790 |
-| `art/blender/renders/UFO.png` | 1,452,770 |
+| `art/blender/renders/AlienHead-fit-body.png` | 33,213 |
+| `art/blender/renders/AlienHead-fit-front.png` | 60,668 |
+| `art/blender/renders/AlienHead-fit-side.png` | 51,518 |
+| `art/blender/renders/AlienHead-game.png` | 404,721 |
+| `art/blender/renders/AlienHead-side.png` | 1,009,973 |
+| `art/blender/renders/AlienHead.png` | 1,010,598 |
+| `art/blender/renders/UFO-AlienHead-game.png` | 515,030 |
+| `art/blender/renders/UFO-AlienHead-validation.json` | 3,097 |
+| `art/blender/renders/UFO-asset.json` | 461 |
+| `art/blender/renders/UFO-game-60m.png` | 494,385 |
+| `art/blender/renders/UFO-underside.png` | 1,415,721 |
+| `art/blender/renders/UFO.png` | 1,452,368 |
