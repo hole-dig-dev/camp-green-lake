@@ -1037,6 +1037,13 @@ wss.on('connection', (ws, req) => {
         if (!CREW_NAMES.includes(m.n)) return; const all = world.crewWard || (world.crewWard = {});
         all[m.n] = wardS(m.w); dirty = true; broadcast({ t: 'crewWard', all }); break;
       }
+      case 'sodaStock': { // sodas into the camp's machine (public/js/84-camp.js): bought just before (walletSpend, rid) or the camper's own
+        if (m.rid && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return; const camp = world.camp || (world.camp = {}); if (!camp.sodaMachine) return;
+        camp.sodaStock = Math.min(500, (camp.sodaStock | 0) + (num(m.n, 1, 50, 0) | 0)); dirty = true; broadcast({ t: 'camp', camp }); break;
+      }
+      case 'sodaTake': { // a crew member's soda break (public/js/88-morale.js), sent by the client that runs the crew
+        const camp = world.camp || {}; if (!(camp.sodaStock > 0)) return; camp.sodaStock--; dirty = true; broadcast({ t: 'camp', camp }); break;
+      }
       case 'giveSoda': { // a camper handed a crew member a soda (public/js/88-morale.js): every screen's copy of him drinks it
         if (!CREW_NAMES.includes(m.n) || !withinRate(c.sellTimes, SELL_RATE, SELL_WINDOW_MS)) return; broadcast({ t: 'crewSoda', n: m.n, by: c.n }); break;
       }

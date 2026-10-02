@@ -192,6 +192,7 @@ function nearSpot(){
   }
   {const g=grappleSpot();if(g)return g}   /* stuck, with a grapple hook (88-gear.js) */
   {const d=disarmSpot();if(d)return d}   /* beside a landmine with the kit (88-disarm.js) */
+  {const so=sodaSpot();if(so)return so}   /* stock the soda machine (84-camp.js) */
   {const p=pipeSpot();if(p)return p}   /* the sand pipeline: lay it, dump into it, fix it (88-pipeline.js) */
   for(const s of SPOTS){
     const roomSpot=s.id==='exit'||s.id==='bunk'||s.id==='cards'||s.id==='office';

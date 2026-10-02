@@ -14,8 +14,15 @@ check('handed over: he cheers up, on everyone\'s screen; one soda left',await A.
 await A.evaluate(()=>buyShopItem('sodaMachine'));await A.waitForTimeout(800);
 check('the soda machine: a camp upgrade everyone has',await A.evaluate(()=>campHas('sodaMachine'))&&await B.evaluate(()=>campHas('sodaMachine')));
 await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');bt.morale=20;bt.state='dig';bt.errand=null});await A.waitForTimeout(800);
+check('an empty machine: no soda break, he says so',await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.errand!=='water'&&__ev.some(e=>e[0]==='toast')||bt.toldEmpty}));
+await A.evaluate(()=>{P.x=SODA_AT.x;P.z=SODA_AT.z-1.5;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(400);
+check('at the machine: F stocks it (your own soda first)',await A.evaluate(()=>{const s=nearSpot();return s&&s.id==='soda'&&/your 1 soda/.test(s.label)}),await A.evaluate(()=>nearSpot()&&nearSpot().label));
+await A.keyboard.press('f');await A.waitForTimeout(600);const w0=await A.evaluate(()=>RUN.bank);
+await A.keyboard.press('f');await A.waitForTimeout(900);
+check('then 5 at a time from the crew wallet (75 gold): 6 in it, for everyone',await A.evaluate(()=>sodaStock()===6&&S.soda===0)&&await B.evaluate(()=>sodaStock()===6)&&await A.evaluate(w0=>w0-RUN.bank===75,w0),JSON.stringify({stock:await A.evaluate(()=>sodaStock()),spent:w0-await A.evaluate(()=>RUN.bank)}));
+await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');bt.morale=20;bt.state='dig';bt.errand=null});await A.waitForTimeout(800);
 check('fed up, he takes himself off for a soda break',await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.errand==='water'&&bt.soda&&/soda/.test(crewActivity(bt))}),await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.state+' '+bt.errand+' '+crewActivity(bt)}));
 await A.waitForFunction(()=>moraleOf(bots.find(b=>b.d.n==='Zach'))>=99,null,{timeout:90000}).catch(()=>{});
-check('...and comes back at full morale',await A.evaluate(()=>moraleOf(bots.find(b=>b.d.n==='Zach'))>=99),await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.state+' '+Math.round(moraleOf(bt))}));
+await A.waitForTimeout(800);check('...and comes back at full morale; one soda gone from the machine',await A.evaluate(()=>moraleOf(bots.find(b=>b.d.n==='Zach'))>=99&&sodaStock()===5)&&await B.evaluate(()=>sodaStock()===5),await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.state+' '+Math.round(moraleOf(bt))}));
 await A.evaluate(()=>tuneSet('haz.all',1));
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)?0:1)})();

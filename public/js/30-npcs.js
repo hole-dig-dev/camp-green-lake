@@ -377,7 +377,7 @@ function updateBots(dt,now){
       const W=SIM.GOLD.WATER,k=bots.indexOf(b),wx=W.x+1.2+Math.cos(k*1.05)*0.9,wz=W.z-1.6+Math.sin(k*1.05)*0.6;
       if(b.t==null){if(!walkTo(b,wx,wz,dt,2.4))continue;b.t=2.2;if(nearCam(wx,wz,25))sfx.splash()}
       animPerson(b.p,5,dt);   // the Drink clip
-      if((b.t-=dt)<=0){b.water=crewWaterMax(b);b.t=null;b.errand=null;if(campHas('sodaMachine')){b.morale=100;if(b.soda&&nearCam(wx,wz,30))say(b.L,pick(['Ahh. Back to it.','That hit the spot.']),2200)}b.soda=false;   /* the soda machine by the drums (88-morale.js) */
+      if((b.t-=dt)<=0){b.water=crewWaterMax(b);b.t=null;b.errand=null;if(campHas('sodaMachine')&&b.soda&&sodaStock()>0){sodaTake();b.morale=100;if(nearCam(wx,wz,30))say(b.L,pick(['Ahh. Back to it.','That hit the spot.']),2200)}b.soda=false;   /* the soda machine by the drums (88-morale.js) */
         /* his pan, washed at the drums: the gold goes in the crew bank (a water-only trip leaves his sand be) */
         if(b.wash){if(b.bucket>0.05){const r=SIM.siftGold(b.bucket,botRng,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);crewDeposit(b,r.gold);say(b.L,pick(['A bit of color. Crew bank.','Washed out. Into the bank.']),2600)}b.bucket=0}
         b.wash=false;b.state='gatebackin';b.tx=CREW_GATE.x;b.tz=CREW_GATE.in}

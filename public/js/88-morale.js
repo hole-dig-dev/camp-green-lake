@@ -7,7 +7,8 @@
    drinks it ('crewSoda'). You can also buy sodas for yourself (S.soda, the Me side) and hand one over: talk to him (F).
    The soda vending machine (a camp upgrade, 84-camp.js 'sodaMachine', by the water drums): a fed-up crew member
    (below MORALE_BREAK) takes himself off for a soda break, walking in to the drums like a water trip, and comes back
-   at full morale. The crew panel shows it as a fourth bar. */
+   at full morale, if it's stocked (84-camp.js: F at the machine loads it; each break takes one). The crew panel shows
+   it as a fourth bar. */
 const MORALE_BREAK=45,MORALE_START=80,MORALE_REGEN=2,MORALE_LOW=50,MORALE_MIN_RATE=0.55,MORALE_SODA=45;
 const moraleOf=b=>b.morale==null?(b.morale=MORALE_START):b.morale;
 const crewMoraleMul=b=>{const m=moraleOf(b);return m>=MORALE_LOW?1:MORALE_MIN_RATE+(1-MORALE_MIN_RATE)*m/MORALE_LOW};
@@ -20,6 +21,7 @@ function moraleNewDay(){for(const b of bots)b.morale=Math.max(moraleOf(b),90)}
 function updateMorale(dt){
   for(const b of bots){if(!crewHired(b))continue;b.morale=Math.min(100,moraleOf(b)+MORALE_REGEN*dt/60);
     /* the vending machine: off for a soda break (the water trip's path, 30-npcs.js; he drinks at the drums) */
-    if(campHas('sodaMachine')&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible){b.errand='water';b.soda=true;b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick(['Soda break.','I need a soda. Back in a bit.','Machine. Now.']),2400)}
+    if(campHas('sodaMachine')&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible&&sodaStock()<1&&!b.toldEmpty){b.toldEmpty=true;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,'The soda machine\'s empty!',2600)}
+    if(campHas('sodaMachine')&&sodaStock()>0&&b.morale<MORALE_BREAK&&!b.errand&&(b.state==='dig'||b.state==='rest')&&b.p.g.visible){b.toldEmpty=false;b.errand='water';b.soda=true;b.state='gateout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick(['Soda break.','I need a soda. Back in a bit.','Machine. Now.']),2400)}
     if(b.morale<MORALE_LOW-15&&b.p.g.visible&&OUTDOOR.has(b.state)&&Math.random()<dt/45&&nearCam(b.p.g.position.x,b.p.g.position.z,35))say(b.L,pick(MORALE_GRUMBLE),2600)}
 }
