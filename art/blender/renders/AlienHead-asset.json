@@ -1,0 +1,24 @@
+{
+  "file": "AlienHead.glb",
+  "bytes": 147188,
+  "triangles": 6172,
+  "blender_bounds": [
+    [
+      -0.39800000190734863,
+      -0.3516341745853424,
+      -0.10499999672174454
+    ],
+    [
+      0.39800000190734863,
+      0.3462600111961365,
+      0.9800000190734863
+    ]
+  ],
+  "attachment": "head bone, identity local transform, scale 1",
+  "forward": "Blender -Y / game +Z",
+  "neck_sleeve_local_y_m": [
+    -0.105,
+    0.2
+  ],
+  "hide": "Head, Nose, Eye, Brow, Mouth, Teeth, Hair, hats, glasses; retain body and rig"
+}

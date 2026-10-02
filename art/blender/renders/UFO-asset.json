@@ -1,0 +1,24 @@
+{
+  "file": "UFO.glb",
+  "bytes": 943368,
+  "triangles": 35660,
+  "blender_bounds": [
+    [
+      -3.05899977684021,
+      -3.05899977684021,
+      0.0
+    ],
+    [
+      3.05899977684021,
+      3.05899977684021,
+      1.7999999523162842
+    ]
+  ],
+  "origin": "centre of underside emitter; game (0,0,0)",
+  "emissive_materials": [
+    "cgl_ufo_rim_emerald_green",
+    "cgl_ufo_rim_lime_green",
+    "cgl_ufo_rim_leaf_green",
+    "cgl_ufo_tractor_emitter"
+  ]
+}
