@@ -116,3 +116,6 @@ function mergeBoxes(parts){
   sunDisc.position.copy(SUN_DIR).multiplyScalar(800);scene.add(sunDisc);
 }
 
+
+/* spectator mode is on (96-spectate.js loads last, after the game loop has started: so ask through here) */
+function SPECON(){return typeof SPEC!=='undefined'&&SPEC.on&&SPEC.joined}

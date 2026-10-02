@@ -35,7 +35,7 @@ canvas.addEventListener('mousedown',e=>{
 addEventListener('mouseup',e=>{if(e.button===0)digHeld=false;dragLook=null});
 let dragLook=null;
 addEventListener('mousemove',e=>{
-  if(SPEC.on&&SPEC.joined&&!S.started){if(lockOk())specMouse(e.movementX,e.movementY);return}   /* 96-spectate.js */
+  if(SPECON()&&!S.started){if(lockOk())specMouse(e.movementX,e.movementY);return}   /* 96-spectate.js */
   if(!S.started)return;
   const iv=SETTINGS.invertY?-1:1;   // pause menu: sensitivity + invert-Y settings
   if(lockOk()){if(!lookDelta(e.movementX,e.movementY))return;P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
@@ -56,8 +56,8 @@ addEventListener('keydown',e=>{
   if(tuneKey(e))return;   // F2 control center (77-tune-panel.js); swallows keys while it's open
   if((e.key==='`'||e.key==='~')&&S.started&&!chatOpen()){e.preventDefault();openConsole();return}
   if(e.target===chatIn){if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape')closeChat();return}
-  if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter'){if(SPEC.on)specStart();else startGame()}return}
-  if(SPEC.on&&SPEC.joined&&!S.started){if(e.key==='Escape')return;KEYS[pk]=true;if(!e.repeat&&specKey(pk,e))e.preventDefault();return}   /* spectator (96-spectate.js) */
+  if(e.target&&e.target.tagName==='INPUT'){if(e.key==='Enter'){if(typeof SPEC!=='undefined'&&SPEC.on)specStart();else startGame()}return}
+  if(SPECON()&&!S.started){if(e.key==='Escape')return;KEYS[pk]=true;if(!e.repeat&&specKey(pk,e))e.preventDefault();return}   /* spectator (96-spectate.js) */
   if(!$('#fired').hidden)return;
   if(pk===SETTINGS.binds.chat&&S.started&&!uiOpen()){e.preventDefault();openChat();return}
   if(shopOpen){shopKeydown(e);return}
@@ -127,5 +127,5 @@ if(isTouch){
 }
 
 
-addEventListener('wheel',e=>{if(SPEC.on&&SPEC.joined&&!S.started)specWheel(e.deltaY)},{passive:true});   /* spectator: speed / orbit distance (96-spectate.js) */
-addEventListener('mousedown',e=>{if(SPEC.on&&SPEC.joined&&!S.started&&!lockOk())lockMouse()});
+addEventListener('wheel',e=>{if(SPECON()&&!S.started)specWheel(e.deltaY)},{passive:true});   /* spectator: speed / orbit distance (96-spectate.js) */
+addEventListener('mousedown',e=>{if(SPECON()&&!S.started&&!lockOk())lockMouse()});
