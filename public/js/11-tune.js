@@ -43,8 +43,6 @@ const TUNE_DEFS=[
   {key:'haz.now.vultures',tab:'Hazards',label:'Vultures: spawn one now, near you',kind:'action',run:()=>hazNow('vultures now')},
   {key:'haz.on.lizards',tab:'Hazards',label:'Yellow-spotted lizards: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.on.night',tab:'Hazards',label:'Night patrols and Madame Zeroni: on anyway (while ALL is off)',def:0,kind:'flag'},
-  // ---- gear: ideas to try (86-backsack.js)
-  {key:'gear.backsack',tab:'Gear',label:'Clear backsack instead of a bucket (worn on your back, the sand rises as you dig)',def:0,kind:'flag'},
   // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
   {key:'veh.respawn',tab:'Vehicles',label:'Put Mr. Sir\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
