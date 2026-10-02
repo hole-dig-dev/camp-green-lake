@@ -31,7 +31,7 @@ function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function newDay(m){m=m||{};moraleNewDay();   /* the crew slept it off (88-morale.js) */
+function newDay(m){m=m||{};moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
   {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
 /* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. (The crew wallet, S.seeds,
    is the server's: it starts the new run at 0, so it isn't wiped here.) */

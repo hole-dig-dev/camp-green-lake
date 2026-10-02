@@ -371,6 +371,16 @@ function pipeW() {
 }
 /* may this hazard or mob happen? The F2 Hazards tab (public/js/88-hazards.js): ALL off for testing, single ones back on */
 function hazOnS(k) { return tuneS('haz.all', 1) >= 0.5 || tuneS('haz.on.' + k, 0) >= 0.5; }
+/* Employee of the Day (public/js/88-eotd.js): today's tallies → the four winners. Everyone on today and the hired crew
+   are in the running; the Least Valuable Person found the least. */
+let eotdDirty = false, eotdSentAt = 0;
+function eotdStandings() {
+  const f = world.run.found || {}, t = world.run.thrown || {}, s = world.run.spent || {};
+  const crew = CREW_NAMES.filter(n => world.crew[n] && world.crew[n].hired), names = [...new Set([...joined().map(c => c.n), ...crew, ...Object.keys(f), ...Object.keys(t), ...Object.keys(s)])];
+  const best = (o, low) => { let w = null; for (const n of names) { const v = o[n] || 0; if (!low && !(v > 0)) continue; if (!w || (low ? v < w.v : v > w.v)) w = { n, v }; } return w; };
+  return { found: best(f), thrown: best(t), lvp: names.length > 1 ? best(f, true) : null, spent: best(s) };
+}
+function eotdReset() { world.run.found = {}; world.run.thrown = {}; world.run.spent = {}; eotdDirty = true; }
 /* rich veins (public/js/88-vein.js): every ~vein.every minutes a patch of the lake turns rich for vein.time minutes */
 let VEIN = null, veinNextT = Date.now() + 3 * 60000;
 function veinMsg() { return VEIN && Date.now() < VEIN.until ? { t: 'vein', on: true, x: VEIN.x, z: VEIN.z, r: VEIN.r, left: VEIN.until - Date.now() } : { t: 'vein', on: false }; }
@@ -587,6 +597,7 @@ wss.on('connection', (ws, req) => {
       scares: world.scares || [], // scarecrows (public/js/88-gear.js)
       crewWard: world.crewWard || {}, // what the crew are wearing (public/js/81-wardrobe.js)
       vein: veinMsg(), // a rich vein, if one's on (public/js/88-vein.js)
+      eotd: eotdStandings(), // Employee of the Day (public/js/88-eotd.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -703,16 +714,20 @@ wss.on('connection', (ws, req) => {
         const bot = CREW_NAMES.includes(m.bot) ? m.bot : null;
         const v = num(m.v, 0, bot ? MAX_CREW_DEPOSIT : MAX_DEPOSIT, 0) | 0; if (!v) return;
         world.run.bank += v; dirty = true;
-        if (bot) { const f = world.run.found || (world.run.found = {}); f[bot] = (f[bot] || 0) + v; } // the crew count in "Found today" too
+        if (bot) { const f = world.run.found || (world.run.found = {}); f[bot] = (f[bot] || 0) + v; eotdDirty = true; } // the crew count in "Found today" too
         LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank, bot });
         broadcast({ t: 'deposit', id: c.id, n: c.n, v, bot, pipe: m.pipe === true || undefined }); // pipe: it came down the sand pipeline (public/js/88-pipeline.js)
         broadcast(runInfo());
         break;
       }
+      case 'thrown': { // sent flying (public/js/88-eotd.js): you, or a crew member (crew: his name; the client that runs the crew sends it)
+        if (!withinRate(c.thrownTimes || (c.thrownTimes = []), 6, 5000)) return; const n = typeof m.crew === 'string' ? (CREW_NAMES.includes(m.crew) ? m.crew : null) : c.n; if (!n) return;
+        const t = world.run.thrown || (world.run.thrown = {}); t[n] = (t[n] || 0) + 1; dirty = true; eotdDirty = true; break;
+      }
       case 'found': { // gold a camper brought in (public/js/84-spend.js foundGold): read out at curfew, "Found today"
         if (!withinRate(c.foundTimes || (c.foundTimes = []), WALLET_RATE, WALLET_WINDOW_MS)) return;
         const v = num(m.v, 0, 5000, 0) | 0; if (!v) return; const f = world.run.found || (world.run.found = {});
-        f[c.n] = (f[c.n] || 0) + v; dirty = true; break;
+        f[c.n] = (f[c.n] || 0) + v; dirty = true; eotdDirty = true; break;
       }
       case 'wallet': {
         // One crew wallet (Greg, 2026-10-01; public/js/84-wallet.js): nobody has their own gold. Any change a camper's game
@@ -722,6 +737,7 @@ wss.on('connection', (ws, req) => {
         const d = Math.round(num(m.d, -MAX_WALLET_D, MAX_WALLET_D, 0)); if (!d) return;
         // a purchase (public/js/84-spend.js walletSpend): only if the wallet still covers it right now. Two campers buying
         // at once from a wallet that covers one: the second is turned down, and anything sent with that rid (crewBuy) too.
+        if (m.spend && d < 0 && world.run.bank >= -d) { const sp = world.run.spent || (world.run.spent = {}); sp[c.n] = (sp[c.n] || 0) - d; eotdDirty = true; } // Big Spender (public/js/88-eotd.js)
         if (m.spend && d < 0 && world.run.bank < -d) { const rid = num(m.rid, 0, 1e9, 0) | 0; (c.walletNo || (c.walletNo = new Set())).add(rid); send(c, { t: 'walletNo', rid }); send(c, runInfo()); break; }
         world.run.bank = Math.max(0, world.run.bank + d); dirty = true;
         broadcast(runInfo());
@@ -1420,8 +1436,8 @@ function endOfDay() {
     world.run.bank -= quota; world.run.day++; world.run.peak = joined().length; dirty = true;
     if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
     world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
-    broadcast({ ...runInfo(), t: 'newday', paid: quota, found: world.run.found || {} }); world.run.found = {};
-  } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true, found: world.run.found || {} }); world.run.found = {}; }
+    broadcast({ ...runInfo(), t: 'newday', paid: quota, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset();
+  } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); }
   else {
     const got = world.run.bank;
     const foundWas = world.run.found || {};
@@ -1437,6 +1453,7 @@ function endOfDay() {
 setInterval(() => {
   const now = Date.now(), dt = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
   mineTick(now); veinTick(now);
+  if (eotdDirty && now - eotdSentAt > 3000) { eotdDirty = false; eotdSentAt = now; broadcast({ t: 'eotd', st: eotdStandings() }); }
   const t = SIM.clockT(world.clock, now);
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)
