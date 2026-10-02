@@ -89,6 +89,7 @@ function crewActivity(b){
   if(s==='gateout'||s==='gatein')return b.errand==='sift'?'Taking his bucket in':b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
+  if(isAbducted(b))return'Abducted by a UFO?!';
   if(s==='sifting')return'Sifting his bucket';
   if(s==='disarming')return'Disarming a landmine';
   if(s==='dig'&&moraleOf(b)<MORALE_LOW)return'Digging (fed up: slower)';
@@ -288,6 +289,8 @@ function updateBots(dt,now){
     b.talkT-=dt;if(b.talkT<=0){b.talkT=18+botRng()*28;if(!asleep)say(b.L,b.d.lines[Math.floor(botRng()*b.d.lines.length)])}
     /* the siren: drop everything and head for camp (running once it's gone), or turn back for the tent */
     if(!crewHired(b)){if(b.state!=='away'){leaveSiftQ(b);b.state='away';g.position.set(g.position.x,-200,g.position.z);if(b.gb)b.gb.visible=false}g.visible=false;b.L.el.style.display='none';continue}   // not on the crew (yet)
+    if(b.ufo)continue;   /* a UFO has him (88-ufo.js drives him) */
+    if(isAbducted(b)){if(b.state!=='away'){leaveSiftQ(b);b.state='away';g.position.set(g.position.x,-200,g.position.z)}g.visible=false;b.L.el.style.display='none';continue}   /* up in the saucer */
     if(b.state==='away'){   // just hired: he walks in through the gate with bare hands and a pan
       g.position.set(CREW_NURSE.x,groundAt(CREW_NURSE.x,CREW_NURSE.z),CREW_NURSE.z);g.visible=true;b.L.el.style.display='';b.bucket=0;b.hp=100;b.stam=100;b.water=crewWaterMax(b);b.errand=null;
       b.hole.d=crewDepth(b);b.state='gatebackout';b.tx=CREW_GATE.x;b.tz=CREW_GATE.out;say(b.L,pick(['Reporting for work.','Where do I dig?','I\'m on the crew? Okay.']),3000)}

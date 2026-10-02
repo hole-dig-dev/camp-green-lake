@@ -381,6 +381,11 @@ function eotdStandings() {
   return { found: best(f), thrown: best(t), lvp: names.length > 1 ? best(f, true) : null, spent: best(s) };
 }
 function eotdReset() { world.run.found = {}; world.run.thrown = {}; world.run.spent = {}; eotdDirty = true; }
+/* the UFO comes back (public/js/88-ufo.js): next new day, or 'ufo back' */
+function ufoReturnAll(day) {
+  for (const n of CREW_NAMES) { const k = world.crew[n]; if (!k || !k.abducted || (day != null && k.abductedDay >= day)) continue;
+    k.abducted = false; k.alien = true; dirty = true; LOG.log('ufoBack', { n }); broadcast({ t: 'crew', up: world.crew }); broadcast({ t: 'ufo', n, phase: 'drop' }); }
+}
 /* rich veins (public/js/88-vein.js): every ~vein.every minutes a patch of the lake turns rich for vein.time minutes */
 let VEIN = null, veinNextT = Date.now() + 3 * 60000;
 function veinMsg() { return VEIN && Date.now() < VEIN.until ? { t: 'vein', on: true, x: VEIN.x, z: VEIN.z, r: VEIN.r, left: VEIN.until - Date.now() } : { t: 'vein', on: false }; }
@@ -1150,6 +1155,13 @@ wss.on('connection', (ws, req) => {
         broadcastSleep();
         maybeSkipNight();
         break;
+      case 'ufo': { // the UFO easter egg (public/js/88-ufo.js), console only: take a crew member, or bring the abductees back
+        if (!c.host) return;
+        if (m.back) { ufoReturnAll(); break; }
+        const n = CREW_NAMES.includes(m.n) && world.crew[m.n] && world.crew[m.n].hired && !world.crew[m.n].abducted ? m.n : null; if (!n) return;
+        world.crew[n].abducted = true; world.crew[n].alien = false; world.crew[n].abductedDay = world.run.day; dirty = true; LOG.log('ufo', { n, by: c.n });
+        broadcast({ t: 'ufo', n, phase: 'take' }); setTimeout(() => broadcast({ t: 'crew', up: world.crew }), 11000); break;
+      }
       case 'veinNow': { // the console's 'vein' (host only): a rich vein 25 m ahead of you, right now (public/js/88-vein.js)
         if (!c.host) return; const x = Math.round(num(m.x, -560, 560, c.x)), z = Math.round(num(m.z, -560, 560, c.z)); if (SIM.inCamp(x, z)) return;
         VEIN = { x, z, r: 12, until: Date.now() + tuneS('vein.time', 10) * 60000 }; LOG.log('vein', { x, z, by: c.n }); broadcast(veinMsg()); break;
@@ -1443,8 +1455,8 @@ function endOfDay() {
     world.run.bank -= quota; world.run.day++; world.run.peak = joined().length; dirty = true;
     if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
     world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
-    broadcast({ ...runInfo(), t: 'newday', paid: quota, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset();
-  } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); }
+    broadcast({ ...runInfo(), t: 'newday', paid: quota, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); setTimeout(() => ufoReturnAll(world.run.day), 8000);
+  } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); setTimeout(() => ufoReturnAll(world.run.day), 8000); }
   else {
     const got = world.run.bank;
     const foundWas = world.run.found || {};
