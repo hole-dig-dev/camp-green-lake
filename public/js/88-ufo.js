@@ -5,10 +5,9 @@
      ufo back     bring the abductee(s) back now (otherwise it happens at the next new day)
    The server keeps it (world.crew[n].abducted = the day he was taken, .alien once he's back) and tells everyone
    ('ufo' take/drop); each screen plays the saucer over its own copy of him (30-npcs.js leaves a crew member alone
-   while b.ufo is set). The alien: the camper's own body with Sol's AlienHead.glb on the head bone in place of his head,
-   face, hair, hats and glasses, and green skin. Models: UFO.glb, AlienHead.glb (art/blender, Sol). */
+   while b.ufo is set). The alien: the camper's own body and head, green, with Sol's AlienFace.glb in place of his face, hair, hats and glasses. Models: UFO.glb, AlienFace.glb (art/blender, Sol). */
 const UFO={obj:null,beam:null,anims:[],parts:null,head:null,loading:false};
-function ufoLoad(){if(UFO.loading)return;UFO.loading=true;modelParts('UFO').then(p=>{UFO.parts=p}).catch(()=>{});modelParts('AlienHead').then(p=>{UFO.head=p}).catch(()=>{})}
+function ufoLoad(){if(UFO.loading)return;UFO.loading=true;modelParts('UFO').then(p=>{UFO.parts=p}).catch(()=>{});modelParts('AlienFace').then(p=>{UFO.head=p}).catch(()=>{})}
 function ufoMesh(){
   const g=new T.Group();if(UFO.parts){g.userData.model=true;for(const pt of UFO.parts){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;g.add(m)}}
   const beam=new T.Mesh(new T.CylinderGeometry(0.6,3.2,1,24,1,true),new T.MeshBasicMaterial({color:0x8dff6a,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide})   /* a green tractor beam */);
@@ -51,14 +50,15 @@ function ufoStep(a,dt){
   if(a.t>=T4){scene.remove(u);UFO_U.uUFOGain.value=0;if(a.kind==='take')b.ufo=false;return false}
   return true;
 }
-/* the alien look: his own body, the alien head on the head bone, green skin (kept up every frame: the
-   Wardrobe or a hat change mustn't bring his old head back) */
+/* the alien look: his own body, head and neck (JT: "keep the head almost the same shape"), green skin, and Sol's
+   AlienFace.glb (Wardrobe-face format) on the head bone in place of his eyes, brows, mouth, nose, hair, hat and glasses
+   (kept up every frame: the Wardrobe or a hat change mustn't bring his old face back) */
 const ALIEN_SKIN=0x5fd04a;   /* alien green (JT: "make the colors green") */
 function alienLook(b){
   const p=b.p,m=p.model;if(!m)return;const head=m.getObjectByName('head');if(!head)return;
   if(!p.alienHead&&UFO.head){const g=new T.Group();for(const pt of UFO.head){const mm=new T.Mesh(pt.geometry,pt.material);mm.castShadow=true;g.add(mm)}head.add(g);p.alienHead=g}
   if(!p.alienHead){ufoLoad();return}
-  for(const o of head.children)if(o!==p.alienHead)o.visible=false;
+  for(const o of head.children)if(o!==p.alienHead)o.visible=/_Head$/.test(o.name);   /* his own head stays, everything on it goes */
   if(!p.alienSkin){p.alienSkin=true;m.traverse(n=>{if(n.isMesh&&n.material&&n.material.name==='CGL_Skin'){n.material=n.material.clone();n.material.color.setHex(ALIEN_SKIN)}})}
 }
 const isAlien=b=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n].alien);
@@ -78,3 +78,5 @@ command('ufo',{usage:'ufo [name] | ufo back',help:'An easter egg: a UFO abducts 
     const b=a?bots.find(x=>x.d.n.toLowerCase().startsWith(String(a).toLowerCase())):L[Math.floor(Math.random()*L.length)];
     if(!b||!crewHired(b))return'Nobody to take (hire some crew first).';if(isAbducted(b))return`${b.d.n}'s already up there.`;
     if(online())wsSend({t:'ufo',n:b.d.n});else ufoTake(b.d.n);return`Look up. ${b.d.n}'s about to have a very strange day.`}});
+/* whatever the crew would say (work chatter, grumbles, soda breaks...): an alien only ever says "I'm <name>." (JT) */
+{const _say=say;say=function(L,text,ms){const b=L&&bots.find(x=>x.L===L);if(b&&isAlien(b))text=`I'm ${b.d.n}.`;return _say(L,text,ms)}}

@@ -1,5 +1,9 @@
 # UFO and alien head — asset report
 
+The current alien treatment is [AlienFace.glb](ALIEN-FACE.md), a face-only attachment
+on the camper's original green head and neck. `AlienHead.glb` below is retained as
+an unused legacy asset; its old fit notes and previews document that earlier version.
+
 Completed 2026-10-02 on `feature/sol-ufo`, in this checkout.
 
 `UFO.glb` is a 1950s saucer with a brushed aluminium disc, machined concentric seams,

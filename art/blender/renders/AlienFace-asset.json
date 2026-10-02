@@ -1,0 +1,22 @@
+{
+  "file": "AlienFace.glb",
+  "bytes": 128600,
+  "triangles": 5996,
+  "attachment": "head; local position zero, identity rotation, scale one",
+  "head": "original camper head and neck retained unchanged; no ridge",
+  "skin_tint": "#5fd04a supplied by game, not exported",
+  "forward": "Blender -Y / game +Z",
+  "blender_bounds": [
+    [
+      -0.27816301584243774,
+      -0.2759930491447449,
+      0.18807554244995117
+    ],
+    [
+      0.27816325426101685,
+      -0.09035713970661163,
+      0.49860528111457825
+    ]
+  ],
+  "source_camper_sha256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf"
+}
