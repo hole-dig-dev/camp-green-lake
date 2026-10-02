@@ -8,7 +8,7 @@ await A.evaluate(()=>{tuneSet('haz.all',0);S.seeds+=400;crewBuy('Zach',CREW_HIRE
 await A.waitForFunction(()=>{const b=bots.find(b=>b.d.n==='Zach');return b&&b.p.g.visible&&b.state!=='away'},null,{timeout:40000});await A.waitForTimeout(2000);
 await A.evaluate(()=>runCommand('ufo zach'));await A.waitForTimeout(5500);
 check('ufo zach: the saucer has him (on both screens)',(await zach(A)).ufo&&(await zach(B)).ufo,JSON.stringify(await zach(B)));
-await A.waitForTimeout(7000);
+await B.waitForFunction(()=>{const b=bots.find(b=>b.d.n==='Zach');return isAbducted(b)&&!b.p.g.visible&&!b.ufo},null,{timeout:90000}).catch(()=>{});   /* he may walk out of camp first (ufoLureStep) */
 const z1=await zach(B);check('gone: abducted, nowhere on the lake',z1.ab&&!z1.vis&&/UFO/.test(z1.act),JSON.stringify(z1));
 // the next day it brings him back
 await A.evaluate(()=>jumpTo(SIM.DAYMS-2500));await A.waitForTimeout(6000+8000+9000);
