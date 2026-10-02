@@ -53,6 +53,7 @@ const SHOP=[
   {id:'hopper',name:'Sifter hopper',desc:'Dump your sand at the sifter and go straight back to digging: the hopper holds 20 holes and sifts a hole every 8 seconds on its own. The gold comes to you.',cost:90,cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'hopper2',name:'Hopper collar',desc:'Planks on top of your hopper: holds 50 holes and sifts twice as fast (a hole every 4 seconds).',cost:220,cat:'dig',icon:'bucket',needs:'hopper'},
   {id:'hopper3',name:'Motorized dry washer',desc:'A towering steel bin on legs and a gas motor on the blower: holds 120 holes and sifts a hole every 1.5 seconds.',cost:500,cat:'dig',icon:'bucket',needs:'hopper2'},
+  {id:'pipe',name:'Sand pipe (5 m)',desc:'Clear pipe for a sand pipeline from the sifter out into the lake. F at the sifter\'s connector (or the pipeline\'s end) and walk: a section goes down every 5 m. Dump your bucket in the intake at the far end and the sand rides down to the sifter. Boulders, sinkholes and mines crack it: hold F on a crack to fix it.',cost:15,stack:'pipe',cat:'dig',icon:'bucket',needs:'bucket'},
   {id:'canteen',name:'Big canteen',desc:'Tier 2 canteen: holds 60% more water.',cost:30,cat:'survival',icon:'canteen'},
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
@@ -156,7 +157,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);

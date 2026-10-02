@@ -358,6 +358,8 @@ function mineTick(now) {
     const k = { id: mineSeq++, x: r2(x), z: r2(z) }; MINES.push(k); broadcast({ t: 'mine', m: k }); return;
   }
 }
+/* the sand pipeline (public/js/88-pipeline.js): one for the camp, saved with the world, gone when the crew's fired */
+function pipeW() { if (!world.pipe || typeof world.pipe !== 'object' || !Array.isArray(world.pipe.nodes)) world.pipe = { nodes: [], broken: {} }; if (!world.pipe.broken || typeof world.pipe.broken !== 'object') world.pipe.broken = {}; return world.pipe; }
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -537,6 +539,7 @@ wss.on('connection', (ws, req) => {
       peers: [...clients.values()].filter(p => p.joined && p.id !== c.id).map(peerInfo),
       mon: monSnapshot(), // ground truth for a (re)connecting client: never make it wait for the next change
       mines: MINES, // landmines (public/js/88-mines.js)
+      pipe: pipeW(), // the sand pipeline (public/js/88-pipeline.js)
       dirOn: dirState.enabled, // event director on/off, and any of its events still running that can be replayed
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
@@ -881,6 +884,25 @@ wss.on('connection', (ws, req) => {
         send(o, { t: m.t === 'revive' ? 'revived' : 'pulled', by: c.n });
         break;
       }
+      case 'pipeAdd': {
+        // A camper laying the sand pipeline (public/js/88-pipeline.js) put a joint down where they're standing, ~5 m on
+        // from the last one. Node 0 is the sifter's connector socket.
+        const p = pipeW(), x = num(m.x, -600, 600, NaN), z = num(m.z, -600, 600, NaN); if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+        if (!p.nodes.length) p.nodes.push({ x: r2(SIM.GOLD.SIFTER.x - 1.9), z: r2(SIM.GOLD.SIFTER.z) });
+        const e = p.nodes[p.nodes.length - 1], d = Math.hypot(x - e.x, z - e.z);
+        if (d < 2 || d > 7 || Math.hypot(c.x - x, c.z - z) > 4 || p.nodes.length > tuneS('pipe.max', 60) + 1) { send(c, { t: 'pipe', ...p }); return; }   // put them right
+        p.nodes.push({ x: r2(x), z: r2(z) }); dirty = true; broadcast({ t: 'pipe', by: c.id, ...p }); break;
+      }
+      case 'pipeBreak': {   // a boulder, sinkhole or mine cracked a run (worked out client-side, like those hazards)
+        const p = pipeW(), i = num(m.i, 0, 1e4, -1) | 0; if (i < 0 || i >= p.nodes.length - 1 || p.broken[i]) return;
+        p.broken[i] = true; dirty = true; LOG.log('pipeBreak', { i, by: c.n }); broadcast({ t: 'pipe', ...p }); break;
+      }
+      case 'pipeFix': {   // held F at the crack for pipe.fixTime: they have to be standing by it
+        const p = pipeW(), i = num(m.i, 0, 1e4, -1) | 0; if (!p.broken[i]) return;
+        const a = p.nodes[i], b = p.nodes[i + 1]; if (!a || !b || Math.min(Math.hypot(c.x - a.x, c.z - a.z), Math.hypot(c.x - b.x, c.z - b.z), Math.hypot(c.x - (a.x + b.x) / 2, c.z - (a.z + b.z) / 2)) > 5) return;
+        delete p.broken[i]; dirty = true; LOG.log('pipeFix', { i, by: c.n }); broadcast({ t: 'pipe', ...p }); break;
+      }
+      case 'pipeFlow': broadcast({ t: 'pipeFlow' }, c.id); break;   // someone sent sand down it: everyone sees the plug go
       case 'mineHit': {
         // Someone stepped on a landmine (public/js/88-mines.js): you, or a D Tent camper on the client that runs the crew
         // (m.crew: his name). Yours has to be under your feet; the crew's we take on trust (the crew lives client-side).
