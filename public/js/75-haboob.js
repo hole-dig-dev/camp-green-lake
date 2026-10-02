@@ -79,7 +79,7 @@ function hbPick(T,fx,fz){
     if(st.e<HB_INSIDE+HB_RECEDE+5)return{pl:hbForced,id:'hbF'+hbForced.t0,st};
     hbForced=null;   // fully over -- stop checking it every frame
   }
-  if(!HABOOB_NATURAL||DIRECTOR_ON||ZONE_H)return null;   // (natural ones: the lake only, 88-zones.js)   // the event director (public/director.js) schedules haboobs while it's on
+  if(!HABOOB_NATURAL||DIRECTOR_ON||ZONE_H||!hazOn('haboob'))return null;   // (natural ones: the lake only, 88-zones.js)   // the event director (public/director.js) schedules haboobs while it's on
   const k=Math.floor(T/HB_WIN);
   for(const kk of[k-1,k]){
     const pl=hbPlan(kk);if(!pl)continue;

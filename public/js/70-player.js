@@ -156,6 +156,7 @@ function titleCamera(dt){titleA+=dt*0.04;const r=34;camera.position.set(Math.sin
 /* lizards */
 function updateLizards(dt,t){
   if(PARTY.on)return;
+  if(!hazOn('lizards')){for(const L of lizards)L.m.g.visible=false;return}   /* the hazards switch (88-hazards.js) */
   const px=P.x,pz=P.z,alive=S.started&&!S.ko;
   for(const L of lizards){
     const tx=L.home.x+Math.cos(t*L.w+L.ph)*5,tz=L.home.z+Math.sin(t*L.w*1.37+L.ph)*5;

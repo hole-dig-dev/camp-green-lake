@@ -167,7 +167,7 @@ function myId(){return online()?net.id:'me'}
 function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:S.inTown?0:P.x,z:S.inTown?40:P.z,   // down in the buried town: out of reach, like being in camp
   fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,kt:kateLoot(),on:S.onionT>0,vy:P.yaw}}
 function stepSoloMonsters(dt){
-  if(online())return;const ev=[];if(!ZONE_H)SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{mood:RUN.mood});else{MONL.trucks=[];MONL.zer=null}   // police/Zeroni: lake only (88-zones.js)
+  if(online())return;const ev=[];if(!ZONE_H&&hazOn('night'))SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{mood:RUN.mood});else{MONL.trucks=[];MONL.zer=null}   // police/Zeroni: lake only (88-zones.js)
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.zer=MONL.zer?{x:MONL.zer.x,z:MONL.zer.z,tgt:MONL.zer.tgt,drag:MONL.zer.drag}:null;
   for(const e of ev)monEvent(e);
 }
@@ -180,6 +180,7 @@ function stepSoloDirector(dt){
   const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
   const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id,curse:RUN.curse||0,rate:tune('mon.events')});
   for(const d of decisions){
+    if(!hazOn(d.kind))continue;   /* the hazards switch (88-hazards.js) */
     if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
     else if(d.kind==='javelinas'){const ev=[];SIM.spawnJavHerd(JAV_LOCAL,{x:P.x,z:P.z},SIM.JAV_COUNT,clamp(Math.hypot(d.x-P.x,d.z-P.z),50,100),ev);for(const e of ev)javEvent(e)}
     else if(d.kind==='lion')LIONL.pendingSpawn={x:d.x,z:d.z};   // solo: same monster starts the server does (see dirStartMonster in server.js)

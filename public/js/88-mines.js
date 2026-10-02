@@ -14,7 +14,7 @@
 const MINES=new Map();   // id -> {id,x,z,obj}
 let MINE_PARTS=null;modelParts('Landmine').then(p=>{MINE_PARTS=p;for(const m of MINES.values())mineMesh(m)}).catch(()=>{});
 let mineSent=0,mineLocalT=20,mineLocalSeq=1;
-const minesOn=()=>tune('haz.mines')>=0.5;
+const minesOn=()=>tune('haz.mines')>=0.5&&hazOn('mines');
 function mineMesh(m){
   if(m.obj||!MINE_PARTS)return;const g=new T.Group();
   for(const pt of MINE_PARTS){const mat=pt.material.clone();mat.transparent=true;mat.opacity=0;mat.depthWrite=false;const mm=new T.Mesh(pt.geometry,mat);mm.receiveShadow=true;g.add(mm)}
