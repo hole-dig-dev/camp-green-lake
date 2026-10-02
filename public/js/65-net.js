@@ -133,7 +133,7 @@ function onMsg(m){
     case 'run':{const d0=RUN.day;setRun(m);if(RUN.day!==d0)S.refills=0;break}
     case 'curse':curseNote(num(m.d,-100,100,0),num(m.curse,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
     case 'newday':setRun(m);newDay(m);break;
-    case 'fired':fired(num(m.bank,0,1e9,0)|0,num(m.quota,0,1e9,0)|0);break;
+    case 'fired':RUN.lastFound=m.found&&typeof m.found==='object'?m.found:{};fired(num(m.bank,0,1e9,0)|0,num(m.quota,0,1e9,0)|0);break;
     case 'deposit':deposited(m);break;
     case 'prog':{const xp=num(m.xp,0,1e8,0);if(xp>PROG.xp){PROG.xp=xp;saveProg();if(me){setHat(me,myLevel());meL.n.textContent=myTag()}}break}
     case 'mon':monFromServer(m);lionFromServer(m);break;
@@ -147,6 +147,7 @@ function onMsg(m){
     case 'revived':revived(cleanName(m.by)||'A friend');break;
     case 'mines':minesSet(m.list);break;   /* landmines (88-mines.js) */
     case 'tunehaz':hazTuneFrom(m.o);break;   /* someone flipped a switch in F2 Hazards (88-hazards.js) */
+    case 'walletNo':walletNo(m);break;   /* the crew wallet couldn't cover a purchase (84-spend.js) */
     case 'mine':mineAdd(m.m);break;
     case 'pipe':if(!PIPE.laying||m.by!==net.id)pipeSet(m);break;   /* the sand pipeline changed (88-pipeline.js) */
     case 'pipeFlow':pipeSlug(false,0);break;

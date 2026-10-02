@@ -27,9 +27,7 @@ check('bucket empty, a plug of sand in the pipe (the friend sees one too)',await
 await B.evaluate(()=>{const N=PIPE.nodes,m=N[2];P.x=m.x+2.5;P.z=m.z+1.5;P.y=groundAt(P.x,P.z)});await B.waitForTimeout(400);
 await lookAt(B,(await B.evaluate(()=>PIPE.nodes[2].x)),0.4,(await B.evaluate(()=>PIPE.nodes[2].z)));await B.waitForTimeout(700);await B.screenshot({path:SP+'/pipe_flow.png'});
 await A.waitForTimeout(4500);
-const g1=await A.evaluate(()=>S.seeds),bank1=await A.evaluate(()=>RUN.bank);check('it reaches the sifter: the gold goes in the crew bank (default)',bank1>bank0&&g1===g0&&await A.evaluate(()=>PIPE.slugs.length===0),'bank '+bank0+' -> '+bank1+', yours '+g0+' -> '+g1);
-await A.evaluate(()=>{tuneSet('pipe.toBank',0);S.bucket=2});await A.keyboard.press('f');await A.waitForTimeout(5000);
-const g2=await A.evaluate(()=>S.seeds);check('pipe.toBank off: the gold is yours',g2>g1,g1+' -> '+g2);await A.evaluate(()=>tuneSet('pipe.toBank',1));
+const bank1=await A.evaluate(()=>RUN.bank);check('it reaches the sifter: the gold goes in the crew wallet',bank1>bank0&&await A.evaluate(()=>PIPE.slugs.length===0),'wallet '+bank0+' -> '+bank1);
 // a mine blast cracks it; sand can't go through; hold F to fix
 await A.evaluate(()=>{const N=PIPE.nodes;pipeBlast((N[2].x+N[3].x)/2,(N[2].z+N[3].z)/2,1.5)});await A.waitForTimeout(800);
 check('a blast cracks the run it hits (for everyone)',await A.evaluate(()=>PIPE.broken[2]===true)&&await B.evaluate(()=>PIPE.broken[2]===true));

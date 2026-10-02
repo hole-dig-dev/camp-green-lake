@@ -196,7 +196,8 @@ function openShopConfirm(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   shopConfirming=true;
   const box=$('#shopConfirm');box.hidden=false;box.innerHTML='';
-  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} gold. Balance after: ${S.seeds-it.cost}.`;
+  const p=document.createElement('p');p.className='shop-confirm__line';p.textContent=`${it.name} -- ${it.cost} gold. Crew wallet after: ${S.seeds-it.cost}.`;
+  {const w=quotaWarnText(it.cost);if(w){const q=document.createElement('p');q.className='shop-confirm__line shop-confirm__warn';q.textContent=w+' Buy anyway?';box.appendChild(q)}}
   const row=document.createElement('div');row.className='shop-confirm__row';
   const yes=document.createElement('button');yes.type='button';yes.id='shopConfirmBuy';yes.className='ui-button ui-button--primary';yes.textContent='Confirm purchase';yes.onclick=()=>buyShopItem(id);
   const no=document.createElement('button');no.type='button';no.className='ui-button ui-button--quiet';no.textContent='Cancel';no.onclick=hideShopConfirm;
@@ -211,7 +212,8 @@ function hideShopConfirm(){
    when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
-  S.seeds-=it.cost;
+  const undo=()=>{if(it.stack==='onions')S.onions=Math.max(0,S.onions-1);else if(it.stack&&it.stack!=='batt')S[it.stack]=Math.max(0,(S[it.stack]||0)-1);else if(!it.stack)delete S.up[it.id]};
+  walletSpend(it.cost,undo,it.name);   /* the crew wallet, checked by the server (84-spend.js) */
   if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}
   sfx.coin();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
@@ -294,7 +296,7 @@ function renderCrewShop(){
       if(st.k==='owned'){btn.textContent=it.id==='hire'?'✓ On the crew':'✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
       else if(st.k==='locked'){btn.textContent=st.need==='hire'?'Hire him first':`Needs ${st.need}`;btn.disabled=true}
       else if(st.k==='short'){btn.textContent=`Need ${st.need} more`;btn.disabled=true}
-      else if(crewConfirm===key&&performance.now()-crewConfirmT<4000){btn.textContent=`Sure? ${cost}`;btn.classList.add('is-confirm');btn.onclick=()=>crewBuy(n,it)}
+      else if(crewConfirm===key&&performance.now()-crewConfirmT<4000){btn.textContent=quotaShort(cost)>0?`Sure? ${cost} (crew short of quota!)`:`Sure? ${cost}`;btn.classList.add('is-confirm');btn.onclick=()=>crewBuy(n,it)}
       else{btn.textContent=`${it.id==='hire'?'Hire':'Buy'} · ${cost}`;btn.onclick=()=>{crewConfirm=key;crewConfirmT=performance.now();renderCrewShop();const q=$(`.crew-buy[data-key="${CSS.escape(key)}"]`);if(q)q.focus()}}
       cell.appendChild(btn);grid.appendChild(cell)}
   }
@@ -302,9 +304,10 @@ function renderCrewShop(){
 function crewBuy(n,it){
   crewConfirm=null;if(crewItemState(n,it).k!=='buy'){renderCrewShop();return}
   const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost,key=it.id==='hire'?'hired':it.id;
-  S.seeds-=cost;sfx.coin();clerk.waveT=1.6;addXP(cost/5);logEv('crewBuy',{crew:n,item:it.id,cost});
+  const rid=walletSpend(cost,()=>{if(CREW_UP[n])delete CREW_UP[n][key];crewPending.delete(n+'|'+it.id);renderCrewShop()},it.id==='hire'?`hiring ${n}`:`${n}'s ${it.name.toLowerCase()}`);   /* 84-spend.js */
+  sfx.coin();clerk.waveT=1.6;addXP(cost/5);logEv('crewBuy',{crew:n,item:it.id,cost});
   (CREW_UP[n]=CREW_UP[n]||{})[key]=true;   // straight away on your screen; the server's 'crew' confirms it
-  if(online()){crewPending.set(n+'|'+it.id,cost);wsSend({t:'crewBuy',n,id:it.id,cost})}
+  if(online()){crewPending.set(n+'|'+it.id,cost);wsSend({t:'crewBuy',n,id:it.id,cost,rid})}
   else try{localStorage.setItem('cgl-crew',JSON.stringify(CREW_UP))}catch(e){}
   $('#crewFeedback').textContent=it.id==='hire'?`${n} is on the crew. ${S.seeds} gold left.`:`${it.name} for ${n}. ${S.seeds} gold left.`;toast(it.id==='hire'?`You hired ${n}. He's on his way in.`:`You bought ${n} a ${it.name.toLowerCase()}.`,'good',2500);
   animateShopSeeds();renderShop();
@@ -320,14 +323,14 @@ function crewMsg(m){
   if(shopOpen)renderShop();
 }
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
-function renderShop(){$('#shopSeeds').textContent=S.seeds;updateShopCardStates();renderShopDetail();renderCrewShop();
+function renderShop(){$('#shopSeeds').textContent=S.seeds;{const el=$('#shopSafe');if(el)el.textContent=`· safe to spend ${safeToSpend()} (quota ${RUN.quota})`}updateShopCardStates();renderShopDetail();renderCrewShop();
   const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
 /* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
    his window instead (sim.js SELL, 84-grab.js). */
 function sackValue(){return S.sack.reduce((s,t)=>s+LOOT[t].val,0)}
 function sellSack(){
   if(!S.sack.length)return;const n=S.sack.length,sum=sackValue();
-  S.seeds+=sum;S.sack=[];sfx.coin();addXP(sum/2);clerk.waveT=1.6;logEv('sell',{n,v:sum});
+  S.seeds+=sum;foundGold(sum);S.sack=[];sfx.coin();addXP(sum/2);clerk.waveT=1.6;logEv('sell',{n,v:sum});
   toast(`Mr. Pendanski paid ${sum} gold for ${n} find${n===1?'':'s'}.`,'good',3000);
   $('#shopFeedback').textContent=`Sold ${n} find${n===1?'':'s'} for ${sum} gold.`;animateShopSeeds();renderShop();
 }

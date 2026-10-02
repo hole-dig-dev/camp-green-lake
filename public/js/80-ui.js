@@ -19,7 +19,7 @@ function chooseOpt(i){const o=DLG.opts&&DLG.opts[i];if(!o)return;if(o.leave){clo
 const LEAVE={label:'See you later.',leave:true};
 function reply(name,text,back){return{name,text,opts:[{label:'Something else.',go:back},LEAVE]}}
 function reportKB(){
-  S.reported=true;S.hasKB=false;S.seeds+=100;sfx.gold();reveal('You');wsSend({t:'kb'});
+  S.reported=true;S.hasKB=false;S.seeds+=100;foundGold(100);sfx.gold();reveal('You');wsSend({t:'kb'});
   toast('+100 gold. The Warden planted red flags around the search area. Check your map.','gold',7000);
   if(!S.up.long)setTimeout(()=>toast('Kate buried it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
@@ -113,7 +113,8 @@ function closeCards(){if(BJ.phase!=='bet'){bjSay('Finish the hand first.');retur
 function bjDeal(){
   if(BJ.phase!=='bet'||BJ.busy)return;const bet=Math.min(BJ.bet,S.seeds);
   if(bet<5){bjSay('Minimum bet is five gold. Go dig some holes.');return}
-  S.seeds-=bet;BJ.stake=bet;BJ.you=[drawCard(),drawCard()];BJ.dealer=[drawCard(),drawCard()];BJ.phase='play';$('#bjResult').textContent='';cardSnd();
+  if(quotaShort(bet)>0&&!(BJ.warnT&&performance.now()-BJ.warnT<5000)){BJ.warnT=performance.now();bjSay(`That's the crew's money. ${quotaWarnText(bet)} Deal again to bet it anyway.`);return}BJ.warnT=0;   /* 84-spend.js */
+  walletSpend(bet,()=>{BJ.phase='bet';BJ.stake=0;BJ.you=[];BJ.dealer=[];renderBJ()},'your blackjack bet');BJ.stake=bet;BJ.you=[drawCard(),drawCard()];BJ.dealer=[drawCard(),drawCard()];BJ.phase='play';$('#bjResult').textContent='';cardSnd();
   renderBJ();
   if(isBJ(BJ.you)||isBJ(BJ.dealer)){BJ.busy=true;setTimeout(bjSettle,700)}
   else{bjSay(pick(['Hit or stand. I don\'t got all day.','Don\'t look at me. Look at your cards.','Your move.']));setTimeout(()=>$('#bjHit').focus(),30)}
@@ -124,7 +125,7 @@ function bjStand(){
   const step=()=>{if(!BJ.open&&BJ.phase!=='dealer')return;if(handVal(BJ.dealer)<17){BJ.dealer.push(drawCard());cardSnd();renderBJ();setTimeout(step,650)}else bjSettle()};
   setTimeout(step,650);
 }
-function bjDouble(){if(BJ.phase!=='play'||BJ.busy||BJ.you.length!==2||S.seeds<BJ.stake)return;S.seeds-=BJ.stake;BJ.stake*=2;BJ.you.push(drawCard());cardSnd();renderBJ();if(handVal(BJ.you)>21)bjSettle();else bjStand()}
+function bjDouble(){if(BJ.phase!=='play'||BJ.busy||BJ.you.length!==2||S.seeds<BJ.stake)return;walletSpend(BJ.stake,null,'doubling down');BJ.stake*=2;BJ.you.push(drawCard());cardSnd();renderBJ();if(handVal(BJ.you)>21)bjSettle();else bjStand()}
 function bjSettle(){
   BJ.phase='done';
   const y=handVal(BJ.you),d=handVal(BJ.dealer),yb=isBJ(BJ.you),db=isBJ(BJ.dealer);let pay=0,res,line;

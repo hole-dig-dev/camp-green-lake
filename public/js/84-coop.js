@@ -31,20 +31,21 @@ function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function newDay(m){m=m||{};toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
+function newDay(m){m=m||{};{const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
 /* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. (The crew wallet, S.seeds,
    is the server's: it starts the new run at 0, so it isn't wiped here.) */
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
   Object.assign(S,{bucket:0,hopper:0,pipe:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
-  if(RUN.bank<q&&played>=180){const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
-  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q}:{grace:true});
+  if(RUN.bank<q&&played>=180){RUN.lastFound=RUN.found||{};RUN.found={};const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
+  const found=RUN.found||{};RUN.found={};RUN.lastFound=found;
+  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
 }
 
 /* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
@@ -68,7 +69,7 @@ function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
   const mine=who.includes(myId());toast(`Mr. Pendanski paid ${v} gold for the ${name}.`+(who.length>1?' Split between everyone who carried it.':''),'good',4500);
-  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
+  if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));foundGold(Math.round(v/Math.max(1,who.length)));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
 function carryN(){const pr=S.carry==null?null:PROPS.get(S.carry);return pr?Math.max(1,pr.n||0):1}

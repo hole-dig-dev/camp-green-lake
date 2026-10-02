@@ -621,3 +621,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .ward-btns button{flex:1;padding:0 8px}
 .ward-btns button.primary{background:var(--jump);color:#fff;border-color:var(--jump-deep)}
 @media (max-width:600px){.wardrobe{top:auto;bottom:12px;transform:none;max-height:55vh}}
+/* the one crew wallet (84-spend.js): what you can spend and still have the Warden's quota at curfew */
+.shop-confirm__warn{color:var(--danger)}
+.shop-safe{margin-left:8px;font-size:13px;color:var(--ink-soft);font-weight:600}

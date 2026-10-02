@@ -10,8 +10,8 @@
      Node 0 is the sifter's connector socket (sifter frame (-1.9, 0.24, 0)).
    - F at the intake with sand: it all goes down the pipe at pipe.speed m/s as a plug of sand you can watch through
      the clear pipe, through the connector into the sifter: into your hopper if you have one (86-hopper.js; what
-     doesn't fit is sifted straight away), else sifted on arrival, the gold yours. With pipe.toBank on (the default,
-     JT 2026-10-01) it's all sifted on arrival and the gold goes in the crew bank instead.
+     doesn't fit is sifted straight away), else sifted on arrival, the gold yours. The gold is the crew wallet's
+     (84-wallet.js), like all gold.
    - Boulders (74-landslide.js), open sinkholes (87-sinkhole.js) and mine blasts (88-mines.js pipeBlast) crack the runs
      they hit. A cracked run stops the sand (a plug that reaches it spills out there). Hold F next to the crack for
      pipe.fixTime seconds to fix it.
@@ -113,13 +113,9 @@ function pipeDump(){
   toast(`Down the pipe it goes: ${Math.round(holes*10)/10} holes of sand to the sifter.`,'good',3000);logEv('pipeDump',{holes:+holes.toFixed(2)});
 }
 function pipeArrive(holes){
-  if(tune('pipe.toBank')>=0.5){   /* JT: the pipeline's gold goes in the crew bank (F2 Gold: pipe.toBank) */
-    const r=SIM.siftGold(holes,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
-    if(online())wsSend({t:'deposit',v:r.gold,pipe:true});else{RUN.bank+=r.gold;saveRun();toast(`Your sand came through the pipeline: the sifter puts ${r.gold} gold in the crew bank.`,'gold',3600)}
-    logEv('pipeArrive',{holes:+holes.toFixed(2),bank:r.gold});return}
   let rest=holes;const cap=hopperCap();
   if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));S.hopper+=put;rest-=put}
-  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);S.seeds+=r.gold;addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
+  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole'),RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
     toast(`Your sand came through the pipeline: the sifter shakes ${r.gold} gold out of it.`+(holes-rest>0.01?` (${Math.round((holes-rest)*10)/10} holes went in your hopper.)`:''),r.nugget?'gold':'good',3800)}
   else toast(`Your sand came through the pipeline into your hopper (${Math.floor(S.hopper)}/${cap}).`,'good',3000);
   logEv('pipeArrive',{holes:+holes.toFixed(2)});
