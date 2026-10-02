@@ -113,6 +113,7 @@ const TUNE_DEFS=[
   {key:'haz.mineSee',tab:'Environment',label:'Landmines: fully visible within (they fade in from twice this)',def:1.6,kind:'mul',range:3,unit:' m'},
   {key:'haz.mineBlast',tab:'Environment',label:'Landmines: blast radius (everyone inside flies)',def:3.5,kind:'mul',range:3,unit:' m'},
   {key:'haz.mineLaunch',tab:'Environment',label:'Landmines: how far it throws you',def:1,kind:'mul',range:3,unit:'×'},
+  {key:'env.sinkSize',tab:'Environment',label:'Sinkhole size (× the 10-14 m radius; new sinkholes)',def:0.5,kind:'mul',range:3,unit:'×'},
   {key:'rag.bonk',tab:'Environment',label:'Shovel bonk launch',def:1,kind:'mul',range:3,zero:true,unit:'×'},
   // ---- the environment: hazards and reach. Random things (each twister's strength, each tumbleweed's size and speed)
   // stay random; these scale them, or set the fixed parts.

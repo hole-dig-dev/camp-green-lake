@@ -15,7 +15,7 @@
 const SINK_CELL=260, SINK_WIN=300000, SINK_CHANCE=0.045;   // ~1 new one somewhere on the lake every ~5 real minutes
 const SINK_CAMP_KEEPOUT=130;                 // stay this far (m, via campDist) from the camp fence
 const SINK_THUMB_KEEPOUT=400;                // stay this far from Big Thumb's base (it's already off the playable map, but keep this honest)
-const SINK_R_MIN=10, SINK_R_MAX=14;          // crater radius (m) -- "make it pretty big" per JT's spec
+const SINK_R_MIN=10, SINK_R_MAX=14;          // crater radius (m) -- "make it pretty big" per JT's spec; × tune env.sinkSize (0.5 since 2026-10-01: half the diameter)
 const SINK_DEPTH=4.4;                        // crater bottom depth (m) below the undug ground. baseH() noise is
                                               // small (well under half a metre) so the bottom lands close to -4.5 --
                                               // deep enough to tower over a player (1.8 m tall) with room to spare
@@ -64,14 +64,14 @@ function sinkPlan(ci,cj,k){
   if(r()>SINK_CHANCE)return null;
   const x=(ci+r())*SINK_CELL,z=(cj+r())*SINK_CELL;
   if(Math.max(Math.abs(x),Math.abs(z))>EDGE-20||nearCampZone(x,z)||campDist(x,z)<SINK_CAMP_KEEPOUT||Math.hypot(x-TH_X,z-TH_Z)<SINK_THUMB_KEEPOUT)return null;
-  const rad=SINK_R_MIN+r()*(SINK_R_MAX-SINK_R_MIN);
+  const rad=(SINK_R_MIN+r()*(SINK_R_MAX-SINK_R_MIN))*tune('env.sinkSize');   /* F2 slider: JT 2026-10-01 halved them */
   return{id:'n'+ci+','+cj+','+k,x,z,r:rad,t0:k*SINK_WIN+r()*(SINK_WIN-20000)};
 }
 /* a sinkhole made on demand (console / ENV). x,z,seed,t0 are the only numbers that cross the network -- every
    client re-derives the same radius from the same seed, same trick as spawnLandslide(). */
 function spawnSinkhole(x,z,seed,t0){
   const r=mulberry32(seed>>>0);r();
-  const rad=SINK_R_MIN+r()*(SINK_R_MAX-SINK_R_MIN);
+  const rad=(SINK_R_MIN+r()*(SINK_R_MAX-SINK_R_MIN))*tune('env.sinkSize');   /* F2 slider: JT 2026-10-01 halved them */
   const id='s'+Math.round(x*10)+'_'+Math.round(z*10)+'_'+Math.round(t0);
   if(sinkSpawned.some(p=>p.id===id)||SINK_LIVE.has(id))return;
   sinkSpawned.push({id,x,z,r:rad,t0,forced:true});
