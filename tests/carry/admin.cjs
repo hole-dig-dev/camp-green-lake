@@ -1,0 +1,23 @@
+// admin console commands (96-admin.js): set up any game state in one line. bash tests/carry/run.sh PORT OUT admin.cjs
+const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2];
+const R=[];const check=(n,ok,i)=>{R.push(!!ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
+(async()=>{const b=await browser(),errs=[];const A=await player(b,PORT,'Alpha',errs),B=await player(b,PORT,'Bravo',errs);
+const cmd=(p,l)=>p.evaluate(l=>runCommand(l),l);
+await cmd(A,'crew hire all');
+await A.waitForFunction(()=>SIM.CREW.every(n=>CREW_UP[n]&&CREW_UP[n].hired),null,{timeout:8000}).catch(()=>{});
+check('crew hire all: all six hired, free, on both screens',await A.evaluate(()=>SIM.CREW.every(n=>CREW_UP[n]&&CREW_UP[n].hired)&&RUN.bank===0)&&await B.evaluate(()=>SIM.CREW.every(n=>CREW_UP[n]&&CREW_UP[n].hired)));
+await cmd(A,'crew kit all shovel bucket3');await A.waitForTimeout(800);
+check('crew kit all shovel bucket3: the bucket chain comes with it',await B.evaluate(()=>SIM.CREW.every(n=>{const u=CREW_UP[n];return u.hired&&u.shovel&&u.bucket&&u.bucket2&&u.bucket3&&!u.spade})));
+await cmd(A,'crew kit Zach none');await A.waitForTimeout(600);
+check('crew kit Zach none: bare but still hired',await B.evaluate(()=>{const u=CREW_UP.Zach;return u.hired&&!u.shovel&&!u.bucket}));
+await cmd(A,'crew fire Larry');await A.waitForTimeout(600);
+check('crew fire Larry',await B.evaluate(()=>!(CREW_UP.Larry&&CREW_UP.Larry.hired)));
+await cmd(A,'crew morale all 15');check('crew morale all 15',await A.evaluate(()=>bots.filter(crewHired).every(b=>Math.round(moraleOf(b))===15)));
+await cmd(A,'crew fill Stan');check('crew fill Stan: full bucket',await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Stan');return b.bucket===crewBucketMax(b)&&b.bucket>0}));
+await cmd(A,'kit bucket3 spade dog');check('kit bucket3 spade dog: my gear, with the prerequisites',await A.evaluate(()=>S.up.bucket&&S.up.bucket2&&S.up.bucket3&&S.up.shovel&&S.up.spade&&S.up.dog));
+await cmd(A,'campup goldScale sodaMachine');await A.waitForTimeout(600);
+check('campup goldScale sodaMachine: for everyone',await B.evaluate(()=>campHas('goldScale')&&campHas('sodaMachine')));
+await cmd(A,'bank 5000');await A.waitForTimeout(600);check('bank 5000',await B.evaluate(()=>RUN.bank===5000));
+await cmd(A,'day 7');await A.waitForTimeout(600);check('day 7, with its quota',await B.evaluate(()=>RUN.day===7&&RUN.quota===SIM.quotaFor(7,2)),await B.evaluate(()=>RUN.day+' '+RUN.quota));
+const st=await A.evaluate(()=>{runCommand('state');return conLog.lastChild.textContent});check('state: one line of JSON',/"day":7/.test(st)&&/"bank":5000/.test(st),st.slice(0,200));
+console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)?0:1)})();
