@@ -404,7 +404,7 @@ const server = http.createServer((req, res) => {
     const tunePost = DEV_MODE && req.method === 'POST' && url0 === '/tune';
     if (req.method !== 'GET' && req.method !== 'HEAD' && !tunePost) { res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' }); return res.end('method not allowed'); }
     const ip = clientIp(req);
-    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/(?:(?:hats|faces|glasses|clothes|footwear)\/)?[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/sim.js' || url0 === '/director.js' || Object.hasOwn(HAT_LAB_FILES,url0) || Object.hasOwn(FACE_LAB_FILES,url0) || Object.hasOwn(GLASSES_LAB_FILES,url0) || Object.hasOwn(CLOTHES_LAB_FILES,url0) || Object.hasOwn(FOOTWEAR_LAB_FILES,url0);
+    const isStatic = /^\/(?:js\/[\w.-]+\.js|css\/[\w.-]+\.css|audio\/[\w.-]+\.mp3|models\/(?:(?:hats|faces|glasses|clothes|footwear)\/)?[\w.-]+\.glb|data\/[\w.-]+\.json|icons\/[\w-]+\/[\w.-]+\.png)$/.test(url0) || url0 === '/models/PipeInletPath.json' || url0 === '/sim.js' || url0 === '/director.js' || Object.hasOwn(HAT_LAB_FILES,url0) || Object.hasOwn(FACE_LAB_FILES,url0) || Object.hasOwn(GLASSES_LAB_FILES,url0) || Object.hasOwn(CLOTHES_LAB_FILES,url0) || Object.hasOwn(FOOTWEAR_LAB_FILES,url0);
     if (isStatic ? !ipWithinRate(ipStaticWindow, ip, STATIC_RATE, HTTP_WINDOW_MS) : !ipWithinRate(ipHttpWindow, ip, HTTP_RATE, HTTP_WINDOW_MS)) { res.writeHead(429, { 'content-type': 'text/plain' }); return res.end('slow down'); }
     const url = (req.url || '/').split('?')[0];
     if (url.startsWith('/admin/')) {
@@ -445,6 +445,7 @@ const server = http.createServer((req, res) => {
     if (url.startsWith('/js/')) return sendStatic(res, 'js', url.slice('/js/'.length));
     if (url.startsWith('/css/')) return sendStatic(res, 'css', url.slice('/css/'.length));
     if (url.startsWith('/icons/')) return sendStatic(res, 'icons', url.slice('/icons/'.length));
+    if (url === '/models/PipeInletPath.json') return sendFile(res, 'models/PipeInletPath.json', 'application/json', req.method === 'HEAD');
     if (url.startsWith('/models/')) return sendStatic(res, 'models', url.slice('/models/'.length));
     if (url.startsWith('/audio/')) return sendStatic(res, 'audio', url.slice('/audio/'.length));
     if (url.startsWith('/data/')) return sendStatic(res, 'data', url.slice('/data/'.length));

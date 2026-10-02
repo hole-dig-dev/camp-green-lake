@@ -7,3 +7,4 @@ tests/_vendor_three.min.js
 tests/smoke-failure.png
 *.blend1
 tests/out/
+tests/goldfx/out/pipe/
