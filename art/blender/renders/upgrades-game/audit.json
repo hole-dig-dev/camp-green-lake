@@ -1,0 +1,49 @@
+{
+  "renderer": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+  "staticNames": [
+    "Dynamite",
+    "DynamiteHeld",
+    "LooseSand",
+    "Scarecrow",
+    "DisarmKit",
+    "GrappleHook",
+    "GrappleHookHead",
+    "GoldScale",
+    "PipePump",
+    "PipeSectionSteel"
+  ],
+  "animated": {
+    "Idle": {
+      "length": 2,
+      "moved": true
+    },
+    "Walk": {
+      "length": 1,
+      "moved": true
+    },
+    "Run": {
+      "length": 0.5,
+      "moved": true
+    },
+    "Sniff": {
+      "length": 2,
+      "moved": true,
+      "minY": 0.0008970131557570621
+    },
+    "Bark": {
+      "length": 1,
+      "moved": true
+    },
+    "Sit": {
+      "length": 2,
+      "moved": true
+    }
+  },
+  "boots": {
+    "shared": true,
+    "moved": true,
+    "vertexMoved": true,
+    "meshes": 44,
+    "hidden": true
+  }
+}
