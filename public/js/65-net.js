@@ -20,7 +20,7 @@ function sendPresence(now){
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0)|(S.up&&S.up.walkie?4096:0);   // 2048: talking on the walkie, 4096: owns one (86-walkie.js, 86-voice.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent,myBackFill()];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,sp:!!S.up.spade,lg:!!S.up.long,sh:!!S.up.shovel,tn:!!S.inTown,bk:pos[10],kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,sp:!!S.up.spade,lg:!!S.up.long,sh:!!S.up.shovel,tn:!!S.inTown,bk:pos[10],bt:myBackTier(),kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
 }
 
 /* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
@@ -107,7 +107,7 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'truck':truckMsg(m);break;
     case 'sumstat':northMsg(m);break;   // the crew on top of the north wall (88-north.js)   // Mr. Sir's pickup (87-truck.js)
