@@ -60,6 +60,7 @@ const TUNE_DEFS=[
   {key:'dmg.Rattlesnake',tab:'Damage',label:'Rattlesnake strike (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'dmg.Scorpion',tab:'Damage',label:'Scorpion sting (poison)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'hp.thirst',tab:'Damage',label:'Thirst: health lost per second once your water runs out',def:4,kind:'mul',range:4,zero:true,unit:' hp/s'},
+  {key:'gold.hopperSpeed',tab:'Gold',label:'Sifter hopper speed (× its tier\'s rate: 8 s, 4 s, 1.5 s a hole)',def:1,kind:'mul',range:5,unit:'×'},
   {key:'gold.perHole',tab:'Gold',label:'Gold per hole of sand, on average (the sifter)',def:4,kind:'lin',span:20,min:0,unit:' gold'},
   {key:'water.last',tab:'Damage',label:'Water lasts (how long a full canteen goes, vs the original)',def:3,kind:'mul',range:4,unit:'×'},   // JT: water lasts 3x longer by default
   {key:'hp.healRate',tab:'Damage',label:'Injuries heal',def:1.5,kind:'mul',range:4,zero:true,unit:' hp/s'},

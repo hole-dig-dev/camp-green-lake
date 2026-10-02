@@ -43,7 +43,7 @@ function newDay(m){m=m||{};toast(m.grace?`Day ${RUN.day}. You only just got here
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
   $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`;$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  Object.assign(S,{seeds:0,bucket:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  Object.assign(S,{seeds:0,bucket:0,hopper:0,pan:0,sack:[],up:{},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
