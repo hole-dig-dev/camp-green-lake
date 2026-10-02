@@ -1,0 +1,69 @@
+{
+  "bytes": 128600,
+  "triangles": 5996,
+  "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+  "fit": {
+    "gpu": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
+    "attached": true,
+    "localPosition": [
+      0,
+      0,
+      0
+    ],
+    "localQuaternion": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "localScale": [
+      1,
+      1,
+      1
+    ],
+    "originalHeadVisible": true,
+    "originalNeckVisible": true,
+    "headUnchanged": true,
+    "neckUnchanged": true,
+    "skin": "#5fd04a",
+    "hidden": [
+      "CGLCamper_Brow-1",
+      "CGLCamper_Brow1",
+      "CGLCamper_Bucket_HatBand",
+      "CGLCamper_Bucket_HatBrim",
+      "CGLCamper_Bucket_HatCrown",
+      "CGLCamper_Cowboy_HatBand",
+      "CGLCamper_Cowboy_HatBrim",
+      "CGLCamper_Cowboy_HatCrown",
+      "CGLCamper_DesertCap_Bill",
+      "CGLCamper_DesertCap_HatCrown",
+      "CGLCamper_DesertCap_HatNeckFlap",
+      "CGLCamper_Eye-1",
+      "CGLCamper_Eye1",
+      "CGLCamper_Hair_HairCap",
+      "CGLCamper_Mouth",
+      "CGLCamper_Nose",
+      "CGLCamper_Shades_ShadesBar"
+    ]
+  },
+  "animation": [
+    {
+      "clip": "Idle",
+      "attached": true,
+      "finite": true,
+      "originalHeadVisible": true
+    },
+    {
+      "clip": "Walk",
+      "attached": true,
+      "finite": true,
+      "originalHeadVisible": true
+    },
+    {
+      "clip": "Dig",
+      "attached": true,
+      "finite": true,
+      "originalHeadVisible": true
+    }
+  ]
+}
