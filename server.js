@@ -114,6 +114,8 @@ const JAV_WHACK_MAX = 2.4;                   // generous server-side reach check
 const SWAT_RATE = 4, SWAT_WINDOW_MS = 1000;  // shovel swats at the mountain lion, per connection per window
 const LION_REACH = 3;                        // max distance a swat message can land from (some slack for latency)
 const MAX_DEPOSIT = 100000;                  // gold per crew-bank deposit; trims a hacked client's ceiling
+const MAX_WALLET_D = 100000;               // gold per crew-wallet change (public/js/84-wallet.js); trims a hacked client's ceiling
+const WALLET_RATE = 30, WALLET_WINDOW_MS = 5000; // wallet changes per connection per window (flecks, sifts, blackjack hands, purchases)
 const MAX_CREW_DEPOSIT = 600;                // one D Tent crew bucket (5 holes, a nugget on a dig day: ~200)
 const CREW_NAMES = SIM.CREW; // the D Tent crew (public/js/30-npcs.js BOTDEF)
 
@@ -663,6 +665,16 @@ wss.on('connection', (ws, req) => {
         world.run.bank += v; dirty = true;
         LOG.log('deposit', { id: c.id, n: c.n, v, bank: world.run.bank, bot });
         broadcast({ t: 'deposit', id: c.id, n: c.n, v, bot, pipe: m.pipe === true || undefined }); // pipe: it came down the sand pipeline (public/js/88-pipeline.js)
+        broadcast(runInfo());
+        break;
+      }
+      case 'wallet': {
+        // One crew wallet (Greg, 2026-10-01; public/js/84-wallet.js): nobody has their own gold. Any change a camper's game
+        // makes to its gold (a find, a sifted bucket, a purchase, a blackjack hand) arrives here as a delta to the crew
+        // bank. Client-authoritative, like the rest of the economy: the rate limit and MAX_WALLET_D cap a hacked client.
+        if (!withinRate(c.walletTimes || (c.walletTimes = []), WALLET_RATE, WALLET_WINDOW_MS)) return;
+        const d = Math.round(num(m.d, -MAX_WALLET_D, MAX_WALLET_D, 0)); if (!d) return;
+        world.run.bank = Math.max(0, world.run.bank + d); dirty = true;
         broadcast(runInfo());
         break;
       }

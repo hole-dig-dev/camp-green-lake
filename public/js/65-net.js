@@ -126,7 +126,7 @@ function onMsg(m){
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
     case 'kb':reveal(cleanName(m.n)||'A camper');break;
     case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
-    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;const sc=num(m.sc,0,1e6,0)|0;if(sc>S.seeds){S.seeds=sc;toast('Welcome back. Your '+sc+' gold were saved.','good',4000)}P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
+    case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;/* no personal gold to restore: the crew wallet is the server's (84-wallet.js) */P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;

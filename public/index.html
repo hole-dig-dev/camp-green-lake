@@ -62,7 +62,7 @@
       <div class="meter" id="hopperMeter" hidden title="Sand in your sifter hopper: it sifts on its own and the gold comes to you."><span class="k" id="hopperK">Hopper</span><div class="ui-meter bar bucket"><i id="hopperBar"></i></div></div>
     </div>
     <div id="hudObjective" class="hud-strip hud-strip--objective ui-panel">
-      <div class="row"><span class="k" title="The crew bank, and the gold the Warden takes out of it at curfew">Bank / quota</span><span class="v" id="quota">0 / 15</span></div>
+      <div class="row"><span class="k" title="The crew wallet, and the gold the Warden takes out of it at curfew">Wallet / quota</span><span class="v" id="quota">0 / 15</span></div>
       <div class="row" id="curseRow" hidden><span class="k">Curse</span><span class="v" id="curseV">0%</span></div>
       <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
       <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
@@ -96,7 +96,7 @@
   </div>
 
   <div id="hudSupplies" class="hud-strip hud-strip--supplies ui-panel">
-    <div class="row big"><span class="k">Gold</span><span class="v" id="seeds">20</span></div>
+    <div class="row big"><span class="k" title="The crew wallet: everyone's gold, shared">Crew gold</span><span class="v" id="seeds">20</span></div>
     <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
     <div class="row" id="onionRow"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
     <div class="row" id="battRow"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
@@ -477,6 +477,7 @@
 <script src="js/83-javelinas.js"></script>
 <script src="js/83-roster.js"></script>
 <script src="js/84-coop.js"></script>
+<script src="js/84-wallet.js"></script>
 <script src="js/84-grab.js"></script>
 <script src="js/84-rigid.js"></script>
 <script src="js/85-lion.js"></script>
