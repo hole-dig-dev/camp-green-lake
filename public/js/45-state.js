@@ -40,7 +40,8 @@ function waterMax(){return (S.up.canteen3?230:S.up.canteen?160:100)+(myLevel()>=
 /* the gold rush (sim.js GOLD): your bucket holds this many holes' worth of sand (5, 10 or 15) */
 /* starting with nothing (JT 2026-10-01): your sand goes in your bucket if you've bought one (to the sifter), else your
    gold pan (washed at the water drums), else on the pile. bucketMax is what it holds, in holes of sand. */
-function bucketMax(){return S.up.bucket3?SIM.GOLD.buckets[2]:S.up.bucket2?SIM.GOLD.buckets[1]:S.up.bucket?SIM.GOLD.buckets[0]:S.up.pan?SIM.PAN:0}
+function bucketMax(){if(S.up.bucket&&backsackOn())return BACKSACK_HOLES[myBackTier()-1];   /* the clear backsack alt (86-backsack.js) */
+  return S.up.bucket3?SIM.GOLD.buckets[2]:S.up.bucket2?SIM.GOLD.buckets[1]:S.up.bucket?SIM.GOLD.buckets[0]:S.up.pan?SIM.PAN:0}
 const carrier=()=>S.up.bucket||S.up.bucket2||S.up.bucket3?'bucket':S.up.pan?'pan':null;
 let noCarrierT=0;
 let bucketWarnT=0;

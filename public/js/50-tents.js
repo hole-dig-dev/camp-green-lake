@@ -82,8 +82,7 @@ function shopEffect(it){
     case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' hole, washed at the water drums'};
     case 'shovel': return {label:'Digging',from:'Bare hands, 1.5 ft deep',to:'Shovel, 3x faster, 5 ft deep'};
     case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: 1 hole':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
-    case 'bucket2': return {label:'Bucket holds',from:SIM.GOLD.buckets[0]+' holes of sand',to:SIM.GOLD.buckets[1]+' holes of sand'};
-    case 'bucket3': return {label:'Bucket holds',from:SIM.GOLD.buckets[1]+' holes of sand',to:SIM.GOLD.buckets[2]+' holes of sand'};
+    case 'bucket2': case 'bucket3':{const H=backsackOn()?BACKSACK_HOLES:SIM.GOLD.buckets,i=it.id==='bucket2'?1:2;return {label:backsackOn()?'Backsack holds':'Bucket holds',from:H[i-1]+' holes of sand',to:H[i]+' holes of sand'}}   /* the clear backsack alt: 5/10/20 (86-backsack.js) */
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
     case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
     case 'onion': return {label:'Lizard ward',from:`${S.onions} on hand`,to:'45 s protection per onion'};
