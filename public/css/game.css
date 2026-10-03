@@ -359,7 +359,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .crew-shop[hidden]{display:none}
 .crew-shop__intro{margin:0 0 10px;font-size:14px;color:var(--ink-soft)}
 .crew-grid{display:grid;grid-template-columns:minmax(170px,1.5fr) repeat(6,minmax(84px,1fr));gap:6px;min-width:720px}
-.crew-grid .crew-h{font:900 15px/1.1 var(--display);letter-spacing:.05em;text-transform:uppercase;text-align:center;padding:6px 4px;border-bottom:2px solid var(--ink)}
+.crew-grid .crew-h{font:900 15px/1.1 var(--display);letter-spacing:.05em;text-transform:uppercase;text-align:center;padding:6px 4px;border-bottom:2px solid var(--ink);position:sticky;top:-12px;z-index:2;background:var(--canvas)}   /* the names stay at the top of their columns as you scroll (JT: so you know who you're buying for) */
 .crew-grid .crew-h small{display:block;font:600 11px/1.2 var(--ui);letter-spacing:0;text-transform:none;color:var(--ink-soft);margin-top:3px}
 .crew-grid .crew-item{padding:6px 4px;border-bottom:1px dashed var(--ink-soft)}
 .crew-grid .crew-item b{display:block;font:700 14px/1.2 var(--ui)}

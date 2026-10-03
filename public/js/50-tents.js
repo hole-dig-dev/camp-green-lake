@@ -313,7 +313,7 @@ function renderCrewShop(){
   for(const it of[CREW_HIRE_ITEM,...SIM.CREW_SHOP]){const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost;
     const c=document.createElement('div');c.className='crew-item'+(it.id==='hire'?' crew-item--hire':'');const t=document.createElement('b');t.textContent=it.name;const d=document.createElement('span');d.textContent=it.desc;const p=document.createElement('em');p.textContent=(it.id==='hire'?'next hire: ':'')+cost+' gold';c.append(t,d,p);grid.appendChild(c);
     for(const n of SIM.CREW){const st=crewItemState(n,it),cell=document.createElement('div');cell.className='crew-cell';const btn=document.createElement('button');btn.type='button';btn.className='crew-buy';
-      const key=n+'|'+it.id;btn.dataset.key=key;btn.setAttribute('aria-label',`${it.name} for ${n}`);
+      const key=n+'|'+it.id;btn.dataset.key=key;btn.setAttribute('aria-label',`${it.name} for ${n}`);btn.title=`${it.name} for ${n}`;
       if(st.k==='owned'){btn.textContent=it.id==='hire'?'✓ On the crew':'✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
       else if(st.k==='locked'){btn.textContent=st.need==='hire'?'Hire him first':`Needs ${st.need}`;btn.disabled=true}
       else if(st.k==='short'){btn.textContent=`Need ${st.need} more`;btn.disabled=true}
