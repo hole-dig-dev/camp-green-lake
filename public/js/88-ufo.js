@@ -94,7 +94,7 @@ const isAbducted=b=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n].abducted);
 function updateUfo(dt){
   if(!PARTY.on&&!ZONE_H)for(const b of bots)if(b.ufoLure)ufoLureStep(b,dt);
   for(let i=UFO.anims.length-1;i>=0;i--)if(!ufoStep(UFO.anims[i],dt))UFO.anims.splice(i,1);
-  for(const b of bots)if(isAlien(b)&&b.p.g.visible)alienLook(b);
+  for(const b of bots){if(isAlien(b)&&b.p.g.visible)alienLook(b);const nm=isAlien(b)?ALIEN_NAME:b.d.n;if(b.L.n.textContent!==nm)b.L.n.textContent=nm}   /* the tag over his head gives him away too (JT): Glorb Glorb */
 }
 /* the alien's conversation (80-ui.js botNode) */
 /* the dialog's speaker name gives him away (JT): "Glorb Glorb", saying he's Zach */

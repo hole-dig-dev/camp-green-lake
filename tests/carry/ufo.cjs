@@ -20,4 +20,5 @@ await A.evaluate(()=>runCommand('ufo pete'));await A.waitForTimeout(12000);
 await A.evaluate(()=>runCommand('ufo back'));await A.waitForTimeout(9000);
 check('ufo back: Pete\'s dropped off straight away, an alien too',await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Pete');return isAlien(b)&&!isAbducted(b)&&b.p.g.visible}));
 await A.evaluate(()=>tuneSet('haz.all',1));
+check('the alien\'s name tag says Glorb Glorb',await B.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach');return b.L.n.textContent==='Glorb Glorb'}),await B.evaluate(()=>bots.find(b=>b.d.n==='Zach').L.n.textContent));
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)?0:1)})();

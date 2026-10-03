@@ -89,7 +89,7 @@ command('haboob',{usage:'haboob [direction]',help:'Start a dust storm blowing in
     spawnEnv('haboob',o);if(online())wsSend({t:'env',k:'haboob',...o});
     return`Dust storm rolling in from the ${compass(Math.sin(a)*100,-Math.cos(a)*100)}.`}});   // same fromVec math as hbCalc's warning toast in 75-haboob.js
 command('god',{usage:'god [on|off]',help:'God mode for you: no damage, no knockouts, water never runs out, and the long-handled shovel (dig to 8 ft). Hazards still push you around.',
-  run([a]){const k=(a||'').toLowerCase();GOD=k==='on'?true:k==='off'?false:!GOD;if(GOD){clearAff();S.water=waterMax();S.up.long=true/* JT: god mode gets the long shovel, yours to keep */}$('#hud').classList.toggle('god',GOD);return GOD?'God mode on. You have the long-handled shovel (8 ft).':'God mode off.'}});
+  run([a]){const k=(a||'').toLowerCase();GOD=k==='on'?true:k==='off'?false:!GOD;if(GOD){clearAff();S.water=waterMax();S.up.shovel=true;S.up.long=true/* JT: god mode gets the long shovel, yours to keep (and the camp shovel it upgrades: digging checks that one) */}$('#hud').classList.toggle('god',GOD);return GOD?'God mode on. You have the long-handled shovel (8 ft).':'God mode off.'}});
 command('give',{usage:'give gold <amount> | give sand',help:'Give yourself gold to spend (testing), e.g. give gold 500. give sand fills your bucket.',
   run([what,n]){what=(what||'').toLowerCase();if(what==='sand'){S.bucket=bucketMax();return`Bucket full: ${S.bucket} holes of sand.`}
     if(!['gold','seeds'].includes(what)||n===undefined)throw new Error('Usage: give gold <amount>  or  give sand');const v=numArg(n,0,1,1e6)|0;S.seeds+=v;sfx.find();return`+${v} gold. You have ${S.seeds}.`}});
