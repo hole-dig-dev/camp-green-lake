@@ -214,6 +214,7 @@ function walkTo(b,x,z,dt,speed,y){   // true once there. Outdoors he follows a p
   g.position.y=y!==undefined?y:groundAt(g.position.x,g.position.z);animPerson(b.p,speed>3?4:1,dt,0,speed>3?1:undefined);return false;
 }
 /* each crew member has his own lane through the main gate, so they don't all stand on the same spot */
+const CREW_THROUGH=new Set(['gatein','gateout','gatebackin','gatebackout','gotent','walk','return']);   /* walking legs that follow another without a stop */
 const gateX=b=>{const x=CREW_GATE.x+(bots.indexOf(b)-2.5)*0.75;
   if(typeof pipeNear!=='function'||!PIPE.nodes.length)return x;   /* a pipe laid through the gate: his lane steps off it */
   for(const dx of[0,0.6,-0.6,1.2,-1.2,1.8,-1.8])if(Math.abs(x+dx-CREW_GATE.x)<(GATE_X1-GATE_X0)/2-0.6&&pipeNear(x+dx,CREW_GATE.out)>0.5&&pipeNear(x+dx,CREW_GATE.in)>0.5)return x+dx;
@@ -326,7 +327,7 @@ function updateBots(dt,now){
     if(OUTDOOR.has(b.state))crewHands(b);
     if(siren){
       if(b.state==='siftq'||b.state==='sifting'||b.state==='drink'){leaveSiftQ(b);b.errand=null;b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}   // already inside the fence: straight to the tent, bucket and all
-      if(b.state==='dig'||b.state==='rest'||b.state==='walk'||b.state==='return'||b.state==='gatebackout'){b.state='gateout';b.tx=gateX(b);b.tz=25;b.errand=null}
+      if(b.state==='dig'||b.state==='rest'||b.state==='walk'||b.state==='return'||b.state==='gatebackout'){b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;b.errand=null}
       else if(b.state==='gatebackin'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
     }
     if(b.state==='indoor'){
@@ -341,7 +342,7 @@ function updateBots(dt,now){
         b.t=siren?null:20+botRng()*40;   // a daytime break lasts 20-60 s; a night lasts until a wake-up time after dawn
       }
       else if(b.then==='unrack'){rackShovel(b,false);goIndoor(b,[D_EXIT],'out')}
-      else if(b.then==='out'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);g.rotation.y=Math.PI;b.state='gatebackin';b.tx=gateX(b);b.tz=30}
+      else if(b.then==='out'){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);g.rotation.y=Math.PI;b.state='gatebackin';b.tx=gateX(b);b.tz=CREW_GATE.in}
       continue;
     }
     if(b.state==='inside'){
@@ -388,7 +389,7 @@ function updateBots(dt,now){
         if(b.water<crewWaterMax(b)*CREW_WATER_LOW){b.errand='water';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,pick(['I need water.','Canteen\'s dry. Back in a minute.','So thirsty...']),2600)}
         else if(b.bucket>=crewBucketMax(b)-1e-6&&!crewSifts(b)){b.errand='pan';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,pick(['Pan\'s full. Off to wash it.','Got a pan of sand. Back soon.']),2600)}
         else if(b.bucket>=crewBucketMax(b)-1e-6){b.errand='sift';b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out;say(b.L,crewPack(b)?pick(['Pack\'s full. Off to the sifter.','That\'s a full backsack. Sifter time.','Can barely stand up with this pack. Sifter.']):pick(['Bucket\'s full. Off to the sifter.','That\'s a full bucket. Sifter time.','Full bucket. Back in a bit.']),3000)}
-        else if(botRng()<0.12*crewThirst(b)){b.state='gateout';b.tx=gateX(b);b.tz=25}   // a daytime break in D Tent now and then (the siren sends everyone home)
+        else if(botRng()<0.12*crewThirst(b)){b.state='gateout';b.tx=gateX(b);b.tz=CREW_GATE.out}   // a daytime break in D Tent now and then (the siren sends everyone home)
         else{const sp=crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.tx=sp.x;b.tz=sp.z;b.state='walk'}else b.t=4}
       }
     }else if(b.state==='siftq'){
@@ -415,18 +416,20 @@ function updateBots(dt,now){
         b.bucket=0;b.errand=null;leaveSiftQ(b);if(b.water<crewWaterMax(b)*0.7){b.state='drink';b.t=null}else{b.state='gatebackin';b.tx=gateX(b);b.tz=CREW_GATE.in}
       }
     }else{
-      const dx=b.tx-g.position.x,dz=b.tz-g.position.z,d=Math.hypot(dx,dz);
+      const dx=b.tx-g.position.x,dz=b.tz-g.position.z,d=Math.hypot(dx,dz),st0=b.state;
       if(d<0.1&&b.state==='return'){b.tx=b.tz=0;b.state=b.hole.d>=crewDepth(b)?'rest':'dig';b.t=2;b.restT=0;b.dph=0}
-      else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=gateX(b);b.tz=30}
+      else if(d<0.1&&b.state==='gateout'){b.state='gatein';b.tx=gateX(b);b.tz=CREW_GATE.in}
       else if(d<0.1&&b.state==='gatein'&&b.errand==='sift'){b.state='siftq';SIFTQ.push(b);b.waitT=0}
       else if(d<0.1&&b.state==='gatein'&&b.errand==='lunch'){b.state='lunch';b.t=null}
       else if(d<0.1&&b.state==='gatein'&&(b.errand==='water'||b.errand==='pan')){b.state='drink';b.wash=b.errand==='pan';b.t=null}
       else if(d<0.1&&b.state==='gatein'){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z}
       else if(d<0.1&&b.state==='gotent'){g.position.set(D_ENTRY.x,TENT_FLOOR_Y,D_ENTRY.z);goIndoor(b,[RACK[bots.indexOf(b)].front],'rack')}   // in through the flap, straight to the rack
-      else if(d<0.1&&b.state==='gatebackin'){b.state='gatebackout';b.tx=gateX(b);b.tz=25}
+      else if(d<0.1&&b.state==='gatebackin'){b.state='gatebackout';b.tx=gateX(b);b.tz=CREW_GATE.out}
       else if(d<0.1&&b.state==='gatebackout'){const sp=b.hole.d>=crewDepth(b)&&crewDigSpot(b,b.hole.x,b.hole.z);if(sp){b.state='walk';b.tx=sp.x;b.tz=sp.z}else{b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}}   // that hole's done: new ground
       else if(d<0.1){b.hole=addHole({x:b.tx,z:b.tz,d:0.05,bot:true});b.tx=b.tz=0;b.state='dig';b.dph=0;touchHole(b.hole)}
       else walkTo(b,b.tx,b.tz,dt,siren?3.6:b.state==='return'?3.5:2.2);
+      /* a waypoint he walks straight through (the gate, out and in): on to the next leg this same frame, no stop to "rethink" (JT) */
+      if(b.state!==st0&&d<0.1&&CREW_THROUGH.has(b.state))walkTo(b,b.tx,b.tz,dt,siren?3.6:b.state==='return'?3.5:2.2);
     }
   }
 }
