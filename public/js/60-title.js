@@ -20,7 +20,8 @@ function startGame(resume){
     const r=resume.S;S.resumed=true;
     S.bucket=num(r.bucket,0,20,0);S.hopper=num(r.hopper,0,120,0);S.pipe=num(r.pipe,0,999,0)|0;S.dynamite=num(r.dynamite,0,99,0)|0;S.scarecrow=num(r.scarecrow,0,99,0)|0;S.soda=num(r.soda,0,99,0)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
-    S.up={};if(r.up&&typeof r.up==='object')for(const k of ['shovel','pan','bucket','spade','long','detector','canteen','canteen3','bucket2','bucket3','hopper','hopper2','hopper3','disarm','dog','grav','grapple','goldShovel','hover','hoverShoes','bigsack','rope','walkie'])if(r.up[k])S.up[k]=true;S.batt=num(r.batt,0,100,100);
+    S.up={pan:true};if(r.up&&typeof r.up==='object')for(const k of ['shovel','pan','bucket','spade','long','detector','canteen','canteen3','bucket2','bucket3','hopper','hopper2','hopper3','disarm','dog','grav','grapple','goldShovel','hover','hoverShoes','bigsack','rope','walkie'])if(r.up[k])S.up[k]=true;if(S.up.long||S.up.spade||S.up.goldShovel)S.up.shovel=true;   /* an upgrade without the shovel it upgrades (old god mode): dig with it */
+    S.batt=num(r.batt,0,100,100);
     S.hasKB=!!r.hasKB;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
     const p=resume.P||{};P.x=num(p.x,-HALF+3,HALF-3,0);P.z=num(p.z,-HALF+3,HALF-3,39);P.y=groundAt(P.x,P.z);P.yaw=num(p.yaw,-100,100,0);P.pitch=num(p.pitch,-0.15,1.25,0.32);
     if(Number.isInteger(p.room)&&TENTS[p.room]){

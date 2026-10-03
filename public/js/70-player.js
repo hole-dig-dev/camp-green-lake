@@ -158,7 +158,7 @@ function updateLizards(dt,t){
   if(PARTY.on)return;
   if(!hazOn('lizards')){for(const L of lizards)L.m.g.visible=false;return}   /* the hazards switch (88-hazards.js) */
   const px=P.x,pz=P.z,alive=S.started&&!S.ko;
-  for(const L of lizards){
+  for(const L of lizards){if(L.calmT>0)L.calmT-=dt;
     const tx=L.home.x+Math.cos(t*L.w+L.ph)*5,tz=L.home.z+Math.sin(t*L.w*1.37+L.ph)*5;
     let dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
@@ -171,7 +171,7 @@ function updateLizards(dt,t){
       L.m.tail.rotation.y=Math.sin(t*14+L.ph)*0.5;if(L.m.rig&&g2.visible)creatureAnim(L.m.rig,'Run',dt,1.3);continue}
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
     // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
-    else if(alive&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12){sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
+    else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
     const dx=gx-L.x,dz=gz-L.z,d=Math.hypot(dx,dz);
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
@@ -181,7 +181,7 @@ function updateLizards(dt,t){
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
     if(L.m.rig&&g.visible)creatureAnim(L.m.rig,L.mode==='wander'?'Walk':'Run',dt,L.mode==='wander'?1:1.3);
-    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander'}
+    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander';L.calmT=4}   /* backs off after a bite: in god mode (no knockout) it used to bite and hiss every frame, deafeningly (JT) */
   }
 }
 
