@@ -1,4 +1,5 @@
 'use strict';
+let roHissT=0;
 /* public/js/83-roster.js -- the day's monster roster, ported from Greg's branch (claude/intense-change-1-test-2026-09-27-1829).
    The rules live in public/sim.js (stepRoster): the server runs them for everyone and sends 'rost' snapshots; solo play
    runs the same code here. This file draws the monsters, applies what they do to you, and adds the shovel swing and
@@ -86,7 +87,7 @@ function rosterEvent(e){
   if(!e||typeof e!=='object')return;
   const mine=e.id===myId(),dist=e.x!=null?Math.hypot(e.x-P.x,e.z-P.z):0;
   switch(e.k){
-    case 'rbite':if(mine){hurt(tune('mon.hatchBite'),'Lizard hatchling','Lizard hatchlings bit you. Swing your shovel (E) at them, or run.','poison');sfx.hiss()}break;
+    case 'rbite':if(mine){hurt(tune('mon.hatchBite'),'Lizard hatchling','Lizard hatchlings bit you. Swing your shovel (E) at them, or run.','poison');{const n=performance.now();if(n-(roHissT||0)>600){roHissT=n;sfx.hiss()}}}break;   /* a swarm's bites: one hiss at a time, not one each */
     case 'rattle':if(dist<22){noise(0.5,5200,6,0.2*clamp(1-dist/22,0.1,1));if(dist<8&&!roRattleTold){roRattleTold=true;toast('You hear a rattle nearby. Rattlesnake.','',2500)}}break;
     case 'strike':if(mine){hurt(20,'Rattlesnake','A rattlesnake got you. The poison eats your stamina until it wears off.','poison');sfx.bite()}break;
     case 'sting':if(mine){hurt(12,'Scorpion','Scorpion sting! Swing your shovel (E) at it.','poison');tone(1400,0.2,'square',0.06,600)}break;

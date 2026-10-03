@@ -1,4 +1,4 @@
-// Starting with nothing: bare hands, the pan, the shovel, the bucket and sifter, and the Warden's quota (pay / fired).
+// Starting with (almost) nothing: bare hands and the gold pan (free from the start, JT 2026-10-02), the shovel, the bucket and sifter, and the Warden's quota (pay / fired).
 const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 const buy=async(p,id)=>{await p.evaluate(()=>{P.x=16;P.z=40.6;P.y=groundAt(P.x,P.z)});await p.waitForTimeout(300);if(!(await p.evaluate(()=>shopOpen))){await p.keyboard.press('f');await p.waitForTimeout(400)}
@@ -7,7 +7,7 @@ const buy=async(p,id)=>{await p.evaluate(()=>{P.x=16;P.z=40.6;P.y=groundAt(P.x,P
 await A.evaluate(()=>{GOD=true;runCommand('time 8:00')});await A.waitForTimeout(800);
 check('you start with nothing: 0 gold, bare hands',await A.evaluate(()=>S.seeds===0&&!S.up.shovel&&/Bare hands/.test(document.querySelector('#tools').textContent+[...document.querySelectorAll('#tools [title]')].map(e=>e.title).join(''))));
 check('no shovel in your hands (your view and your friend\'s)',await A.evaluate(()=>me.noShovel&&me.shovelMeshes.every(n=>!n.visible))&&await B.evaluate(()=>{const R=[...remotes.values()].find(r=>r.name==='Alpha');return R.p.noShovel&&R.p.shovelMeshes.every(n=>!n.visible)}));
-check('no pan or bucket yet: no sand meter',await A.evaluate(()=>$('#bucketMeter').hidden));
+check('the gold pan from the start (free), no bucket yet: the meter says Pan',await A.evaluate(()=>S.up.pan&&!S.up.bucket&&!$('#bucketMeter').hidden&&$('#bucketK').textContent==='Pan'));
 check('quota on the HUD: wallet / quota, day 1 is 15 a camper (24 for two of you)',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent)==='0 / 24',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent));
 // dig with your hands (real E)
 await A.evaluate(()=>{for(let i=0;i<200;i++){const x=-60+(i%20)*6,z=-80-((i/20)|0)*6;if(!holeNear(x,z,4)&&!holeNear(x,z+1.1,4)){P.x=x;P.z=z;P.y=groundAt(x,z);P.fa=0;P.yaw=Math.PI;break}}});await A.keyboard.down('e');await A.waitForTimeout(9000);await A.keyboard.up('e');   // clear ground (not next to one of the lake's old holes)
@@ -17,8 +17,8 @@ check('bare hands dig, but only 1.5 ft down',hd>0.3&&hd<=0.451,`hole ${hd} m`);
 const fl=await A.evaluate(()=>{const g0=S.seeds;for(let i=0;i<300;i++){P.x=20+((i/10)|0)*3;P.z=-40+(i%10)*3;scoop()}return S.seeds-g0});
 check('the odd fleck of gold turns up as you dig (about 1 scoop in 25)',fl>=4&&fl<=25,`${fl} gold in 300 hand scoops`);
 // the pan
-await A.evaluate(()=>{runCommand('give gold 200')});await buy(A,'pan');
-check('the pan (10 gold): the meter says Pan',await A.evaluate(()=>S.up.pan&&!$('#bucketMeter').hidden&&$('#bucketK').textContent==='Pan'));
+await A.evaluate(()=>{runCommand('give gold 200')});
+check('the store shows the pan as yours already',await A.evaluate(()=>shopStatus(SHOP.find(i=>i.id==='pan')).kind==='owned'));
 await A.evaluate(()=>{S.bucket=1;P.x=SIM.GOLD.WATER.x;P.z=SIM.GOLD.WATER.z;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(400);
 const pr=await A.evaluate(()=>$('#prompt').textContent);const g1=await A.evaluate(()=>S.seeds);await A.keyboard.press('f');await A.waitForTimeout(7500);   // the panning plays first (89-goldfx.js)
 check('a full pan washes out at the water drums (F)',/Wash your pan/.test(pr)&&await A.evaluate(g=>S.seeds>g&&S.bucket===0,g1),`${pr} | +${await A.evaluate(g=>S.seeds-g,g1)} gold`);

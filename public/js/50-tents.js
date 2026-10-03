@@ -360,6 +360,7 @@ function openShop(){
   shopOpen=true;clerk.waveT=1.6;releaseLock();shopPrevFocus=document.activeElement;$('#shop').hidden=false;
   buildShopTabs();buildShopGrid();
   const ids=shopVisibleIds();if(!ids.includes(shopSel))shopSel=ids[0]||null;
+  {const st=shopSel&&SHOP.find(i=>i.id===shopSel);if(!st||shopStatus(st).kind==='owned'){const n=shopVisibleIds().find(id=>{const k=shopStatus(SHOP.find(i=>i.id===id)).kind;return k==='available'||k==='short'});if(n)shopSel=n}}   /* open on something you don't have yet (not the pan everyone starts with) */
   renderShop();startShopGamepad();
   setTimeout(()=>{const sel=shopSel?$(`.shop-item[data-item="${CSS&&CSS.escape?CSS.escape(shopSel):shopSel}"]`):null;(sel||$('#shopClose')).focus()},30);
 }
