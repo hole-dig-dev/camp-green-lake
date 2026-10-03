@@ -36,7 +36,7 @@ const defaultBinds=()=>Object.fromEntries(BIND_DEFS.map(b=>[b.id,b.def]));
 /* ---- settings: one blob in localStorage, loaded once and applied everywhere it matters. ---- */
 const SETTINGS_KEY='cgl-settings';
 const SETTINGS={voiceOn:false,voiceMode:'ptt',sens:1,invertY:false,touchSens:1,fov:62,volMaster:0.55,volFx:1,volMusic:1,volVoice:1,
-  shadows:true,quality:'auto',showFps:false,mapStyle:'square',mapScale:1,mapOpacity:1,binds:defaultBinds()};
+  shadows:true,quality:'auto',showFps:false,showKeys:false,mapStyle:'square',mapScale:1,mapOpacity:1,mapZoom:1,binds:defaultBinds()};
 function loadSettings(){
   try{
     const o=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');if(!o||typeof o!=='object')return;
@@ -45,8 +45,10 @@ function loadSettings(){
     if(typeof o.voiceOn==='boolean')SETTINGS.voiceOn=o.voiceOn;if(o.voiceMode==='ptt'||o.voiceMode==='open')SETTINGS.voiceMode=o.voiceMode;
     if(typeof o.shadows==='boolean')SETTINGS.shadows=o.shadows;
     if(typeof o.showFps==='boolean')SETTINGS.showFps=o.showFps;
+    if(typeof o.showKeys==='boolean')SETTINGS.showKeys=o.showKeys;
     if(['auto','low','med','high'].includes(o.quality))SETTINGS.quality=o.quality;
     if(['square','compass'].includes(o.mapStyle))SETTINGS.mapStyle=o.mapStyle;
+    if([0,1,2].includes(o.mapZoom))SETTINGS.mapZoom=o.mapZoom;
     if(Number.isFinite(o.mapScale))SETTINGS.mapScale=clamp(o.mapScale,0.6,1.6);
     if(Number.isFinite(o.mapOpacity))SETTINGS.mapOpacity=clamp(o.mapOpacity,0.2,1);
     if(o.binds&&typeof o.binds==='object')for(const b of BIND_DEFS)if(typeof o.binds[b.id]==='string')SETTINGS.binds[b.id]=o.binds[b.id];
@@ -85,11 +87,13 @@ function applyQuality(){
   const pr=QUALITY_PR[SETTINGS.quality]||MAX_PR;
   PERF.pr=pr;renderer.setPixelRatio(pr);renderer.setSize(innerWidth,innerHeight);
 }
+/* the key-hint strip along the bottom: off unless you turn it on (JT 2026-10-02: off for new players); Controls lists them all */
+function applyKeyHints(){const k=$('#keys');if(k)k.hidden=!SETTINGS.showKeys}
 function applyFpsVisibility(){if(PERF.el)PERF.el.hidden=!(SETTINGS.showFps||/fps/.test(location.hash))}
 /* minimap size + opacity (Options > Minimap): CSS variables on the map panel, so both map styles and the zoom/field-map
    buttons scale together from the top-right corner. The J field map moves the canvas out, so it isn't affected. */
 function applyMapLook(){const m=$('#mapbox');m.style.setProperty('--map-scale',SETTINGS.mapScale);m.style.setProperty('--map-opacity',SETTINGS.mapOpacity)}
-function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility();setMapStyle(SETTINGS.mapStyle);applyMapLook()}
+function applySettings(){rebuildRemap();applyVolume();applyFov();applyShadows();applyQuality();applyFpsVisibility();applyKeyHints();setMapStyle(SETTINGS.mapStyle);applyMapLook();setMapZoom(SETTINGS.mapZoom)}
 
 /* ---- pause state + screens ---- */
 const PAUSE={open:false};
@@ -146,7 +150,7 @@ const oSens=$('#oSens'),oSensV=$('#oSensV'),oInvert=$('#oInvert'),oTouchSens=$('
       oFov=$('#oFov'),oFovV=$('#oFovV'),oVolMaster=$('#oVolMaster'),oVolMasterV=$('#oVolMasterV'),
       oVolFx=$('#oVolFx'),oVolFxV=$('#oVolFxV'),oVolMusic=$('#oVolMusic'),oVolMusicV=$('#oVolMusicV'),
       oVolVoice=$('#oVolVoice'),oVolVoiceV=$('#oVolVoiceV'),
-      oShadows=$('#oShadows'),oFps=$('#oFps'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle'),oVoiceOn=$('#oVoiceOn'),oVoiceMode=$('#oVoiceMode');
+      oShadows=$('#oShadows'),oFps=$('#oFps'),oKeys=$('#oKeys'),oQuality=$('#oQuality'),oMapStyle=$('#oMapStyle'),oMapZoom=$('#oMapZoom'),oVoiceOn=$('#oVoiceOn'),oVoiceMode=$('#oVoiceMode');
 function renderOptions(){
   oSens.value=SETTINGS.sens;oSensV.textContent=SETTINGS.sens.toFixed(2)+'x';
   oMapScale.value=SETTINGS.mapScale;oMapScaleV.textContent=Math.round(SETTINGS.mapScale*100)+'%';
@@ -158,9 +162,10 @@ function renderOptions(){
   oVolFx.value=Math.round(SETTINGS.volFx*100);oVolFxV.textContent=oVolFx.value+'%';
   oVolMusic.value=Math.round(SETTINGS.volMusic*100);oVolMusicV.textContent=oVolMusic.value+'%';
   oVolVoice.value=Math.round(SETTINGS.volVoice*100);oVolVoiceV.textContent=oVolVoice.value+'%';
-  oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;
+  oShadows.checked=SETTINGS.shadows;oFps.checked=SETTINGS.showFps;oKeys.checked=SETTINGS.showKeys;
   for(const b of oQuality.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.quality?'true':'false');
   for(const b of oMapStyle.children)b.setAttribute('aria-pressed',b.dataset.v===SETTINGS.mapStyle?'true':'false');
+  for(const b of oMapZoom.children)b.setAttribute('aria-pressed',+b.dataset.v===SETTINGS.mapZoom?'true':'false');
   syncVoiceOpts();
   renderBindList();
 }
@@ -177,8 +182,10 @@ oVolVoice.oninput=()=>{SETTINGS.volVoice=+oVolVoice.value/100;oVolVoiceV.textCon
 oShadows.onchange=()=>{SETTINGS.shadows=oShadows.checked;applyShadows();saveSettings()};
 oVoiceOn.onchange=async()=>{await setVoiceEnabled(oVoiceOn.checked);rememberVoice()};   // (mic denied: it stays off, and the box unticks)
 oVoiceMode.onclick=e=>{const b=e.target.closest('button');if(!b)return;VOX.mode=b.dataset.v;if(VOX.enabled)setMicTransmitting(VOX.mode==='open');updateVoiceHud();rememberVoice()};
+oMapZoom.onclick=e=>{const b=e.target.closest('button');if(!b)return;for(const c of oMapZoom.children)c.setAttribute('aria-pressed',c===b?'true':'false');setMapZoom(+b.dataset.v);SETTINGS.mapZoom=+b.dataset.v;saveSettings()};   /* the minimap's zoom lives here now, not on the map (JT) */
 oMapStyle.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.mapStyle=b.dataset.v;for(const c of oMapStyle.children)c.setAttribute('aria-pressed',c===b?'true':'false');setMapStyle(SETTINGS.mapStyle);saveSettings()};
 oFps.onchange=()=>{SETTINGS.showFps=oFps.checked;applyFpsVisibility();saveSettings()};
+oKeys.onchange=()=>{SETTINGS.showKeys=oKeys.checked;applyKeyHints();saveSettings()};
 oQuality.onclick=e=>{const b=e.target.closest('button');if(!b)return;SETTINGS.quality=b.dataset.v;for(const c of oQuality.children)c.setAttribute('aria-pressed',c===b?'true':'false');applyQuality();saveSettings()};
 
 /* ---- key-binding capture: click a row, press a key. Conflicts get a warning but aren't blocked;

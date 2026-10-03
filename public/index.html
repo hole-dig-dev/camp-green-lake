@@ -61,13 +61,6 @@
       <div class="meter" id="bucketMeter" title="Sand in your gold pan (wash it at the water drums) or your bucket (sift it in camp)."><span class="k" id="bucketK">Bucket</span><div class="ui-meter bar bucket" id="bucketWrap"><i id="bucketBar"></i></div></div>
       <div class="meter" id="hopperMeter" hidden title="Sand in your sifter hopper: it sifts on its own and the gold comes to you."><span class="k" id="hopperK">Hopper</span><div class="ui-meter bar bucket"><i id="hopperBar"></i></div></div>
     </div>
-    <div id="hudObjective" class="hud-strip hud-strip--objective ui-panel">
-      <div class="row"><span class="k" title="The crew wallet, and the gold the Warden takes out of it at curfew">Wallet / quota</span><span class="v" id="quota">0 / 15</span></div>
-      <div class="row" id="curseRow" hidden><span class="k">Curse</span><span class="v" id="curseV">0%</span></div>
-      <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
-      <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
-      <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
-    </div>
   </div>
 
   <div id="mapbox" class="panel">
@@ -77,28 +70,24 @@
       <!-- compass style only (Options > Minimap): N/E/S/W turn with the map; the tick marks the way you're facing -->
       <div class="map-compass" aria-hidden="true"><span data-d="n">N</span><span data-d="e">E</span><span data-d="s">S</span><span data-d="w">W</span></div>
       <span class="map-heading" aria-hidden="true"></span>
+      <div id="mapCoords" class="map-coords" aria-label="Your coordinates">X 0 · Y 0</div>
     </div>
-    <div class="map-zoom" role="group" aria-label="Map zoom">
-      <button id="mapZoomOut" type="button" class="ui-button ui-button--quiet" aria-label="Zoom out">&minus;</button>
-      <span id="mapZoomLabel" class="map-zoom-label">260 m across</span>
-      <button id="mapZoomIn" type="button" class="ui-button ui-button--quiet" aria-label="Zoom in">+</button>
-    </div>
-    <div id="mapCoords" class="map-coords" aria-label="Your coordinates">X 0 · Y 0</div>
-    <button id="mapExpandBtn" class="ui-button ui-button--quiet ui-button--sm map-expand-btn" type="button">
-      <svg class="ui-icon" aria-hidden="true"><use href="#icon-search"></use></svg>Field map
-    </button>
-    <div id="online"><b>At camp</b><span id="onlineList">Just you</span></div>
+    <div id="online" hidden><b>At camp</b><span id="onlineList">Just you</span></div>   <!-- not shown (JT); who's here, for screen readers and the tests -->
   </div>
-  <!-- the D Tent crew at a glance (78-hud.js updateCrewPanel): K shows / hides it -->
+  <!-- the D Tent crew at a glance (78-hud.js updateCrewPanel): top right, left of the minimap; the button minimizes it, K shows / hides it -->
   <div id="crewPanel" class="panel crew-panel" aria-label="The crew">
-    <div class="crew-panel__head"><b>The crew</b><span class="crew-panel__key">K</span></div>
+    <div class="crew-panel__head"><b>The crew</b><span class="crew-panel__key" title="K hides the panel">K</span><button id="crewMinBtn" type="button" class="crew-panel__min" aria-label="Minimize the crew panel" aria-expanded="true">&minus;</button></div>
     <div id="crewRows"></div>
   </div>
 
+  <!-- the run at a glance, in one place (JT 2026-10-02): the crew wallet against tonight's quota, the clock, your sack -->
   <div id="hudSupplies" class="hud-strip hud-strip--supplies ui-panel">
-    <div class="row big"><span class="k" title="The crew wallet: everyone's gold, shared">Crew gold</span><span class="v" id="seeds">20</span></div>
+    <div class="row big"><span class="k" title="The crew wallet (everyone's gold, shared) and the gold the Warden takes out of it at curfew">Wallet</span><span class="v"><span id="seeds">20</span><small id="quota">/ 15</small></span></div>
+    <div class="row" id="curseRow" hidden><span class="k">Curse</span><span class="v" id="curseV">0%</span></div>
+    <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
+    <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
+    <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
     <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
-    <div class="row" id="onionRow"><span class="k">Onions</span><span class="v" id="onions">0</span></div>
     <div class="row" id="battRow"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
     <div class="meter" id="detector" hidden><span class="k">Detector</span><div class="ui-meter sig"><i id="sigBar" style="width:0"></i></div></div>
   </div>
@@ -384,10 +373,14 @@
       <div class="optrow"><span>Minimap</span><div class="seg" id="oMapStyle">
         <button type="button" data-v="square">Square (north up)</button><button type="button" data-v="compass">Compass (turns with you)</button>
       </div></div>
+      <div class="optrow"><span>Minimap zoom</span><div class="seg" id="oMapZoom">
+        <button type="button" data-v="0">130 m</button><button type="button" data-v="1">260 m</button><button type="button" data-v="2">520 m</button>
+      </div></div>
       <div class="optrow"><span>Minimap size</span><input type="range" id="oMapScale" min="0.6" max="1.6" step="0.05"><output id="oMapScaleV"></output></div>
       <div class="optrow"><span>Minimap opacity</span><input type="range" id="oMapOpacity" min="20" max="100" step="5"><output id="oMapOpacityV"></output></div>
       <div class="optrow chk"><input type="checkbox" id="oShadows"><span>Shadows</span></div>
       <div class="optrow chk"><input type="checkbox" id="oFps"><span>Show FPS counter</span></div>
+      <div class="optrow chk"><input type="checkbox" id="oKeys"><span>Show key hints along the bottom</span></div>
       <div class="optrow"><span>Render quality</span><div class="seg" id="oQuality">
         <button type="button" data-v="auto">Auto</button><button type="button" data-v="low">Low</button><button type="button" data-v="med">Medium</button><button type="button" data-v="high">High</button>
       </div></div>
