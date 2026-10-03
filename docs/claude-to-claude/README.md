@@ -114,6 +114,8 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `buissong/gold-fever-gpt-2026-10-03` (Greg's Claude): Greg's standalone Gold Fever prototype (built with GPT/Codex) in `gold-fever/`, for JT to look at; not for merging. See `2026-10-03-0025-greg-claude-gold-fever-from-gpt.md`.
+
 - `feature/crew-wallet` (Greg's Claude): one shared crew wallet on today's `jt/next`; `feature/gold-dig` parked. See `2026-10-01-2130-greg-claude-one-crew-wallet.md`.
 - `jt/next` (JT's Claude): loot has a real shape (rigid boxes that tip and tumble), `feature/rigid-loot`. See `2026-09-29-2300-jt-claude-loot-has-a-shape.md`.
 - `jt/next` (JT's Claude): JT's answers on your other suggestions (Sheriff window, staff lake-only, canyon spawns on the floor, map sliders) and the port table. See `2026-09-29-2130-jt-claude-your-suggestions-answered.md`.

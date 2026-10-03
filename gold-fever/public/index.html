@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#e9b358"><title>Gold Fever — Fool's Crossing</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <canvas id="world" tabindex="0" aria-label="First-person multiplayer goldfield"></canvas>
+  <div id="mud-splatter" hidden aria-hidden="true"></div>
+  <div id="lobby">
+    <div class="masthead"><span>FOOL'S CROSSING MINING COMPANY</span><span>EST. 1849-ish</span></div>
+    <main class="join-layout">
+      <div class="poster"><p class="eyebrow">A COOPERATIVE GOLD RUSH</p><h1>GOLD<br><em>FEVER.</em></h1><p class="tagline">A little luck. A lot of dirt.</p><p class="intro">Start with a pan. Find your fortune.<br>Dig yourself into something ridiculous.</p></div>
+      <form id="join-form" class="join-form">
+        <span class="eyebrow">YOUR CREW STARTS HERE</span>
+        <label for="name">Prospector's name</label><input id="name" maxlength="22" placeholder="Dusty McBuckets" autocomplete="nickname" required>
+        <label for="room">Room code <span>Leave empty to start a new crew</span></label><input id="room" maxlength="20" placeholder="Your friend's room code" autocomplete="off" spellcheck="false">
+        <details class="returning"><summary>Returning on a new sharing link?</summary><label for="resume-key">Personal prospector pass</label><input id="resume-key" maxlength="100" placeholder="Paste your saved pass" autocomplete="off" spellcheck="false"></details>
+        <label for="mode">New world's rules</label><select id="mode"><option value="rush">Gold Rush · earn every upgrade</option><option value="sandbox">Machine Playground · try the big toys</option></select>
+        <label for="crew-size">New crew size <span>Prices stay fixed when friends log off</span></label><select id="crew-size"><option value="1">1 · Solo, difficult but possible</option><option value="2" selected>2 · A partnership</option><option value="3">3 prospectors</option><option value="4">4 prospectors</option><option value="5">5 prospectors</option><option value="6">6 prospectors</option><option value="7">7 prospectors</option><option value="8">8 · A questionable enterprise</option></select>
+        <button id="start-btn" class="primary" type="submit">ENTER THE GOLDFIELD <span>↗</span></button>
+        <p id="join-status">1–8 prospectors · private rooms · worlds save automatically</p>
+      </form>
+    </main>
+    <div class="lobby-footer"><span>FIRST PERSON. SHARED DIRT. QUESTIONABLE FINANCIAL DECISIONS.</span><button id="lobby-help">How to play ↗</button></div>
+  </div>
+  <div id="hud" hidden>
+    <header class="hud-top"><div><span class="small-brand">GOLD FEVER</span><div class="room-line"><span id="room-label"></span><button id="invite">Copy invite ↗</button></div><div id="crew"></div></div><div class="compass"><span id="bearing">N</span><small id="place">Fool's Crossing</small></div><div class="money"><small>CREW TREASURY</small><strong id="cash">$0.00</strong><span id="gold">0.000 g in your pouch</span></div></header>
+    <div id="aim"><i></i></div><div id="target-note"></div>
+    <div id="pan-guide" hidden><span class="eyebrow">WASHING YOUR SAMPLE</span><h2 id="pan-stage">Wash away the gravel</h2><div class="meter"><div id="pan-progress"></div></div><p id="pan-instruction">Hold mouse or Space to swirl.</p></div>
+    <div id="haul-status" hidden></div><div id="notifications" aria-live="polite"></div><div id="chat-log"></div>
+    <form id="chat-form" hidden><input id="chat-input" placeholder="Tell your crew… (Enter sends, Esc closes)" maxlength="160" autocomplete="off"></form>
+    <footer class="hud-bottom"><div class="tool-state"><span id="tool-label">01 / SHOVEL</span><strong id="load">0 / 24 kg</strong><div class="load-meter"><i id="load-progress"></i></div></div><div id="interaction"></div><div class="quick-keys"><span><kbd>M</kbd> Field map</span><span><kbd>B</kbd> Place equipment</span><span><kbd>Tab</kbd> Guide</span></div></footer>
+    <div id="unlock-mouse" hidden><div class="mouse-actions"><button id="capture-mouse" type="button">Capture mouse</button><button id="drag-look" type="button">Use drag-to-look</button></div><p id="mouse-help">Capture the mouse to look around. Esc releases it.</p></div>
+  </div>
+  <div id="modal" hidden><section id="modal-panel"><button id="close-modal" class="close" aria-label="Close">✕</button><div id="modal-content"></div></section></div>
+  <div id="connection" hidden>Connection lost. Rejoining your crew…</div>
+  <script type="module" src="/client.mjs"></script>
+</body>
+</html>

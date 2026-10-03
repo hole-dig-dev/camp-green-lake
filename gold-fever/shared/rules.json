@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "title": "Gold Fever",
+  "world": {
+    "size": 224,
+    "cellSize": 2,
+    "waterLevel": 1.05,
+    "maxDepth": 5.8,
+    "maxPlayers": 8
+  },
+  "economy": {
+    "dollarsPerGram": 30,
+    "sandboxCash": 1000000
+  },
+  "player": {
+    "speed": 4.6,
+    "sprint": 7,
+    "bucketKg": 24,
+    "panKg": 8,
+    "digKg": 6,
+    "digSeconds": 0.85,
+    "reach": 4.7
+  },
+  "landmarks": [
+    {
+      "id": "assay",
+      "name": "Bill's Assay",
+      "x": -37,
+      "z": 64,
+      "radius": 6
+    },
+    {
+      "id": "supplier",
+      "name": "Mabel's Hardware",
+      "x": -46,
+      "z": 49,
+      "radius": 6
+    },
+    {
+      "id": "camp",
+      "name": "Fool's Crossing",
+      "x": -25,
+      "z": 57,
+      "radius": 6
+    },
+    {
+      "id": "mine",
+      "name": "Crooked Hat Mine",
+      "x": -64,
+      "z": 34,
+      "radius": 5
+    }
+  ],
+  "catalog": [
+    {
+      "id": "sieve",
+      "name": "Gravel sieve",
+      "price": 35,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "Screen out stones. Faster panning; recover 92% of your gold instead of 82%."
+    },
+    {
+      "id": "shovel",
+      "name": "Steel shovel & pick",
+      "price": 85,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "Dig 10 kg per scoop, with shorter swings and deeper cuts."
+    },
+    {
+      "id": "bucket",
+      "name": "Hauling pack",
+      "price": 145,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "Carry 64 kg of gravel. More dirt means a heavier walk."
+    },
+    {
+      "id": "boots",
+      "name": "Prospector boots",
+      "price": 120,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "Walk and sprint 20% faster while scouting your next claim."
+    },
+    {
+      "id": "rocker",
+      "name": "Rocker box",
+      "price": 320,
+      "category": "Washing equipment",
+      "kind": "machine",
+      "description": "Portable cradle. Load 96 kg; hold the crank to wash. Place near the creek.",
+      "capacity": 96,
+      "rate": 3.5,
+      "recovery": 0.9,
+      "waterReach": 20
+    },
+    {
+      "id": "sluice",
+      "name": "Long tom & sluice",
+      "price": 1100,
+      "requires": "rocker",
+      "category": "Washing equipment",
+      "kind": "machine",
+      "description": "Continuous creek flow washes 7 kg per second. Load gravel; return for a clean-up.",
+      "capacity": 320,
+      "rate": 7,
+      "recovery": 0.94,
+      "waterReach": 17
+    },
+    {
+      "id": "excavator",
+      "name": "Rustbucket excavator",
+      "price": 4800,
+      "requires": "sluice",
+      "category": "Earthmovers",
+      "kind": "vehicle",
+      "description": "Drive it. Scoop 180 kg at a time. Transfer your load into a nearby truck or washer.",
+      "capacity": 720,
+      "speed": 3.2,
+      "digKg": 180,
+      "digSeconds": 2.3,
+      "reach": 14
+    },
+    {
+      "id": "truck",
+      "name": "Dump truck",
+      "price": 7200,
+      "requires": "excavator",
+      "category": "Earthmovers",
+      "kind": "vehicle",
+      "description": "Haul 2,400 kg. Pull beside an excavator to load, then tip gravel into a washer.",
+      "capacity": 2400,
+      "speed": 10
+    },
+    {
+      "id": "washplant",
+      "name": "Trommel wash plant",
+      "price": 10500,
+      "requires": "truck",
+      "category": "Washing equipment",
+      "kind": "machine",
+      "description": "Rotating screen, pump and sluices. Accepts truckloads; washes 32 kg per second.",
+      "capacity": 6000,
+      "rate": 32,
+      "recovery": 0.97,
+      "waterReach": 32,
+      "placementClearance": 6.5
+    },
+    {
+      "id": "hydraulic",
+      "name": "The Widowmaker",
+      "price": 35000,
+      "requires": "washplant",
+      "category": "Earthmovers",
+      "kind": "vehicle",
+      "description": "Ridiculous hydraulic excavation rig. Blast 650 kg per burst. It still needs good ground.",
+      "capacity": 3900,
+      "speed": 2.5,
+      "digKg": 650,
+      "digSeconds": 3,
+      "reach": 22
+    },
+    {
+      "id": "minetrack",
+      "name": "Mine track bundle · 6 sections",
+      "price": 95,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "bundle": 6,
+      "description": "Six two-metre rail sections. Snap on cleared level ground; adjoining sections form corners."
+    },
+    {
+      "id": "minecart",
+      "name": "Tipping mine cart",
+      "price": 180,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "Carries 240 kg. Push on rails, brake, load your bucket, catch dirt, and ride it up in the cage."
+    },
+    {
+      "id": "hoist",
+      "name": "Hand-cranked cage hoist",
+      "price": 450,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "Install at Crooked Hat shaft. Carries a cart and prospectors. Controls at each landing and aboard."
+    },
+    {
+      "id": "shaftkit",
+      "name": "Shaft extension · 6 metres",
+      "price": 180,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "Extend the shaft deeper with guides, emergency ladder and a new cleared landing."
+    },
+    {
+      "id": "steamhoist",
+      "name": "Steam winding engine",
+      "price": 1400,
+      "requires": "hoist",
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "Upgrade the cage to powered automatic travel. Tap I/K and keep exploring."
+    },
+    {
+      "id": "minelamp",
+      "name": "Hanging mine lantern",
+      "price": 18,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "Place a light inside a cleared tunnel. Your belt lamp is included free."
+    },
+    {
+      "id": "timber",
+      "name": "Timber tunnel frame",
+      "price": 25,
+      "category": "Mining equipment",
+      "kind": "mine",
+      "description": "A visible wooden support frame. Structural cave-in simulation is a future addition."
+    }
+  ]
+}
