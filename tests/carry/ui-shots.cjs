@@ -11,7 +11,7 @@ await A.evaluate(()=>{runCommand('crew kit all shovel bucket2');runCommand('crew
   P.x=4;P.z=10;P.y=groundAt(4,10);if(FP)toggleView();P.yaw=Math.PI;P.pitch=0.3});
 await A.waitForTimeout(3000);
 await shot('hud',1200);
-await A.evaluate(()=>{if(crewPanelOn)toggleCrewPanel()});await shot('hud-no-crew-panel');await A.evaluate(()=>{if(!crewPanelOn)toggleCrewPanel()});
+await A.evaluate(()=>setCrewPanelMin(true));await shot('hud-crew-minimized');await A.evaluate(()=>setCrewPanelMin(false));
 await A.evaluate(()=>openFieldMap());await shot('field-map',900);await esc();
 for(const c of ['all','sack','supplies','gear']){await A.evaluate(c=>{if(!invOpen)openInventory();invCat=c;renderInventory(true)},c);await shot('inventory-'+c)}
 await esc();

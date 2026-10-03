@@ -52,8 +52,8 @@ function applyDig(x,z,d,rebuild){
 function renderOnline(){
   const names=[...remotes.values()].map(R=>R.name);
   const lob=$('#lobby');
-  if(net.ws&&net.ws.readyState===1)lob.textContent=names.length?`${names.length} other camper${names.length>1?'s':''} digging right now: ${names.join(', ')}.`:'Nobody else is here yet. Send your friends this link. The D Tent crew will keep you company.';
   $('#onlineList').textContent=names.length?['You',...names].join(', '):'Just you';
+  if(net.ws&&net.ws.readyState===1)lob.textContent=names.length?`${names.length} other camper${names.length>1?'s':''} digging right now: ${names.join(', ')}.`:'Nobody else is here yet. Send your friends this link. The D Tent crew will keep you company.';
 }
 function wonAlready(name){if(S.won)return;S.won=true;rain.visible=true;setTimeout(()=>toast(`${name} already dug up the suitcase today. A new day starts soon.`,'gold',6000),1500)}
 function onMsg(m){

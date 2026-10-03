@@ -140,6 +140,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .hud-warn-icon{color:var(--danger);width:1em;height:1em}
 /* bottom-left: seeds/sack always, onion/flashlight/detector contextual (hidden via JS) */
 .hud-strip--supplies{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:196px}
+.hud-strip--supplies .row.big .v small{font-size:.55em;margin-left:3px;color:var(--ink-soft)}   /* tonight's quota, next to the wallet */
 /* bottom-right: current shovel/reach glyphs, above the touch buttons */
 .hud-strip--tools{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:8px;width:auto}
 /* bottom-center: hole depth while digging/in a hole, just above the interaction prompt */
@@ -201,7 +202,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
   transform:scale(var(--map-scale,1));transform-origin:top right;opacity:var(--map-opacity,1)}   /* Options > Minimap size / opacity */
 .map-canvas-wrap{position:relative;width:144px;height:144px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;background:#d9a86c;box-shadow:inset 0 0 0 3px var(--canvas-deep),inset 0 0 0 5px rgba(40,29,21,.3)}
 #minimap{display:block;width:100%;height:100%}
-.map-north{position:absolute;left:50%;top:3px;transform:translateX(-50%);font:900 10px/1 var(--display);color:var(--ink);background:var(--canvas);padding:1px 4px 2px;border-radius:2px;z-index:2;letter-spacing:.05em;pointer-events:none}
+.map-north{position:absolute;right:4px;top:3px;font:900 10px/1 var(--display);color:var(--ink);background:var(--canvas);padding:1px 4px 2px;border-radius:2px;z-index:2;letter-spacing:.05em;pointer-events:none}
 .map-north::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:6px;background:var(--ink);transform:translateX(-50%)}
 .map-compass,.map-heading{display:none}
 /* Compass style: a round map that turns so the way you're looking is always up (78-hud.js spins the canvas and
@@ -220,10 +221,15 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .map-zoom-label{font:700 11px/1 var(--ui);letter-spacing:.03em;color:var(--ink-soft);min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
 .map-zoom .ui-button{min-height:30px;min-width:30px;padding:4px 8px}
 /* the crew panel (78-hud.js): under the map */
-.crew-panel{position:fixed;right:16px;width:250px;padding:6px 9px;z-index:3;font-size:12px;line-height:1.2;overflow-y:auto}
+.crew-panel{position:fixed;right:186px;width:250px;padding:6px 9px;z-index:3;font-size:12px;line-height:1.2;overflow-y:auto}
 .crew-panel[hidden]{display:none}
 .crew-panel__head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .crew-panel__head b{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--ink-soft)}
+.crew-panel.is-min #crewRows,.crew-panel.is-min #crewNone{display:none}
+.crew-panel.is-min .crew-panel__head{margin-bottom:0}
+.crew-panel__min{font:900 14px/1 var(--ui);min-width:24px;min-height:22px;margin-left:6px;border:1.5px solid var(--ink-soft);border-radius:4px;background:transparent;color:var(--ink);cursor:pointer;padding:0 5px}
+.crew-panel__min:hover{background:var(--canvas-2)}
+.crew-panel__head b{flex:1}
 .crew-panel__key{font:700 10px/1 var(--ui);border:1.5px solid var(--ink-soft);border-radius:4px;padding:2px 4px;color:var(--ink-soft)}
 .crew-none{color:var(--ink-soft);padding:4px 0 2px;font-size:12px}
 .crew-none[hidden],.crew-row[hidden]{display:none}
@@ -264,7 +270,8 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .toast--neutral{background:var(--ink);color:var(--canvas)}
 .toast--refresh{animation:tin .2s var(--ease-ui)}
 @keyframes tin{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
-#keys{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:600 14px/1.3 var(--ui);color:#fff8e8;text-shadow:0 1px 2px rgba(0,0,0,.6);letter-spacing:.03em;max-width:calc(100vw - 32px)}
+#keys[hidden]{display:none}
+#keys{position:fixed;left:228px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:600 14px/1.3 var(--ui);color:#fff8e8;text-shadow:0 1px 2px rgba(0,0,0,.6);letter-spacing:.03em;max-width:calc(100vw - 400px)}
 /* proximity voice HUD: mic on/off, PTT-vs-open-mic, mute-everyone -- stacked bottom right, out of the way of #keys */
 #voiceBox{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 #voiceBox button{font:700 13px/1 var(--ui);text-transform:none;letter-spacing:.02em;padding:7px 11px;box-shadow:0 2px 0 var(--ink);background:var(--canvas-2);color:var(--ink)}
@@ -604,7 +611,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #mapbox.sand canvas{filter:blur(6px) sepia(1) brightness(.8)}
 
 /* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Warden's note */
-.map-coords{font:600 13px ui-monospace,Menlo,Consolas,monospace;text-align:center;padding:2px 0 4px;letter-spacing:0.02em;color:var(--ink,inherit)}
+.map-coords{position:absolute;left:3px;top:3px;z-index:3;font:700 9px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:0.02em;color:var(--ink);background:rgba(242,231,205,.82);padding:2px 4px;border-radius:3px;pointer-events:none}   /* over the minimap's corner (JT) */
 
 /* the Wardrobe (81-wardrobe.js): a panel on the left; your camper faces you on the right */
 .wardrobe{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:40;width:min(360px,calc(100vw - 32px));padding:14px 14px 12px;
@@ -626,3 +633,4 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .shop-safe{margin-left:8px;font-size:13px;color:var(--ink-soft);font-weight:600}
 /* spectator mode (96-spectate.js) */
 .spec-help{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;padding:8px 14px;font-family:var(--ui);font-size:15px;color:var(--ink);text-align:center;max-width:calc(100vw - 32px)}
+#mapbox.map--compass .map-coords{left:50%;top:auto;bottom:8px;transform:translateX(-50%)}   /* the round map: bottom middle, inside the circle */

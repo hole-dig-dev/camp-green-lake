@@ -8,7 +8,7 @@ await A.evaluate(()=>{GOD=true;runCommand('time 8:00')});await A.waitForTimeout(
 check('you start with nothing: 0 gold, bare hands',await A.evaluate(()=>S.seeds===0&&!S.up.shovel&&/Bare hands/.test(document.querySelector('#tools').textContent+[...document.querySelectorAll('#tools [title]')].map(e=>e.title).join(''))));
 check('no shovel in your hands (your view and your friend\'s)',await A.evaluate(()=>me.noShovel&&me.shovelMeshes.every(n=>!n.visible))&&await B.evaluate(()=>{const R=[...remotes.values()].find(r=>r.name==='Alpha');return R.p.noShovel&&R.p.shovelMeshes.every(n=>!n.visible)}));
 check('no pan or bucket yet: no sand meter',await A.evaluate(()=>$('#bucketMeter').hidden));
-check('quota on the HUD: bank / quota, day 1 is 15 a camper (24 for two of you)',await A.evaluate(()=>$('#quota').textContent)==='0 / 24',await A.evaluate(()=>$('#quota').textContent));
+check('quota on the HUD: wallet / quota, day 1 is 15 a camper (24 for two of you)',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent)==='0 / 24',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent));
 // dig with your hands (real E)
 await A.evaluate(()=>{for(let i=0;i<200;i++){const x=-60+(i%20)*6,z=-80-((i/20)|0)*6;if(!holeNear(x,z,4)&&!holeNear(x,z+1.1,4)){P.x=x;P.z=z;P.y=groundAt(x,z);P.fa=0;P.yaw=Math.PI;break}}});await A.keyboard.down('e');await A.waitForTimeout(9000);await A.keyboard.up('e');   // clear ground (not next to one of the lake's old holes)
 const hd=await A.evaluate(()=>{let d=0;forNearHoles(P.x,P.z,h=>{if(h.own)d=Math.max(d,h.d)});return +d.toFixed(2)});
