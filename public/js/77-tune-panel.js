@@ -52,8 +52,9 @@ function renderTune(){
   tuneTabsEl.textContent='';
   for(const t of TUNE_TABS){const b=document.createElement('button');b.type='button';b.dataset.tab=t;b.className=t===tuneTab?'on':'';b.innerHTML='<span></span><i></i>';b.firstChild.textContent=t;
     b.onclick=()=>{tuneTab=t;try{localStorage.setItem('cgl-tune-tab',t)}catch(e){}renderTune()};tuneTabsEl.appendChild(b)}
+  {const c=$('#tuneChaos');c.textContent='';c.appendChild(tuneRow(TUNE_DEFS.find(d=>d.key==='haz.chaos')))}   /* CHAOS, pinned above the tabs */
   tuneBody.textContent='';
-  for(const d of TUNE_DEFS)if(d.tab===tuneTab)tuneBody.appendChild(tuneRow(d));
+  for(const d of TUNE_DEFS)if(d.tab===tuneTab&&d.key!=='haz.chaos')tuneBody.appendChild(tuneRow(d));
   tuneCount();
 }
 function tuneApplyAll(){if(!tuneEl.hidden)renderTune()}

@@ -29,6 +29,7 @@ for(const [btn,name] of [['#pOptions','pause-options'],['#pControlsBtn','pause-c
 await A.evaluate(()=>{if(PAUSE.open)closePause()});await A.waitForTimeout(300);
 await A.evaluate(()=>openTune());
 for(const t of await A.evaluate(()=>TUNE_TABS)){await A.evaluate(t=>{tuneTab=t;renderTune()},t);await shot('f2-'+t.toLowerCase(),250)}
+await A.evaluate(()=>{tuneSet('haz.chaos',3);tuneTab='Hazards';renderTune()});await shot('f2-chaos-at-3',300);await A.evaluate(()=>tuneSet('haz.chaos',1));
 await esc();await A.evaluate(()=>{if(tuneOpen())closeTune()});
 await A.evaluate(()=>{openConsole();runCommand('help')});await shot('console');await A.evaluate(()=>closeConsole());
 await A.evaluate(()=>{try{toggleAdmin()}catch(e){}});await shot('admin-panel',900);await A.evaluate(()=>{const e=$('#admin');if(e)e.hidden=true});

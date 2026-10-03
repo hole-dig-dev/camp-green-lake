@@ -72,8 +72,8 @@ function updateMines(dt){
 }
 /* offline only: the same rules as server.js mineTick */
 function mineLocalSpawn(dt){
-  mineLocalT-=dt;if(mineLocalT>0)return;mineLocalT=tune('haz.mineEvery')*(0.6+Math.random()*0.8);
-  if(MINES.size>=tune('haz.mineMax')||SIM.inCamp(P.x,P.z))return;
+  mineLocalT-=dt;if(mineLocalT>0)return;mineLocalT=tune('haz.mineEvery')*(0.6+Math.random()*0.8)/Math.max(0.2,chaos());if(chaos()<=0)return;   /* CHAOS */
+  if(MINES.size>=Math.round(tune('haz.mineMax')*chaos())||SIM.inCamp(P.x,P.z))return;
   for(let i=0;i<20;i++){const a=Math.random()*Math.PI*2,d=8+Math.random()*37,x=P.x+Math.cos(a)*d,z=P.z+Math.sin(a)*d;
     if(Math.abs(x)>HALF-10||Math.abs(z)>HALF-10||SIM.inCamp(x,z)||SIM.nearCampZone(x,z))continue;mineAdd({id:mineLocalSeq++,x,z});return}
 }
