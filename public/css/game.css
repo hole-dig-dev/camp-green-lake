@@ -634,3 +634,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 /* spectator mode (96-spectate.js) */
 .spec-help{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:30;padding:8px 14px;font-family:var(--ui);font-size:15px;color:var(--ink);text-align:center;max-width:calc(100vw - 32px)}
 #mapbox.map--compass .map-coords{left:50%;top:auto;bottom:8px;transform:translateX(-50%)}   /* the round map: bottom middle, inside the circle */
+
+/* F2: the CHAOS knob, pinned above the tabs (JT) */
+.tune-chaos{border:2px solid var(--jump-deep);border-radius:6px;margin:6px 8px;padding:2px 6px;background:rgba(201,76,30,.08)}
+.tune-chaos label,.tune-chaos b,.tune-chaos span:first-child{font-weight:800}

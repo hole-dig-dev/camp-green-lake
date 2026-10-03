@@ -147,10 +147,11 @@
     if (!state.enabled) return [];
     if (now < state.nextRollAt) return [];
     const day = ctx.day || 1, players = ctx.players || [], crew = Math.max(1, players.length);
-    const rate = ctx.rate == null ? 1 : ctx.rate; if (rate <= 0) return [];   // the tester's events slider
+    const rate = ctx.rate == null ? 1 : ctx.rate; if (rate <= 0) return [];   // the tester's events slider (times CHAOS)
+    const ch = Math.max(0.2, ctx.chaos == null ? 1 : ctx.chaos);   // CHAOS: the gaps and cooldowns shrink (or stretch) with it
     const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200) * rate;   // the curse: up to 1.5x
-    state.nextRollAt = now + Math.max(4000, DIR_ROLL_MS / intensity + (rand() * 2 - 1) * DIR_ROLL_JITTER);
-    if (now - state.lastGlobalAt < DIR_MIN_GAP_MS) return []; // global cooldown: never two natural events too close together
+    state.nextRollAt = now + Math.max(4000 / Math.max(1, ch), DIR_ROLL_MS / intensity + (rand() * 2 - 1) * DIR_ROLL_JITTER);
+    if (now - state.lastGlobalAt < DIR_MIN_GAP_MS / ch) return []; // global cooldown: never two natural events too close together
     if (rand() > Math.min(0.9, DIR_BASE_CHANCE * intensity)) return []; // the roll itself
     const phase = phaseOf(ctx.clockT || 0);
     const eligible = [];
@@ -180,7 +181,7 @@
     if (!placed) return []; // every out-of-camp camper already has a major nearby, or no legal spot -- try again next roll
     const id = state.nextId++;
     state.active.push({ id, kind: chosen.key, x: placed.x, z: placed.z, major: chosen.major, mapWide: !!chosen.mapWide, startAt: now, expiresAt: now + chosen.lifeMs, t0: ctx.hazardNow != null ? ctx.hazardNow : now, supportsLateJoin: chosen.supportsLateJoin !== false });
-    state.cooldowns[chosen.key] = now + chosen.cooldownMs;
+    state.cooldowns[chosen.key] = now + chosen.cooldownMs / ch;
     state.lastGlobalAt = now;
     return [{ id, kind: chosen.key, x: r1(placed.x), z: r1(placed.z), a: r2(placed.a), major: chosen.major, mode: chosen.mode, targetId, start: now }];
   }

@@ -23,6 +23,10 @@ const TUNE_DEFS=[
   {key:'light.townSee',tab:'Flashlight',label:'Underground: how far you see with it on (off: 12 m)',def:26,kind:'mul',range:3,unit:' m'},
   // ---- hazards and mobs: one switch for testing (88-hazards.js). Off: nothing spawns and what's out goes away; then
   //      switch single ones back on, or spawn one right now.
+  /* CHAOS (JT 2026-10-02): one knob over everything that spawns, 0 (nothing) to 5; pinned at the top of F2 (77-tune-panel.js).
+     Multiplies: the event director (twisters, landslides, tumbleweeds, haboobs, sinkholes, javelina herds, the lion: how
+     often, and the gaps and cooldowns between them), landmines (how often, how many out), roster monsters. */
+  {key:'haz.chaos',tab:'Hazards',label:'CHAOS: how much of everything spawns (0 nothing, 1 normal, 5 bedlam)',def:1,kind:'mul',range:5,zero:true,unit:'×'},
   {key:'haz.all',tab:'Hazards',label:'ALL hazards and mobs (off for testing: nothing spawns, what\'s out there goes away)',def:1,kind:'flag'},
   {key:'haz.on.twister',tab:'Hazards',label:'Twisters: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.now.twister',tab:'Hazards',label:'Twisters: spawn one now, near you',kind:'action',run:()=>hazNow('twister')},
@@ -274,3 +278,5 @@ function tuneSet(key,v){
   if(v===d.def)delete TUNE_OVR[key];else TUNE_OVR[key]={v,def:d.def};
   tuneSync();
 }
+
+const chaos=()=>tune('haz.chaos');   /* the CHAOS knob (above) */

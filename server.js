@@ -347,8 +347,8 @@ const MINES = []; let mineSeq = 1, mineNextT = Date.now() + 20000;
 function mineTick(now) {
   if (tuneS('haz.mines', 1) < 0.5 || !hazOnS('mines') || (world.zone || 'lake') !== 'lake') { if (MINES.length) { MINES.length = 0; broadcast({ t: 'mines', list: [] }); } return; }
   if (now < mineNextT) return;
-  mineNextT = now + tuneS('haz.mineEvery', 25) * 1000 * (0.6 + Math.random() * 0.8);
-  if (MINES.length >= tuneS('haz.mineMax', 12)) return;
+  const ch = chaosS(); mineNextT = now + tuneS('haz.mineEvery', 25) * 1000 * (0.6 + Math.random() * 0.8) / Math.max(0.2, ch);   // CHAOS: more often
+  if (ch <= 0 || MINES.length >= Math.round(tuneS('haz.mineMax', 12) * ch)) return;   // ...and more of them (0: no new ones)
   const outs = joined().filter(c => !c.town && c.room == null && !SIM.inCamp(c.x, c.z));
   if (!outs.length) return;
   const o = outs[Math.floor(Math.random() * outs.length)];
@@ -414,6 +414,7 @@ function dynBoomS(id, x, z) {
   }
   for (let i = MINES.length - 1; i >= 0; i--) { const k = MINES[i]; if (Math.hypot(k.x - x, k.z - z) < tuneS('dyn.blast', 4.5)) { MINES.splice(i, 1); broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: 'Dynamite' }); } }
 }
+const chaosS = () => tuneS('haz.chaos', 1);   // the F2 CHAOS knob (public/js/11-tune.js): 0 nothing spawns ... 5
 function tuneS(key, def) { const o = TUNE_S[key]; return o && Number.isFinite(o.v) && o.def === def ? o.v : def; }
 function sendTune(res) {
   fs.readFile(TUNE_FILE, 'utf8', (err, txt) => {
@@ -1432,7 +1433,7 @@ ensureCart();
 const ROSTER = { mobs: [] };
 let rostOn = false;
 function tickRoster(t, dt, players) {
-  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1), sheriffWin: tuneS('ro.sheriffWin', 0.15) });
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1) * chaosS(), sheriffWin: tuneS('ro.sheriffWin', 0.15) });
   const now = Date.now();
   for (const e of rev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -1541,7 +1542,7 @@ setInterval(() => {
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0, rate: tuneS('mon.events', 1) })) {
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0, rate: tuneS('mon.events', 1) * chaosS(), chaos: chaosS() })) {
     if (!hazOnS(d.kind)) continue; // switched off in F2 Hazards (public/js/88-hazards.js)
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });

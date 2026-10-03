@@ -178,7 +178,7 @@ function stepSoloDirector(dt){
   if(online()||!DIRECTOR_ON)return;
   if(!soloDirState)soloDirState=DIRECTOR.createState();
   const players=[{id:'me',x:P.x,z:P.z,inCamp:SIM.inCamp(P.x,P.z),down:S.ko>0}];
-  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id,curse:RUN.curse||0,rate:tune('mon.events')});
+  const decisions=DIRECTOR.step(soloDirState,{now:Date.now(),day:RUN.day,players,clockT:clockT(),zone:ZONE.id,curse:RUN.curse||0,rate:tune('mon.events')*chaos(),chaos:chaos()});
   for(const d of decisions){
     if(!hazOn(d.kind))continue;   /* the hazards switch (88-hazards.js) */
     if(d.mode==='env')spawnEnv(d.kind,{x:d.x,z:d.z,a:d.a,dir:true});
