@@ -1,6 +1,6 @@
 import {bucketProp,shovelProp} from './hand-props.mjs';
 import {minerBody} from './miner-model.mjs';
-import {camperReady,camperBody,camperAnimate,camperIdle,camperShovelProp} from './camper-model.mjs';   /* JT 2026-10-05: Camp Green Lake's camper and shovel */
+import {camperReady,camperBody,camperAnimate,camperIdle,camperShovelProp,camperFirstPerson,camperFPReady,camperFPBody} from './camper-model.mjs';   /* JT 2026-10-05: Camp Green Lake's camper and shovel */
 import {westernEnvironment} from './western-environment.mjs';
 import {authoredRocks} from './scenery-models.mjs';
 import {vehicleModel as sculptedVehicle} from './vehicle-model.mjs';
@@ -221,6 +221,7 @@ export function createView(canvas) {
   const mineView=createMineView(scene,camera,{wood,iron,earth,label});
   const guardView=createGuardView(scene,label);
   const relicView=createRelicView(scene,camera,label);
+  let fpCamper=null;   /* first person: Sol's ScoopFP arms and shovel (camper-model.mjs camperFPBody) */
   const tools=viewTools(camera),players=new Map(),machines=new Map(),vehicles=new Map(),carts=new Map(),spills=new Map(),clods=new Map(),buckets=new Map(),particles=[];
   const placementRing=mesh(scene,new THREE.RingGeometry(1.7,1.78,40),new THREE.MeshBasicMaterial({color:'#efc566',side:THREE.DoubleSide,transparent:true,opacity:.9,depthWrite:false}));placementRing.rotation.x=-Math.PI/2;placementRing.visible=false;placementRing.castShadow=false;
   const outletRing=mesh(scene,new THREE.RingGeometry(.6,.68,24),new THREE.MeshBasicMaterial({color:'#94b861',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));outletRing.rotation.x=-Math.PI/2;outletRing.visible=false;outletRing.castShadow=false;
@@ -276,6 +277,11 @@ export function createView(canvas) {
       tools.shovel.position.set(.42+swayX*.30,-.10+swayY*.23-(planted?.18*(1-lift):0),-.90-(planted?.30*(1-lift):0));
       tools.pick.rotation.set((loaded?.65:.4)-(planted?.45*(1-lift):0)+swayY*.3,swayX*.28,-.45-swayX*.5);tools.pick.position.set(.28+swayX*.24,-.55+swayY*.2-(planted?.12*(1-lift):0),-1.45-(planted?.18*(1-lift):0));tools.pick.userData.load.visible=loaded;tools.shovel.userData.load.visible=loaded;tools.bucket.visible=!state.self.bucketPos&&!state.self.busy&&['shovel','pick'].includes(tool)&&!tools.helpHands.visible;tools.bucket.userData.fill.visible=state.self.cargo.mass>0;tools.bucket.userData.fill.position.y=.09+Math.min(1,state.self.cargo.mass/state.self.capacity)*.30;const bucketPose=heldBucketPose({...state.self,...local,input:{...gesture,yaw:local.yaw,pitch:local.pitch},tumble:tools.boots.visible});tools.bucket.position.set(bucketPose.local.x,bucketPose.local.y,bucketPose.local.z);tools.bucket.rotation.x=(bucketPose.catching?-local.pitch:.25)+Math.sin((time-bucketHitAt)*30)*Math.max(0,1-(time-bucketHitAt)/.45)*.12;
       const b=state.self.busy;tools.pan.rotation.z=b&&holding?Math.sin(time*7)*.13:0;tools.pan.rotation.x=.35+(b&&holding?Math.cos(time*7)*.08:0);tools.pan.userData.dirt.scale.setScalar(b?Math.max(.12,1-b.progress):.3);tools.pan.userData.water.visible=!!b;tools.pan.userData.flakes.visible=!b&&goldFlash>time;
+      /* first person = the same camper and Scoop everyone else sees (camper-model.mjs camperFirstPerson), shovel only */
+      if(camperFPReady()&&!fpCamper){fpCamper=camperFPBody();tools.rig.add(fpCamper);}   /* on the camera, in the held-tools pass */
+      if(fpCamper){const show=tools.rig.visible&&tool==='shovel'&&!state.self.busy&&!gesture.catching&&!state.self.helping;fpCamper.visible=show;
+        if(show){tools.shovel.visible=false;tools.bucket.visible=false;   /* both hands on the shovel; the bucket shows again for a catch (C) */
+          camperFirstPerson(fpCamper,{planted,loaded,lift:planted?lift:0,moving:!!local.moving,now:performance.now(),dt});}}
     }
     placementRing.visible=!!placementConfig&&mode==='game';outletRing.visible=false;
     if(placementRing.visible){const h=groundTarget();if(h){placementRing.position.set(h.x,h.y+.08,h.z);placementRing.scale.setScalar(placementConfig.id==='washplant'?3.5:1);const d=Math.hypot(h.x-local.x,h.z-local.z),valid=placementConfig.id==='rockerdrive'?state.machines.some(m=>m.type==='rocker'&&!m.powered&&distance2(m,h)<2.8&&d<10):placementConfig.kind==='mine'?(inMine(h.x,h.z)&&d<4.5&&(placementConfig.id!=='timber'||undergroundAt(mineView.mine,{x:h.x,y:h.y,z:h.z}))):d<=10&&d>=(placementConfig.placementClearance||0)&&nearWater(h.x,h.z,placementConfig.waterReach)&&h.y>=.65&&!protectedGround(h.x,h.z);placementRing.material.color.set(valid?'#efc566':'#ca6555');if(placementConfig.id==='feeder'){const out=feederPose({x:h.x,z:h.z,yaw:local.yaw},cells).outlet;outletRing.visible=true;outletRing.position.set(out.x,heightAt(out.x,out.z,cells)+.08,out.z);outletRing.material.color.set(state.machines.some(m=>{const offset=m.type==='washplant'?2.8:0,x=m.x-Math.sin(m.yaw)*offset,z=m.z-Math.cos(m.yaw)*offset,y=heightAt(m.x,m.z,cells)+(m.type==='washplant'?5.15:m.type==='rocker'?1.55:1.3);return distance2({x,z},out)<(m.type==='washplant'?1.5:.8)&&out.y>y&&out.y-y<3;})?'#94b861':'#e7a957');}}else placementRing.visible=false;}

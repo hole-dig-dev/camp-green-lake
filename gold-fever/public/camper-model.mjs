@@ -16,6 +16,24 @@ let template=null,clips=[];
 try{const g=await new GLTFLoader().loadAsync('/assets/characters/camper.glb');template=g.scene;clips=g.animations;}
 catch(e){console.error('Camper model failed to load; using the original prospector',e);}
 export const camperReady=()=>!!template;
+/* the first-person version (Sol, Camp Green Lake blender/cgl_scoopfp.py): sleeves, hands and shovel posed for the
+   camera, clip ScoopFP with the same phase times; origin = the eye, +X right, +Y up, -Z forward: parent to the camera */
+let fpTemplate=null,fpClips=[];
+try{const g=await new GLTFLoader().loadAsync('/assets/characters/camper-fp.glb');fpTemplate=g.scene;fpClips=g.animations;}
+catch(e){console.error('First-person camper failed to load; keeping the old first-person shovel',e);}
+export const camperFPReady=()=>!!fpTemplate;
+export function camperFPBody(){
+  const root=new THREE.Group(),inner=skeletonClone(fpTemplate);root.add(inner);
+  inner.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=false;}});
+  const blade=inner.getObjectByName('CGLCamper_R_ShovelBlade');
+  const load=new THREE.Group(),clod=new THREE.IcosahedronGeometry(.05,1),earth=new THREE.MeshStandardMaterial({color:'#6e5b3d',roughness:1});
+  for(let i=0;i<7;i++){const m=new THREE.Mesh(clod,earth);m.position.set((random(94,i)-.5)*.08,(random(95,i)-.5)*.08,(random(96,i)-.5)*.08);m.scale.set(.8,.6,.7);load.add(m);}
+  if(blade){blade.geometry.computeBoundingBox();load.position.copy(blade.geometry.boundingBox.getCenter(new THREE.Vector3()));blade.add(load);}
+  load.visible=false;
+  const mixer=new THREE.AnimationMixer(inner),actions={};for(const c of fpClips)actions[c.name]=mixer.clipAction(c);
+  root.userData.camper={inner,mixer,actions,shovel:[],load,current:null,digT:0,prevLoaded:false,throwAt:-1};
+  return root;
+}
 
 /* the camp shovel's parts, in the right forearm (CGLCamper_R_Shovel*; the *Long ones are the long-handled variant) */
 const isShovel=n=>/_R_Shovel/.test(n),isLong=n=>/Long$/.test(n);
@@ -108,4 +126,23 @@ export function camperShovelProp({sharp=false}={}){
   for(let i=0;i<8;i++){const m=new THREE.Mesh(clod,earth);m.position.set((random(81,i)-.5)*.25,(random(82,i)-.5)*.22,.10+random(83,i)*.09);m.scale.set(.65,.65,.42);load.add(m);}
   load.position.set(0,-.56,0);load.visible=false;g.add(load);g.userData.load=load;g.userData.camperShovel=true;
   return g;
+}
+
+/* First person (JT: "first person should reflect this new animation setup"): your own camper, standing where you stand
+   and facing the way you look, head and hat hidden (the camera is in it), playing the same Scoop as everyone sees, but
+   from your live gesture: planted -> the plant, pulling -> plant to lever by how far you've pulled, loaded -> the lift
+   then the held carry pose, thrown -> the toss. */
+/* first person shows only the arms, hands and shovel (the rest would fill the view) */
+export function camperHideHead(g){g.userData.camper.inner.traverse(o=>{if(o.isMesh&&!/Sleeve|_Hand|_Shovel/.test(o.name))o.visible=false;});}
+export function camperFirstPerson(g,{planted,loaded,lift,moving,now,dt}){
+  const C=g.userData.camper;if(!C)return;
+  for(const m of C.shovel)m.visible=true;C.load.visible=loaded;
+  if(C.prevLoaded&&!loaded&&!planted)C.throwAt=now;C.prevLoaded=loaded;
+  const throwing=C.throwAt>0&&now-C.throwAt<THROW_MS,scoop=C.actions.ScoopFP?'ScoopFP':C.actions.Scoop?'Scoop':'Dig';let a;
+  if(throwing){a=play(C,scoop,.06);a.timeScale=0;C.digT=Math.max(C.digT,DIG.loaded+(DIG.end-DIG.loaded)*Math.min(1,(now-C.throwAt)/THROW_MS));a.time=Math.min(DIG.end-.01,C.digT);}
+  else if(loaded){a=play(C,scoop,.1);a.timeScale=0;if(C.digT>DIG.loaded+.05)C.digT=DIG.levered;C.digT=Math.min(DIG.loaded,Math.max(C.digT,DIG.levered)+dt*1.2);a.time=C.digT;}
+  else if(planted){a=play(C,scoop,.12);a.timeScale=0;if(C.digT>DIG.loaded+.05)C.digT=0;
+    const target=DIG.planted+(DIG.levered-DIG.planted)*Math.max(0,Math.min(1,lift));C.digT+=(target-C.digT)*Math.min(1,dt*14);a.time=C.digT;}
+  else{a=play(C,scoop,.2);a.timeScale=0;C.digT+=(0-C.digT)*Math.min(1,dt*8);if(C.digT>DIG.loaded+.05)C.digT=0;a.time=C.digT;}   /* idle: ScoopFP's ready pose (t=0) */
+  C.mixer.update(dt);
 }
