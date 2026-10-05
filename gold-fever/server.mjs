@@ -83,7 +83,7 @@ const server = http.createServer((req, res) => {
   if (relative.startsWith('/vendor/')) {
     relative = relative.slice(7);
     if (['/three.module.js', '/three.core.js'].includes(relative)) base = path.join(ROOT, 'node_modules/three/build');
-    else if (['/loaders/GLTFLoader.js','/loaders/HDRLoader.js','/utils/BufferGeometryUtils.js'].includes(relative)) base = path.join(ROOT,'public/vendor');
+    else if (['/loaders/GLTFLoader.js','/loaders/HDRLoader.js','/utils/BufferGeometryUtils.js','/utils/SkeletonUtils.js'].includes(relative)) base = path.join(ROOT,'public/vendor');
     else { res.writeHead(404); res.end(); return; }
   }
   if (relative === '/') relative = '/index.html';

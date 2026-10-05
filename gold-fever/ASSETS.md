@@ -24,3 +24,11 @@ Colors are muted and normalized in the shader to keep the warm cartoon palette. 
 [Quaternius Stylized Nature MegaKit](https://quaternius.com/packs/stylizednaturemegakit.html), Standard free release, downloaded from the publisher's [itch.io page](https://quaternius.itch.io/stylized-nature-megakit). Included models: Pine_1, Pine_3, Pine_5, Bush_Common, Grass_Common_Short, Rock_Medium_1 and their referenced buffers/images. CC0 1.0 is confirmed in assets/nature/License.txt. Only glTF/mesh buffers/PNG images/license text were extracted from the archive; no executable, installer, engine project or Blender file is shipped. Archive and per-file SHA-256/source records are in assets/nature/manifest.json. Google Drive's older pack download returned quota exceeded; no bypass was used.
 
 [Poly Haven Sunflowers PureSky](https://polyhaven.com/a/sunflowers_puresky), CC0, 1K HDR, 1,482,923 bytes. Normal HTTPS/TLS download, exact published size and MD5 checked; SHA-256 recorded in assets/nature/sky-manifest.json. Three.js GLTFLoader, HDRLoader and BufferGeometryUtils are vendored from the already installed official Three.js dependency, with only the browser import path adjusted. MIT license is included in public/vendor/THREE-LICENSE.txt. All runtime asset requests are local.
+
+## Camp Green Lake camper - JT 2026-10-05
+
+`public/assets/characters/camper.glb` is Camp Green Lake's own Blender camper (camp-green-lake `public/models/camper.glb`,
+original work for JT's games): a rigid-segment rig with 12 bones, 13 clips (Idle, Walk, Run, Dig, KO, Wave, ...), the camp
+shovel and three hats. `public/camper-model.mjs` uses it for players and the town NPCs, and its shovel in first person.
+`public/vendor/utils/SkeletonUtils.js` is vendored from the installed official Three.js dependency (MIT, see
+`public/vendor/THREE-LICENSE.txt`) with only the import path adjusted, like the other vendored files.
