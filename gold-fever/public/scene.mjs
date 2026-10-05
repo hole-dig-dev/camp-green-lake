@@ -156,10 +156,42 @@ export function createView(canvas) {
   const originalIndices=geometry.index.array,newIndices=[];for(let i=0;i<originalIndices.length;i+=3){const ids=[originalIndices[i],originalIndices[i+1],originalIndices[i+2]],x=ids.reduce((n,k)=>n+positions.getX(k),0)/3,z=ids.reduce((n,k)=>n+positions.getZ(k),0)/3;if(!inMine(x,z))newIndices.push(...ids);}geometry.setIndex(newIndices);
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));geometry.computeVertexNormals();const terrain=new THREE.Mesh(geometry,groundMaterial());terrain.receiveShadow=true;scene.add(terrain);
   const waterGeo=new THREE.BufferGeometry(),wv=[],wi=[];
-  for(let i=0;i<=112;i++){const z=i*2-HALF,x=riverX(z);wv.push(x-6.6,WATER,z,x+6.6,WATER,z);if(i<112&&z>=-24){const a=i*2;wi.push(a,a+2,a+1,a+1,a+2,a+3);}}
-  waterGeo.setAttribute('position',new THREE.Float32BufferAttribute(wv,3));waterGeo.setIndex(wi);waterGeo.computeVertexNormals();const water=new THREE.Mesh(waterGeo,mat('#67a6ac',{transparent:true,opacity:.82,roughness:.34,metalness:.15,side:THREE.DoubleSide}));scene.add(water);
-  for(const side of [-1,1]){const pts=[];for(let z=-24;z<=110;z+=2)pts.push(new THREE.Vector3(riverX(z)+side*6.5,WATER+.025,z));scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:'#d0ded0',transparent:true,opacity:.7})));}
-  const rippleGroup=new THREE.Group();scene.add(rippleGroup);for(let i=0;i<70;i++){const z=random(43,i)*129-22,x=riverX(z)+(random(44,i)-.5)*10;const m=mesh(rippleGroup,new THREE.PlaneGeometry(.7+random(45,i)*1.8,.025),new THREE.MeshBasicMaterial({color:'#d0e9de',transparent:true,opacity:.4}),x,WATER+.04,z);m.rotation.x=-Math.PI/2;}
+  /* the creek (JT 2026-10-05): one shader, no textures. aRiver = (across the creek -1..1, metres along it). Ripples are
+     two scrolling layers of noise flowing downstream (+z); colour goes from clear sandy shallows at the banks to deep teal
+     in the middle; the shoreline fades out with broken foam; it's smooth enough that the HDR sky reflects at grazing
+     angles and the sun glints off the ripples. Replaces the flat teal ribbon, the bank lines and the 70 ripple strips. */
+  const wr=[];
+  for(let i=0;i<=112;i++){const z=i*2-HALF,x=riverX(z);wv.push(x-6.6,WATER,z,x+6.6,WATER,z);wr.push(-1,z,1,z);if(i<112&&z>=-24){const a=i*2;wi.push(a,a+2,a+1,a+1,a+2,a+3);}}
+  waterGeo.setAttribute('position',new THREE.Float32BufferAttribute(wv,3));waterGeo.setAttribute('aRiver',new THREE.Float32BufferAttribute(wr,2));waterGeo.setIndex(wi);waterGeo.computeVertexNormals();
+  const waterMat=new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,roughness:.08,metalness:0,envMapIntensity:1.6,side:THREE.DoubleSide});
+  const waterU={uTime:{value:0}};
+  waterMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,waterU);
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 aRiver;varying vec2 vRiver;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRiver=aRiver;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+      varying vec2 vRiver;uniform float uTime;
+      float cwHash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float cwNoise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);return mix(mix(cwHash(i),cwHash(i+vec2(1,0)),u.x),mix(cwHash(i+vec2(0,1)),cwHash(i+vec2(1,1)),u.x),u.y);}
+      float cwFbm(vec2 p){float v=0.0,a=.5;for(int i=0;i<4;i++){v+=a*cwNoise(p);p=p*2.07+vec2(5.3,1.9);a*=.5;}return v;}
+      /* two ripple layers moving downstream at different speeds and scales, stretched along the flow */
+      float cwH(vec2 p){return .6*cwFbm(p*vec2(.95,.55)-vec2(0.0,uTime*.85))+.4*cwFbm(p*vec2(1.8,1.05)+vec2(3.1,-uTime*1.45));}`);
+    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      vec2 cwP=vec2(vRiver.x*6.6,vRiver.y);float cwA=abs(vRiver.x),cwD=1.0-cwA;
+      vec3 cwShallow=vec3(.25,.42,.39),cwDeep=vec3(.075,.25,.255),cwBed=vec3(.40,.41,.33);   /* JT: lighter edges less drastic */
+      vec3 cwCol=mix(cwShallow,cwDeep,smoothstep(.04,.60,cwD));cwCol=mix(cwBed,cwCol,smoothstep(.0,.06,cwD));
+      float cwEdge=smoothstep(.86,.975,cwA),cwFoamN=cwFbm(cwP*vec2(2.4,1.1)-vec2(0.0,uTime*1.1));
+      float cwFoam=clamp(cwEdge*smoothstep(.55,.78,cwFoamN+cwEdge*.12),0.0,1.0)*.75*(1.0-smoothstep(.975,1.0,cwA));   /* broken, not a line */
+      float cwStreak=smoothstep(.74,.83,cwFbm(cwP*vec2(2.6,.32)-vec2(0.0,uTime*1.3)))*.22*smoothstep(.15,.5,cwD);
+      cwFoam=max(cwFoam,cwStreak);
+      diffuseColor.rgb=mix(cwCol,vec3(.84,.88,.84),cwFoam);
+      diffuseColor.a=(mix(.76,.93,smoothstep(.0,.30,cwD))+cwFoam*.25)*(1.0-smoothstep(.965,1.0,cwA));`);
+    sh.fragmentShader=sh.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(.07,.55,cwFoam);');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+      {float e=.06,h0=cwH(cwP),hx=cwH(cwP+vec2(e,0.0))-h0,hz=cwH(cwP+vec2(0.0,e))-h0;
+       vec3 cwN=normalize(vec3(-hx/e*.10,1.0,-hz/e*.10));normal=normalize((viewMatrix*vec4(cwN,0.0)).xyz);if(!gl_FrontFacing)normal=-normal;}`);
+  };
+  waterMat.customProgramCacheKey=()=>'gf-creek-3';
+  const water=new THREE.Mesh(waterGeo,waterMat);water.renderOrder=1;scene.add(water);
+  const rippleGroup=new THREE.Group();scene.add(rippleGroup);   /* kept (empty): the shader draws the ripples now */
   // The shared floor collider follows this deck; the ropes are deliberately precarious.
   const bridge=CANYON_BRIDGE,bridgeGroup=new THREE.Group();scene.add(bridgeGroup);
   for(let z=-bridge.halfLength;z<bridge.halfLength;z+=.65){
@@ -269,7 +301,7 @@ export function createView(canvas) {
       }
     }
     for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.v.y-=dt*5;p.m.position.addScaledVector(p.v,dt);p.m.rotation.x+=dt*5;if(p.life<0){scene.remove(p.m);p.m.geometry.dispose();particles.splice(i,1);}}
-    rippleGroup.children.forEach((m,i)=>{m.position.x+=Math.sin(time+i)*dt*.035;m.material.opacity=.23+Math.sin(time*1.1+i)*.15;});
+    waterU.uTime.value=time;   /* the creek flows (shader above) */
     npc1.userData.arms[0].rotation.x=Math.sin(time*1.5)*.12;
     // Separate depth pass: held tools stay in front of terrain, while their solid parts occlude each other.
     renderer.clear();camera.layers.set(0);renderer.render(scene,camera);renderer.clearDepth();const background=scene.background;scene.background=null;camera.layers.set(1);renderer.shadowMap.autoUpdate=false;renderer.render(scene,camera);renderer.shadowMap.autoUpdate=true;scene.background=background;camera.layers.set(0);
