@@ -1,5 +1,7 @@
 import { distance, heightAt, canWalk, clamp } from './world.mjs';
 import { emptyCargo, addCargo, takeCargo } from './cargo.mjs';
+import {inCanyon} from './canyon.mjs';
+import {inMine,groundAt,mineBodyClear} from './mine.mjs';
 
 export const CART_CAPACITY = 180, SAFE_LOAD = 72;
 const ok = (message, extra = {}) => ({ ok: true, message, ...extra });
@@ -84,7 +86,7 @@ export function tickHauling(room, rules, dt, now) {
     const selfAid = now - p.lastInput < 600 && p.input.jump;
     p.aid = h || selfAid ? p.aid + dt * (h ? 1.7 : 1) : Math.max(0, p.aid - dt * .5);
     const nx = p.x + p.tumble.vx * dt, nz = p.z + p.tumble.vz * dt;
-    if (canWalk(nx, nz)) { p.x = nx; p.z = nz; } p.tumble.vx *= Math.exp(-4 * dt); p.tumble.vz *= Math.exp(-4 * dt); p.y = Math.max(.3, heightAt(p.x, p.z, room.cells));
+    if (canWalk(nx, nz)&&(!inMine(nx,nz)||mineBodyClear(room.mine,nx,p.y,nz))) { p.x = nx; p.z = nz; } p.tumble.vx *= Math.exp(-4 * dt); p.tumble.vz *= Math.exp(-4 * dt); p.y = inMine(p.x,p.z)?groundAt(room,p.x,p.z,p.y):Math.max(.3,heightAt(p.x,p.z,room.cells));
     if (p.aid >= 2.2 || now >= p.tumble.until) {
       p.tumble = null; p.aid = 0; p.immuneUntil = now + 1800; p.vy = 0; dirty(room);
       events.push({ player: p.id, result: ok(h ? `${h.name} got you back on your feet!` : 'Back on your feet. Try a smaller load or a gentler turn.') });
@@ -100,7 +102,7 @@ export function tickHauling(room, rules, dt, now) {
     const h0 = heightAt(c.x, c.z, room.cells);
     const gx = (heightAt(c.x + .6, c.z, room.cells) - heightAt(c.x - .6, c.z, room.cells)) / 1.2;
     const gz = (heightAt(c.x, c.z + .6, room.cells) - heightAt(c.x, c.z - .6, room.cells)) / 1.2;
-    const load = c.cargo.mass / SAFE_LOAD, brake = c.brake || !!i.jump;
+    const load = c.cargo.mass / SAFE_LOAD, brake = c.brake || !!i.jump || (!p&&helpers.length>0);
     const speed = Math.hypot(c.vx, c.vz), oldYaw = c.yaw;
     if (p && Number.isFinite(i.yaw)) {
       const turn = Math.atan2(Math.sin(i.yaw - c.yaw), Math.cos(i.yaw - c.yaw));
@@ -116,12 +118,13 @@ export function tickHauling(room, rules, dt, now) {
     const operatorX = nx + Math.sin(c.yaw) * 1.55, operatorZ = nz + Math.cos(c.yaw) * 1.55;
     if (canWalk(nx, nz, .8) && (!p || canWalk(operatorX, operatorZ, .4)) && Math.abs(heightAt(nx, nz, room.cells) - h0) < .7) { c.x = nx; c.z = nz; }
     else { c.vx = c.vz = 0; }
+    if(!p&&helpers.length&&Math.hypot(c.vx,c.vz)<.35&&!c.brake){c.brake=true;dirty(room);events.push({effect:{type:'catch',x:c.x,y:h0+1,z:c.z,receiver:c.id,mass:c.cargo.mass},broadcast:`${helpers[0].name} caught the runaway wheelbarrow!`});}
     c.wheel += Math.hypot(c.vx, c.vz) * dt / .35;
     const lateral = Math.abs((c.yaw - oldYaw) / Math.max(.001, dt)) * speed;
     const unstable = Math.max(0, load - .6) * (lateral * .14 + Math.hypot(gx, gz) * speed * .7);
     c.wobble = clamp(c.wobble + (unstable * (helpers.length ? .2 : 1) - (brake ? 2 : .32)) * dt, 0, 1.2);
     c.roll = Math.sin(c.wheel * .6) * c.wobble * .55;
-    if (p) { p.x = c.x + Math.sin(c.yaw) * 1.55; p.z = c.z + Math.cos(c.yaw) * 1.55; p.y = Math.max(.3, heightAt(p.x, p.z, room.cells)); p.yaw = c.yaw; p.vy = 0; }
+    if (p) { p.x = c.x + Math.sin(c.yaw) * 1.55; p.z = c.z + Math.cos(c.yaw) * 1.55; p.y = inCanyon(p.x,p.z)?heightAt(p.x,p.z,room.cells):Math.max(.3,heightAt(p.x,p.z,room.cells)); p.yaw = c.yaw; p.vy = 0; }
     if (c.wobble >= 1) {
       spillCart(room, c, now);
       events.push({ broadcast: 'Wheelbarrow over! The spilled gravel can be recovered.', effect: { type: 'spill', x: c.x, z: c.z } });

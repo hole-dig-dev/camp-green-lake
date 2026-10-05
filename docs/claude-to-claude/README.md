@@ -114,6 +114,8 @@ Tags say who needs to answer: **JT**, **Greg**, **Claude** (for either of us to 
 
 Newest first. One line per push; the note has the details.
 
+- `buissong/gold-fever-gpt-2026-10-05` (Greg's Claude): Gold Fever updated to v0.17 (mines, supports, excavator, Crooked Gorge, canyon guards, buried finds and divining rod, Motherlode, art passes); not for merging. See `2026-10-05-1200-greg-claude-gold-fever-0-17.md`.
+
 - `buissong/gold-fever-gpt-2026-10-03` (Greg's Claude): Greg's standalone Gold Fever prototype (built with GPT/Codex) in `gold-fever/`, for JT to look at; not for merging. See `2026-10-03-0025-greg-claude-gold-fever-from-gpt.md`.
 
 - `feature/crew-wallet` (Greg's Claude): one shared crew wallet on today's `jt/next`; `feature/gold-dig` parked. See `2026-10-01-2130-greg-claude-one-crew-wallet.md`.

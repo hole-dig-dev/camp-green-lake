@@ -107,5 +107,36 @@ The final machines should retain the same underlying chain: excavate -> haul -> 
 2. **Early cooperation:** physical wheelbarrow, bulk rocker loading, shared sample stakes and a small horse cart.
 3. **Waterworks:** place pipes/flumes, source pumps, reservoir capacity, water pressure and a historical hydraulic monitor.
 4. **Industrial claim:** operating costs, better roads, dumping piles, conveyors and mechanically animated excavator buckets.
-5. **Geology and terrain:** more readable layers, bedrock crevices, buried channels and deeper deposits. Choose a terrain solution before adding tunnels.
+5. **Geology and terrain:** more readable layers, bedrock crevices, buried channels and deeper deposits. The 0.6 bounded voxel claim now provides real tunnels; expand its geology and survey feedback next.
 6. **Unreal vertical slice:** preserve the prospecting, recovery, inventory and crew economy contracts; rebuild the renderer, movement, terrain and replication in the engine.
+
+
+## Version 0.6 — player-built mines
+
+Implemented: a bounded true 3D mine claim with persistent player-cut branches, removable floors/ceilings, a central ladder shaft, purchasable shaft extensions, snap-grid tracks, 240kg carts and a cart cage hoist. Its manual crank can be operated alone from inside; the steam upgrade continues to the next landing. Calling the cage, recovering an orphaned cart and sequential processing keep the solo path viable. Co-op players can share tasks while the same terrain edits and cargo replicate for up to eight miners.
+
+The progression now has a mine logistics branch: creek samples and panning -> profitable claim -> rail bundles and carts -> manual cage hoist -> deeper shaft levels -> steam lifting, connected to existing surface washing equipment. Ore crushing, autonomous cart dispatch, conveyors, supports/cave-ins and ventilation remain planned. This prototype uses the shovel for rock excavation; later pickaxes/drills should distinguish hard-rock extraction and crushing from creek gravel. See MINE-GUIDE.md and ARCHITECTURE.md for current capabilities and bounds.
+
+## Continuous mine excavation (0.7)
+
+Aim direction shapes real excavation: level galleries, diagonal ramps and downward shafts. Rounded walls use continuous density cuts rather than cube removal. A hand shovel removes a stylized bounded parcel (at most 12kg) per cut; the geometric opening is deliberately forgiving for traversal. Widen passages for level rail construction. Personal shafts need a purchased rope anchored before excavation; solo climbing is available without a second operator. World depth remains 38m in the current claim.
+
+## Wood and structural mining (0.8)
+
+Wood is earned through trees, not a shop button. A tree yields six logs; four build one support. Frames roughly every four metres give a solo miner enough time to excavate and brace while a crew can split forestry, digging, building and hauling. Cracks at 45 seconds and danger at 70 telegraph the 90-second cave-in. Recoverable rubble creates a setback and an escape moment without needing another player to rescue you. Initial landings are safe and offline danger freezes.
+
+## Hand excavation progression (0.9)
+
+The starter shovel remains usable for mines. A miner’s pick is an accessible $65 first step; a $210 pick-mattock and $620 heavy tunnelling pick progressively broaden/lengthen true cuts, shorten swings and lower mouse effort. Every tier needs personal ownership of the previous pick. Press 4 for the best purchased pick, 1 for the surface shovel. Heavy 24kg loads push players toward carts and improved hauling; faster expansion still needs wood supports. The large reinforced head starts the goofy visual escalation while keeping hand tools recognisable. Prices and mouse feel are provisional and need human playtesting.
+
+
+## Goofy mouse-operated excavator (0.10)
+
+The Rustbucket now extends the physical shovel loop: position real teeth, plant, pull up to scoop, then swing and release to dump. Four articulated joints replace the canned dig swing. Springs overshoot slightly and respond more slowly under load; the cab reacts to slewing. C lets the miner curl the bucket separately, wheel folds the stick, and Shift allows multiple scoops. A slow release pours into a receiver; a flick launches paydirt, leaving recoverable mess when the crew misses. Solo players can position a truck and load it sequentially, with E preserved as a convenient shortcut. Co-op spectators receive joint motion and flying cargo. Tree strikes, vehicle impacts, excavator mining underground and fully simulated hydraulic loads are further work.
+
+
+## Difficulty preference and first automation/comedy pass (0.11)
+
+The user explicitly wants demanding multi-mode hand and vehicle controls. Preserve that difficulty. Their requested priorities are physical feedback, upgrades that take over jobs, and interacting accidents. A rocker motor now replaces the hand-crank job, and a feeder removes serial bucket trips after a load is dumped at its inlet. Both use the existing shared purchasing/placement economy. Feeding faster than processing builds a visible backlog; a misaligned belt drops recoverable dirt rather than crediting a hidden transfer.
+
+The immediate scenario is: park the barrow, dump a pile at the hopper, let the belt feed the washer, and return to mining. An overloaded hopper or backed-up outlet produces a readable jam. Someone holds H to clear it; the resulting messy discharge can muddy a nearby face and still leaves the paydirt recoverable. With two players, one clears while the other digs or fixes the outlet; alone, the player stops and performs those jobs sequentially. H can also catch a released runaway cart. These mechanics create opportunities for accidents and rescue; automated coverage does not establish human enjoyment or viral potential. Long sessions and economic progression still need human tuning.

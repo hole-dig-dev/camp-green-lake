@@ -22,7 +22,7 @@ test('real host isolates rooms, replicates digging, exports geometry, and restor
     a.ws.send(JSON.stringify({type:'action',action:{type:'dig',x:a.latest.self.x+.5,z:a.latest.self.z}}));
     await until(()=>a.latest.self.cargo.mass===10&&b.patches>0);assert.equal(other.patches,0);
     const exported=await(await fetch(`${origin}/api/export?room=NETSAVE0&token=${token}`)).json();assert.equal(exported.terrain.heights.length,12769);assert.ok(Object.keys(exported.cells).length>0);assert.ok(!JSON.stringify(exported).includes(token));
-    const obj=await(await fetch(`${origin}/api/terrain?room=NETSAVE0&token=${token}`)).text();assert.ok(obj.startsWith('# Gold Fever terrain'));assert.equal((obj.match(/^f /gm)||[]).length,25088);
+    const obj=await(await fetch(`${origin}/api/terrain?room=NETSAVE0&token=${token}`)).text();assert.ok(obj.startsWith('# Gold Fever terrain'));assert.ok((obj.match(/^f /gm)||[]).length>25088);assert.ok(obj.includes('o CrookedHatMine'));
     assert.equal((await fetch(`${origin}/data/host.key`)).status,404);
     for(const ws of sockets)ws.close();await pause(200);await stop();await start();
     const restored=await join('NETSAVE0',token);assert.equal(restored.welcome.mode,'sandbox');assert.equal(restored.latest.self.cargo.mass,10);assert.equal(restored.latest.cash,100000000);assert.equal(restored.latest.vehicles.length,3);assert.ok(Object.keys(restored.welcome.cells).length>0);

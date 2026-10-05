@@ -34,6 +34,8 @@ Vehicle spawns print their IDs and locations. Use `tp ID`, close the console, th
 
 | Command | Effect |
 | --- | --- |
+| `tp mine` / `tp minebottom` | Visit the mine entrance / deepest landing |
+| `tp -70 30 -6` | Visit a clear underground position; order is X Z Y |
 | `tp camp` / `tp shop` / `tp assay` | Go to town destinations |
 | `tp creek` / `tp ghost` / `tp fox` | Go to creek, Ghost Bend or Fox Hill |
 | `tp pay1` through `tp pay4` | Go to one of the four generated gold deposits |
@@ -58,9 +60,10 @@ In flight, **WASD** moves along your view, **Space** goes up, **Ctrl** goes down
 
 | Command | Effect |
 | --- | --- |
-| `give all` | All personal upgrades, washer kits and purchase unlocks; vehicles are spawned separately |
+| `give all` | All personal upgrades, mine kits, washer kits and purchase unlocks; vehicles are spawned separately |
 | `give sieve` / `give shovel` / `give bucket` / `give boots` | Grant a personal upgrade |
 | `give rocker` / `give sluice` / `give washplant` | Grant a washer kit |
+| `give minetrack` / `give minecart` / `give hoist` / `give shaftkit` | Grant mine equipment; B places it |
 | `unlock all` / `unlock truck` | Bypass purchase prerequisites |
 | `spawn wheelbarrow` | Create another parked wheelbarrow |
 | `spawn rocker` / `spawn sluice` / `spawn washplant` | Place a washer; distant washers are placed beside the creek |

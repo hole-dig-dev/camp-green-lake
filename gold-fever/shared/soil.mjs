@@ -1,5 +1,6 @@
 // Engine-neutral physical dirt. Each clod carries a conserved parcel of paydirt.
-import {inMine,mineSolid,mineFloor,groundAt,digMine,d3} from './mine.mjs';
+import {miningTool} from './tools.mjs';
+import {inMine,mineSolid,mineFloor,mineBodyClear,groundAt,digMine,d3} from './mine.mjs';
 import { distance, heightAt, clamp, canWalk } from './world.mjs';
 import { emptyCargo, addCargo, takeCargo } from './cargo.mjs';
 
@@ -34,11 +35,12 @@ export function soilAction(room, p, action, rules, now) {
   if (p.vehicle || p.cart || p.mineCart || p.hoistRide || p.busy || p.tumble) return fail('Free your hands and get on your feet first.');
   if (action.type === 'bucket') {
     if (p.bucketPos) {
-      if (distance(p, p.bucketPos) > 3.8) return fail('Walk back to your bucket to pick it up.');
+      if (d3(p, {...p.bucketPos,y:p.bucketPos.y??heightAt(p.bucketPos.x,p.bucketPos.z,room.cells)}) > 3.8) return fail('Walk back to your bucket to pick it up.');
       p.bucketPos = null; mark(room); return good('Bucket picked up.');
     }
     const x = p.x - Math.sin(p.yaw) * 1.55, z = p.z - Math.cos(p.yaw) * 1.55;
     if (!canWalk(x, z, .5)) return fail('Leave room for your bucket.');
+    if(inMine(x,z)&&(!mineBodyClear(room.mine,x,p.y,z)||Math.abs(groundAt(room,x,z,p.y)-p.y)>1))return fail('Place the bucket on a nearby cleared floor.');
     p.bucketPos = {x,z,...(inMine(p.x,p.z)?{y:groundAt(room,x,z,p.y)}:{})}; mark(room); return good('Bucket down. Aim into the opening and release a gentle shovel toss. T picks it up.');
   }
   if (action.type === 'shovelPlant') {
@@ -46,7 +48,8 @@ export function soilAction(room, p, action, rules, now) {
     const x = Number(action.x), z = Number(action.z);
     if (!Number.isFinite(x) || !Number.isFinite(z) || distance(p, {x,z}) > rules.player.reach || Math.abs(x) > 108 || Math.abs(z) > 108) return fail('Look down at nearby dirt.');
     if (now < p.digUntil) return { ok: false, quiet: true };
-    p.shovelPlant = {x,z,at:now,...(action.mine?{y:Number(action.y),mine:true}:{})}; mark(room); return good('', { shovel: 'planted' });
+    if(p.input?.tool==='pick'&&!action.mine)return fail('Use 1 for surface shovelling; the pick cuts exposed mine rock.');
+    p.shovelPlant = {x,z,at:now,tool:p.input?.tool==='pick'?'pick':'shovel',...(action.mine?{y:Number(action.y),mine:true}:{})}; mark(room); return good('', { shovel: 'planted' });
   }
   if (!p.shovel?.mass) return fail('The shovel is empty. Hold left mouse on dirt and pull upward.');
   if (room.clods.length > 150) return fail('Let the flying dirt settle before throwing another load.');
@@ -91,13 +94,17 @@ export function tickSoil(room,rules,dt,now=Date.now()) {
     for(let i=0;i<steps&&!settled;i++) {
       const old={x:c.x,y:c.y,z:c.z}; c.age+=step;c.vy-=9.8*step;
       c.x=clamp(c.x+c.vx*step,-108,108);c.z=clamp(c.z+c.vz*step,-108,108);c.y+=c.vy*step;
-      if(!canWalk(c.x,c.z,.1)||inMine(c.x,c.z)&&mineSolid(room.mine,c.x,c.y,c.z)){c.x=old.x;c.z=old.z;c.vx*=-.28;c.vz*=-.28;}
+      if(!canWalk(c.x,c.z,.1)){c.x=old.x;c.z=old.z;c.vx*=-.28;c.vz*=-.28;}
+      if(inMine(c.x,c.z)&&mineSolid(room.mine,c.x,c.y,c.z)){
+        if(mineSolid(room.mine,old.x,c.y,old.z)){c.y=old.y;if(c.vy>0)c.vy*=-.3;}
+        c.x=old.x;c.z=old.z;c.vx*=-.28;c.vz*=-.28;
+      }
       for(const r of receivers) {
         if(old.y>=r.y-.02&&c.y<=r.y&&c.vy<0) {
           const t=clamp((old.y-r.y)/(old.y-c.y||1),0,1),x=old.x+(c.x-old.x)*t,z=old.z+(c.z-old.z)*t;
           if(distance({x,z},r)<r.radius) {
             const part=takeCargo(c.cargo,Math.max(0,r.capacity-r.cargo.mass));
-            if(part.mass>0){addCargo(r.cargo,part);mark(room);events.push({effect:{type:'catch',x:r.x,y:r.y,z:r.z,receiver:r.id}});}
+            if(part.mass>0){addCargo(r.cargo,part);mark(room);events.push({effect:{type:'catch',x:r.x,y:r.y,z:r.z,receiver:r.id,mass:part.mass}});}
             if(c.cargo.mass<1e-8){settled=true;break;}
           }
         }

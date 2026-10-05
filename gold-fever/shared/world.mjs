@@ -1,3 +1,4 @@
+import {inCanyon,canyonHeight,canyonBlend} from './canyon.mjs';
 // Engine-neutral coordinates: metres, Y up, +X east, +Z south. Angles in radians.
 export const SIZE = 224, STEP = 2, HALF = SIZE / 2, GRID = SIZE / STEP;
 export const WATER = 1.05;
@@ -10,14 +11,14 @@ export function random(seed, x = 0, z = 0, n = 0) {
 }
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 export function riverX(z) { return 6 + Math.sin(z * .041) * 9 + Math.cos(z * .018) * 4; }
-export function nearWater(x, z, reach = 12) { return Math.abs(x - riverX(z)) < reach && Math.abs(z) < 107; }
+export function nearWater(x, z, reach = 12) { return z>-24 && Math.abs(x - riverX(z)) < reach && Math.abs(z) < 107; }
 export function baseHeight(x, z) {
   const d = Math.abs(x - riverX(z));
   const h = .3 + smooth(5, 14, d) * 2.7 + smooth(20, 104, d) * (5.8 + Math.sin(z * .029) * 2.5) + Math.sin(x * .078) * .19 + Math.cos(z * .065) * .16;
   const town = (1 - smooth(14, 22, Math.abs(x + 39))) * (1 - smooth(12, 23, Math.abs(z - 58)));
   const surface=h*(1-town)+3.15*town;
   const mine=(1-smooth(0,4,Math.max(-88-x,x+40,0)))*(1-smooth(0,4,Math.max(-12-z,z-36,0)));
-  return surface*(1-mine)+6*mine;
+  const legacy=surface*(1-mine)+6*mine,b=canyonBlend(x,z);return legacy*(1-b)+canyonHeight(x,z)*b;
 }
 export const keyOf = (ix, iz) => `${ix},${iz}`;
 export function toCell(x, z) { return { ix: clamp(Math.round((x + HALF) / STEP), 0, GRID), iz: clamp(Math.round((z + HALF) / STEP), 0, GRID) }; }
@@ -66,3 +67,7 @@ export function gradeName(gramsPerKg) {
   if (gramsPerKg < .013) return 'Pay dirt';
   return 'Rich';
 }
+
+// Stable tree IDs: the renderer and host use the same forest layout.
+export const FOREST_TREES=[];
+for(let i=0;i<600&&FOREST_TREES.length<140;i++){const x=random(891,i)*220-110,z=random(892,i)*220-110;if(inCanyon(x,z)&&baseHeight(x,z)<3||nearWater(x,z,22)||x>-61&&x<-9&&z>30&&z<84)continue;FOREST_TREES.push({id:'tree'+i,x,z,scale:1+random(893,i)*1.1,y:baseHeight(x,z)});}

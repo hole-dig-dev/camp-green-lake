@@ -61,12 +61,46 @@
       "description": "Screen out stones. Faster panning; recover 92% of your gold instead of 82%."
     },
     {
+      "id": "diviningrod",
+      "name": "Crooked divining rod",
+      "price": 180,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "Fictional frontier treasure finder. Equip with 5; walk and sweep toward the strongest rattle, then dig out buried finds. G drops a carried find."
+    },
+    {
       "id": "shovel",
-      "name": "Steel shovel & pick",
+      "name": "Steel digging shovel",
       "price": 85,
       "category": "Hand tools",
       "kind": "personal",
-      "description": "Dig 10 kg per scoop, with shorter swings and deeper cuts."
+      "description": "10 kg surface scoops, deeper dirt cuts and a 650 ms mine swing. Picks unlock broader mine cuts."
+    },
+    {
+      "id": "minerpick",
+      "name": "Miner’s pick",
+      "price": 65,
+      "category": "Hand tools",
+      "kind": "personal",
+      "description": "First mine upgrade. Broader rock cuts, 0.75 m bite, 14 kg loads and an easier upward pull. Equip with 4."
+    },
+    {
+      "id": "mattock",
+      "name": "Pick-mattock",
+      "price": 210,
+      "category": "Hand tools",
+      "kind": "personal",
+      "requiresPersonal": "minerpick",
+      "description": "Point and broad adze for widening galleries. 1.1 m bite, 18 kg loads, 550 ms swings. Requires your own miner’s pick."
+    },
+    {
+      "id": "tunnelpick",
+      "name": "Heavy tunnelling pick",
+      "price": 620,
+      "category": "Hand tools",
+      "kind": "personal",
+      "requiresPersonal": "mattock",
+      "description": "Reinforced, ridiculously hefty pick. Widest hand cuts, 1.4 m bite, 24 kg loads, 450 ms swings. Requires your own mattock; bring a cart."
     },
     {
       "id": "bucket",
@@ -97,6 +131,28 @@
       "waterReach": 20
     },
     {
+      "id": "rockerdrive",
+      "name": "Rocker treadle motor",
+      "price": 180,
+      "requires": "rocker",
+      "category": "Washing equipment",
+      "kind": "machine",
+      "description": "Fit to an existing rocker with B. Takes over the hand crank so a solo miner can keep digging."
+    },
+    {
+      "id": "feeder",
+      "name": "Paydirt feeder belt",
+      "price": 650,
+      "requires": "rocker",
+      "category": "Washing equipment",
+      "kind": "machine",
+      "description": "Scoops loose piles at its hopper and drops 6 kg/s from its raised end. Aim it into a washer. Overfill or back it up and it jams; H clears it with a messy sneeze.",
+      "capacity": 180,
+      "intakeRate": 12,
+      "rate": 6,
+      "waterReach": 1000
+    },
+    {
       "id": "sluice",
       "name": "Long tom & sluice",
       "price": 1100,
@@ -116,7 +172,7 @@
       "requires": "sluice",
       "category": "Earthmovers",
       "kind": "vehicle",
-      "description": "Drive it. Scoop 180 kg at a time. Transfer your load into a nearby truck or washer.",
+      "description": "Mouse-controlled boom, swing and bucket; wheel folds the stick. Pull up to scoop 180 kg, then tip or fling into a truck. Holds 720 kg.",
       "capacity": 720,
       "speed": 3.2,
       "digKg": 180,
@@ -214,11 +270,20 @@
     },
     {
       "id": "timber",
-      "name": "Timber tunnel frame",
-      "price": 25,
+      "name": "Log mine support",
+      "price": 0,
       "category": "Mining equipment",
       "kind": "mine",
-      "description": "A visible wooden support frame. Structural cave-in simulation is a future addition."
+      "description": "Craft from four chopped logs in B. Brace about every four metres to prevent cave-ins.",
+      "craftWood": 4
+    },
+    {
+      "id": "rope",
+      "name": "Prospector’s rope ladder",
+      "kind": "mine",
+      "price": 35,
+      "description": "Anchor at your feet before digging a deep shaft. Space climbs and Ctrl descends. Works alone.",
+      "category": "Mining equipment"
     }
   ]
 }

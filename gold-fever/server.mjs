@@ -1,4 +1,9 @@
-import {ensureMine,releaseMine} from './shared/mine.mjs';
+import {ensureRelics} from './shared/relics.mjs';
+import {ensureGuards} from './shared/guards.mjs';
+import {armTargets} from './shared/excavator.mjs';
+import {ensureForest} from './shared/forestry.mjs';
+import {ensureSupports} from './shared/supports.mjs';
+import {ensureMine,releaseMine,inMine,mineBodyClear} from './shared/mine.mjs';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,18 +34,20 @@ function loadRoom(code, mode, crewSize = 2) {
   let room;
   try { room = JSON.parse(fs.readFileSync(path.join(SAVE_DIR, `${code}.json`), 'utf8')); } catch { room = createRoom(code, RULES, mode, crewSize); }
   if (room.version !== 1 || !room.players || !room.cells) throw Error('Unsupported save format');
-  room.crewSize ??= 6; room.ownerId ??= Object.values(room.players)[0]?.id || null; ensureHauling(room); ensureSoil(room); ensureMine(room);
-  for (const p of Object.values(room.players)) { releaseCart(room,p,true);releaseMine(room,p); p.active = false; p.fly = false; p.speedScale = p.jumpScale = 1; p.cheatSafe = false; p.vehicle = null; p.input = {}; p.lastInput = 0; p.digUntil = 0; p.shovelPlant = null; p.emoteUntil = 0; cancelPan(p); }
+  room.crewSize ??= 6; room.ownerId ??= Object.values(room.players)[0]?.id || null; ensureHauling(room); ensureSoil(room); ensureMine(room);ensureForest(room);ensureSupports(room);ensureGuards(room);ensureRelics(room);for(const g of room.guards){g.state='patrol';g.target=null;g.until=0;g.stateAt=0;}
+  for (const p of Object.values(room.players)) { releaseCart(room,p,true);releaseMine(room,p); p.active = false; p.fly = false; p.speedScale = p.jumpScale = 1; p.cheatSafe = false; p.vehicle = null; p.input = {}; p.lastInput = 0; p.digUntil = 0; p.shovelPlant = null;p.excavatorPlant=null;p.guardKnock=null;p.guardSafeUntil=0; p.emoteUntil = 0; cancelPan(p); }
+  for(const p of Object.values(room.players))if(inMine(p.x,p.z)&&!mineBodyClear(room.mine,p.x,p.y,p.z)){p.x=-68;p.z=34;p.y=6;p.vy=0;}
   for (const v of room.vehicles) v.driver = null;
   room.dirty = false; rooms.set(code, room); return room;
 }
 function saveRoom(room) {
   if (!room.dirty) return;
   const serialized = JSON.parse(JSON.stringify(room)); delete serialized.dirty;
-  for (const p of Object.values(serialized.players)) { p.active = false; p.input = {}; p.lastInput = 0; p.vehicle = null; p.shovelPlant = null; cancelPan(p); }
+  for (const p of Object.values(serialized.players)) { p.active = false; p.input = {}; p.lastInput = 0; p.vehicle = null; p.shovelPlant = null;p.excavatorPlant=null; cancelPan(p); }
   for (const v of serialized.vehicles) v.driver = null;
   for (const c of serialized.carts || []) { c.operator = null; c.steadier = null; c.brake = true; c.vx = c.vz = 0; }
   for (const p of Object.values(serialized.players)) p.cart = null;
+  for (const p of Object.values(serialized.players)) releaseMine(serialized,p);
   const file = path.join(SAVE_DIR, `${room.code}.json`);
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(serialized)); fs.renameSync(`${file}.tmp`, file); room.dirty = false;
 }
@@ -52,7 +59,7 @@ function lanUrls() {
 function shareUrl() {
   try { const s = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/share-url.json'), 'utf8')); process.kill(s.pid, 0); return s.url; } catch { return null; }
 }
-const MIME = { '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ico': 'image/x-icon' };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   if (req.method === 'POST' && url.pathname === '/api/host/stop') {
@@ -62,7 +69,7 @@ const server = http.createServer((req, res) => {
     setTimeout(shutdown, 100); return;
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
-  if (url.pathname === '/api/health') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ game: 'Gold Fever', version: '0.5.0', online: sessions.size })); return; }
+  if (url.pathname === '/api/health') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ game: 'Gold Fever', version: '0.17.0', online: sessions.size })); return; }
   if (url.pathname === '/api/connection') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ shareUrl: shareUrl(), lanUrls: lanUrls() })); return; }
   if (url.pathname === '/api/export' || url.pathname === '/api/terrain') {
     const room = rooms.get(cleanRoom(url.searchParams.get('room'))), token = url.searchParams.get('token') || '';
@@ -74,8 +81,10 @@ const server = http.createServer((req, res) => {
   try { relative = decodeURIComponent(url.pathname); } catch { res.writeHead(400); res.end(); return; }
   if (relative.startsWith('/shared/')) { base = path.join(ROOT, 'shared'); relative = relative.slice(7); }
   if (relative.startsWith('/vendor/')) {
-    base = path.join(ROOT, 'node_modules/three/build'); relative = relative.slice(7);
-    if (!['/three.module.js', '/three.core.js'].includes(relative)) { res.writeHead(404); res.end(); return; }
+    relative = relative.slice(7);
+    if (['/three.module.js', '/three.core.js'].includes(relative)) base = path.join(ROOT, 'node_modules/three/build');
+    else if (['/loaders/GLTFLoader.js','/loaders/HDRLoader.js','/utils/BufferGeometryUtils.js'].includes(relative)) base = path.join(ROOT,'public/vendor');
+    else { res.writeHead(404); res.end(); return; }
   }
   if (relative === '/') relative = '/index.html';
   const resolved = path.resolve(base, `.${relative}`);
@@ -103,14 +112,15 @@ wss.on('connection', ws => {
       const name = String(msg.name || 'Prospector').replace(/[<>\x00-\x1f]/g, '').trim().slice(0, 22) || 'Prospector';
       const player = existing || createPlayer(token, name, room); player.name = name; player.active = true; player.input = {}; player.lastInput = now;
       sessions.set(ws, { room, player, token }); room.dirty = true; clearTimeout(joinTimer);
-      send(ws, { type: 'welcome', room: code, seed: room.seed, mode: room.mode, rules: RULES, cells:room.cells,mineTerrain:room.mine.removed,state: snapshot(room, player, RULES, now) });
+      send(ws, { type: 'welcome', room: code, seed: room.seed, mode: room.mode, rules: RULES, cells:room.cells,mineTerrain:room.mine.removed,mineBrushes:room.mine.brushes,state: snapshot(room, player, RULES, now) });
       announce(room, `${name} arrived at Fool’s Crossing.`); return;
     }
     const s = sessions.get(ws); if (!s) return;
     const { room, player } = s;
     if (msg.type === 'input') {
       player.input = { forward: Math.max(-1, Math.min(1, Number(msg.forward) || 0)), right: Math.max(-1, Math.min(1, Number(msg.right) || 0)), yaw: Number.isFinite(msg.yaw) ? msg.yaw % (Math.PI * 2) : player.yaw, sprint: !!msg.sprint, jump: !!msg.jump, wash: !!msg.wash, operate: typeof msg.operate === 'string' ? msg.operate : null };
-      player.input.hoistUp=!!msg.hoistUp;player.input.hoistDown=!!msg.hoistDown;
+      if(msg.arm&&typeof msg.arm==='object')player.input.arm=armTargets(msg.arm);
+      player.input.tool=['axe','pan','shovel','pick','rod'].includes(msg.tool)?msg.tool:'shovel';player.input.hoistUp=!!msg.hoistUp;player.input.hoistDown=!!msg.hoistDown;
       player.input.catching = !!msg.catching;
       player.input.bucketX = Number.isFinite(msg.bucketX) ? Math.max(-.75,Math.min(.75,msg.bucketX)) : 0;
       player.input.bucketY = Number.isFinite(msg.bucketY) ? Math.max(-.65,Math.min(.65,msg.bucketY)) : 0;
@@ -118,13 +128,15 @@ wss.on('connection', ws => {
     }
     if (msg.type === 'action') {
       const result = act(room, player, msg.action || {}, RULES, now);
+      if(result.mineRubble)broadcast(room,{type:'mineRubble',rubble:result.mineRubble});
+      if(result.mineBrushes)broadcast(room,{type:'mineBrushes',brushes:result.mineBrushes});
       if(result.minePatches)broadcast(room,{type:'mineTerrain',patches:result.minePatches});
       if(result.mineRebuild)broadcast(room,{type:'mineRebuild'});
       if (result.patches) broadcast(room, { type: 'terrain', patches: result.patches });
       if (result.effect) broadcast(room, { type: 'effect', effect: result.effect, now });
       if (result.broadcast) announce(room, result.message);
       if (result.crewNotice) announce(room, result.crewNotice);
-      if (!result.quiet && (result.message || result.console || result.shovel)) send(ws, { type: 'result', ...result });
+      if (!result.quiet && (result.message || result.console || result.shovel || result.excavator)) send(ws, { type: 'result', ...result });
       if (result.resync) send(ws, snapshot(room, player, RULES, now));
       return;
     }
@@ -137,7 +149,7 @@ wss.on('connection', ws => {
     clearTimeout(joinTimer); const s = sessions.get(ws); if (!s) return; sessions.delete(ws);
     // A replaced socket must not mark its replacement offline.
     if ([...sessions.values()].some(n => n.room === s.room && n.player === s.player)) return;
-    releaseMine(s.room,s.player);cancelPan(s.player); s.player.shovelPlant = null; s.player.active = false; s.player.input = {};
+    releaseMine(s.room,s.player);cancelPan(s.player); s.player.shovelPlant = null;s.player.excavatorPlant=null; s.player.active = false; s.player.input = {};
     releaseCart(s.room, s.player, true);
     if (s.player.vehicle) { const v = s.room.vehicles.find(v => v.id === s.player.vehicle); if (v) v.driver = null; s.player.vehicle = null; }
     s.room.dirty = true; announce(s.room, `${s.player.name} left the crew.`); saveRoom(s.room);
@@ -150,6 +162,7 @@ const timer = setInterval(() => {
   for (const room of rooms.values()) {
     const events = tick(room, RULES, .05, now);
     for (const event of events) {
+      if(event.mineRubble)broadcast(room,{type:'mineRubble',rubble:event.mineRubble});
       if (event.broadcast) announce(room, event.broadcast);
       if (event.effect) broadcast(room, { type: 'effect', effect: event.effect, now });
       if (event.player) for (const [ws, s] of sessions) if (s.player.id === event.player && s.room === room) send(ws, { type: 'result', ...event.result });
@@ -165,3 +178,4 @@ server.listen(PORT, '0.0.0.0', () => {
   for (const url of lanUrls()) console.log(`Same-network friend: ${url}`);
   console.log('Worlds save automatically. Run Share with Friend.cmd for an Internet link.');
 });
+

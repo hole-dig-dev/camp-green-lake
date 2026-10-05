@@ -1,6 +1,6 @@
 {
   "name": "gold-fever",
-  "version": "0.5.0",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
   "description": "A cooperative first-person gold rush prototype with persistent digging and an escalating mining operation.",
@@ -13,3 +13,4 @@
     "ws": "8.18.3"
   }
 }
+

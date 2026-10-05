@@ -8,3 +8,5 @@
 
 /* Mud covers the world for three seconds, leaving controls readable. */
 #mud-splatter{position:fixed;inset:0;pointer-events:none;backdrop-filter:blur(3px);background:radial-gradient(ellipse 34% 48% at 15% 25%,#563520f5 63%,transparent 68%),radial-gradient(ellipse 37% 32% at 47% 54%,#71482bf5 62%,transparent 69%),radial-gradient(ellipse 31% 41% at 87% 24%,#583821f5 63%,transparent 68%),radial-gradient(ellipse 40% 37% at 75% 92%,#603c23f5 62%,transparent 70%),radial-gradient(ellipse 26% 25% at 16% 88%,#74472df2 66%,transparent 71%),#75492ba6;}
+
+#wood-load{display:block;font-size:10px;letter-spacing:.5px;color:#e8cf9c;margin:5px 0}#roof-status{position:absolute;left:50%;top:90px;transform:translateX(-50%);padding:9px 15px;font-size:11px;background:#4a382be3;color:#ffdfa0;border-left:3px solid #e7b460;pointer-events:none}#roof-status.danger{background:#793b27eb;color:#ffe2c1;border-color:#ff9e5d}.craft-row{display:flex;gap:22px;justify-content:space-between;align-items:center;padding:16px;background:#e4d7ba;margin:12px 0 20px}.craft-row strong{font:22px Georgia}.craft-row p{font-size:12px;line-height:1.6}.craft-row span{font-size:12px;color:#77552c}
