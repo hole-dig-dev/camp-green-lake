@@ -19,8 +19,10 @@ export const camperReady=()=>!!template;
 
 /* the camp shovel's parts, in the right forearm (CGLCamper_R_Shovel*; the *Long ones are the long-handled variant) */
 const isShovel=n=>/_R_Shovel/.test(n),isLong=n=>/Long$/.test(n);
-/* Dig clip: where each phase of the gesture sits (seconds), measured from the blade's path */
-export const DIG={planted:.31,loaded:.60,end:1.23};
+/* the two-handed Scoop clip (Sol, Camp Green Lake blender/cgl_rig.py anim_scoop, SCOOP_TIMES): plant, lever the blade
+   up, lift it level to the waist (held while you carry the load), toss to the right, recover. JT: Dig read as a stab */
+const THROW_MS=650;   /* the toss and recover, played at about the clip's speed */
+export const DIG={planted:.267,levered:.533,loaded:.833,tossed:1.167,end:1.5};
 
 export function camperBody({color=0}={}){
   const root=new THREE.Group(),inner=skeletonClone(template);
@@ -63,15 +65,18 @@ export function camperAnimate(g,s,dt,now,fallen){
   const digging=['shovel','pick',undefined].includes(s.tool),mass=s.shovelMass||0;
   if(C.prevMass>0&&mass===0&&!s.shovelPlanted)C.throwAt=now;   // the scoop just went: play the toss
   C.prevMass=mass;C.load.visible=mass>0&&shovelOut;
-  const emote=s.emoteUntil>now,chop=tool==='axe'&&s.chopUntil>now,throwing=C.throwAt>0&&now-C.throwAt<520,moving=C.speed>.35;
+  const emote=s.emoteUntil>now,chop=tool==='axe'&&s.chopUntil>now,throwing=C.throwAt>0&&now-C.throwAt<THROW_MS,moving=C.speed>.35;
   let a;
   if(fallen)a=play(C,'KO',.12);
   else if(emote)a=play(C,'Wave');
   else if(chop){a=play(C,'Dig');a.timeScale=1.8;}
-  else if(digging&&throwing){a=play(C,'Dig',.08);a.timeScale=0;C.digT=Math.max(C.digT,DIG.loaded+(DIG.end-DIG.loaded)*Math.min(1,(now-C.throwAt)/520));a.time=Math.min(DIG.end-.01,C.digT);}
+  else if(digging&&throwing){a=play(C,C.actions.Scoop?'Scoop':'Dig',.08);a.timeScale=0;C.digT=Math.max(C.digT,DIG.loaded+(DIG.end-DIG.loaded)*Math.min(1,(now-C.throwAt)/THROW_MS));a.time=Math.min(DIG.end-.01,C.digT);}
   else if(digging&&(s.shovelPlanted||(mass>0&&!moving))){
-    a=play(C,'Dig',.12);a.timeScale=0;const target=mass>0?DIG.loaded:DIG.planted;
-    if(C.digT>DIG.loaded+.05)C.digT=0;C.digT+=(target-C.digT)*Math.min(1,dt*(mass>0?5:9));a.time=C.digT;
+    a=play(C,C.actions.Scoop?'Scoop':'Dig',.15);a.timeScale=0;
+    if(C.digT>DIG.loaded+.05)C.digT=0;
+    /* planted: ease into the plant; loaded: play the lever and the lift at the clip's own speed, then hold the carry pose */
+    if(mass>0)C.digT=Math.min(DIG.loaded,Math.max(C.digT,DIG.planted)+dt);else C.digT+=(DIG.planted-C.digT)*Math.min(1,dt*7);
+    a.time=C.digT;
   }else{
     C.digT=0;
     if(moving){const run=C.speed>4.2;a=play(C,run?'Run':'Walk');a.timeScale=THREE.MathUtils.clamp(C.speed/(run?5.5:2.4),.55,1.7);}
