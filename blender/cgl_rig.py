@@ -313,6 +313,125 @@ def anim_dig(rig, frames=36):
     return make_action(rig, "Dig", keys)
 
 
+SCOOP_TIMES = {"planted": 8 / FPS, "levered": 16 / FPS, "loaded": 25 / FPS,
+               "tossed": 35 / FPS, "end": 45 / FPS}
+
+
+def anim_scoop(rig):
+    """Plant, push the rear grip DOWN to lever, lift level, then dump to the right.
+
+    The shovel stays on its original forearm parent. Solve both arms at every
+    sampled frame and bake ordinary Euler keys; no runtime IK or extra bones.
+    Local shovel +Z runs up the shaft, -Y is the concave face. The authored
+    camper's face is Blender -Y (glTF +Z), so its right is Blender +X.
+    """
+    if rig.animation_data:
+        rig.animation_data.action = None
+    key_pose(rig, 0, {})
+    bpy.context.view_layer.update()
+    blade = _part(rig, "_R_ShovelBlade")
+    shaft = _part(rig, "_R_ShovelShaft")
+    fore = rig.pose.bones["forearm.R"]
+    blade_to_fore = fore.matrix.to_3x3().inverted() @ blade.matrix_world.to_3x3()
+    previous = {}
+
+    def orient(name, world_rotation, pose):
+        pb = rig.pose.bones[name]
+        inherited = pb.parent.matrix @ pb.parent.bone.matrix_local.inverted() @ pb.bone.matrix_local
+        rotation = (inherited.to_3x3().inverted() @ world_rotation).to_euler('XYZ', previous.get(name, Euler()))
+        previous[name] = rotation.copy()
+        pose[name] = tuple(rotation)
+        pb.rotation_euler = rotation
+        bpy.context.view_layer.update()
+
+    def point(name, direction, pose):
+        pb = rig.pose.bones[name]
+        inherited = pb.parent.matrix @ pb.parent.bone.matrix_local.inverted() @ pb.bone.matrix_local
+        rotation = inherited.to_3x3()
+        swing = (rotation @ Vector((0, 1, 0))).rotation_difference(direction.normalized())
+        orient(name, swing.to_matrix() @ rotation, pose)
+
+    # frame, spine lean, squat, head dip, twist, ideal rear grip, blade pitch/roll/yaw (degrees).
+    # The extra loaded key holds a level blade before the torso initiates the throw.
+    phases = [
+        (0,  .74, -.23, .12, 0,    (.12, -.63, 1.03), (-48, 28, -20)),
+        (8,  .98, -.40, .22, 0,    (.12, -.86, .72),  (-48, 28, -20)),
+        (16, .84, -.38, .10, 0,    (.12, -.56, .68),  (-72, 28, -30)),
+        (25, .22, -.07, .12, 0,    (.20, -.40, 1.40), (-90, 0, -55)),
+        (28, .22, -.07, .12, 0,    (.20, -.40, 1.40), (-90, 0, -55)),
+        (32, .12, -.06, .00, .48, (.00, -.10, 1.40), (-90, 80, 0)),
+        (35, .18, -.09, .04, .82, (-.08, -.14, 1.42), (-95, 80, 20)),
+        (39, .32, -.13, .08, .44, (.00, -.25, 1.22), (-90, 65, -8)),
+        (45, .74, -.23, .12, 0,    (.12, -.63, 1.03), (-48, 28, -20)),
+    ]
+    bank_keys = {0: 0, 8: 0, 16: 0, 25: 0, 28: 0, 32: 10, 35: 85, 39: 25, 45: 0}
+    keys, errors = [], []
+    for frame in range(46):
+        a, b = next((a, b) for a, b in zip(phases, phases[1:]) if a[0] <= frame <= b[0])
+        t = (frame - a[0]) / (b[0] - a[0])
+        t = t * t * (3 - 2 * t)
+        mix = lambda x, y: x + (y - x) * t
+        lean, bob, dip, twist = [mix(a[i], b[i]) for i in range(1, 5)]
+        pose = {"spine": (lean, twist, 0), "bob": bob, "head": (dip, -.25 * twist, 0),
+                "arm.L@loc": (0, 0, .10)}
+        key_pose(rig, frame, pose)
+        bpy.context.view_layer.update()
+        # Keep the two ankles in a staggered stance, with knees bending forward.
+        for side, y in (("L", -.22), ("R", .19)):
+            upper, lower = rig.pose.bones['leg.' + side], rig.pose.bones['shin.' + side]
+            hip = upper.head.copy()
+            ankle = Vector((hip.x, y, .06))
+            delta = ankle - hip
+            length = delta.length
+            u, v = upper.bone.length, lower.bone.length
+            along = (u*u - v*v + length*length) / (2 * length)
+            bend = math.sqrt(max(0, u*u - along*along))
+            axis = delta.normalized()
+            pole = Vector((0, -1, 0)); pole = (pole - axis * pole.dot(axis)).normalized()
+            knee = hip + axis * along + pole * bend
+            point(upper.name, knee - hip, pose)
+            point(lower.name, ankle - lower.head, pose)
+        hand = Vector(tuple(mix(x, y) for x, y in zip(a[5], b[5])))
+        angles = tuple(D(mix(x, y)) for x, y in zip(a[6], b[6]))
+        bank = D(mix(bank_keys[a[0]], bank_keys[b[0]]))
+        desired = (Euler(angles, 'XYZ').to_matrix() @
+                   Euler((0, 0, bank), 'XYZ').to_matrix() @ blade_to_fore.inverted())
+        # The rear hand is 35cm along the forearm. Project its ideal elbow onto
+        # the upper-arm sphere, retaining the blade's exact authored orientation.
+        elbow = hand - desired @ Vector((0, .35, 0))
+        point('arm.R', elbow - rig.pose.bones['arm.R'].head, pose)
+        orient('forearm.R', desired, pose)
+        # Fixed grip on the lower half of the wooden shaft, 36cm below the rear hand.
+        target = shaft.matrix_world @ Vector((0, 0, .27))
+        shoulder = rig.pose.bones['arm.L'].head.copy()
+        delta = target - shoulder
+        distance = delta.length
+        u, v = ARM['elbow'], .35
+        d = min(distance, u + v - .0001)
+        axis = delta.normalized()
+        along = (u*u - v*v + d*d) / (2 * d)
+        height = math.sqrt(max(0, u*u - along*along))
+        pole = Vector((-.8, .3, -.6)); pole = (pole - axis * pole.dot(axis)).normalized()
+        elbow = shoulder + axis * along + pole * height
+        point('arm.L', elbow - shoulder, pose)
+        point('forearm.L', target - rig.pose.bones['forearm.L'].head, pose)
+        error = (_center(_part(rig, '_L_Hand')) - target).length
+        errors.append(error)
+        keys.append((frame, pose))
+        if frame in (0, 8, 16, 25, 35, 45):
+            tip = blade.matrix_world @ Vector((0, 0, -SHOVEL['h']))
+            print('Scoop phase', frame, 'left grip error', round(error, 4), 'blade tip', tuple(round(v, 3) for v in tip))
+    assert max(errors) < .03, "Scoop front hand lost the shaft"
+    # Exactly matching endpoints, with linear interpolation between dense solves.
+    keys[-1] = (45, dict(keys[0][1]))
+    action = make_action(rig, 'Scoop', keys)
+    for fc in fcurves_of(action):
+        for key in fc.keyframe_points:
+            key.interpolation = 'LINEAR'
+    print('Scoop maximum left grip error (m):', round(max(errors), 5))
+    return action
+
+
 def anim_jump(rig):
     up = {"arm.L": (2.0, 0, -0.75), "arm.R": (2.0, 0, 0.75), "leg.L": (0.35, 0, -0.08), "leg.R": (-0.15, 0, 0.08),
           "shin.L": (-.85, 0, 0), "shin.R": (-.65, 0, 0), "forearm.L": (.45, 0, 0), "forearm.R": (.45, 0, 0),
@@ -497,7 +616,7 @@ def anim_sit_edge(rig):
     return make_action(rig, "SitEdge", [(1, p(1)), (36, p(-1)), (72, p(1))])
 
 
-ANIMS = {"Idle": anim_idle, "Walk": anim_walk, "Run": anim_run, "Dig": anim_dig, "Jump": anim_jump,
+ANIMS = {"Idle": anim_idle, "Walk": anim_walk, "Run": anim_run, "Dig": anim_dig, "Scoop": anim_scoop, "Jump": anim_jump,
          "KO": anim_ko, "Drink": anim_drink, "WipeSweat": anim_wipe, "Dance": anim_dance, "Wave": anim_wave,
          "Radio": anim_radio, "Sit": anim_sit, "SitEdge": anim_sit_edge}
 

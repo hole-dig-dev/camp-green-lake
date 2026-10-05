@@ -38,7 +38,7 @@ for(const node of limbs){
   const seen=new Set([0]),queue=[0];for(const n of queue)for(const next of neighbors[n])if(!seen.has(next)){seen.add(next);queue.push(next)}
   assert.equal(seen.size,unique.size,`${node.name}: one connected surface`);
 }
-const clips=['Idle','Walk','Run','Dig','Jump','KO','Drink','WipeSweat','Dance','Wave','Radio','Sit','SitEdge'];
+const clips=['Idle','Walk','Run','Dig','Scoop','Jump','KO','Drink','WipeSweat','Dance','Wave','Radio','Sit','SitEdge'];
 assert.deepEqual(g.animations.map(a=>a.name).sort(),clips.sort());
 for(const name of ['Walk','Run','Jump','Sit']){
   const a=g.animations.find(a=>a.name===name);
@@ -50,4 +50,4 @@ for(const name of ['Walk','Run','Jump','Sit']){
   }
 }
 for(const side of ['L','R'])assert.ok(g.nodes.some(n=>n.name===`CGLCamper_${side}_Hand`));
-console.log('Camper rig: 4 closed connected skins, normalized blended weights, knee animation and all 13 clips OK.');
+console.log('Camper rig: 4 closed connected skins, normalized blended weights, knee animation and all 14 clips OK.');
