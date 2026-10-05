@@ -82,7 +82,18 @@ export function groundMaterial({mine=false}={}){
       varying vec3 gfPosition;varying vec3 gfNormal;
       uniform sampler2D gfRock;uniform sampler2D gfRockHeight;uniform sampler2D gfRockRough;uniform float gfMine;
       vec3 gfWeights(){vec3 w=pow(abs(normalize(gfNormal)),vec3(5.0));return w/max(.0001,w.x+w.y+w.z);}
-      vec4 gfProject(sampler2D image,vec3 p){vec3 w=gfWeights();vec4 sampled=vec4(0.0);if(w.x>.005)sampled+=texture2D(image,p.zy)*w.x;if(w.y>.005)sampled+=texture2D(image,p.xz)*w.y;if(w.z>.005)sampled+=texture2D(image,p.xy)*w.z;return sampled;}
+      /* JT 2026-10-05: no visible tiling. Value noise for (1) randomised tiling, (3) macro variation, (4) ground types. */
+      float gfHash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float gfNoise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);return mix(mix(gfHash(i),gfHash(i+vec2(1,0)),u.x),mix(gfHash(i+vec2(0,1)),gfHash(i+vec2(1,1)),u.x),u.y);}
+      float gfFbm(vec2 p){float v=0.0,a=.5;for(int i=0;i<4;i++){v+=a*gfNoise(p);p=p*2.03+vec2(17.1,9.7);a*=.5;}return v;}
+      /* (1) randomised tiling (Inigo Quilez's texture-repetition technique): a slow noise picks one of 8 random offsets
+         per patch of tiles and blends between neighbours, with explicit gradients so mipmaps don't seam */
+      vec4 gfNoTile(sampler2D image,vec2 uv){
+        float k=gfNoise(uv*.37),l=k*8.0,fl=fract(l),ia=floor(l),ib=ia+1.0;
+        vec2 oa=sin(vec2(3.0,7.0)*ia),ob=sin(vec2(3.0,7.0)*ib),dx=dFdx(uv),dy=dFdy(uv);
+        vec4 a=textureGrad(image,uv+oa,dx,dy),b=textureGrad(image,uv+ob,dx,dy);
+        return mix(a,b,smoothstep(.2,.8,fl-.1*dot(a.rgb-b.rgb,vec3(1.0))));}
+      vec4 gfProject(sampler2D image,vec3 p){vec3 w=gfWeights();vec4 sampled=vec4(0.0);if(w.x>.005)sampled+=gfNoTile(image,p.zy)*w.x;if(w.y>.005)sampled+=gfNoTile(image,p.xz)*w.y;if(w.z>.005)sampled+=gfNoTile(image,p.xy)*w.z;return sampled;}
       float gfRockMix(){return gfMine>.5?1.0:smoothstep(.14,.55,1.0-abs(normalize(gfNormal).y));}
     `);
     // Bump sampler declarations must precede the helper that references them.
@@ -92,12 +103,32 @@ export function groundMaterial({mine=false}={}){
       vec3 gfStone=gfProject(gfRock,gfPosition*.24).rgb;
       gfSoil=mix(vec3(dot(gfSoil,vec3(.2126,.7152,.0722))),gfSoil,.45)/.31;
       gfStone=mix(vec3(dot(gfStone,vec3(.2126,.7152,.0722))),gfStone,.36)/.40;
-      vec3 gfScan=mix(gfSoil,gfStone,gfRockMix());
-      float gfMacro=.95+.06*sin(gfPosition.x*.13+sin(gfPosition.z*.11))+ .035*sin(gfPosition.z*.19-gfPosition.x*.07);
+      /* (4) ground types by noise, slope and height: fine sand, gravel, dry scrub; the slope rock and the wet creek
+         edge stay as they were */
+      vec2 gfW=gfPosition.xz;float gfFlat=1.0-gfRockMix();
+      float gfSandN=gfFbm(gfW*.035+vec2(3.1,7.7)),gfGravN=gfFbm(gfW*.06+vec2(11.3,2.9)),gfScrubN=gfFbm(gfW*.045+vec2(5.5,13.1));
+      vec3 gfSand=gfProject(map,gfPosition*.071).rgb;gfSand=mix(vec3(dot(gfSand,vec3(.2126,.7152,.0722))),gfSand,.25)/.31;gfSand=mix(gfSand,vec3(1.0),.55)*vec3(1.22,1.12,.94);
+      vec3 gfGravel=gfProject(gfRock,gfPosition*.83).rgb;gfGravel=mix(vec3(dot(gfGravel,vec3(.2126,.7152,.0722))),gfGravel,.15)/.40*vec3(.80,.80,.80);
+      float gfSandW=smoothstep(.50,.62,gfSandN)*gfFlat*.9,gfGravW=smoothstep(.55,.66,gfGravN)*gfFlat*(1.0-gfSandW)*.85;
+      vec3 gfGround=mix(mix(gfSoil,gfSand,gfSandW),gfGravel,gfGravW);
+      vec3 gfScan=mix(gfGround,gfStone,gfRockMix());
+      /* far away the scan's speckle is what reads as a grid: fade the fine detail with distance (to the type's own mean), so
+         the big variation carries the distance instead */
+      float gfFar=smoothstep(18.0,85.0,distance(cameraPosition,gfPosition));
+      vec3 gfMean=mix(mix(mix(vec3(1.0),vec3(1.22,1.12,.94)*1.05,gfSandW),vec3(.82),gfGravW),vec3(1.0),gfRockMix());
+      gfScan=mix(gfScan,gfMean,gfFar*.75);
+      /* (3) macro variation: slow noise over ~60 m and ~18 m, brighter bleached ground vs darker warm earth (no repeats) */
+      float gfM1=gfFbm(gfW*.016),gfM2=gfNoise(gfW*.055);
+      float gfMacro=.74+.42*gfM1+.12*(gfM2-.5);
+      vec3 gfDry=mix(vec3(.90,.95,1.08),vec3(1.10,1.0,.88),smoothstep(.3,.7,gfM1));
+      float gfRiverBank=6.0+sin(gfPosition.z*.041)*9.0+cos(gfPosition.z*.018)*4.0;
+      float gfBank=(1.0-smoothstep(9.0,22.0,abs(gfPosition.x-gfRiverBank)))*smoothstep(-24.0,-18.0,gfPosition.z);
+      float gfScrubW=clamp(smoothstep(.52,.66,gfScrubN)*.75+gfBank*.7,0.0,.9)*gfFlat*(1.0-gfSandW*.7);
+      vec3 gfScrub=vec3(.80,.92,.58);
       float gfRiver=6.0+sin(gfPosition.z*.041)*9.0+cos(gfPosition.z*.018)*4.0;
       float gfWet=(1.0-smoothstep(6.8,9.5,abs(gfPosition.x-gfRiver)))*smoothstep(-24.0,-20.0,gfPosition.z)*(1.0-smoothstep(1.1,2.2,gfPosition.y));
-      diffuseColor.rgb*=clamp(mix(vec3(1.0),gfScan,.72),vec3(.45),vec3(1.5))*gfMacro*mix(1.0,.73,gfWet);`);
+      diffuseColor.rgb*=clamp(mix(vec3(1.0),gfScan,.72),vec3(.45),vec3(1.5))*gfMacro*gfDry*mix(vec3(1.0),gfScrub,gfScrubW)*mix(1.0,.73,gfWet);`);
     shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>',`float roughnessFactor=roughness*mix(gfProject(roughnessMap,gfPosition*.30).g,gfProject(gfRockRough,gfPosition*.24).g,gfRockMix());roughnessFactor=clamp(roughnessFactor-gfWet*.18,.55,1.0);`);
   };
-  material.customProgramCacheKey=()=>`gf-world-surface-${mine?1:0}-1`;return material;
+  material.customProgramCacheKey=()=>`gf-world-surface-${mine?1:0}-3`;return material;
 }
