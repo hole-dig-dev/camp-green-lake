@@ -9,8 +9,9 @@ export function createForestView(scene,{label}){
  const batches=[],templates=[],decorations=[];let state={trees:{},stacks:[]},cells={},key='',loaded=false,failed=[],lastLocal={x:0,z:0},lastTreeX=Infinity,lastTreeZ=Infinity;
  const fallback=new THREE.InstancedMesh(new THREE.CylinderGeometry(.15,.25,5,10),bark,FOREST_TREES.length);fallback.castShadow=true;scene.add(fallback);
  const loader=new GLTFLoader();
- function prepare(model){
-  model.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model),scale=7.5/(bounds.max.y-bounds.min.y);
+ /* our own pines (Sol, art/blender/pines.py): real metres and their own vertex colours; the old Quaternius ones were stretched to 7.5 m and tinted */
+ function prepare(model,real=false){
+  model.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model),scale=real?1:7.5/(bounds.max.y-bounds.min.y);
   const parts=[];model.traverse(o=>{if(!o.isMesh)return;const geometry=o.geometry.clone();geometry.applyMatrix4(o.matrixWorld);geometry.scale(scale,scale,scale);
    const m=o.material;m.roughness=1;m.metalness=0;m.envMapIntensity=.5;
    if(m.normalMap)m.normalScale.set(.45,.45);if(m.map)m.map.anisotropy=4;
@@ -18,8 +19,9 @@ export function createForestView(scene,{label}){
    parts.push({geometry,material:m});
   });return parts;
  }
- Promise.all(['Pine_1','Pine_3','Pine_5'].map(name=>loader.loadAsync('/assets/nature/'+name+'.gltf'))).then(models=>{
-  for(const model of models)templates.push(prepare(model.scene));
+ const PINES=[...Array(10)].map((_,i)=>'pine-'+String(i+1).padStart(2,'0'));   /* templates 0-9 near, 10-19 their far versions */
+ Promise.all([...PINES,...PINES.map(n=>n+'-far')].map(name=>loader.loadAsync('/assets/trees/'+name+'.glb'))).then(models=>{
+  for(const model of models)templates.push(prepare(model.scene,true));
   for(let variant=0;variant<templates.length;variant++)for(const part of templates[variant]){
    const m=new THREE.InstancedMesh(part.geometry,part.material,FOREST_TREES.length);m.userData.variant=variant;m.castShadow=m.receiveShadow=true;m.frustumCulled=false;scene.add(m);batches.push(m);
   }
@@ -51,7 +53,7 @@ export function createForestView(scene,{label}){
  function updateTrees(local){
   for(const m of batches){let count=0;FOREST_TREES.forEach((t,i)=>{
    if(state.trees?.[t.id]?.felledAt!==undefined)return;
-   const distance=Math.hypot(t.x-local.x,t.z-local.z),variant=distance<70?i%2:2;
+   const distance=Math.hypot(t.x-local.x,t.z-local.z),variant=distance<70?i%10:10+i%10;
    if(variant!==m.userData.variant)return;
    dummy.position.set(t.x,heightAt(t.x,t.z,cells),t.z);dummy.rotation.set(0,random(671,i)*Math.PI*2,0);dummy.scale.setScalar(t.scale);dummy.updateMatrix();m.setMatrixAt(count++,dummy.matrix);
   });m.count=count;m.instanceMatrix.needsUpdate=true;}
@@ -60,7 +62,7 @@ export function createForestView(scene,{label}){
  function logPile(){const g=new THREE.Group();for(let i=0;i<6;i++){const log=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,1.5,12),[bark,cap,cap]);log.castShadow=log.receiveShadow=true;log.rotation.z=Math.PI/2;log.position.set(0,.18+Math.floor(i/3)*.27,(i%3-1)*.3);g.add(log);}g.userData.sign=label('LOGS · E',1.5);g.userData.sign.position.y=1;g.add(g.userData.sign);return g;}
  function dispose(g){if(g.userData.stump){scene.remove(g.userData.stump);g.userData.stump.geometry.dispose();}scene.remove(g);if(!g.userData.sharedTree)g.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}
  function makeFallen(t,cut,y,i){const g=new THREE.Group();g.userData.sharedTree=loaded;
-  if(loaded)for(const p of templates[i%2]){const m=new THREE.Mesh(p.geometry,p.material);m.castShadow=m.receiveShadow=true;g.add(m);}else {const stem=new THREE.Mesh(new THREE.CylinderGeometry(.15,.25,5,10),bark);stem.position.y=2.5;g.add(stem);}
+  if(loaded)for(const p of templates[i%10]){const m=new THREE.Mesh(p.geometry,p.material);m.castShadow=m.receiveShadow=true;g.add(m);}else {const stem=new THREE.Mesh(new THREE.CylinderGeometry(.15,.25,5,10),bark);stem.position.y=2.5;g.add(stem);}
   g.scale.setScalar(t.scale);g.position.set(t.x,y,t.z);g.rotation.y=cut.yaw;g.userData.cut=cut;
   const stump=new THREE.Mesh(new THREE.CylinderGeometry(.19*t.scale,.26*t.scale,.36,12),[bark,cap,cap]);stump.position.set(t.x,y+.18,t.z);stump.castShadow=true;scene.add(stump);g.userData.stump=stump;scene.add(g);return g;
  }
