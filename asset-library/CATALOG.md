@@ -44,6 +44,12 @@ The numbers match round 2 of the dig review. The game rotates all four.
 | `audio/sources/shovel-themightyglider.ogg` | Source | [Shovel Sound by themightyglider](https://opengameart.org/content/shovel-sound) (full length; `shovel.mp3` is trimmed) | CC0 |
 | `audio/sources/Fantozzi-SandL1.ogg`, `SandR1`, `SandL3`, `SandR3` | Source | [Fantozzi's Footsteps](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone) | CC0 |
 
+## Models, kept, not used
+
+| Asset | Status | File | Notes |
+| --- | --- | --- | --- |
+| Pines 01–10 (Ponderosa, Lodgepole, Young pine, Dense mountain pine, Windswept, Old twin, Half-dead, Dead snag, Pinyon, Lightning-struck), each with a far version | Kept, not used | `models/pines/pine-NN.glb`, `pine-NN-far.glb`; preview `models/pines/pines-sheet.jpg` | Gold Fever. Original work: Sol (GPT-6.1) built them procedurally in Blender on Oct 5, 2026 (`models/pines/source/pines.py`, `pines.blend`, `PINES-REPORT.md`). Real heights 4–12 m, glTF +Y up, origin at the trunk base, materials `PineBark` / `PineNeedles`, colour in vertex colours (COLOR_0); 1.5k–4.4k triangles near, ≤ 800 far. JT, after seeing them in the forest: "Just keep them in the asset library." The game keeps the Quaternius pines. The forest wiring that used them is on branch `feature/sol-pines` (`gold-fever/public/forest-view.mjs`). Note: `pines.py` exports to `gold-fever/public/assets/trees/`; copy here instead when rebuilding for the library. Seen in game: chunkier and darker than the Quaternius pines, and the pinyon reads like an acacia |
+
 ## Retired
 
 | File | Retired | Why |

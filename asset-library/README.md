@@ -17,6 +17,7 @@ A record of every asset we've considered: what the game uses, what we liked but 
 | **In game: approved** | Shipped, and JT listened to it and approved it |
 | **In game: not reviewed** | Shipped, but no verdict yet |
 | **Liked, not used** | JT liked it; kept for later or as an alternate |
+| **Kept, not used** | Made for the game; JT kept it for later without picking it |
 | **Source** | Raw recording a shipped or liked file was made from |
 | **Retired** | Previously shipped and replaced; notes say why |
 | **Review reel** | A labeled listening reel used to make a decision |
@@ -29,6 +30,8 @@ audio/
   sources/        raw recordings used in shipped mixes
   retired/        clips removed from the game
   review-reels/   dated listening reels and their maps
+models/
+  pines/          Sol's ten Blender pines (Gold Fever), kept, not used; source/ holds the Blender script and file
 images/           (none yet; the game draws everything in code)
 ```
 
