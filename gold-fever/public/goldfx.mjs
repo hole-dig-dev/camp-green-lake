@@ -4,7 +4,8 @@
 // GoldFxArm): dip the pan in the creek, stratify with alternating shakes, wash over the riffles, re-dip, drain, show the
 // gold. Instead of a fixed 7 s it follows Gold Fever's own panning (server p.busy): the dip plays on R, the two wash
 // cycles follow your wash progress (0 -> 0.88, only while you hold Space/mouse), the drain plays during the settle, and
-// the show plays when the result comes in, with gold flecks for what you actually recovered.
+// the show plays when the result comes in. The gold flecks (what this pan will recover) sit in the pan the whole
+// time and come out from under the sediment as it washes away, like real panning.
 import * as THREE from '/vendor/three.module.js';
 import {GLTFLoader} from '/vendor/loaders/GLTFLoader.js';
 
@@ -35,7 +36,7 @@ export function createGoldFx(scene,camera){
   function draw(){const put=(im,list)=>{let i=0;for(const g of list){if(g.gone)continue;_e.set(g.rx||0,g.ry||0,0);_q.setFromEuler(_e);const s=g.s*(g.fade==null?1:g.fade);_s.set(s*(g.sx||1),s*(g.sy||1),s*(g.sz||1));_p.set(g.x,g.y,g.z);im.setMatrixAt(i++,_m.compose(_p,_q,_s));}im.count=i;im.instanceMatrix.needsUpdate=true;};put(sandIM,sand);put(goldIM,gold);put(dropIM,drops);}
   function ballistic(list,dt,floor){for(const g of list){if(g.gone)continue;g.age=(g.age||0)+dt;g.vy-=9.8*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt;if(g.y<floor||g.age>.8)g.gone=true;else g.fade=1-g.age/.8;}while(list.length&&list[0].gone)list.shift();}
   /* start at the creek: water = the point of the creek in front of you (waterY), D = from it towards you */
-  function start(local,water){
+  function start(local,water,goldMg=0){
     if(!goldFxReady())return false;end();
     S.on=true;S.t=0;S.hold=0;S.phase='dip';S.goldShown=false;S.mats=[];sand.length=gold.length=drops.length=0;for(const im of[sandIM,goldIM,dropIM]){im.count=0;im.visible=true;}
     S.root=new THREE.Group();scene.add(S.root);
@@ -45,14 +46,15 @@ export function createGoldFx(scene,camera){
     S.spill=model('GoldFxSpill',true,S.mats);R.add(S.spill);S.ripples=[0,1,2].map(()=>{const g=model('GoldFxRipple',true,S.mats);R.add(g);return g;});
     const dx=local.x-water.x,dz=local.z-water.z,d=Math.hypot(dx,dz)||1;S.tub=new THREE.Vector3(water.x,water.y,water.z);S.dir={x:dx/d,z:dz/d};S.panYaw=Math.atan2(dx,dz);S.dropEmit=0;
     camera.updateMatrixWorld();S.cam.copy(camera.position);camera.getWorldDirection(S.look);S.look.multiplyScalar(3).add(camera.position);S.home=null;
+    /* the gold is in the pan from the start, under the sediment and black sand: it shows as they wash away (JT) */
+    const n=goldMg>.01?clamp(Math.round(Math.sqrt(goldMg)*1.6),1,N_GOLD):0;
+    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=.022+Math.random()*.049;gold.push({lx:Math.cos(a)*r,lz:Math.sin(a)*r,s:.0055+Math.random()*.0035,rx:Math.random()*6,ry:Math.random()*6,x:0,y:-50,z:0});}
     const D=S.dir,tub=S.tub;S.camT.set(tub.x+D.x*.67,tub.y+.63,tub.z+D.z*.67);S.lookT.copy(tub).add(new THREE.Vector3(D.x*.1,.12,D.z*.1));
     return true;
   }
   function end(){if(!S.root)return;scene.remove(S.root);S.root=null;for(const m of S.mats)m.dispose();S.mats=[];for(const im of[sandIM,goldIM,dropIM])im.visible=false;sand.length=gold.length=drops.length=0;S.on=false;}
   /* the result: show the gold you recovered (mg), then lower the pan */
-  function finish(goldMg){if(!S.on)return;S.phase='show';S.t=Math.max(S.t,DRAIN_END);
-    const n=goldMg>.01?clamp(Math.round(Math.sqrt(goldMg)*1.6),1,N_GOLD):0;
-    for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=.022+Math.random()*.049;gold.push({lx:Math.cos(a)*r,lz:Math.sin(a)*r,s:.0055+Math.random()*.0035,rx:Math.random()*6,ry:Math.random()*6,x:0,y:0,z:0});}}
+  function finish(){if(!S.on)return;S.phase='show';S.t=Math.max(S.t,DRAIN_END);}   /* the gold's already there: just hold it up */
   /* busy: Gold Fever's p.busy ({progress 0..0.88, settle 0..1.05}) or null; washing: the wash input is held */
   function step(dt,busy,washing){
     if(!S.on)return false;

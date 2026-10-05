@@ -265,7 +265,7 @@ export function publicPlayer(p) {
 export function privatePlayer(p, rules) {
   return { ...publicPlayer(p), guardKnock:p.guardKnock||null,guardSafeUntil:p.guardSafeUntil||0,fly: !!p.fly, speedScale: p.speedScale || 1, jumpScale: p.jumpScale || 1, cheatSafe: !!p.cheatSafe, wood:p.wood||0,consoleMarks: p.consoleMarks || {}, cargo: { mass: p.cargo.mass }, goldMg: p.goldMg, capacity: bucketCapacity(p, rules), upgrades: p.upgrades, kits: p.kits, samples: p.samples, stats: p.stats,
     shovelPlant: p.shovelPlant ? {x:p.shovelPlant.x,y:p.shovelPlant.y,z:p.shovelPlant.z,mine:!!p.shovelPlant.mine} : null, bucketPos:p.bucketPos || null,
-    busy: p.busy ? { progress: p.busy.progress, settle: p.busy.settle, mass: p.busy.sample.mass } : null };
+    busy: p.busy ? { progress: p.busy.progress, settle: p.busy.settle, mass: p.busy.sample.mass, goldMg: p.busy.sample.goldMg * (p.upgrades.includes('sieve') ? .92 : .82) } : null };   // goldMg: what this pan will recover, so the gold can sit in the pan from the start and show as the dirt washes off (JT)
 }
 export function snapshot(room, p, rules, now) {
   return { type: 'snapshot', now, revision: room.revision, cash: room.cash, crewSize: room.crewSize || 1, ownerId: room.ownerId, prices: Object.fromEntries(rules.catalog.map(c => [c.id, equipmentPrice(room, c)])), day: room.day, clock: room.clock,

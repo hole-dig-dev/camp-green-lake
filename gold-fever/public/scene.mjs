@@ -281,8 +281,8 @@ export function createView(canvas) {
       /* panning at the creek: Camp Green Lake's sequence (goldfx.mjs), driven by Gold Fever's wash progress */
       if(!goldFx)goldFx=createGoldFx(scene,camera);
       {const busy=state.self.busy;
-        if(busy&&!goldFx.active&&goldFxReady()){const rx=riverX(local.z),side=Math.sign(local.x-rx)||1,off=Math.min(5.4,Math.max(0,Math.abs(local.x-rx)-1.3));goldFxStartMg=state.self.goldMg||0;goldFx.start(local,{x:rx+side*off,y:WATER,z:local.z});}
-        if(goldFx.active){if(busy)goldFx.step(dt,busy,holding);else{if(goldFx.phase!=='show')goldFx.finish(Math.max(0,(state.self.goldMg||0)-goldFxStartMg));goldFx.step(dt,null,false);}}}
+        if(busy&&!goldFx.active&&goldFxReady()){const rx=riverX(local.z),side=Math.sign(local.x-rx)||1,off=Math.min(5.4,Math.max(0,Math.abs(local.x-rx)-1.3));goldFxStartMg=state.self.goldMg||0;goldFx.start(local,{x:rx+side*off,y:WATER,z:local.z},busy.goldMg||0);}
+        if(goldFx.active){if(busy)goldFx.step(dt,busy,holding);else{if(goldFx.phase!=='show')goldFx.finish();goldFx.step(dt,null,false);}}}
       /* first person = the same camper and Scoop everyone else sees (camper-model.mjs camperFirstPerson), shovel only */
       if(camperFPReady()&&!fpCamper){fpCamper=camperFPBody();tools.rig.add(fpCamper);}   /* on the camera, in the held-tools pass */
       if(fpCamper){const show=tools.rig.visible&&tool==='shovel'&&!state.self.busy&&!gesture.catching&&!state.self.helping;fpCamper.visible=show;
