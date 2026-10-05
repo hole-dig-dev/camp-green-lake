@@ -14,6 +14,7 @@ from mathutils import Vector
 args = argparse.ArgumentParser()
 args.add_argument('--output', default='/tmp/sol-scoop/render')
 args.add_argument('--preview', action='store_true')
+args.add_argument('--audit', action='store_true', help='also render left-side and rear clearance views')
 args = args.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])
 out = Path(args.output)
 out.mkdir(parents=True, exist_ok=True)
@@ -77,6 +78,8 @@ cam_data.type = 'ORTHO'
 cam_data.ortho_scale = 3.45
 
 views = {'side': (5, -.25, 2.2), 'front': (4, -6, 3.2)}
+if args.audit:
+    views.update({'left': (-5, -.25, 2.2), 'rear': (-4, 6, 3.2)})
 for view, loc in views.items():
     cam.location = loc
     aim(cam, (0, -.5, 1.22))

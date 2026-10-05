@@ -372,8 +372,10 @@ def anim_scoop(rig):
         t = t * t * (3 - 2 * t)
         mix = lambda x, y: x + (y - x) * t
         lean, bob, dip, twist = [mix(a[i], b[i]) for i in range(1, 5)]
+        # Protract and separate the left shoulder enough for the sleeve surface,
+        # not just its bone centerline, to clear the rounded torso.
         pose = {"spine": (lean, twist, 0), "bob": bob, "head": (dip, -.25 * twist, 0),
-                "arm.L@loc": (0, 0, .10)}
+                "arm.L@loc": (.08, 0, .15)}
         key_pose(rig, frame, pose)
         bpy.context.view_layer.update()
         # Keep the two ankles in a staggered stance, with knees bending forward.
@@ -411,7 +413,10 @@ def anim_scoop(rig):
         axis = delta.normalized()
         along = (u*u - v*v + d*d) / (2 * d)
         height = math.sqrt(max(0, u*u - along*along))
-        pole = Vector((-.8, .3, -.6)); pole = (pole - axis * pole.dot(axis)).normalized()
+        # Outward/front/down in torso space: a world-space pole folds the left
+        # elbow through the chest when the torso twists into the toss.
+        pole = rig.pose.bones['spine'].matrix.to_3x3() @ Vector((-1, -.6, .5))
+        pole = (pole - axis * pole.dot(axis)).normalized()
         elbow = shoulder + axis * along + pole * height
         point('arm.L', elbow - shoulder, pose)
         point('forearm.L', target - rig.pose.bones['forearm.L'].head, pose)
