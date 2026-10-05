@@ -176,20 +176,20 @@ export function createView(canvas) {
       float cwH(vec2 p){return .6*cwFbm(p*vec2(.95,.55)-vec2(0.0,uTime*.85))+.4*cwFbm(p*vec2(1.8,1.05)+vec2(3.1,-uTime*1.45));}`);
     sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
       vec2 cwP=vec2(vRiver.x*6.6,vRiver.y);float cwA=abs(vRiver.x),cwD=1.0-cwA;
-      vec3 cwShallow=vec3(.42,.55,.47),cwDeep=vec3(.075,.25,.255),cwBed=vec3(.55,.52,.40);
-      vec3 cwCol=mix(cwShallow,cwDeep,smoothstep(.10,.80,cwD));cwCol=mix(cwBed,cwCol,smoothstep(.0,.10,cwD));
+      vec3 cwShallow=vec3(.25,.42,.39),cwDeep=vec3(.075,.25,.255),cwBed=vec3(.40,.41,.33);   /* JT: lighter edges less drastic */
+      vec3 cwCol=mix(cwShallow,cwDeep,smoothstep(.04,.60,cwD));cwCol=mix(cwBed,cwCol,smoothstep(.0,.06,cwD));
       float cwEdge=smoothstep(.86,.975,cwA),cwFoamN=cwFbm(cwP*vec2(2.4,1.1)-vec2(0.0,uTime*1.1));
       float cwFoam=clamp(cwEdge*smoothstep(.55,.78,cwFoamN+cwEdge*.12),0.0,1.0)*.75*(1.0-smoothstep(.975,1.0,cwA));   /* broken, not a line */
       float cwStreak=smoothstep(.74,.83,cwFbm(cwP*vec2(2.6,.32)-vec2(0.0,uTime*1.3)))*.22*smoothstep(.15,.5,cwD);
       cwFoam=max(cwFoam,cwStreak);
       diffuseColor.rgb=mix(cwCol,vec3(.84,.88,.84),cwFoam);
-      diffuseColor.a=(mix(.55,.93,smoothstep(.0,.45,cwD))+cwFoam*.35)*(1.0-smoothstep(.95,1.0,cwA));`);
+      diffuseColor.a=(mix(.76,.93,smoothstep(.0,.30,cwD))+cwFoam*.25)*(1.0-smoothstep(.965,1.0,cwA));`);
     sh.fragmentShader=sh.fragmentShader.replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(.07,.55,cwFoam);');
     sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
       {float e=.06,h0=cwH(cwP),hx=cwH(cwP+vec2(e,0.0))-h0,hz=cwH(cwP+vec2(0.0,e))-h0;
        vec3 cwN=normalize(vec3(-hx/e*.10,1.0,-hz/e*.10));normal=normalize((viewMatrix*vec4(cwN,0.0)).xyz);if(!gl_FrontFacing)normal=-normal;}`);
   };
-  waterMat.customProgramCacheKey=()=>'gf-creek-2';
+  waterMat.customProgramCacheKey=()=>'gf-creek-3';
   const water=new THREE.Mesh(waterGeo,waterMat);water.renderOrder=1;scene.add(water);
   const rippleGroup=new THREE.Group();scene.add(rippleGroup);   /* kept (empty): the shader draws the ripples now */
   // The shared floor collider follows this deck; the ropes are deliberately precarious.
