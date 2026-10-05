@@ -1,0 +1,200 @@
+[
+  {
+    "file": "pine-01.glb",
+    "triangles": 3802,
+    "bytes": 321024,
+    "height_m": 12,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-01-far.glb",
+    "triangles": 798,
+    "bytes": 82812,
+    "height_m": 12,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-02.glb",
+    "triangles": 2998,
+    "bytes": 252060,
+    "height_m": 11,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-02-far.glb",
+    "triangles": 628,
+    "bytes": 65176,
+    "height_m": 11,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-03.glb",
+    "triangles": 3514,
+    "bytes": 298076,
+    "height_m": 4,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-03-far.glb",
+    "triangles": 728,
+    "bytes": 76364,
+    "height_m": 4,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-04.glb",
+    "triangles": 4082,
+    "bytes": 347532,
+    "height_m": 8,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-04-far.glb",
+    "triangles": 762,
+    "bytes": 81796,
+    "height_m": 8,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-05.glb",
+    "triangles": 2998,
+    "bytes": 252044,
+    "height_m": 7,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-05-far.glb",
+    "triangles": 628,
+    "bytes": 65232,
+    "height_m": 7,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-06.glb",
+    "triangles": 4406,
+    "bytes": 365992,
+    "height_m": 9,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-06-far.glb",
+    "triangles": 782,
+    "bytes": 81364,
+    "height_m": 9,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-07.glb",
+    "triangles": 2618,
+    "bytes": 210056,
+    "height_m": 9,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-07-far.glb",
+    "triangles": 662,
+    "bytes": 63312,
+    "height_m": 9,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-08.glb",
+    "triangles": 1502,
+    "bytes": 108636,
+    "height_m": 8,
+    "materials": [
+      "PineBark"
+    ]
+  },
+  {
+    "file": "pine-08-far.glb",
+    "triangles": 462,
+    "bytes": 39036,
+    "height_m": 8,
+    "materials": [
+      "PineBark"
+    ]
+  },
+  {
+    "file": "pine-09.glb",
+    "triangles": 4410,
+    "bytes": 370748,
+    "height_m": 5,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-09-far.glb",
+    "triangles": 792,
+    "bytes": 83208,
+    "height_m": 5,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-10.glb",
+    "triangles": 2554,
+    "bytes": 210816,
+    "height_m": 7,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  },
+  {
+    "file": "pine-10-far.glb",
+    "triangles": 556,
+    "bytes": 55768,
+    "height_m": 7,
+    "materials": [
+      "PineBark",
+      "PineNeedles"
+    ]
+  }
+]
