@@ -129,6 +129,7 @@ const TUNE_DEFS=[
   {key:'zone.fireR',tab:'Maps',label:'Campfire: how close counts as at the fire (also "home" for a carried friend)',def:1,kind:'mul',range:3,unit:'×'},
   {key:'zone.ropeSlow',tab:'Maps',label:'Climbing a dropped rope: walking speed',def:0.35,kind:'mul',range:3,unit:'×'},
   // ---- you: moving and digging (70-player.js, 45-state.js)
+  {key:'fp.scoopfp',tab:'Player',label:'First person digs with Sol\'s ScoopFP arms (off: your body\'s own hands)',def:1,kind:'flag'},
   {key:'move.walk',tab:'Player',label:'Walking speed',def:4.3,kind:'mul',range:2,unit:' m/s'},
   {key:'move.sprint',tab:'Player',label:'Sprinting speed',def:7.2,kind:'mul',range:2,unit:' m/s'},
   {key:'move.crouch',tab:'Player',label:'Crouching speed',def:2,kind:'mul',range:2,unit:' m/s'},

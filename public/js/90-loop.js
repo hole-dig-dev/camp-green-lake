@@ -56,7 +56,7 @@ function frame(now){
   sendPresence(now);
   if(S.started){hudT-=dt;if(hudT<=0){hudT=0.1;updateHUD()}mapT-=dt;if(mapT<=0){mapT=0.2;drawMap()}}
   const spec=!S.started&&SPECON(),fx=S.started?P.x:spec?camera.position.x:0,fz=S.started?P.z:spec?camera.position.z:12;
-  streamChunks(fx,fz);farU.uFocus.value.set(fx,fz);flushTerrain();updateViewmodel();stars.position.copy(camera.position);
+  streamChunks(fx,fz);farU.uFocus.value.set(fx,fz);flushTerrain();updateViewmodel();updateFpScoop(dt);stars.position.copy(camera.position);
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
   updateGoldFx(dt);updateWardrobeCam();   // panning / sifting you watch (89-goldfx.js): drives the view while it runs
