@@ -1,7 +1,7 @@
 {
   "bytes": 128600,
   "triangles": 5996,
-  "sourceCamperSHA256": "4077bdbc201876a4e0c1ce2ac4c2496aaed8822b272768c6397f7520b34caabf",
+  "sourceCamperSHA256": "d90df1da49e7c5fe095ca732a197929e1bab5ae6baea7587de35ca3dc8c35acc",
   "fit": {
     "gpu": "ANGLE (AMD, Vulkan 1.4.318 (AMD Radeon 760M Graphics (RADV PHOENIX) (0x000015BF)), radv)",
     "attached": true,
