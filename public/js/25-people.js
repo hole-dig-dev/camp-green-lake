@@ -85,6 +85,9 @@ const HAT_ROLL=['bucket','bucket','bucket','desert','desert','desert','none','no
 const HAT_NODE={bucket:'Bucket',desert:'DesertCap',cowboy:'Cowboy'};
 /* animPerson modes -> clips. 0-6 are the game's existing modes; 7 jump, 8 dance, 9 wave, 10 sit, 11 sit on an edge are local-only */
 const MODE_CLIP=['Idle','Walk','Dig','KO','Run','Drink','WipeSweat','Jump','Dance','Wave','Sit','SitEdge'];   // 10: sitting (86-sit.js), 11: on an edge, legs dangling (the pickup's tailgate)
+const SCOOP_LOADED=0.833,SCOOP_END=1.5;   // Sol's two-handed Scoop (blender/cgl_rig.py SCOOP_TIMES): plant, lever, lifted by 0.833 s, toss + recover to 1.5 s
+// the game's scoop() fires as the dig phase wraps, so phase 0 = the lifted pose: the toss plays as the dirt flies
+function scoopTime(ph){return(SCOOP_LOADED+clamp(ph||0,0,0.999)*SCOOP_END)%SCOOP_END}
 const CLIP_ONCE={KO:1,Jump:1,Drink:1,WipeSweat:1,Wave:1};
 function strHash(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0}
 /* same name + color -> same camper on every client */
@@ -202,10 +205,12 @@ function animModel(p,mode,dt,digPhase,speed){
   p.g.rotation.x=0;
   if(p.shovelMeshes)for(const n of p.shovelMeshes)n.visible=(!p.o||p.o.shovel!==false)&&!p.stowed&&shovelShows(p,n);   // back in hand once you're up (sleepPose hides it), unless it's on a rack (p.stowed)
   if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
-  const name=MODE_CLIP[mode]||'Idle';
+  let name=MODE_CLIP[mode]||'Idle';
+  if(name==='Dig'&&p.acts.Scoop)name='Scoop';   // falls back to the old one-handed Dig if a camper.glb without Scoop loads
   setClip(p,name);
   const a=p.acts[name];
-  if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
+  if(a&&name==='Scoop'){a.timeScale=0;a.time=scoopTime(digPhase)}
+  else if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
@@ -214,7 +219,7 @@ function animModel(p,mode,dt,digPhase,speed){
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
-  new T.GLTFLoader().load('models/camper.glb?v=7',g=>{
+  new T.GLTFLoader().load('models/camper.glb?v=8',g=>{
     MODEL.scene=g.scene;
     /* the renderer draws hex colors as-is (no sRGB output), but glTF colors arrive linear: convert them back
        so the model's orange matches the rest of the camp */
