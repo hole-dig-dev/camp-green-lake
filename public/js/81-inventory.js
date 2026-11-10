@@ -20,21 +20,21 @@ function invEntries(){
   const types=Object.keys(counts).sort((a,b)=>LOOT[b].val-LOOT[a].val);
   for(const t of types){
     const L=LOOT[t],n=counts[t];
-    out.push({id:'find:'+t,cat:'sack',type:t,name:L.name,desc:`Find · worth ${L.val} gold${n>1?' each':''}. Sell it to Mr. Pendanski at the Supply Depot.`,
+    out.push({id:'find:'+t,cat:'sack',type:t,name:L.name,desc:`Find · worth ${L.val} gold${n>1?' each':''}. Sell it to Mr. Abel at the Company Store.`,
       loot:t,swatch:L.color,meta:`${L.val*n} gold`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
   }
   if(!types.length)out.push({id:'sack:empty',cat:'sack',name:'Empty sack',desc:`Nothing dug up yet. Room for ${sackMax()} finds.`,icon:'sack',meta:'',state:`0 / ${sackMax()}`,dim:true});
   // special items: the KB tube, and heavy loot you're dragging
-  if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Warden will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
+  if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Superintendent will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
-  if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Mr. Sir's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
-  else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Pendanski's window at the Supply Depot: worth ${LOOT[pr.type].val} gold.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} gold`,state:'Hauling'});
+  if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Dutch's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
+  else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Abel's window at the Company Store: worth ${LOOT[pr.type].val} gold.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} gold`,state:'Hauling'});
   // supplies
-  out.push({id:'onion',cat:'supplies',name:'Raw onion',icon:'onion',art:'gear/onion',desc:'Eat one (Q) and lizards won\'t come near you for 45 seconds.',
+  out.push({id:'onion',cat:'supplies',name:'Bitterroot',icon:'onion',art:'gear/onion',desc:'Chew one (Q) and gilas won\'t come near you for 45 seconds.',
     meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
-  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Sam\'s onion tonic',icon:'onion',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and lizards stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
+  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Bitterroot tonic',icon:'onion',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and gilas stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
   if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',art:'gear/medkit',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
-  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Supply Depot sells refills.',
+  out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Company Store sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
   out.push({id:'water',cat:'supplies',name:'Water',icon:'water',art:S.up.canteen?'gear/canteen':'gear/water',desc:'Refill at the water drums in camp. Sleeping in your bunk tops it up too.',
     meta:`${Math.round(S.water)} / ${waterMax()}`,state:S.water<waterMax()*0.25?'Low':'Water'});
@@ -44,7 +44,7 @@ function invEntries(){
     const own=!!S.up[it.id];
     out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
   }
-  if(!S.up.shovel)out.push({id:'hands',cat:'gear',name:'Bare hands',icon:'teammate',desc:'All you start with. Slow, and only 1.5 feet down. A camp shovel is 25 gold at the Supply Depot.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
+  if(!S.up.shovel)out.push({id:'hands',cat:'gear',name:'Bare hands',icon:'teammate',desc:'All you start with. Slow, and only 1.5 feet down. A camp shovel is 25 gold at the Company Store.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
   return out;
 }
 function invVisible(){const all=invEntries();return invCat==='all'?all:all.filter(e=>e.cat===invCat)}
@@ -116,8 +116,8 @@ function renderInvDetail(e){
   }
   if(e.id==='haul')acts.append(invButton('Let go of it',()=>{S.carry=null;toast('You let go.','',1200);renderInventory(true)},false));
   if(e.id==='onion'){
-    row('On hand',`${S.onions} onion${S.onions===1?'':'s'}`);
-    const b=invButton(S.onions>0?'Eat one now':'No onions left',()=>{eatOnion();renderInventory(true)},true);b.disabled=S.onions<=0;acts.append(b);
+    row('On hand',`${S.onions} bitterroot${S.onions===1?'':'s'}`);
+    const b=invButton(S.onions>0?'Chew one now':'No bitterroot left',()=>{eatOnion();renderInventory(true)},true);b.disabled=S.onions<=0;acts.append(b);
   }
   if(e.id==='tonic'||e.id==='medkit'){const need=e.id==='tonic'?(AFF.poison>3||AFF.burn>5||AFF.heat>5):AFF.injury>10;
     const b=invButton(need?'Use one now':'Not needed right now',()=>{useSupply();renderInventory(true)},true);b.disabled=!need;acts.append(b)}
@@ -128,7 +128,7 @@ function renderInvDetail(e){
   if(e.id==='water')row('Water',`${Math.round(S.water)} of ${waterMax()}`);
   if(e.shop){
     const eff=shopEffect(e.shop);if(eff)row(eff.label,S.up[e.shop.id]?eff.to:eff.from);
-    if(!S.up[e.shop.id])row('Where to get it',`Supply Depot, ${e.shop.cost} gold`);
+    if(!S.up[e.shop.id])row('Where to get it',`Company Store, ${e.shop.cost} gold`);
   }
   if(acts.children.length)box.appendChild(acts);
 }

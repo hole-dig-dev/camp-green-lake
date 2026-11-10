@@ -23,7 +23,7 @@ function moodHud(){
 }
 /* solo: the same rules the server runs */
 function soloCurse(d,why){if(online())return;const was=RUN.curse||0;RUN.curse=clamp(was+d,0,100);saveRun();curseNote(d,Math.round(RUN.curse),why);moodHud()}
-function curseNote(d,c,why){if(!S.started||!why||why==='dawn')return;toast(d>0?`The curse grows (${c}%): ${why}.`:`The curse eases (${c}%): ${why}.`,d>0?'bad':'good',4500)}
+function curseNote(d,c,why){if(!S.started||!why||why==='dawn')return;toast(d>0?`Lil's luck gets worse (${c}%): ${why}.`:`Lil's luck eases (${c}%): ${why}.`,d>0?'bad':'good',4500)}
 function curseKo(){if(online())wsSend({t:'koCurse'});else soloCurse(tune('curse.ko'),'you got knocked out')}
 let moodLastT=-1;
 function updateMood(dt){
@@ -31,7 +31,7 @@ function updateMood(dt){
   moodAnnounce();if((moodHud.t=(moodHud.t||0)-dt)<=0){moodHud.t=1;moodHud()}
   const t=clockT();
   if(!online()&&moodLastT>=0){
-    if(moodLastT<DAYMS&&t>=DAYMS&&!inCamp(P.x,P.z)&&!S.inTown&&!ZONE_H)soloCurse(tune('curse.curfew'),'you were outside the fence at curfew');
+    if(moodLastT<DAYMS&&t>=DAYMS&&!inCamp(P.x,P.z)&&!S.inTown&&!ZONE_H)soloCurse(tune('curse.curfew'),'you were outside the fence at lights-out');
     if(moodLastT>t+CYCLE/2&&(RUN.curse||0)>0)soloCurse(-tune('curse.dawn'),'dawn');
   }
   moodLastT=t;
@@ -42,18 +42,18 @@ function updateMood(dt){
 }
 function sneakersFall(){
   countUp('clyde',1,'clyde');sfx.thud();tone(900,0.5,'sine',0.05,300);say(meL,'OW!',2500);
-  hurt(8,'Sneakers','A pair of sneakers fell out of the sky and hit you on the head.');
-  toast('A pair of sneakers fell out of the sky and hit you on the head. They say CLYDE LIVINGSTON on them. (The curse)','bad',6000);
+  hurt(8,'Old boots','A pair of old boots fell out of the sky and hit you on the head.');
+  toast('A pair of old boots fell out of the sky and hit you on the head. They are still wet. (Lil\'s luck)','bad',6000);
   if(S.sack.length<sackMax())S.sack.push('sneakers');logEv('sneakers',{});
 }
 /* solo: singing close to Madame Zeroni */
 let zSongSolo=0;
 function moodSing(){
   if(online()||!MONL.zer)return;
-  if(Math.hypot(MONL.zer.x-P.x,MONL.zer.z-P.z)<14&&++zSongSolo>=SIM.CURSE.SONG){zSongSolo=0;MONL.zer=null;MONL.appeased=true;MONV.zer=null;monEvent({k:'appeased',by:S.name});soloCurse(-tune('curse.lullaby'),'you sang Madame Zeroni away')}
+  if(Math.hypot(MONL.zer.x-P.x,MONL.zer.z-P.z)<14&&++zSongSolo>=SIM.CURSE.SONG){zSongSolo=0;MONL.zer=null;MONL.appeased=true;MONV.zer=null;monEvent({k:'appeased',by:S.name});soloCurse(-tune('curse.lullaby'),'you sang the Drowned Bride away')}
 }
-command('curse',{usage:'curse [0-100]',help:'Show or set the crew\'s curse (testing).',
-  run([a]){if(a==null)return`Curse: ${Math.round(RUN.curse||0)}%.`;const v=numArg(a,0,0,100);if(online())wsSend({t:'runset',curse:v});else{RUN.curse=v;saveRun();moodHud()}return`Curse set to ${v}%.`}});
-command('mood',{usage:'mood [name]',help:'Show or set the Warden\'s mood: '+Object.keys(SIM.MOODS).join(', ')+' (testing).',
+command('curse',{usage:'curse [0-100]',help:'Show or set the crew\'s bad luck (testing).',
+  run([a]){if(a==null)return`Bad luck: ${Math.round(RUN.curse||0)}%.`;const v=numArg(a,0,0,100);if(online())wsSend({t:'runset',curse:v});else{RUN.curse=v;saveRun();moodHud()}return`Bad luck set to ${v}%.`}});
+command('mood',{usage:'mood [name]',help:'Show or set the day\'s mood: '+Object.keys(SIM.MOODS).join(', ')+' (testing).',
   run([a]){if(!a)return`Today: ${SIM.MOODS[moodOf()].name}.`;if(!SIM.MOODS[a])throw new Error('Moods: '+Object.keys(SIM.MOODS).join(', '));
     if(online())wsSend({t:'runset',mood:a});else{RUN.mood=a;saveRun();moodHud()}moodShownDay=-1;return`Mood set to ${SIM.MOODS[a].name}.`}});

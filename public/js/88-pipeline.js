@@ -52,7 +52,7 @@ function pipeBuild(){
 const pipeIntakeAt=c=>{const N=PIPE.nodes,a=N[N[c].p],b=N[c],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1;return{x:b.x+dx/l*PIPE_INTAKE_OFF,z:b.z+dz/l*PIPE_INTAKE_OFF}};
 /* ---- laying it: from the socket, an intake, or (with tee fittings) any joint ---- */
 function pipeLayStart(from){
-  if(S.pipe<1){toast('You need pipe: 5 m sections at the Supply Depot.','',3000);return}
+  if(S.pipe<1){toast('You need pipe: 5 m sections at the Company Store.','',3000);return}
   if(!PIPE.nodes.length)PIPE.nodes=[pipeSocket()];
   PIPE.laying=true;PIPE.trail=[];PIPE.layFrom=from==null?0:from;
   toast(`Laying pipe: walk where you want it (a joint every ${PIPE_RUN} m, ${S.pipe} section${S.pipe>1?'s':''} left). F to stop.`,'good',4000);
@@ -75,7 +75,7 @@ function pipeLayStep(){
   n={x:+n.x.toFixed(2),z:+n.z.toFixed(2),p:PIPE.layFrom};{const dn=Math.hypot(n.x-e.x,n.z-e.z);PIPE.trail=tr.filter(t=>Math.hypot(t.x-e.x,t.z-e.z)>dn)}
   PIPE.nodes.push(n);PIPE.layFrom=PIPE.nodes.length-1;S.pipe--;PIPE.dirty=true;sfx.clank();if(online())wsSend({t:'pipeAdd',x:n.x,z:n.z,p:n.p});
   logEv('pipeAdd',{x:n.x,z:n.z,p:n.p,n:PIPE.nodes.length});
-  if(S.pipe<1)pipeLayStop('Out of pipe. Buy more at the Supply Depot, then F at the intake to carry on.');
+  if(S.pipe<1)pipeLayStop('Out of pipe. Buy more at the Company Store, then F at the intake to carry on.');
 }
 /* nothing solid (20-world.js colliders: buildings, the fence, rocks...) across a straight run from a to b */
 function pipeClear(ax,az,bx,bz){

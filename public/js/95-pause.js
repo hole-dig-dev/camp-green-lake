@@ -20,7 +20,7 @@ const BIND_DEFS=[
   {id:'left',label:'Move left',def:'a'},{id:'right',label:'Move right',def:'d'},
   {id:'sprint',label:'Sprint',def:'shift'},{id:'jump',label:'Jump / climb out of a hole',def:' '},
   {id:'dig',label:'Dig (hold)',def:'e'},{id:'use',label:'Use / talk / buy / sell',def:'f'},
-  {id:'onion',label:'Eat an onion',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'place',label:'Plant a scarecrow',def:'u'},{id:'hover',label:'Hop on / off your hoverboard',def:'z'},{id:'hoverShoes',label:'Hover shoes off / on',def:'n'},{id:'detector',label:'Toggle the detector',def:'t'},
+  {id:'onion',label:'Chew bitterroot',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'place',label:'Plant a scarecrow',def:'u'},{id:'hover',label:'Hop on / off your hoverboard',def:'z'},{id:'hoverShoes',label:'Hover shoes off / on',def:'n'},{id:'detector',label:'Toggle the detector',def:'t'},
   {id:'sound',label:'Mute sound',def:'m'},{id:'firstPerson',label:'First / third person',def:'v'},
   {id:'crouch',label:'Crouch',def:'c'},{id:'ping',label:'Ping the map',def:'g'},
   {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
@@ -131,7 +131,7 @@ function askConfirm(title,text,yesLabel,onYes){
   showPauseScreen('confirm');
 }
 $('#pRestart').onclick=()=>askConfirm('Restart?',
-  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your gold, gear, sack, onions, the crew bank, or the time of day -- that\'s shared with everyone at camp and already saved.',
+  'This respawns you at camp: full health and water, and out of any hole you were stuck in. It does NOT reset your gold, gear, sack, bitterroot, the crew bank, or the time of day -- that\'s shared with everyone at camp and already saved.',
   'Respawn at camp',()=>{logEv('pause',{action:'restart'});respawn();closePause()});
 $('#pQuit').onclick=()=>askConfirm('Quit to title?',
   'Your progress is saved. You\'ll disconnect from camp and land back on the title screen -- come back any time to pick up where you left off.',

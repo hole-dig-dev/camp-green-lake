@@ -25,7 +25,7 @@
      items(rnd)            buried loot for the day: [{type,x,z,depth}] (same for everyone: rnd is seeded by map + day)
      solids:[[x,z,w,d]]    box colliders, like solid() in 20-world.js
 */
-const ZONES={lake:{id:'lake',name:'Camp Green Lake'}};
+const ZONES={lake:{id:'lake',name:'Camp Drywater'}};
 const ZONE_ORDER=['lake','canyon'];   // the escape route, in order; server.js has the same list
 let ZONE=ZONES.lake;
 const ZSTORE={};                      // per map: its holes and buried loot while the crew is somewhere else
@@ -259,7 +259,7 @@ function updateZones(dt){
     const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];
     if(cpOn&&cpStat){
       if(cpStat.at>=cpStat.total){
-        txt=next?'Everyone made it. Moving on…':'The whole crew made it! The trail to Big Thumb isn\'t built yet.';
+        txt=next?'Everyone made it. Moving on…':'The whole crew made it! The trail to Chimney Rock isn\'t built yet.';
         if(!cpTold){cpTold=true;sfx.coin();if(!online()&&next)zoneFade(()=>zoneEnter(next))}
       }else txt=`At the campfire: ${cpStat.at} of ${cpStat.total}. The whole crew has to be here to go on.`;
     }else if(cpOn)txt='At the campfire. Waiting for the crew…';

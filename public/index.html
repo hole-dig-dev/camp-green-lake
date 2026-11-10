@@ -1,4 +1,5 @@
-<title>Camp Green Lake</title>
+<title>DRYWATER</title>
+<meta name="description" content="DRYWATER: a co-op digging game on a dried-up lake. The water's gone. The gold isn't.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;900&family=Anton&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -52,7 +53,7 @@
 
   <div id="hudTop" class="hud-top-row">
     <div id="stats" class="hud-strip hud-strip--camper ui-panel">
-      <div class="who"><b id="hudName">Caveman</b><span id="dayTag">D Tent</span></div>
+      <div class="who"><b id="hudName">Dusty</b><span id="dayTag">Bunk D</span></div>
       <div class="meter"><span class="k" id="lvK">LV 1</span><div class="ui-meter bar xp"><i id="xpBar" style="width:0"></i></div></div>
       <div class="meter"><span class="k">Stamina</span><div class="ui-meter bar hp stam" id="hpWrap" title="Stamina (yellow) and room to recover (pale). Coloured blocks from the right are afflictions: injury, heatstroke, sunburn, poison, hunger. Health is whatever they leave."><i id="stamFill"></i><i id="stamRoom"></i><i class="a-hunger" id="affHunger"></i><i class="a-poison" id="affPoison"></i><i class="a-burn" id="affBurn"></i><i class="a-heat" id="affHeat"></i><i class="a-injury" id="affInjury"></i></div></div>
       <p id="hpWarn" class="hud-warn" hidden>Low health</p>
@@ -82,10 +83,10 @@
 
   <!-- the run at a glance, in one place (JT 2026-10-02): the crew wallet against tonight's quota, the clock, your sack -->
   <div id="hudSupplies" class="hud-strip hud-strip--supplies ui-panel">
-    <div class="row big"><span class="k" title="The crew wallet (everyone's gold, shared) and the gold the Warden takes out of it at curfew">Wallet</span><span class="v"><span id="seeds">20</span><small id="quota">/ 15</small></span></div>
-    <div class="row" id="curseRow" hidden><span class="k">Curse</span><span class="v" id="curseV">0%</span></div>
+    <div class="row big"><span class="k" title="The crew wallet (everyone's gold, shared) and the cut the Company takes out of it at lights-out">Wallet</span><span class="v"><span id="seeds">20</span><small id="quota">/ 15</small></span></div>
+    <div class="row" id="curseRow" hidden><span class="k">Bad luck</span><span class="v" id="curseV">0%</span></div>
     <div class="row"><span class="k">Time</span><span class="v" id="clock">06:00</span></div>
-    <div class="row"><span class="k" id="curK">Curfew in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
+    <div class="row"><span class="k" id="curK">Lights-out in</span><span class="v-wrap"><svg id="curfewIcon" class="ui-icon hud-warn-icon" aria-hidden="true" hidden><use href="#icon-clock"></use></svg><span class="v" id="curfew">9:30</span></span></div>
     <div class="row" id="backRow"><span class="k">Walk to camp</span><span class="v" id="back">0:00</span></div>
     <div class="row"><span class="k">Sack</span><span class="v" id="sack">empty</span></div>
     <div class="row" id="battRow"><span class="k">Flashlight</span><span class="v" id="batt">100%</span></div>
@@ -99,7 +100,7 @@
   <div id="depthChip" class="hud-depth-chip" hidden><span class="k">Hole depth</span><span class="v" id="depth">0.0 ft</span></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="partyBanner" hidden></div>
-  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q eat onion · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · I inventory · P push-to-talk · R grab (hold) · X rope · B twerk · H sing</div>
+  <div id="keys">WASD move · Shift run · Space jump · Hold click or E to dig · F use · Q chew bitterroot · 1–5 shout · T detector · M sound · V first person · C crouch · G ping · Enter chat · L flashlight · I inventory · P push-to-talk · R grab (hold) · X rope · B twerk · H sing</div>
   <div id="voiceBox">
     <button id="voiceBtn" type="button" aria-pressed="false" title="Turn on proximity voice chat (asks for mic access)">Voice off</button>
     <button id="voiceModeBtn" type="button" hidden title="Switch between push-to-talk and always-on mic">Push-to-talk (hold P)</button>
@@ -112,7 +113,7 @@
 <div id="title" class="overlay">
   <div class="title-shade" aria-hidden="true"></div>
   <div class="title-hero">
-    <h1 class="stencil title-logo">Camp<br>Green Lake<small>There is no lake. Only holes.</small></h1>
+    <h1 class="stencil title-logo">Drywater<small>The water's gone. The gold isn't.</small></h1>
     <div class="field title-start">
       <label for="nick">Your camp nickname</label>
       <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
@@ -131,11 +132,11 @@
   </div>
   <div id="titleInfo" class="card title-info" hidden role="dialog" aria-labelledby="titleInfoHead">
     <div class="title-info-top"><h2 id="titleInfoHead">How to play</h2><button id="titleInfoClose" class="ui-button ui-button--quiet ui-button--sm" type="button">Close</button></div>
-    <p class="title-premise">There's gold in the dry lake bed. Dig, fill your bucket with sand, and sift it at camp. Sell what you dig up to Mr. Pendanski, gear up, and pool your gold with the crew. Keep away from the yellow-spotted lizards, and be back inside the fence by curfew.</p>
+    <p class="title-premise">There's gold in the dry lake bed. Dig, fill your bucket with sand, and sift it at camp. Sell what you dig up to Mr. Abel at the Company Store, gear up, and pool your gold with the crew. Keep away from the gold-eyed gilas, and be back inside the fence by lights-out.</p>
     <div class="title-objectives">
       <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-shovel"></use></svg><b>Dig</b><span>Every hole fills your bucket with sand.</span></div>
       <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-seed"></use></svg><b>Sift</b><span>Sift your sand at camp for gold.</span></div>
-      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-clock"></use></svg><b>Be back by curfew</b><span>Or the police come looking.</span></div>
+      <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-clock"></use></svg><b>Be back by lights-out</b><span>Or the police come looking.</span></div>
     </div>
     <div class="controls" id="controlsEssential">
       <div><kbd class="ui-kbd">WASD</kbd> walk, <kbd class="ui-kbd">Shift</kbd> run</div>
@@ -143,12 +144,12 @@
       <div><kbd class="ui-kbd">Hold click</kbd> or <kbd class="ui-kbd">E</kbd> dig</div>
       <div><kbd class="ui-kbd">F</kbd> talk / buy / sell</div>
       <div><kbd class="ui-kbd">V</kbd> first / third person</div>
-      <div><kbd class="ui-kbd">Q</kbd> eat an onion</div>
+      <div><kbd class="ui-kbd">Q</kbd> chew bitterroot</div>
       <div><kbd class="ui-kbd">1</kbd>–<kbd class="ui-kbd">5</kbd> shout at friends</div>
       <div><kbd class="ui-kbd">C</kbd> crouch (hide from police)</div>
       <div><kbd class="ui-kbd">Esc</kbd> pause, options, every key</div>
     </div>
-    <p class="fine title-legend">Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot -- the curse on the lake only breaks when someone finds it.</p>
+    <p class="fine title-legend">Somewhere out there is a gold card case engraved <b>LM</b>. Take it to the Superintendent, and she'll show you where "Lucky" Lil Marlow sank her strongbox. The lake's bad luck only turns when someone finds it.</p>
     <p class="fine">Anyone with this page open shows up in your camp. Share the link and dig together.</p>
   </div>
 </div>
@@ -162,7 +163,7 @@
 <div id="cards" class="overlay" hidden>
   <div class="felt" role="dialog" aria-labelledby="cardsTitle">
     <div class="head">
-      <h2 id="cardsTitle">D Tent Blackjack</h2>
+      <h2 id="cardsTitle">Bunk D Blackjack</h2>
       <div class="head-pills">
         <span class="seedpill"><svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg><strong id="bjSeeds">0</strong> gold</span>
         <span class="seedpill bet-pill" id="bjBetPill" hidden>Bet <strong id="bjBetHeader">0</strong></span>
@@ -198,16 +199,16 @@
            aria-labelledby="shopTitle" aria-describedby="shopFlavor">
     <header class="shop-head">
       <div>
-        <p class="eyebrow">Camp Green Lake · Supply counter</p>
-        <h2 id="shopTitle">Supply Depot</h2>
-        <p id="shopFlavor">Mr. Pendanski buys what you dig up and sells you what you need. In gold.</p>
+        <p class="eyebrow">Camp Drywater · Company counter</p>
+        <h2 id="shopTitle">Company Store</h2>
+        <p id="shopFlavor">Mr. Abel buys what you dig up and sells you what you need. In gold.</p>
       </div>
       <div class="shop-head-actions">
         <button id="shopSell" class="ui-button ui-button--primary" type="button" hidden>Sell finds</button>
         <div class="seedline" aria-label="Your gold">
           <svg class="ui-icon" aria-hidden="true"><use href="#icon-seed"></use></svg>
           <span><strong id="shopSeeds">0</strong> gold</span>
-          <span class="shop-safe" id="shopSafe" title="The crew wallet minus tonight's quota: what you can spend and still have the Warden's gold at curfew"></span>
+          <span class="shop-safe" id="shopSafe" title="The crew wallet minus tonight's cut: what you can spend and still have the Company's gold at lights-out"></span>
         </div>
         <button id="shopClose" class="ui-button ui-button--quiet" type="button" aria-label="Close store">
           <svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg>Close
@@ -231,7 +232,7 @@
       </aside>
     </div>
     <div id="crewShop" class="crew-shop" hidden>
-      <p class="crew-shop__intro">Kit out the D Tent crew with your own gold. A better-kitted crew member fills the crew bank faster.</p>
+      <p class="crew-shop__intro">Kit out the Bunk D crew with your own gold. A better-kitted crew member fills the crew bank faster.</p>
       <div id="crewGrid" class="crew-grid" aria-label="Crew upgrades"></div>
       <p id="crewFeedback" class="shop-feedback" role="status"></p>
     </div>
@@ -242,7 +243,7 @@
   <section class="shop-frame ui-panel" role="dialog" aria-modal="true" aria-labelledby="invTitle" aria-describedby="invFlavor">
     <header class="shop-head">
       <div>
-        <p class="eyebrow">Camp Green Lake · What you're carrying</p>
+        <p class="eyebrow">Camp Drywater · What you're carrying</p>
         <h2 id="invTitle">Inventory</h2>
         <p id="invFlavor"></p>
       </div>
@@ -284,12 +285,12 @@
 </div>
 
 <div id="admin" hidden>
-  <h3><span>Warden's clock</span><span id="admClose" role="button" tabindex="0" style="cursor:pointer">×</span></h3>
+  <h3><span>Superintendent's clock</span><span id="admClose" role="button" tabindex="0" style="cursor:pointer">×</span></h3>
   <div><span id="admT">--:--</span> <span id="admS"></span></div>
   <div class="g">
     <button data-h="6">Morning 06:00</button><button data-h="13">Noon 13:00</button>
-    <button data-c="1">Curfew −1 min</button><button data-h="20.05">Night: police</button>
-    <button data-h="1.05">Night: Zeroni</button><button data-h="5.8">Almost dawn</button>
+    <button data-c="1">Lights-out −1 min</button><button data-h="20.05">Night: police</button>
+    <button data-h="1.05">Night: the Bride</button><button data-h="5.8">Almost dawn</button>
     <button data-d="-1">− 1 hour</button><button data-d="1">+ 1 hour</button>
     <button data-a="empty">Empty crew bank</button>
     <button id="admPause">Pause time</button><button id="admReal">Back to real clock</button>
@@ -299,9 +300,9 @@
 <div id="fired" class="overlay" hidden>
   <div class="card outcome-card outcome-card--fired">
     <p class="eyebrow">Dismissed</p>
-    <h2>Fired</h2>
+    <h2>Let go</h2>
     <p id="firedText"></p>
-    <p class="fine">The Warden fired the whole crew. The lake gets filled back in and you all start over with nothing: no gold, no tools, an empty crew bank. Your level stays.</p>
+    <p class="fine">The Superintendent let the whole crew go. The lake gets filled back in and you all start over with nothing: no gold, no tools, an empty crew bank. Your level stays.</p>
     <button id="firedBtn" class="ui-button ui-button--danger">Start a new run</button>
   </div>
 </div>
@@ -315,14 +316,14 @@
  </div>
  <div id="console" hidden><div id="conLog" aria-live="polite"></div><div id="conRow"><b>&gt;</b><input id="conIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type a command (help lists them). Esc closes."></div></div>
 <button id="conBtn" type="button" hidden aria-label="Open console">&gt;_</button>
-<input id="chatIn" maxlength="80" placeholder="Say something. Only campers near you will see it." autocomplete="off" hidden>
+<input id="chatIn" maxlength="80" placeholder="Say something. Only diggers near you will see it." autocomplete="off" hidden>
 <div id="scare"></div>
 
 <div id="ko" class="overlay" hidden>
   <div class="card outcome-card outcome-card--ko">
     <p class="eyebrow">Hazard</p>
     <h2 id="koTitle">Bitten</h2>
-    <p id="koText">A yellow-spotted lizard got you.</p>
+    <p id="koText">A gold-eyed gila got you.</p>
     <p class="fine" id="koFine">Waking up in the nurse's office…</p>
   </div>
 </div>
@@ -331,8 +332,8 @@
   <div class="card outcome-card outcome-card--win">
     <p class="eyebrow">Rainfall</p>
     <h2>It's raining</h2>
-    <p id="winText">Someone dug up the suitcase.</p>
-    <p class="fine">For the first time in over a hundred years, rain is falling on Camp Green Lake. The curse is broken. You can keep digging if you want.</p>
+    <p id="winText">Someone dug up the strongbox.</p>
+    <p class="fine">For the first time in forty years, rain is falling on Lake Drywater. Lil's luck has turned. You can keep digging if you want.</p>
     <button id="winClose" class="ui-button ui-button--primary">Keep digging</button>
   </div>
 </div>
@@ -430,7 +431,7 @@
   <div id="stick"><i id="knob"></i></div>
   <div id="tbtns">
     <button id="tUse">Use</button><button id="tJump">Jump</button>
-    <button id="tOnion">Onion</button><button id="tShout">Shout</button>
+    <button id="tOnion">Root</button><button id="tShout">Shout</button>
     <button id="tDig">Dig</button><button id="tInv">Bag</button>
   </div>
 </div>

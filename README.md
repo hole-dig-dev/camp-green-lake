@@ -1,6 +1,6 @@
-# Camp Green Lake
+# DRYWATER
 
-A multiplayer browser digging game set in the dry lake bed from *Holes*. Dig the lake bed for sand, sift it for gold, sell what you dig up to Mr. Pendanski, gear up, and pool your gold with your crew. Dodge yellow-spotted lizards along the way, and find what Kissin' Kate Barlow buried.
+*The water's gone. The gold isn't.* A multiplayer browser digging game. Lake Drywater dried up forty years ago; now there is gold in the mud and the Drywater Reclamation Company is hiring. You are a digger at Camp Drywater: dig the lake bed for sand, sift it for gold, sell what you dig up to Mr. Abel at the Company Store, gear up, and pool your gold with your crew so the Company can take its cut every night at lights-out. Dodge the gold-eyed gilas along the way, and find what "Lucky" Lil Marlow sank in the lake in 1887. The setting, names and tone are in [docs/STORY.md](docs/STORY.md) (the code's identifiers still use the older names; see that file).
 
 **The gold rush (JT + Greg, 2026-09-30):** the game is now a repeatable loop, not a run of acts. Dig, fill your bucket,
 sift it for gold, buy gear that gets you more gold. The design: [docs/plans/2026-09-30-gold-rush.md](docs/plans/2026-09-30-gold-rush.md).
@@ -31,9 +31,9 @@ Inspired by the co-op digging game *Needle In A Haystack*: a huge search area, o
 
 - **WASD** walk, **Shift** run, **Space** jump
 - **Click** to lock the mouse, then **hold click** (or **E**) to dig
-- **Shovel bonk**: dig while a friend is right in front of you and you whack them instead. They go tumbling but take no damage (the D Tent crew just complain). No bonking inside tents, and it can't knock anyone out of a hole.
+- **Shovel bonk**: dig while a friend is right in front of you and you whack them instead. They go tumbling but take no damage (the Bunk D crew just complain). No bonking inside tents, and it can't knock anyone out of a hole.
 - **F** talk, buy, sell, or sit down at the card table
-- **Q** eat an onion (lizards won't come near you for 45 seconds)
+- **Q** chew bitterroot (gilas won't come near you for 45 seconds)
 - **1–5** shout at your friends, **T** toggle the metal detector, **M** sound
 - **Voice chat** (proximity, like Lethal Company / Rust): click **Voice off** in the bottom-right HUD to turn on your mic (your browser will ask permission). Hold **B** to talk (push-to-talk is the default), or click the mode button to switch to always-on mic. Click **Mute voices** to silence everyone else without muting game sound. Whoever's talking gets a green glow on their name tag. **M** (sound off) mutes voice chat too, since it shares the game's volume.
 - **Esc** pauses (a touch-screen game gets a small pause button in the HUD instead): Resume, Options, Controls, Restart (respawns you at camp; keeps your gold, gear, and the crew bank), or Quit to title. The game keeps running for everyone else while you're paused.
@@ -42,13 +42,13 @@ In Options you can adjust mouse sensitivity, invert Y, touch look speed, field o
 
 The soundscape uses CC0 recordings for footsteps, digging, fabric/doors, birds, crickets, and rain, plus synthesized game cues and live proximity voice. The original wind remains the default; a recorded wind is available for A/B comparison with `audio wind new` in the developer console. [The sound inventory and recording credits](docs/audio-inventory.md) list every sound family and how it is made. The [single MP3 audio reel](docs/audio-showcase.mp3) previews the fixed sounds, with [cue times](docs/audio-showcase.md). The [asset library](asset-library/CATALOG.md) tracks every sound we use, liked, or retired.
 
-**The gold loop:** every scoop of a hole puts sand in your **bucket** (the bar under Water). A bucket holds 5 holes of sand (10 and 15 with the bigger buckets from the Supply Depot). Bring it to the **sifter** in camp and press F for gold: about 4 gold a hole on average, and some batches are rich (or a nugget turns up). Sell your finds to **Mr. Pendanski** at the Supply Depot window (heavy finds, carry them to his window). Talk to **the Warden** to put gold in the **crew bank**, the crew's shared gold for the big purchases. Water's free at the drums by the water truck.
+**The gold loop:** every scoop of a hole puts sand in your **bucket** (the bar under Water). A bucket holds 5 holes of sand (10 and 15 with the bigger buckets from the Company Store). Bring it to the **sifter** in camp and press F for gold: about 4 gold a hole on average, and some batches are rich (or a nugget turns up). Sell your finds to **Mr. Abel** at the Company Store window (heavy finds, carry them to his window). Talk to **the Warden** to put gold in the **crew bank**, the crew's shared gold for the big purchases. Water's free at the drums by the water truck.
 
-Find the gold tube marked **KB** and take it to the Warden. She'll mark the search area with red flags. The suitcase is buried deeper than five feet, so you'll need the long-handled shovel from the Supply Depot.
+Find the gold card case engraved **LM** and take it to the Superintendent. She'll mark the search area with red flags. Lil's strongbox is buried deeper than five feet, so you'll need the long-handled shovel from the Company Store.
 
 Also in camp:
-- **D Tent blackjack**: X-Ray deals. Bet your gold, blackjack pays 3 to 2.
-- **Conversations**: walk up to the Warden, Mr. Pendanski, or the D Tent crew and press F. Some of them know where things are buried.
+- **Bunk D blackjack**: Jim Bob deals. Bet your gold, blackjack pays 3 to 2.
+- **Conversations**: walk up to the Superintendent, Mr. Abel, or the Bunk D crew and press F. Some of them know where things are buried.
 
 <details>
 <summary>Easter egg (spoiler)</summary>
@@ -73,7 +73,7 @@ holes.example.com {
 }
 ```
 
-The world (dug holes, found items, the KB tube, the suitcase) is saved to `data/world.json`. After someone digs up the suitcase, the camp resets to a new day ten minutes later.
+The world (dug holes, found items, the LM card case, Lil's strongbox) is saved to `data/world.json`. After someone digs up the strongbox, the camp resets to a new day ten minutes later.
 
 ### Updating without kicking players
 
@@ -122,7 +122,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | Command | What it does |
 |---|---|
 | `twister [distance]` | Spawn a twister ~45 m in front of you, heading your way. Everyone in camp sees it. |
-| `landslide [distance]` | Trigger a rockslide off Big Thumb ~50 m out from you: 10-26 boulders rain down over a few seconds (some angled in), bounce hard, ricochet and roll. Everyone in camp sees it. |
+| `landslide [distance]` | Trigger a rockslide off Chimney Rock ~50 m out from you: 10-26 boulders rain down over a few seconds (some angled in), bounce hard, ricochet and roll. Everyone in camp sees it. |
 | `tumbleweed [distance]` | Blow in 1-3 giant tumbleweeds ~55 m out, heading your way: comically huge, bouncy, and fast. Get in one's way and you're stuck to it, riding around until you mash Space free or get flung off. Everyone in camp sees them. |
 | `haboob [direction]` | Start a dust storm blowing in from a compass direction (`n`/`ne`/`e`/`se`/`s`/`sw`/`w`/`nw`, or a random one). Rolls in over ~1 min, closes visibility to ~8 m for 1.5-3 min, then clears over ~12 s. Everyone in camp sees it. |
 | `sinkhole [distance]` | Warn, then open a big (10-14 m wide, ~4.4 m deep) sinkhole ~50 m out from you. Everyone sees it. Fall in and only a friend holding F at the rim (or, alone, Zero after a wait) can pull you out. |

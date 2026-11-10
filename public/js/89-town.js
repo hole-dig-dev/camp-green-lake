@@ -130,7 +130,7 @@ function shaftMark(k,b){
    stairwell (sim.js townBreaks, townBreachSpot). ---- */
 function readWardenNote(){
   const[X,Y]=coordXY(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z);
-  toast(`The Warden's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 5 ft. Floor gives. Don't tell Mr. Sir." (Your coordinates are above the Field map button.)`,'gold',9000);
+  toast(`The Superintendent's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 5 ft. Floor gives. Don't tell Dutch." (Your coordinates are above the Field map button.)`,'gold',9000);
   logEv('note',{});
 }
 /* ---- the old town on the lake: a clue (cracked, darker ground and old timbers poking out) ---- */
@@ -166,7 +166,7 @@ function enterTown(k){
   if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false)}S.carry=null;
   townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();
   hurt(4,'Fall','You dropped into the buried town.');sfx.thud();logEv('townIn',{k});
-  toast('You drop into the dark: the buried town of Green Lake. Grab what you can. To get out, press F under the shaft you came down, or at the collapsed stairwell at the end of Main Street.','gold',9000);
+  toast('You drop into the dark: the drowned town of Marlow\'s Landing. Grab what you can. To get out, press F under the shaft you came down, or at the collapsed stairwell at the end of Main Street.','gold',9000);
 }
 function exitTown(x,z,why){
   S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;
@@ -198,7 +198,7 @@ function townUse(s){
     const help=climbHelp(s.id==='townShaft'?s.b:null);
     if(!help){
       if(s.id==='townShaft'&&S.up.rope){S.up.rope=false;if(online())wsSend({t:'ladder',k:s.k});else{s.b.ladder=true;addBreach(s.k,s.b)}toast('You stake your rope ladder in the shaft. Now anyone can climb it alone.','good',4000);sfx.clank();return true}
-      toast(s.id==='townWell'?'The well is too high to climb alone. A friend down here has to crouch (C) next to you and boost you.':'Too high to climb alone. A friend down here can crouch (C) and boost you, someone up top can hold F at the hole, or stake a rope ladder (Supply Depot).','bad',5000);return true}
+      toast(s.id==='townWell'?'The well is too high to climb alone. A friend down here has to crouch (C) next to you and boost you.':'Too high to climb alone. A friend down here can crouch (C) and boost you, someone up top can hold F at the hole, or stake a rope ladder (Company Store).','bad',5000);return true}
     if(!spendStam(20)){toast('Too tired to climb. Catch your breath first.','bad',2500);return true}
     if(s.id==='townWell'){const a=s.i*2.39;exitTown(Math.cos(a)*250,Math.sin(a)*250-60,`You climb up the old well (${help}) and come out somewhere on the lake.`);return true}
     exitTown(s.b.x+1.8,s.b.z,`You climb out (${help}).`);countUp('helps',10,'ladder');return true;

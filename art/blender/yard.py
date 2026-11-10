@@ -164,7 +164,7 @@ for x in (-1.6,1.6):
 cyl('tank',0.7,1.9,(0,0.4,H+1.45),('tank_black',(0x2e,0x2e,0x2c),0.7,0.3),verts=16,rot=(0,math.pi/2,0),bevel=0.02,parent=r)
 tube('feed',(0.95,0.4,H+1.3),(W/2-0.2,D/2-0.12,H+0.12),0.04,m=MET,parent=r)
 box('sign',(1.8,0.05,0.5),(0,-D/2-0.05,H+0.35),('paint_white','paint_white',0.8),bevel=0.01,parent=r)
-text('signtxt','SHOWERS - 4 MIN',(0,-D/2-0.08,H+0.35),0.16,('ink','ink',0.85),parent=r)
+text('signtxt','SHOWERS - 10 CENTS',(0,-D/2-0.08,H+0.35),0.16,('ink','ink',0.85),parent=r)
 box('duckboard',(W-0.2,0.8,0.05),(0,-D/2-0.55,0.15),('wood_pale','wood_pale',0.9),bevel=0.005,parent=r)
 studio(elev=16,azim=-35,lens=40);frame(margin=1.08);print('shower',tris());render()
 

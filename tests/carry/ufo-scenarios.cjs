@@ -38,7 +38,7 @@ check('"ufo back": all three dropped off as aliens, out on the lake bed',dr.leng
 // 4. night: Zach asleep in D Tent
 await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zach');runCommand('time 23:30');z.state='inside';z.p.g.position.set(z.p.g.position.x,TENT_FLOOR_Y,z.p.g.position.z);z.p.g.visible=false});
 await A.waitForTimeout(1500);const z0=await who('Zach');
-check('setup: Zach asleep in D Tent',/Asleep|D Tent/.test(z0.act)&&!z0.vis,JSON.stringify(z0));
+check('setup: Zach asleep in D Tent',/Asleep|Bunk D/.test(z0.act)&&!z0.vis,JSON.stringify(z0));
 await cmd('ufo zach');await A.waitForTimeout(2500);
 const z1=await who('Zach');check('he gets up and comes out of D Tent, walking out to the lake bed',z1.vis&&z1.lure&&z1.y>-1&&/lake/.test(z1.act),JSON.stringify(z1));
 await waitEv('ufoTake','Zach',90000);const tz=(await ev('ufoTake','Zach'))[0];check('Zach: beamed up outside the camp, at night',tz&&!tz.inCamp,JSON.stringify(tz));

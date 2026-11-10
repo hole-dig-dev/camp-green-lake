@@ -5,29 +5,29 @@
    Pause menu > Badges shows them and lets you pick a jumpsuit; friends see your jumpsuit colour.
    Also here: the shop's supplies that need their own logic (onion tonic, first-aid kit) and Q's "use the right thing". */
 const BADGES={
-  caveman:['Caveman','Finish 25 holes'],
+  caveman:['Shovelhead','Finish 25 holes'],
   ladder:['Human ladder','Help a friend up 10 times (pull them out, pick them up, carry them home)'],
   pallbearer:['Pallbearer','Carry a downed friend back inside the fence'],
-  sploosh:['Sploosh','Eat 5 jars of Sploosh or peaches'],
-  onion:['Onion breath','Eat 10 onions'],
+  sploosh:['Sweet Tooth','Finish 5 jars of peach shine or peaches'],
+  onion:['Root breath','Chew 10 bitterroots'],
   magnet:['Sticky Fingers','Pick up 3 dropped sacks'],
   squid:['Punching Bag','Get knocked out 5 times'],
-  barfbag:['Barf Bag','Twerk 20 times'],
-  lullaby:['If only, if only','Sing 40 lines of the lullaby'],
+  barfbag:['Loose Hips','Twerk 20 times'],
+  lullaby:['Sleep now, sleep now','Sing 40 lines of the lullaby'],
   squasher:['Snake charmer','Squash 15 hatchlings, rattlesnakes or scorpions'],
   hauler:['Hauler','Sell 3 pieces of heavy loot'],
   knots:['Knots','Tie your rope to something 10 times'],
   butter:['Butterfingers','Knock 50 gold off heavy loot by dropping it'],
-  stanley:['Stanley','Dig up the suitcase'],
-  clyde:['Sweet Feet','Get hit by falling sneakers'],
+  stanley:['Lucky','Dig up Lil\'s strongbox'],
+  clyde:['Boot to the Head','Get hit by falling boots'],
 };
 const JUMPSUITS=[
   {n:'Orange (standard issue)',c:0xe8742a,ok:()=>true},
   {n:'Faded blue (the crew reaches day 3)',c:0x4f7fa8,ok:()=>(META.bestDay||1)>=3},
   {n:'Midnight black (the crew reaches day 5)',c:0x2a2a2a,ok:()=>(META.bestDay||1)>=5},
-  {n:'Onion green (earn 6 badges)',c:0x6f9a3a,ok:()=>Object.keys(META.badges||{}).length>=6},
-  {n:'Sploosh peach (earn 10 badges)',c:0xf0a070,ok:()=>Object.keys(META.badges||{}).length>=10},
-  {n:'Gold (dig up the suitcase)',c:0xd4af37,ok:()=>!!(META.badges||{}).stanley},
+  {n:'Bitterroot green (earn 6 badges)',c:0x6f9a3a,ok:()=>Object.keys(META.badges||{}).length>=6},
+  {n:'Peach shine (earn 10 badges)',c:0xf0a070,ok:()=>Object.keys(META.badges||{}).length>=10},
+  {n:'Gold (dig up Lil\'s strongbox)',c:0xd4af37,ok:()=>!!(META.badges||{}).stanley},
 ];
 let META={};
 try{META=JSON.parse(localStorage.getItem('cgl-meta')||'{}')||{}}catch(e){META={}}
@@ -69,6 +69,6 @@ function useSupply(){
   if(S.ko)return;
   if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}
   if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.onionT=Math.max(S.onionT,30);
-    tone(330,0.3,'triangle',0.1,220);toast('You drink some of Sam\'s onion tonic. The sting fades, and lizards won\'t like your smell for 30 seconds.','good',4000);logEv('tonic',{});return}
+    tone(330,0.3,'triangle',0.1,220);toast('You drink some bitterroot tonic. The sting fades, and gilas won\'t like your smell for 30 seconds.','good',4000);logEv('tonic',{});return}
   eatOnion();
 }

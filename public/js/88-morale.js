@@ -13,7 +13,7 @@ const MORALE_BREAK=45,MORALE_START=80,MORALE_REGEN=2,MORALE_LOW=50,MORALE_MIN_RA
 const moraleOf=b=>b.morale==null?(b.morale=MORALE_START):b.morale;
 const crewMoraleMul=b=>{const m=moraleOf(b);return m>=MORALE_LOW?1:MORALE_MIN_RATE+(1-MORALE_MIN_RATE)*m/MORALE_LOW};
 const MORALE_HIT={mn:25,dy:25,tw:15,tb:12,ls:15,ko:20,bite:15};
-const MORALE_GRUMBLE=['Why do I even bother.','This lake hates me.','I want my mom.','Nobody tells me anything.','Not again...','My back. My everything.'];
+const MORALE_GRUMBLE=['Why do I even bother.','This lake hates me.','I want to go home.','Nobody tells me anything.','Not again...','My back. My everything.'];
 function moraleHit(b,why){const v=MORALE_HIT[why]||12;b.morale=Math.max(0,moraleOf(b)-v);logEv('crewMorale',{n:b.d.n,why,m:Math.round(b.morale)})}
 function crewSoda(n){const b=bots.find(b=>b.d.n===n);if(!b)return;b.morale=Math.min(100,moraleOf(b)+MORALE_SODA);if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick(['Ahh. Sweet, sweet soda.','Now we\'re talking!','I could dig all day now.']),2600);holdProp(b.p,'tonic',HOLD_SECS.tonic)}
 function giveSoda(b){if(!(S.soda>0))return;S.soda--;sfx.coin();logEv('giveSoda',{n:b.d.n});if(online())wsSend({t:'giveSoda',n:b.d.n});else crewSoda(b.d.n)}

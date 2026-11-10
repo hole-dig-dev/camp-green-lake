@@ -20,33 +20,33 @@ const LEAVE={label:'See you later.',leave:true};
 function reply(name,text,back){return{name,text,opts:[{label:'Something else.',go:back},LEAVE]}}
 function reportKB(){
   S.reported=true;S.hasKB=false;S.seeds+=100;foundGold(100);sfx.gold();reveal('You');wsSend({t:'kb'});
-  toast('+100 gold. The Warden planted red flags around the search area. Check your map.','gold',7000);
-  if(!S.up.long)setTimeout(()=>toast('Kate buried it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
+  toast('+100 gold. The Superintendent planted red flags around the search area. Check your map.','gold',7000);
+  if(!S.up.long)setTimeout(()=>toast('Lil sank it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
 function wardenNode(first){
   const back=()=>wardenNode(false),opts=[];
-  opts.push({label:'How much is in the crew wallet?',go:()=>reply('The Warden',`${RUN.bank} gold. Everyone's gold: whatever any of you finds goes in, whatever any of you buys comes out, and I take my quota at curfew. Not for candy.`,back)});   // one crew wallet (84-wallet.js): nothing to deposit
-  if(S.hasKB&&!S.reported)opts.push({label:'I found a gold tube marked KB.',go:()=>{reportKB();return reply('The Warden','Well, well. Where did you find this? Never mind. Dig inside my red flags. Nobody sleeps until you find it.',back)}});
-  opts.push({label:'Where should I dig?',go:()=>reply('The Warden',S.revealed?(S.up.long?'Inside my flags. Did I stutter?':'Inside my flags. And it\'s deep, sugar. Buy a longer shovel.'):'Anywhere you like. If you find anything interesting, you bring it straight to me.',back)});
-  opts.push({label:'Nice nail polish.',go:()=>({name:'The Warden',text:'Thank you. I make it myself. Want to know the secret ingredient?',opts:[{label:'...Sure?',go:()=>reply('The Warden','Rattlesnake venom. Completely harmless. Once it dries.',back)},{label:'No thanks.',go:back},LEAVE]})});
-  opts.push({label:'Can I have a day off?',go:()=>reply('The Warden','Of course. The day after the lake fills back up.',back)});
+  opts.push({label:'How much is in the crew wallet?',go:()=>reply('The Superintendent',`${RUN.bank} gold. Everyone's gold: whatever any of you finds goes in, whatever any of you buys comes out, and the Company takes its cut at lights-out. Not for candy.`,back)});   // one crew wallet (84-wallet.js): nothing to deposit
+  if(S.hasKB&&!S.reported)opts.push({label:'I found a gold card case engraved LM.',go:()=>{reportKB();return reply('The Superintendent','Well, well. Lil Marlow\'s. Where did you... never mind. Dig inside my red flags. Nobody clocks out until you find it.',back)}});
+  opts.push({label:'Where should I dig?',go:()=>reply('The Superintendent',S.revealed?(S.up.long?'Inside my flags. Did I stutter?':'Inside my flags. And it\'s deep, sugar. Buy a longer shovel.'):'Anywhere past the white line. Anything engraved comes straight to me. It\'s in your contract.',back)});
+  opts.push({label:'Nice house.',go:()=>({name:'The Superintendent',text:'Thank you. The Company paid for it. Want to know with what?',opts:[{label:'...Sure?',go:()=>reply('The Superintendent','Your bus fare. Plus interest.',back)},{label:'No thanks.',go:back},LEAVE]})});
+  opts.push({label:'Can I have a day off?',go:()=>reply('The Superintendent','Of course. The day after the lake fills back up.',back)});
   opts.push(LEAVE);
-  return{name:'The Warden',text:first?pick(['Excuse me. Aren\'t you supposed to be digging?','I was painting my nails. This had better be good.','Well? Speak up.']):'What else?',opts};
+  return{name:'The Superintendent',text:first?pick(['You\'re on the clock. Talk fast.','I was doing the books. This had better be good.','Well? Speak up.']):'What else?',opts};
 }
 const BOT_TALK={
-  'Jim Bob':{hi:['What you want? I\'m busy.','Talk quick. I\'m almost done.'],special:[{label:'Why do you always go first at the water drums?',go:back=>({name:'Jim Bob',text:'Cause I\'m Jim Bob. You bring me anything good you find, maybe I let you go ahead of me. Deal?',opts:[{label:'Deal.',go:()=>{S.water=waterMax();sfx.splash();return reply('Jim Bob','Smart kid. Here, have a sip of my water. Remember who your friends are. (Water refilled)',back)}},{label:'No way.',go:()=>reply('Jim Bob','Your funeral. Enjoy the back of the line.',back)},LEAVE]})}]},
-  'Randy':{hi:['Hey. My back is killing me.','Don\'t step on my dirt pile.'],special:[{label:'You got anything to eat?',go:back=>{if(DLG.used.armpit)return reply('Randy','I already gave you my onion, man.',back);DLG.used.armpit=1;S.onions++;return reply('Randy','Got an onion. Raw. Lizards hate the smell. So does everybody else. Take it. (+1 onion)',back)}}]},
-  'Stan':{hi:['What.','Keep your eyes on the ground, new kid.'],special:[{label:'You doing okay, Stan?',go:back=>({name:'Stan',text:'...Why do you care? I\'m fine. It\'s the sun. Gets in your eyes.',opts:[{label:'If you ever want to talk, I\'m around.',go:()=>{if(DLG.used.squid)return reply('Stan','Yeah. Thanks.',back);DLG.used.squid=1;S.seeds+=5;sfx.coin();return reply('Stan','...Yeah. Okay. Here, take this gold. Don\'t make it weird. (+5 gold)',back)}},{label:'Cool. Just checking.',go:back},LEAVE]})}]},
+  'Jim Bob':{hi:['What you want? I\'m busy.','Talk quick. I\'m almost done.'],special:[{label:'Why do you always go first at the water drums?',go:back=>({name:'Jim Bob',text:'Seniority. I\'ve been here eleven days. Carry my bucket sometime, maybe I let you go ahead of me. Deal?',opts:[{label:'Deal.',go:()=>{S.water=waterMax();sfx.splash();return reply('Jim Bob','Smart. Here, have a sip of my water. Remember who your friends are. (Water refilled)',back)}},{label:'No way.',go:()=>reply('Jim Bob','Your funeral. Enjoy the back of the line.',back)},LEAVE]})}]},
+  'Randy':{hi:['Hey. My back is killing me.','Don\'t step on my dirt pile.'],special:[{label:'You got anything to eat?',go:back=>{if(DLG.used.armpit)return reply('Randy','I already gave you my bitterroot, man.',back);DLG.used.armpit=1;S.onions++;return reply('Randy','Got a bitterroot. Raw. Gilas hate the smell. So does everybody else. Take it. (+1 bitterroot)',back)}}]},
+  'Stan':{hi:['What.','Keep your eyes on the ground, rookie.'],special:[{label:'You doing okay, Stan?',go:back=>({name:'Stan',text:'...Why do you care? I\'m fine. It\'s the sun. Gets in your eyes.',opts:[{label:'If you ever want to talk, I\'m around.',go:()=>{if(DLG.used.squid)return reply('Stan','Yeah. Thanks.',back);DLG.used.squid=1;S.seeds+=5;sfx.coin();return reply('Stan','...Yeah. Okay. Here, take this gold. Don\'t make it weird. (+5 gold)',back)}},{label:'Cool. Just checking.',go:back},LEAVE]})}]},
   'Pete':{hi:['Shh. I\'m listening to the dirt.','Did you hear that? The ground hummed.'],special:[{label:'What is the dirt saying?',go:back=>{
     const kb=items.find(i=>i.type==='kb');let t;
     if(!kb.found&&!S.hasKB){const d=Math.hypot(kb.x-P.x,kb.z-P.z);t=`It says something gold is buried ${d>30?'way out':'somewhere'} to the ${compass(kb.x-P.x,kb.z-P.z)}. Or it's lying. Dirt lies sometimes.`}
-    else if(S.revealed&&!SUITCASE.found)t=`It says the Warden's flags are ${compass(SEARCH.x-P.x,SEARCH.z-P.z)} of here, and the real thing is deeper than five feet.`;
+    else if(S.revealed&&!SUITCASE.found)t=`It says the Super's flags are ${compass(SEARCH.x-P.x,SEARCH.z-P.z)} of here, and the real thing is deeper than five feet.`;
     else t='It says dig more. It always says that.';
     return reply('Pete',t,back)}}]},
-  'Larry':{hi:['Hey. You didn\'t see anybody\'s sunflower seeds, did you?','Things just stick to my hands.'],special:[{label:'What\'s in your pockets?',go:back=>({name:'Larry',text:'Oh, just stuff I found. Or borrowed. Ten gold gets you a mystery item. No refunds.',opts:[{label:'Here, 10 gold.',go:()=>{if(S.seeds<10)return reply('Larry','You ain\'t got ten gold, man.',back);S.seeds-=10;const t=pick(['cap','can','spoon','shoe','arrow','jar','fossil']);S.sack.push(t);sfx.find();return reply('Larry',`Pleasure doing business. You got: ${LOOT[t].name}. Pendanski pays ${LOOT[t].val} for that.`,back)}},{label:'Pass.',go:back},LEAVE]})}]},
+  'Larry':{hi:['Hey. You didn\'t see anybody\'s chewing gum, did you?','I found it. Finding isn\'t stealing.'],special:[{label:'What\'s in your pockets?',go:back=>({name:'Larry',text:'Oh, just stuff I found. Or borrowed. Ten gold gets you a mystery item. No refunds.',opts:[{label:'Here, 10 gold.',go:()=>{if(S.seeds<10)return reply('Larry','You ain\'t got ten gold, man.',back);S.seeds-=10;const t=pick(['cap','can','spoon','shoe','arrow','jar','fossil']);S.sack.push(t);sfx.find();return reply('Larry',`Pleasure doing business. You got: ${LOOT[t].name}. Mr. Abel pays ${LOOT[t].val} for that.`,back)}},{label:'Pass.',go:back},LEAVE]})}]},
   'Zach':{hi:['...','Hi.'],special:[
     {label:'Want to dig together?',go:back=>{S.zeroT=90;return reply('Zach','Okay. I like digging. I\'ll help with your next hole. (You dig twice as fast for 90 seconds.)',back)}},
-    {label:'Want me to teach you to read?',go:back=>reply('Zach','...Yes. I would like that. Maybe after we\'re done digging. One letter every day.',back)}]},
+    {label:'How do you dig so fast?',go:back=>reply('Zach','...I don\'t stop. That is the whole trick. You can watch if you want.',back)}]},
 };
 function botNode(b,first){
   if(isAlien(b))return alienNode(b);   /* "I'm Zach." (88-ufo.js) */
@@ -59,7 +59,7 @@ function botNode(b,first){
     return reply(name,`I saw the ground glint about ${stepsTo(Math.hypot(it.x-P.x,it.z-P.z))} steps ${compass(it.x-P.x,it.z-P.z)} of here. Maybe a ${LOOT[it.type].name.toLowerCase()}. Maybe nothing.`,back)}});
   if(S.soda>0&&crewHired(b))opts.push({label:`Here, have a soda. (Morale ${Math.round(moraleOf(b))}%. You have ${S.soda}.)`,go:()=>{giveSoda(b);return reply(name,pick(['Ahh. Sweet, sweet soda.','For me? You\'re all right.','Now that\'s what I needed.']),back)}});   /* 88-morale.js */
   for(const sp of T2.special)opts.push({label:sp.label,go:()=>sp.go(back)});
-  opts.push({label:'How deep is your hole?',go:()=>reply(name,b.hole.d>=FIVE_FT?'Done. Five by five. Don\'t fall in.':`About ${(b.hole.d*FT).toFixed(1)} feet. ${name==='Zach'?'Almost done.':'Long way to go.'}`,back)});
+  opts.push({label:'How deep is your hole?',go:()=>reply(name,b.hole.d>=FIVE_FT?'Done. Five feet. Don\'t fall in.':`About ${(b.hole.d*FT).toFixed(1)} feet. ${name==='Zach'?'Almost done.':'Long way to go.'}`,back)});
   opts.push(LEAVE);
   return{name,text:first?pick(T2.hi):'What else?',opts};
 }
@@ -226,7 +226,7 @@ function danceArms(p,beat,style){
   p.legL.rotation.x=w*0.35;p.legR.rotation.x=-w*0.35;
   p.g.rotation.x=0;
 }
-const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'Best day at Camp Green Lake EVER.',n=>'Show us your moves, '+n+'!',()=>"I haven't danced since the lake dried up.",()=>'Zach, you can DANCE?',n=>'Where you going, '+n+"? We're coming with you."];
+const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'Best day at Camp Drywater EVER.',n=>'Show us your moves, '+n+'!',()=>"I haven't danced since the lake dried up.",()=>'Zach, you can DANCE?',n=>'Where you going, '+n+"? We're coming with you."];
 function stepTo(g,gx,gz,dt,sp){const dx=gx-g.position.x,dz=gz-g.position.z,d=Math.hypot(dx,dz);if(d>0.02){const s=Math.min(d,dt*sp);g.position.x+=dx/d*s;g.position.z+=dz/d*s}return d}
 function updateParty(dt,now){
   if(!PARTY.on){

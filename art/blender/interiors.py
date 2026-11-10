@@ -86,7 +86,7 @@ def tent_room(name,W,D,crew=False):
     box('rules',(1.2,0.04,0.9),(3.1,ry+0.05,1.65),('corkboard',(0xb8,0x8f,0x5c),0.95),bevel=0.01,parent=r)
     box('rulespaper',(0.9,0.02,0.66),(3.1,ry,1.65),('paint_white','paint_white',0.85),bevel=0,parent=r)
     text('rulestitle','CAMP RULES',(3.1,ry-0.02,1.9),0.1,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
-    for k,l in enumerate(('1. DIG ONE HOLE A DAY','2. REPORT ANYTHING FOUND','3. NO ONE LEAVES CAMP')):
+    for k,l in enumerate(('1. DIG','2. THE COMPANY THANKS YOU','3. NO ONE LEAVES CAMP')):
         text(f'rule{k}',l,(3.1,ry-0.02,1.72-k*0.12),0.05,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
     # orange jumpsuits and caps on hooks along the back wall
     for k in range(4 if not crew else 6):
@@ -176,7 +176,7 @@ box('lake',(2.2,0.022,1.0),(mx+0.1,my+0.052,1.58),('lakebed',(0xc9,0xa2,0x6a),0.
 for k in range(9):box(f'gridv{k}',(0.012,0.024,1.0),(mx-1.0+k*0.25,my+0.054,1.58),('ink','ink',0.9),bevel=0,parent=r)
 for k in range(5):box(f'gridh{k}',(2.2,0.024,0.012),(mx+0.1,my+0.054,1.08+k*0.25),('ink','ink',0.9),bevel=0,parent=r)
 for k in range(7):cyl(f'pin{k}',0.025,0.04,(mx-0.8+rnd.uniform(0,1.8),my+0.07,1.15+rnd.uniform(0,0.85)),('paint_red','paint_red',0.6),verts=6,rot=(math.pi/2,0,0),bevel=0,parent=r)
-text('maptitle','GREEN LAKE - SEARCH GRID',(mx,my+0.06,2.24),0.1,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
+text('maptitle','LAKE DRYWATER - SEARCH GRID',(mx,my+0.06,2.24),0.1,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
 # east wall: filing cabinets, a water cooler, the WANTED poster; by the door: a coat rack
 for k in range(2):
     fy=-5.8+k*0.62;box(f'filing{k}',(0.6,0.55,1.35),(W-0.35,fy,0.675),('filing',(0x6b,0x70,0x66),0.6),bevel=0.015,parent=r)
@@ -186,8 +186,8 @@ cyl('bottle',0.17,0.45,(W-0.35,-0.6,1.18),('water_blue',(0x6f,0xa3,0xc4),0.2),ve
 box('poster',(0.03,0.75,1.0),(W-0.07,0.6,1.9),('poster',(0xe0,0xcf,0xa3),0.95),bevel=0,parent=r)
 text('wanted','WANTED',(W-0.1,0.6,2.25),0.14,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
 box('mugshot',(0.02,0.4,0.36),(W-0.1,0.6,1.93),('mugshot',(0x6a,0x55,0x44),0.9),bevel=0,parent=r)
-text('kate1',"KISSIN' KATE",(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
-text('kate2','BARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,math.pi/2),parent=r)
+text('kate1','"LUCKY" LIL',(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
+text('kate2','MARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,math.pi/2),parent=r)
 rx,ryy=-3.0,D-0.5
 tube('coatpole',(rx,ryy,0.05),(rx,ryy,1.9),0.03,m=TRIM,parent=r)
 for k in range(3):

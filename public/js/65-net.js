@@ -35,7 +35,7 @@ addEventListener('unhandledrejection',e=>{try{const r=e&&e.reason;logEv('err',{m
 function num(v,a,b,d){v=Number(v);return Number.isFinite(v)?clamp(v,a,b):d}
 function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
-  const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Camper';
+  const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Digger';
   const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;if(m.w)p.ward=wardClean(m.w);   /* their Wardrobe picks (81-wardrobe.js) */
   const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,8191,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,10,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
@@ -53,9 +53,9 @@ function renderOnline(){
   const names=[...remotes.values()].map(R=>R.name);
   const lob=$('#lobby');
   $('#onlineList').textContent=names.length?['You',...names].join(', '):'Just you';
-  if(net.ws&&net.ws.readyState===1)lob.textContent=names.length?`${names.length} other camper${names.length>1?'s':''} digging right now: ${names.join(', ')}.`:'Nobody else is here yet. Send your friends this link. The D Tent crew will keep you company.';
+  if(net.ws&&net.ws.readyState===1)lob.textContent=names.length?`${names.length} other digger${names.length>1?'s':''} digging right now: ${names.join(', ')}.`:'Nobody else is here yet. Send your friends this link. The Bunk D crew will keep you company.';
 }
-function wonAlready(name){if(S.won)return;S.won=true;rain.visible=true;setTimeout(()=>toast(`${name} already dug up the suitcase today. A new day starts soon.`,'gold',6000),1500)}
+function wonAlready(name){if(S.won)return;S.won=true;rain.visible=true;setTimeout(()=>toast(`${name} already dug up Lil's strongbox today. A new day starts soon.`,'gold',6000),1500)}
 function onMsg(m){
   if(!m||typeof m!=='object')return;
   switch(m.t){
@@ -69,12 +69,12 @@ function onMsg(m){
       if(typeof zoneEnter==='function')zoneEnter(typeof m.zone==='string'?m.zone:'lake',m.zflags);   // which map the crew is in (88-zones.js); before the holes below, which are that map's
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
-      if(m.kb)reveal(cleanName(m.kb)||'A camper');
+      if(m.kb)reveal(cleanName(m.kb)||'A digger');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
       if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null;if(Array.isArray(p.q))propQ(pr,p.q)}}
       if(Array.isArray(m.bags))for(const b of m.bags.slice(0,80))if(b)addBag(num(b.id,0,1e9,-1),num(b.x,-600,600,0),num(b.z,-600,600,0),Array.isArray(b.items)?b.items.filter(t=>LOOT[t]).slice(0,12):[],cleanName(b.n));
-      if(m.won)wonAlready(cleanName(m.won)||'A camper');
+      if(m.won)wonAlready(cleanName(m.won)||'A digger');
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
@@ -124,11 +124,11 @@ function onMsg(m){
     case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
     case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);else if(R&&HOLD_SECS[m.k])holdProp(R.p,m.k,HOLD_SECS[m.k]);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
-    case 'kb':reveal(cleanName(m.n)||'A camper');break;
-    case 'win':triggerWin(cleanName(m.n)||'A camper',false);break;
+    case 'kb':reveal(cleanName(m.n)||'A digger');break;
+    case 'win':triggerWin(cleanName(m.n)||'A digger',false);break;
     case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;/* no personal gold to restore: the crew wallet is the server's (84-wallet.js) */P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
-    case 'party':startParty(m.id,cleanName(m.n)||'Camper',num(m.dur,5,300,60));break;
+    case 'party':startParty(m.id,cleanName(m.n)||'Digger',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
     case 'run':{const d0=RUN.day;setRun(m);if(RUN.day!==d0)S.refills=0;break}
     case 'curse':curseNote(num(m.d,-100,100,0),num(m.curse,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
@@ -164,7 +164,7 @@ function onMsg(m){
     case 'eotd':eotdSet(m.st);break;
     case 'ufo':{const n=String(m.n||'');if(m.phase==='take')ufoTake(n);else if(m.phase==='drop')ufoDrop(n);break}   /* the UFO easter egg (88-ufo.js) */   /* Employee of the Day standings (88-eotd.js) */   /* a rich vein (88-vein.js) */   /* a soda for a crew member (88-morale.js) */   /* someone dressed a crew member (81-wardrobe.js) */   /* scarecrows (88-gear.js) */   /* the camp's upgrades (84-camp.js) */
     case 'mineBoom':mineBoom(num(m.id,0,1e9,0),num(m.x,-2000,2000,0),num(m.z,-2000,2000,0),cleanName(m.by)||'Someone');break;
-    case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A camper',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
+    case 'bonked':{const R=remotes.get(m.from);bonked(cleanName(m.by)||'A digger',R?P.x-R.p.g.position.x:num(m.dx,-1,1,0),R?P.z-R.p.g.position.z:num(m.dz,-1,1,0));break}
     case 'pulled':if(isTrapped()){popOut();toast(`${cleanName(m.by)||'A friend'} pulled you out of the hole.`,'good',2500)}break;
     case 'sinkpulled':addXP(SINK_RESCUE_XP);toast(`You helped pull ${cleanName(m.by)||'a friend'} out of the sinkhole! +${SINK_RESCUE_XP} XP`,'good',2800);sfx.thud();logEv('sinkRescuer',{by:cleanName(m.by)||''});break;
     case 'ping':{const mine=m.id===net.id,R=remotes.get(m.id);if(!mine&&!R)break;pingAt(num(m.x,-600,600,0),num(m.z,-600,600,0),mine?'You':R.name,mine?0xffd23a:CAMPER_COLORS[R.ci]);break}
@@ -177,7 +177,7 @@ function onMsg(m){
       // means the password was right: remember it and start (or resume) the game for real.
       if(net.awaitingJoin){net.awaitingJoin=false;net.passOk=true;try{localStorage.setItem('cgl-camp',PASS)}catch(e){}hideCampErr();if(pendingResume)maybeResume();else startGame()}
       break;
-    case 'env':if(m.dir===true&&!hazOn(m.k))break;spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A camper'));break; // m.dir: director-spawned, no "camper spawned" toast
+    case 'env':if(m.dir===true&&!hazOn(m.k))break;spawnEnv(m.k,{x:m.x,z:m.z,a:m.a,t0:m.t0,dir:m.dir===true},m.dir?null:(cleanName(m.n)||'A digger'));break; // m.dir: director-spawned, no "camper spawned" toast
     case 'dir':DIRECTOR_ON=m.on===true;break; // host toggled the event director (see the 'director' console command)
     case 'dirinfo':DIRINFO=m;break; // periodic director status snapshot, for the 'events' console command
     case 'clock':setClock(m);break;
@@ -185,7 +185,7 @@ function onMsg(m){
     case 'curfew':SIM.setCurfew(Object.assign({},SIM.CURFEW_DEF,m.v));break;   // the play-test server's Curfew-tab values (police + searchlights run there)
     case 'sleepstat':SLEEP.asleep=num(m.asleep,0,80,0)|0;SLEEP.total=num(m.total,0,80,1)|0;break;
     case 'daybreak':S.inBed=null;toast('Morning already - everyone in camp was asleep.','good',4500);break;
-    case 'reset':toast('A new day at Camp Green Lake. The lake bed is being refilled.','',4000);saveSession(true);setTimeout(()=>location.reload(),2500);break;
+    case 'reset':toast('A new day at Camp Drywater. The lake bed is being refilled.','',4000);saveSession(true);setTimeout(()=>location.reload(),2500);break;
   }
 }
 // A saved session (e.g. the page reloaded itself after a server 'reset'/'update', or just an accidental refresh)

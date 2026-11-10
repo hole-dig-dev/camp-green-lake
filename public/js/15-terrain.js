@@ -41,22 +41,22 @@ const LOOT={
   spoon:{name:'Old spoon',val:9,color:0xd0d0d0},
   shoe:{name:'Horseshoe',val:12,color:0x5f5f5f},
   arrow:{name:'Arrowhead',val:16,color:0x4a4038},
-  jar:{name:'Jar of spiced peaches',val:22,color:0xd98a3a},
+  jar:{name:'Jar of brandied peaches',val:22,color:0xd98a3a},
   fossil:{name:'Fossil fish',val:30,color:0xd8ccb0},
   lipstick:{name:'Silver lipstick tube',val:40,color:0xe0e0e8},
-  sploosh:{name:'Old jar of Sploosh',val:48,color:0xe8a040},
+  sploosh:{name:'Old jar of peach shine',val:48,color:0xe8a040},
   locket:{name:'Gold locket',val:60,color:0xd4af37},
-  pistol:{name:'Kate\'s old pistol',val:75,color:0x2a2a2a},
+  pistol:{name:'Lil\'s old pistol',val:75,color:0x2a2a2a},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
-  strongbox:{name:'Kate\'s strongbox',val:80,color:0x5b3a1e,heavy:true},
+  strongbox:{name:'Old bank cashbox',val:80,color:0x5b3a1e,heavy:true},   // ids keep their old names (saves, the server): 'strongbox' is this cashbox, 'suitcase' Lil's strongbox, 'kb' the LM card case, 'sploosh' peach shine, 'onions' bitterroot
   // carried finds (45-state.js carryFind): what a find becomes when it's too big for the sack. val is typical; each one's is set when dug
-  crate:{name:'Crate of spiced peaches',val:60,color:0x9a7448,heavy:true,carry:true,note:'Glass jars: it chips if you drop it.'},
+  crate:{name:'Crate of brandied peaches',val:60,color:0x9a7448,heavy:true,carry:true,note:'Glass jars: it chips if you drop it.'},
   tools:{name:'Bundle of old tools',val:35,color:0x5a524a,heavy:true,carry:true,note:'Iron: it can take a knock.'},
-  jug:{name:'Big jug of Sploosh',val:120,color:0xe6d8b4,heavy:true,carry:true,note:'Pottery: one bad drop and it cracks.'},
-  kb:{name:'Gold tube marked "KB"',val:0,color:0xd4af37,key:true},
-  suitcase:{name:'Suitcase marked "STANLEY YELNATS"',val:500,color:0x6b3e1f,key:true},
+  jug:{name:'Big jug of peach shine',val:120,color:0xe6d8b4,heavy:true,carry:true,note:'Pottery: one bad drop and it cracks.'},
+  kb:{name:'Gold card case engraved "LM"',val:0,color:0xd4af37,key:true},
+  suitcase:{name:'Lil\'s strongbox',val:500,color:0x6b3e1f,key:true},
   goldbar:{name:'Gold bar',val:90,color:0xd4af37},   // only in the buried town's vault (89-town.js)
-  sneakers:{name:'Clyde Livingston\'s sneakers',val:30,color:0xf0f0f0}   // they fall out of the sky when the curse is high (81-mood.js)   // only in the buried town's vault (89-town.js)
+  sneakers:{name:'Pair of old boots',val:30,color:0xf0f0f0}   // they fall out of the sky when the curse is high (81-mood.js)   // only in the buried town's vault (89-town.js)
 };
 const WEIGHTS=[['cap',30],['can',24],['spoon',14],['shoe',12],['arrow',9],['jar',6],['fossil',5],['lipstick',2],['sploosh',1.6],['locket',1.2],['pistol',0.8]];
 const WSUM=WEIGHTS.reduce((s,w)=>s+w[1],0);

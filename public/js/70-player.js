@@ -170,7 +170,7 @@ function updateLizards(dt,t){
       L.m.tail.rotation.y=Math.sin(t*14+L.ph)*0.5;if(L.m.rig&&g2.visible)creatureAnim(L.m.rig,'Run',dt,1.3);continue}
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
     // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
-    else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.lizard();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
+    else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.lizard();if(Math.random()<0.6)toast('A gold-eyed gila is coming for you. Run, or chew bitterroot.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
     const dx=gx-L.x,dz=gz-L.z,d=Math.hypot(dx,dz);
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
@@ -180,7 +180,7 @@ function updateLizards(dt,t){
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
     if(L.m.rig&&g.visible)creatureAnim(L.m.rig,L.mode==='wander'?'Walk':'Run',dt,L.mode==='wander'?1:1.3);
-    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A yellow-spotted lizard bit you.');L.mode='wander';L.calmT=4}   /* backs off after a bite: in god mode (no knockout) it used to bite and hiss every frame, deafeningly (JT) */
+    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A gold-eyed gila bit you.');L.mode='wander';L.calmT=4}   /* backs off after a bite: in god mode (no knockout) it used to bite and hiss every frame, deafeningly (JT) */
   }
 }
 
@@ -216,7 +216,7 @@ const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text,kind){
   if(GOD)return;
   if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
-  n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
+  n*=tune('dmg.all')*tuneOr(title==='Gila hatchling'?'dmg.Lizard hatchling':'dmg.'+title,1);   // the slider's saved key keeps the hatchling's old name   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
   afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.hurt(n);   // poison hold: a swarm stacks up, one bite still fades
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,kind:kind||'injury',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
@@ -228,7 +228,7 @@ function drainStam(n){if(GOD)return;S.stam=Math.max(0,S.stam-n);S.stamT=0}
 function inShade(){return inTent()||inCamp(P.x,P.z)||(baseH(P.x,P.z)-P.y)>1.2}
 const COLLAPSE_TXT={injury:['Collapsed','You took one hit too many.'],heat:['Heatstroke','You ran out of water in the sun.'],
   burn:['Sunstroke','Hours in the midday sun without shade. Dig in, or rest in camp.'],poison:['Poisoned','The venom got the better of you.'],
-  hunger:['Collapsed','You haven\'t eaten all day. Peaches, Sploosh or an onion would have helped.']};
+  hunger:['Collapsed','You haven\'t eaten all day. Peaches, peach shine or a bitterroot would have helped.']};
 function updateHealth(dt){
   if(hurtHoldT>0)hurtHoldT=Math.max(0,hurtHoldT-dt);else hurtFx=Math.max(0,hurtFx-dt*HURT_DECAY);
   $('#hurtFx').style.opacity=hurtFx.toFixed(2);
@@ -259,6 +259,6 @@ function updateHealth(dt){
 function eatFood(type){
   const i=S.sack.indexOf(type);if(i<0||S.ko)return false;
   countUp('eat',5,'sploosh');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
-  toast(type==='sploosh'?'You eat the hundred-year-old Sploosh. It\'s delicious. Hunger gone.':'You eat the spiced peaches. Hunger gone.','good',3500);
+  toast(type==='sploosh'?'You drink the hundred-year-old peach shine. It\'s delicious. Hunger gone.':'You eat the brandied peaches. Hunger gone.','good',3500);
   logEv('eat',{type});return true;
 }
