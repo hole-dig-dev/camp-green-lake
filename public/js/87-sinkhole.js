@@ -14,7 +14,7 @@
    away from it (which would otherwise re-run its opening animation from scratch when you came back). */
 const SINK_CELL=260, SINK_WIN=300000, SINK_CHANCE=0.045;   // ~1 new one somewhere on the lake every ~5 real minutes
 const SINK_CAMP_KEEPOUT=130;                 // stay this far (m, via campDist) from the camp fence
-const SINK_THUMB_KEEPOUT=400;                // stay this far from Big Thumb's base (it's already off the playable map, but keep this honest)
+const SINK_THUMB_KEEPOUT=400;                // stay this far from Chimney Rock's base (it's already off the playable map, but keep this honest)
 const SINK_R_MIN=10, SINK_R_MAX=14;          // crater radius (m) -- "make it pretty big" per JT's spec; × tune env.sinkSize (0.5 since 2026-10-01: half the diameter)
 const SINK_DEPTH=4.4;                        // crater bottom depth (m) below the undug ground. baseH() noise is
                                               // small (well under half a metre) so the bottom lands close to -4.5 --
@@ -145,7 +145,7 @@ function popOutOfSinkhole(sh,by){
   logEv('sinkPulled',{by:by||'',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
 }
 
-/* ---- solo fallback: with nobody else online, Zach (D Tent's fastest digger) comes with a line instead ---- *
+/* ---- solo fallback: with nobody else online, Zach (Bunk D's fastest digger) comes with a line instead ---- *
    He "arrives" from SINK_SOLO_APPROACH_R out (not literally from his own hole clear across the map) so the whole
    fallback resolves in a bounded, predictable time -- worse than a friend, never a softlock. b.sinkOverride, set
    here, tells updateBots() (30-npcs.js) to leave this bot alone while it's set; updateSoloRescues() below drives it. */

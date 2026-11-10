@@ -1,4 +1,4 @@
-// Starting with (almost) nothing: bare hands and the gold pan (free from the start, JT 2026-10-02), the shovel, the bucket and sifter, and the Warden's quota (pay / fired).
+// Starting with (almost) nothing: bare hands and the gold pan (free from the start, JT 2026-10-02), the shovel, the bucket and sifter, and the Superintendent's quota (pay / fired).
 const {browser,player}=require('./lib2.cjs');const SIMQ=require('../../public/sim.js'),Q1=SIMQ.quotaFor(1,2),Q2=SIMQ.quotaFor(2,2);   /* the quota for two campers on days 1 and 2, from the game's own curve (so retuning it doesn't break this) */const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 const buy=async(p,id)=>{await p.evaluate(()=>{P.x=16;P.z=40.6;P.y=groundAt(P.x,P.z)});await p.waitForTimeout(300);if(!(await p.evaluate(()=>shopOpen))){await p.keyboard.press('f');await p.waitForTimeout(400)}
@@ -39,13 +39,13 @@ check('no crew until you hire them',await A.evaluate(()=>bots.every(b=>b.state==
 // the quota. Day 1: you've only just got here, so a grace day
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 let d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota,t:[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|')}));
-check("day 1 at curfew: the Warden takes her 24 out of the crew wallet (one wallet: what you found pays it), day 2 wants 37 a camper",d.day===2&&d.quota===Q2&&/* the 'took her N' toast can scroll off behind level-up and Employee of the Day toasts now that hands dig faster: the day and the next quota are the check *//Found today: Alpha/.test(d.t),JSON.stringify(d));
+check("day 1 at curfew: the Superintendent takes her 24 out of the crew wallet (one wallet: what you found pays it), day 2 wants 37 a camper",d.day===2&&d.quota===Q2&&/* the 'took her N' toast can scroll off behind level-up and Employee of the Day toasts now that hands dig faster: the day and the next quota are the check *//Found today: Alpha/.test(d.t),JSON.stringify(d));
 // day 2: a full day played, the bank covers it
 await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);
 await A.evaluate(()=>{S.seeds+=100});   /* one crew wallet: no depositing, it's all the crew's */await A.waitForTimeout(500);const bank2=await A.evaluate(()=>RUN.bank);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota}));
-check('day 2 at curfew: the Warden takes 59 out of the bank',d.day===3&&d.bank===bank2-Q2,`bank ${bank2} -> ${JSON.stringify(d)}`);
+check('day 2 at curfew: the Superintendent takes 59 out of the bank',d.day===3&&d.bank===bank2-Q2,`bank ${bank2} -> ${JSON.stringify(d)}`);
 // day 3: short (the crew spent it all)
 await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);await A.evaluate(()=>{S.seeds=0});await A.waitForTimeout(800);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);

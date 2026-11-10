@@ -43,7 +43,7 @@ n='Lip_5';scene(n);r=root(n);cyl('base',R*0.85,0.045,(0,0,0.0225),SILVER,verts=2
 for k in range(5):a=k/5*6.2832;bpy.ops.mesh.primitive_uv_sphere_add(segments=8,ring_count=4,radius=0.0025,location=(math.cos(a)*0.0035,-R*0.85-0.0003,0.022+math.sin(a)*0.0035));o=bpy.context.active_object;o.name=f'petal{k}';o.scale=(1,0.3,1);_finish(o,SILV_D,0,r)
 finish(n,elev=18)
 
-# ---------------- old jar of Sploosh (murky, 110-year-old peaches) ----------------
+# ---------------- old jar of peach shine (murky, 110-year-old peaches) ----------------
 def murky(name,parent,h=0.09,r=0.032,level=0.75,glass_a=0.45,cloudy=(0x9a,0x8a,0x60)):
     g=cyl(name+'_glass',r,h,(0,0,h/2),M_('r_glass_old',cloudy,0.4,0),verts=18,bevel=0.004,parent=parent);glassify(g.data.materials[0],glass_a)
     goo=dense_cyl(name+'_goo',r*0.92,h*level,(0,0,h*level/2+0.002),parent=parent,verts=18,cuts=6)
@@ -76,7 +76,7 @@ bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1,radius=0.005,location=(0,0.
 for k in range(16):a=k/16*6.2832;bpy.ops.mesh.primitive_uv_sphere_add(segments=6,ring_count=3,radius=0.0013,location=(math.sin(a)*0.012,0.002+math.cos(a)*0.011,0.0085));o=bpy.context.active_object;o.name=f'bead{k}';_finish(o,GOLD_D,0,r)
 chain('c',r,[(0,0.026,0.003),(0.02,0.05,0.002),(0.05,0.06,0.001)]);finish(n,elev=55)
 
-# ---------------- Kate's old pistol (revolver ~28 cm) ----------------
+# ---------------- Lil's old pistol (revolver ~28 cm) ----------------
 def revolver(name,parent,metal=STEEL,grip=WALNUT,drum=None,barrel=0.14,derringer=False,accents=None):
     g=root(name);g.parent=parent;g.location=(0,0,0.02)
     if derringer:

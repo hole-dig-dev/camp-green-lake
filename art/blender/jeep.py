@@ -1,4 +1,4 @@
-"""art/blender/jeep.py : Mr. Sir's ride, from a free model instead of our scratch-built pickup.
+"""art/blender/jeep.py : Foreman Dutch's ride, from a free model instead of our scratch-built pickup.
 
 Source: "Jeep" by Zsky on Poly Pizza (https://poly.pizza/m/AcSdGGrgYP), CC-BY 3.0. Kept as downloaded in
 art/blender/sources/jeep-zsky.glb; this script turns it into public/models/MrSirTruck.glb (the game still loads the

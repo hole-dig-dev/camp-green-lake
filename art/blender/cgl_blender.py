@@ -1,4 +1,4 @@
-"""Camp Green Lake asset toolkit for the live Blender (run through the blender-mcp socket).
+"""Camp Drywater asset toolkit for the live Blender (run through the blender-mcp socket).
 
 Every asset gets its OWN SCENE in its group's .blend (buildings/props/finds/creatures/characters.blend, see README):
   - collection "Asset"  : the model itself (the only thing exported to GLB)

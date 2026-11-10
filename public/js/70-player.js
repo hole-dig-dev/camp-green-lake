@@ -5,7 +5,7 @@ const fwd=new T.Vector3();
 function nearCam(x,z,d){return (camera.position.x-x)**2+(camera.position.z-z)**2<d*d}
 /* Inside a tent: a small, separate movement update. No gravity, no digging, no outdoor colliders (the room has its
    own tiny furniture colliders instead) - just walk around a flat floor bounded by the room's own walls. Twisters,
-   police, Madame Zeroni and lizards all already leave you alone (see inTent() in twPush, and inCamp() elsewhere:
+   police, the Drowned Bride and lizards all already leave you alone (see inTent() in twPush, and inCamp() elsewhere:
    your x/z never actually change, so every check that already asks "is this in camp?" still says yes). */
 function updatePlayerTent(dt){
   const t=TENTS[S.tent];
@@ -47,7 +47,7 @@ function updatePlayer(dt){
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
   if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(S.sit!=null){sitStep(dt);return}   // sitting on a bench or stool (86-sit.js)
-  if(S.inTruck){truckPlayer(dt);return}   // driving or riding Mr. Sir's pickup (87-truck.js)
+  if(S.inTruck){truckPlayer(dt);return}   // driving or riding Foreman Dutch's pickup (87-truck.js)
   if(S.inTown)return updatePlayerTown(dt);   // down in the buried town (89-town.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
@@ -196,9 +196,9 @@ function updateLizards(dt,t){
    Stamina lives inside that: sprinting, jumping and hauling spend it, standing still gets it back, and it can never
    be more than your health. So a sunburnt, hungry camper tires fast, and friends notice.
    Recovery: injury heals by itself after hp.healDelay s at hp.healRate/s; heat goes once you've got water again;
-   sunburn fades in shade (camp, a tent, 4+ ft down a hole); poison wears off; hunger needs food (Q eats an onion,
-   and the inventory lets you eat a jar of peaches or Sploosh from your sack). Every rate is a slider in F2.
-   Lizard bites, the police and Madame Zeroni still knock you out outright. */
+   sunburn fades in shade (camp, a tent, 4+ ft down a hole); poison wears off; hunger needs food (Q eats a bitterroot,
+   and the inventory lets you eat a jar of peaches or peach shine from your sack). Every rate is a slider in F2.
+   Lizard bites, the police and the Drowned Bride still knock you out outright. */
 const HP_MAX=100,REVIVE_HP=40;
 const AFF={injury:0,heat:0,burn:0,poison:0,hunger:0};
 const AFF_INFO={injury:'Injured',heat:'Heatstroke',burn:'Sunburn',poison:'Poisoned',hunger:'Hungry'};
@@ -260,7 +260,7 @@ function updateHealth(dt){
   S.stamT=(S.stamT||0)+dt;
   if(S.stamT>0.9)S.stam=Math.min(S.hp,S.stam+(P.moving?tune('stam.regenMove'):tune('stam.regen'))*dt);
 }
-/* food from your sack (the inventory's Eat button): peaches and Sploosh cure hunger and give some stamina back */
+/* food from your sack (the inventory's Eat button): peaches and peach shine cure hunger and give some stamina back */
 function eatFood(type){
   const i=S.sack.indexOf(type);if(i<0||S.ko)return false;
   countUp('eat',5,'sploosh');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();

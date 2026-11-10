@@ -1,7 +1,7 @@
 'use strict';
 /* public/js/89-zone-canyon.js -- the Dry Canyon, the first Peak-style map (see 88-zones.js for how maps work).
 
-   A dry wash that winds north toward Big Thumb and climbs as it goes, like one of Peak's biomes:
+   A dry wash that winds north toward Chimney Rock and climbs as it goes, like one of Peak's biomes:
    1. The wash (start): wide and easy. Dig for loot, learn the ground.
    2. The first step: a rock ledge too tall to jump. A friend crouches (C) and you jump off them (a leg-up), or you
       find the lone boulder at the side (a cairn marks it) and hop up from that.
@@ -9,7 +9,7 @@
    4. The stairs: three more steps in a row, each with its boulder on alternating sides.
    5. The dry fall: a 4.8 m wall nobody can leg-up. One camper takes the long, narrow shelf up the east wall (fall off
       and you're back at the bottom, a bit hurt), then drops the rope at the top (F) for everyone else.
-   6. The upper bench: one last step, then the rim camp's campfire with Big Thumb ahead. Get the whole crew to it.
+   6. The upper bench: one last step, then the rim camp's campfire with Chimney Rock ahead. Get the whole crew to it.
 
    It sits east of the lake's middle (x ~190-330), well clear of the camp fence box, running from z +520 (start) to
    z -525 (the campfire). Everything off the canyon floor is sheer cliff and plateau.
@@ -42,7 +42,7 @@ function cyFloor(x,z){
   if(Math.abs(x-sx)<CY_SHELF_W*0.5+0.3&&t>0&&t<1.02){const k=1-sm((Math.abs(x-sx)-CY_SHELF_W*0.5)/0.3);fall=Math.max(fall,lerp(fall,CY_FALL.h*Math.min(1,t),k))}
   return h+fall;
 }
-const CY_RIM=4;                         // the low rim past the campfire: too tall to climb, low enough to see Big Thumb over
+const CY_RIM=4;                         // the low rim past the campfire: too tall to climb, low enough to see Chimney Rock over
 function cyWall(x,z){
   const d=Math.abs(x-cyX(z))-cyW(z);
   let q=d>0?d*CY_WALL_K:0;

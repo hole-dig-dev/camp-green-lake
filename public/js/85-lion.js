@@ -109,7 +109,7 @@ function updateLionSound(dt,d,canSee,mode){
 }
 
 /* ---------- events (tuning lives in sim.js): a warning the first time you're targeted, deterrence feedback,
-   the pounce itself -- damage applied by the victim's own client, same pattern as Zeroni's 'down' -- and the
+   the pounce itself -- damage applied by the victim's own client, same pattern as the Bride's 'down' -- and the
    roar when it finally gives up. Reached from monEvent()'s default case in 82-patrol.js. ---------- */
 function lionEvent(e){
   const mine=e.id===myId(),near=LIONV.active&&Math.hypot(LIONV.x-P.x,LIONV.z-P.z)<90;

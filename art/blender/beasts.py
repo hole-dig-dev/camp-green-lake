@@ -1,5 +1,5 @@
 # blend: creatures.blend
-exec(open('/tmp/claude-1001/bl/creatures.py').read().split("# ================== yellow-spotted lizard")[0])
+exec(open('/tmp/claude-1001/bl/creatures.py').read().split("# ================== gold-eyed gila")[0])
 from mathutils import noise
 SKEL={};ARMS={}
 def skin(name,nodes,edges,parent,sub=2,dec=0.35,seed=0,vox=None):
@@ -78,7 +78,7 @@ def patch(tag,body,origin,direction,sx,sy,m,parent,thick=0.006):
     """a flat marking stuck onto the surface (nose pad, snout disc)."""
     p,n=surf(body,origin,direction);o=blob(tag,p+n*thick*0.3,(sx,sy,thick),m,parent,seg=10,rings=5);o.rotation_euler=n.to_track_quat('Z','Y').to_euler();return p,n
 
-# ======================= LIZARD (theme #1: green, yellow spots) =======================
+# ======================= GILA (theme #1: green, bright spots) =======================
 scene('Lizard');r=root('Lizard')
 N=[(0,-0.37,0.055,0.022,0.016),(0,-0.31,0.07,0.042,0.03),(0,-0.25,0.075,0.05,0.036),(0,-0.19,0.07,0.044,0.032),
    (0,-0.1,0.07,0.068,0.04),(0,0.02,0.072,0.076,0.042),(0,0.13,0.066,0.062,0.036),

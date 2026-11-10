@@ -9,7 +9,7 @@
    memory of "when it hit me" is stored, so it can't drift or get stuck.
    Fog/sky/light ownership: 80-ui.js's updateParty() sets scene.fog/sky/sun/hemi for day-night and the disco every
    frame; updateHaboob() runs AFTER that in the main loop and blends its own colour into whatever those left behind
-   (see hbBlend), the same "final step on top of the day/night code" approach 15-terrain.js's Thumb haze already
+   (see hbBlend), the same "final step on top of the day/night code" approach 15-terrain.js's Chimney haze already
    uses. It restores itself the moment haboobF() reaches 0 -- nothing needs to reset by hand. */
 const HB_SEED=0x5a17b008;           // fixed seed: same natural schedule for everyone, independent of the twister/landslide seeds
 const HB_WIN=3*12*60*1000;          // one roll every 3 in-game days (a day is CYCLE=12 real minutes in 82-patrol.js, loaded after this file, so spelled out here)

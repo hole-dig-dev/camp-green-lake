@@ -57,7 +57,7 @@ try {
   check('a reload resumes with the crew wallet, nobody paid twice', (await gold(p1)) === 40 && (await gold(p2)) === 40, `${await gold(p1)} / ${await gold(p2)}`);
 
   const warden = await p2.evaluate(() => { const n = wardenNode(true); return n.opts.map(o => o.label); });
-  check('the Warden has no deposit option any more', !warden.some(l => /Put gold/.test(l)) && warden.some(l => /crew wallet/.test(l)), warden.slice(0, 2).join(' | '));
+  check('the Superintendent has no deposit option any more', !warden.some(l => /Put gold/.test(l)) && warden.some(l => /crew wallet/.test(l)), warden.slice(0, 2).join(' | '));
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' ; '));
 } catch (e) { check('test ran', false, e.message); }
 await browser.close(); server.kill();

@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-zones.js -- Peak-style maps ("zones"): the escape across the lake to Big Thumb, one map at a time.
+/* public/js/88-zones.js -- Peak-style maps ("zones"): the escape across the lake to Chimney Rock, one map at a time.
 
    How it fits the rest of the game:
    - The whole crew is always in ONE map (the server decides: world.zone in server.js), so monsters, hazards, voice and

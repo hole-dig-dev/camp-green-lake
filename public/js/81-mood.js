@@ -1,13 +1,13 @@
 'use strict';
-/* public/js/81-mood.js -- the Warden's daily mood and the curse, after Greg's branch (claude/intense-change-1-test-2026-09-27-1829).
+/* public/js/81-mood.js -- the Superintendent's daily mood and the bad luck, after Greg's branch (claude/intense-change-1-test-2026-09-27-1829).
    Rules in public/sim.js (MOODS, rollMood, CURSE); the server keeps both in world.run and sends them with 'run'.
    Solo play keeps them in RUN (saved with the run).
    Moods: heatwave (water drains faster, sunburn x2), sandstorm (murky air, the map only works in camp), breeding
-   (hatchlings everywhere), stingy (3 water refills each), fullmoon (Zeroni all night, no police), digday (double quota,
-   double pay), inspection (the Warden walks the lake all day).
-   The curse: up when campers are out past curfew or get knocked out; down at dawn, when the quota's met, and when
-   someone sings Madame Zeroni away (hold H close to her). It means more monsters and hazards, likelier bad moods, and
-   from 40 up, Clyde Livingston's sneakers fall out of the sky. */
+   (hatchlings everywhere), stingy (3 water refills each), fullmoon (the Bride all night, no police), digday (double quota,
+   double pay), inspection (the Superintendent walks the lake all day).
+   The bad luck: up when campers are out past curfew or get knocked out; down at dawn, when the quota's met, and when
+   someone sings the Drowned Bride away (hold H close to her). It means more monsters and hazards, likelier bad moods, and
+   from 40 up, a pair of old boots falls out of the sky. */
 const moodOf=()=>RUN.mood||'normal';
 let moodShownDay=-1,sneakT=25;
 function moodAnnounce(){
@@ -37,7 +37,7 @@ function updateMood(dt){
   moodLastT=t;
   // sandstorm: murky air out on the lake by day (on top of whatever the sky code set this frame)
   if(moodOf()==='sandstorm'&&t<DAYMS&&!inCamp(P.x,P.z)&&!inTent()&&!S.inTown&&!ZONE_H){scene.fog.color.lerp(new T.Color(0xc9a070),0.6);scene.fog.near=Math.min(scene.fog.near,4);scene.fog.far=Math.min(scene.fog.far,70)}
-  // the curse: Clyde Livingston's sneakers fall out of the sky (the movie)
+  // the bad luck: a pair of old boots falls out of the sky
   if((RUN.curse||0)>=40&&t<DAYMS&&!inCamp(P.x,P.z)&&!inTent()&&!S.inTown&&!S.ko&&(sneakT-=dt)<=0){sneakT=20;if(Math.random()<((RUN.curse||0)-30)/140)sneakersFall()}
 }
 function sneakersFall(){
@@ -46,7 +46,7 @@ function sneakersFall(){
   toast('A pair of old boots fell out of the sky and hit you on the head. They are still wet. (Lil\'s luck)','bad',6000);
   if(S.sack.length<sackMax())S.sack.push('sneakers');logEv('sneakers',{});
 }
-/* solo: singing close to Madame Zeroni */
+/* solo: singing close to the Drowned Bride */
 let zSongSolo=0;
 function moodSing(){
   if(online()||!MONL.zer)return;

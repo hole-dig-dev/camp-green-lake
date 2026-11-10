@@ -29,9 +29,9 @@ function nearCampNoDig(x,z){return !ZONE_H&&Math.hypot(Math.max(-40-x,0,x-30),Ma
 let ZONE_H=null,ZONE_TINT=null,ZONE_MAP=null,ZONE_STEP=0;
 let HELLO_LATER=null;   // a hello naming a map whose script hasn't loaded yet waits here (65-net.js, replayed by 88-zones.js)
 const ZONE_MAX_Y=200;   // highest a camper can stand in any map (the canyon floor climbs); server.js clamps the same
-/* ---------- the end of Act 1, toward Big Thumb (north, -z): the trench, the ramps and the wall (JT, 2026-09-30) ----------
+/* ---------- the end of Act 1, toward Chimney Rock (north, -z): the trench, the ramps and the wall (JT, 2026-09-30) ----------
    A trench runs the whole width of the lake's north edge: sheer both sides, so there's no way round it on foot or by truck
-   -- only a jump in Mr. Sir's pickup off the ramp (87-truck.js; land short and it's wrecked till dawn). A few dirt slopes
+   -- only a jump in Foreman Dutch's pickup off the ramp (87-truck.js; land short and it's wrecked till dawn). A few dirt slopes
    on the camp side let anyone who falls in walk back out. Past it, flat land to the wall (JT: a full climb to finish):
    ~30 m up in 24 steps -- 0.9 m ones you jump, and every third a 2 m ledge too tall to jump (a leg-up from a crouching
    friend, a hand from a friend on the ledge above, or your rope ladder).

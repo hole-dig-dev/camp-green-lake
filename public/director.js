@@ -33,7 +33,7 @@
                   (exactly how twister/landslide already work). Wire in a new kind by adding its ENV entry
                   (public/js/76-console.js) and flipping `enabled` to true here.
      'monster' -- not an env spawn: a living, chasing thing (javelina herd, mountain lion) that the SERVER has to
-                  start and step every tick, the way it already does for police trucks / Madame Zeroni in
+                  start and step every tick, the way it already does for police trucks / the Drowned Bride in
                   sim.js's stepMonsters(). The director only decides WHERE and WHEN one should start; a future
                   branch adding these needs to add that server-side start/step logic and read `mode==='monster'`
                   decisions in server.js's tick handler (marked with a TODO there) instead of broadcasting 'env'.
@@ -149,7 +149,7 @@
     const day = ctx.day || 1, players = ctx.players || [], crew = Math.max(1, players.length);
     const rate = ctx.rate == null ? 1 : ctx.rate; if (rate <= 0) return [];   // the tester's events slider (times CHAOS)
     const ch = Math.max(0.2, ctx.chaos == null ? 1 : ctx.chaos);   // CHAOS: the gaps and cooldowns shrink (or stretch) with it
-    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200) * rate;   // the curse: up to 1.5x
+    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200) * rate;   // the bad luck: up to 1.5x
     state.nextRollAt = now + Math.max(4000 / Math.max(1, ch), DIR_ROLL_MS / intensity + (rand() * 2 - 1) * DIR_ROLL_JITTER);
     if (now - state.lastGlobalAt < DIR_MIN_GAP_MS / ch) return []; // global cooldown: never two natural events too close together
     if (rand() > Math.min(0.9, DIR_BASE_CHANCE * intensity)) return []; // the roll itself

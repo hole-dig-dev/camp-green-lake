@@ -1,9 +1,9 @@
 # blend: props.blend
 # Carried finds: the middle tier of loot, too big for the sack (public/js/45-state.js turns about 1 in 3 finds into
 # one of these; more from deeper holes). Grabbed and hauled like the safe (84-grab.js), and they chip when dropped:
-#   LootCrate   a slatted crate of spiced-peach jars in straw   ~30 kg, glass: chips easily
+#   LootCrate   a slatted crate of brandied-peach jars in straw   ~30 kg, glass: chips easily
 #   LootTools   a bundle of old tools roped together            ~28 kg, iron: hard to hurt
-#   LootJug     a big stoneware jug of Sploosh                  ~18 kg, pottery: the most fragile
+#   LootJug     a big stoneware jug of peach shine                  ~18 kg, pottery: the most fragile
 # Run inside Blender with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py carryloot.py
 # One scene per asset, origin on the ground at the middle, front facing -Y; exports to glb/Loot*.glb for public/models/.
 import bpy,os,re,math
@@ -13,7 +13,7 @@ def src(f,stop=None):
     s=open(os.path.join(HERE,f)).read()
     if stop:s=s.split(stop)[0]
     return re.sub(r"open\('[^']*/([\w.]+)'\)\.read\(\)",lambda m:f"src('{m.group(1)}')",s)
-exec(src('creatures.py','# ================== yellow'))   # toolkit (via finds.py): M_ materials, tube(), finish(), blob(), cone()
+exec(src('creatures.py','# ================== gold-eyed gila'))   # toolkit (via finds.py): M_ materials, tube(), finish(), blob(), cone()
 OUT=os.path.join(ART,'glb')
 def glassy(o,a):
     m=o.data.materials[0];b=m.node_tree.nodes['Principled BSDF'];b.inputs['Alpha'].default_value=a

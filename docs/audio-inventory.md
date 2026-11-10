@@ -1,4 +1,4 @@
-# Camp Green Lake sound inventory
+# Camp Drywater sound inventory
 
 The game starts Web Audio on the player's first game-start click. Master volume controls everything; Effects controls recordings, ambience, and synthesized effects; Music controls the synthesized disco track; Voice controls live proximity chat. **M** mutes the master bus. Recordings load asynchronously, so the first use of a clip can play its synthesized fallback.
 
@@ -23,7 +23,7 @@ JT listened to the [labeled reel](../asset-library/audio/review-reels/2026-09-28
 | Birds (day loop) | Too much when always on | Off: `BIRDS_LEVEL` is 0; `birds.mp3` kept |
 | Desert calls | Picked hawk, distant and near coyotes, owl, dove; clean up the background noise; play every 3–5 minutes by time of day | Five noise-reduced one-shots, one every 180–300 s from a random side |
 
-Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
+Most later cues (hazards, wildlife, patrol, the Bride, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
 
 ## Core-loop sound pass (November 10, 2026): NOT yet reviewed by ear
 
@@ -54,7 +54,7 @@ To compare in game, open the console with backtick: `audio rewards old`, `audio 
 | `sfx.siren()`: curfew in one minute | Three identical sawtooth sweeps | Still synthesized: a hand-cranked siren. Two detuned saws wind up, sag, wind up again and run down over 7.5 s through a low-pass that opens with the pitch, with an echo | none (Web Audio) | `danger` |
 | `sfx.startSting()`: the title screen's start press | Silent | The approved shovel hit, a low bell toll and two faint high notes. Skipped when a saved session resumes | `shovel` (already shipped), `bell`, `ting` | `ui` |
 
-**Not done, on purpose.** There is no ambient pad on the title screen: browsers do not let a page play sound before the first click, so it could only start after the start press, and no CC0 material found was good enough to judge without hearing it. The generic `sfx.thud` (rocks, tumbleweeds, falls), `sfx.hiss`, `sfx.splash` (canteen), `sfx.beep`, wildlife, Zeroni and the disco are unchanged and still synthesized.
+**Not done, on purpose.** There is no ambient pad on the title screen: browsers do not let a page play sound before the first click, so it could only start after the start press, and no CC0 material found was good enough to judge without hearing it. The generic `sfx.thud` (rocks, tumbleweeds, falls), `sfx.hiss`, `sfx.splash` (canteen), `sfx.beep`, wildlife, the Bride and the disco are unchanged and still synthesized.
 
 ### What was checked without listening
 
@@ -130,10 +130,10 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | --- | --- |
 | Open lakebed by day | Original pulsing synthesized wind by default, plus a CC0 bird recording. The optional recorded-wind mode replaces most of the synthesized wind with a CC0 wind loop. |
 | Open lakebed by night | Original wind and a CC0 cricket recording. Recorded-wind mode and tent muffling can be compared separately. |
-| Rain at the suitcase ending | CC0 rain loop, with a quiet filtered-noise fallback. |
+| Rain at Lil's strongbox ending | CC0 rain loop, with a quiet filtered-noise fallback. |
 | Walking and running | Three CC0 sand-step recordings, rotated and slightly pitch-varied; three stone-step recordings for tent/office floors. A short filtered-noise step is the loading fallback. Running has a faster cadence. These are local-player footsteps only. |
 | Digging | Four pre-mixed clips, each the CC0 shovel hit layered with a different CC0 sand step (Fantozzi L1, R1, L3, R3), played in turn and varied slightly in pitch so back-to-back digs never repeat. The bare shovel, then the old filtered-noise scrape and low tone, cover loading. |
-| Entering/leaving tents or the Warden's house | CC0 cloth rustle for tents. The Warden's house plays a CC0 wooden-door-opening recording both ways; leaving plays it slightly lower. |
+| Entering/leaving tents or the Superintendent's house | CC0 cloth rustle for tents. The Superintendent's house plays a CC0 wooden-door-opening recording both ways; leaving plays it slightly lower. |
 | Lying down/getting up | CC0 cloth rustle. |
 | Now and then, out on the lake | Every 3–5 minutes (randomised) one far-off call from a random side, never the same one twice in a row: a red-tailed hawk by day, a mourning dove in the morning (before 10:00), coyotes (distant or near) or an owl at night. Skipped in tents and dust storms. `audio call` in the console plays one now; F2 → Audio → Desert calls sets the level. |
 | Metal hit, loot collision, shovel bonk | CC0 metal click; the old high triangle tone plus noise are the loading fallback. |
@@ -142,10 +142,10 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Twisters, tumbleweeds, haboobs | Separate looping filtered-noise wind layers whose levels follow the hazard. A twister also triggers `hiss` when it grabs a player. |
 | Landslides, sinkholes | Low filtered-noise rumble loops; landslides add a rising tone and hiss warning. Nearby bouncing rocks and falls trigger `thud`. |
 | Vultures, javelinas, mountain lion | Vulture screech = band-pass noise plus a descending sawtooth; javelina squeals/snorts = sawtooth sweeps; lion growl/roar = low oscillator and noise; lion stalking also adds a synthesized heartbeat. |
-| Curfew and Madame Zeroni | The curfew warning is three synthesized siren sweeps. Police spotting adds two warning beeps and a browser text-to-speech line. Zeroni has a low drone, whisper-like filtered noise, sting, heartbeat, jumpscare, and browser text-to-speech. Old police car siren/engine loop nodes are silent because officers now walk. |
+| Curfew and the Drowned Bride | The curfew warning is three synthesized siren sweeps. Police spotting adds two warning beeps and a browser text-to-speech line. the Bride has a low drone, whisper-like filtered noise, sting, heartbeat, jumpscare, and browser text-to-speech. Old police car siren/engine loop nodes are silent because officers now walk. |
 | Cards, chat, flashlight, onion | Brief synthesized clicks, noise ticks, or oscillator sweeps. Blackjack win/loss reuses coin/thud. |
 | Disco party | A four-bar sequenced Web Audio composition: synthesized kick, hat, snare, bass, and chords. It is the game's only continuous music. |
-| Other campers talking | Live WebRTC microphone audio, heard through a positional HRTF panner. Browser text-to-speech is used for the police/Zeroni lines above, not for regular text dialogue. |
+| Other campers talking | Live WebRTC microphone audio, heard through a positional HRTF panner. Browser text-to-speech is used for the police/the Bride lines above, not for regular text dialogue. |
 
 Unused variants, retired clips, source recordings, and review reels are kept in the [asset library](../asset-library/CATALOG.md).
 

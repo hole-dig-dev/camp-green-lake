@@ -56,7 +56,7 @@ game's existing canvas material convention. The review uses r128's
 - [Blender preview](renders/EmployeeBoard.png): Eevee on Radeon 760M Vulkan;
   inspected for header readability, frame construction, weathering and posts.
 - [In-game canvas review](renders/employee-board-game/front-uv.png): actual game
-  avatar portraits (player, Randy, Stan and Mr. Sir), category/name plaques,
+  avatar portraits (player, Randy, Stan and Foreman Dutch), category/name plaques,
   TOP/LEFT/RIGHT labels and four distinct corner colours on every canvas.
 - [10 m yard view](renders/employee-board-game/yard-10m.png): full-size placement,
   header and all four frame silhouettes remain readable at 10 m.

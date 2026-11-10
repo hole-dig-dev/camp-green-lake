@@ -7,7 +7,7 @@ await A.evaluate(()=>{tuneSet('haz.all',0);runCommand('time 10:00');S.seeds+=800
 await A.waitForFunction(()=>['Zach','Pete','Stan'].every(n=>{const b=bots.find(b=>b.d.n===n);return b.p.g.visible&&b.state==='dig'}),null,{timeout:90000});
 // chatter in context
 check('chatter fits what\'s going on (a rich vein out there)',await A.evaluate(()=>{VEIN.on=true;let hit=0;for(let i=0;i<40;i++)if(/glitter|rich today/.test(crewChatter(bots.find(b=>b.d.n==='Zach'))))hit++;VEIN.on=false;return hit>5}));
-check('no more Mr. Sir in the crew\'s lines',await A.evaluate(()=>bots.every(b=>b.d.lines.every(l=>!/Mr\. Sir/.test(l)))));
+check('no more Foreman Dutch in the crew\'s lines',await A.evaluate(()=>bots.every(b=>b.d.lines.every(l=>!/Dutch|Foreman/.test(l)))));
 // hello
 await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Pete');b.state='rest';b.t=30;b.restT=5;b.greetT=0;const g=b.p.g.position;P.x=g.x+2;P.z=g.z;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(600);
 check('walk up to Pete: he says hi and waves',await A.evaluate(()=>{const b=bots.find(b=>b.d.n==='Pete');return /Alpha|hey|You again/i.test(b.L.el.innerText)&&b.greetT>60}),await A.evaluate(()=>bots.find(b=>b.d.n==='Pete').L.el.innerText));

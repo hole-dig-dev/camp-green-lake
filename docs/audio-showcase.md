@@ -1,4 +1,4 @@
-# Camp Green Lake audio A/B reel
+# Camp Drywater audio A/B reel
 
 [Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.
 
@@ -44,8 +44,8 @@
 | 01:18.8 | Night and patrol | Curfew siren |
 | 01:24.3 | Night and patrol | Patrol arrival |
 | 01:26.2 | Night and patrol | Police spotting beeps |
-| 01:28.0 | Night and patrol | Zeroni drone and whisper |
-| 01:31.6 | Night and patrol | Zeroni sting |
+| 01:28.0 | Night and patrol | Bride drone and whisper |
+| 01:31.6 | Night and patrol | Bride sting |
 | 01:34.7 | Night and patrol | Jumpscare |
 | 01:36.4 | Game cues | Ordinary find |
 | 01:37.9 | Game cues | Important find or level up |

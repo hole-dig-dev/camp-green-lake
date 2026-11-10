@@ -7,11 +7,11 @@ let roHissT=0;
      hatch    lizard hatchlings, in swarms          bite: a little poison          squash them with a shovel swing (E)
      snake    rattlesnakes, rattle before they strike: a lot of poison            squash / keep your distance
      scorp    scorpions come up where you're digging: poison                     squash
-     sir      Mr. Sir walks the lake: stand around and he warns you, then takes your whole sack
-     warden   the Warden: stand around and she knocks you out
-     sheriff  near curfew, the Sheriff's ghost hunts whoever carries Kate Barlow's loot (lipstick, pistol, locket, strongbox)
-     kate     at night, Kate Barlow's ghost only moves while nobody is looking at her
-   An onion keeps the small ones off you. Poison is an affliction on your stamina bar (70-player.js). */
+     sir      Foreman Dutch walks the lake: stand around and he warns you, then takes your whole sack
+     warden   the Superintendent: stand around and she knocks you out
+     sheriff  near curfew, the Marshal's ghost hunts whoever carries Lil Marlow's loot (lipstick, pistol, locket, strongbox)
+     kate     at night, Lil Marlow's ghost only moves while nobody is looking at her
+   A bitterroot keeps the small ones off you. Poison is an affliction on your stamina bar (70-player.js). */
 const RO_LOCAL={mobs:[]};                 // solo play's roster state (online, the server owns it)
 const ROV=new Map();                      // id -> drawn monster {k, g, x,z,h, tx,tz,th, st, L, rig, p}
 let RO_TODAY=[],roTodayKey='';

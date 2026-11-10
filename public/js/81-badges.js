@@ -3,7 +3,7 @@
    adapted to what this game tracks (no sentences or curse here yet), plus a few for the rope, the wheelbarrow and
    carrying friends home. Both live in this browser (localStorage 'cgl-meta'), across runs.
    Pause menu > Badges shows them and lets you pick a jumpsuit; friends see your jumpsuit colour.
-   Also here: the shop's supplies that need their own logic (onion tonic, first-aid kit) and Q's "use the right thing". */
+   Also here: the shop's supplies that need their own logic (bitterroot tonic, first-aid kit) and Q's "use the right thing". */
 const BADGES={
   caveman:['Shovelhead','Finish 25 holes'],
   ladder:['Human ladder','Help a friend up 10 times (pull them out, pick them up, carry them home)'],
@@ -64,7 +64,7 @@ function renderBadges(){
     bt.append(sw,t);bt.onclick=()=>setSuit(i);sb.appendChild(bt)});
 }
 
-/* ---- supplies: onion tonic and the first-aid kit (Supply Depot), and Q ---- */
+/* ---- supplies: bitterroot tonic and the first-aid kit (Company Store), and Q ---- */
 function useSupply(){
   if(S.ko)return;
   if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}

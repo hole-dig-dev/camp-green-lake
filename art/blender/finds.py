@@ -136,7 +136,7 @@ for k in range(5):cyl(f'wrap{k}',0.0048,0.002,(0,-0.032-k*0.0025,0),SINEW,verts=
 finish(n,elev=45)
 n='Arrow_5';scene(n);r=root(n);point('a',r,STONE2,seed=5,L=0.05,W=0.036,facets=5);finish(n,elev=50)
 
-# ---------------- jar of spiced peaches (12 cm) ----------------
+# ---------------- jar of brandied peaches (12 cm) ----------------
 def glassify(m,alpha=0.3):
     b=m.node_tree.nodes['Principled BSDF'];b.inputs['Alpha'].default_value=alpha
     try:m.surface_render_method='BLENDED'

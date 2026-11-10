@@ -1,5 +1,5 @@
 # blend: town.blend
-# The buried town of Green Lake: a hundred-odd years under the lake bed. public/sim.js (townLayout) picks the day's
+# The buried town of Marlow's Landing: a hundred-odd years under the lake bed. public/sim.js (townLayout) picks the day's
 # layout: Main Street, a buried street cavern with three big buildings on each side, and seven more buildings off it,
 # reached by timber-shored tunnels. public/js/89-town.js puts these pieces where the layout says and digs the tunnels
 # (their cave walls are generated there along each day's path; the timber sets and debris in them come from here).

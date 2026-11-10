@@ -3,7 +3,7 @@
    the end of the pipeline and empty your sand, sending it to the sifter automatically, basically allowing you to build
    into the lake and send sand from there." Plus: "it can never be destroyed, but can crack/break if hit by rocks,
    sinkholes, mines etc. Fixed if you hold interact on it for like 15 seconds", and "clear so you can see the sand move".
-   - Pipe comes in 5 m sections from the Supply Depot (S.pipe). F at the end of the pipeline (at first: the connector at
+   - Pipe comes in 5 m sections from the Company Store (S.pipe). F at the end of the pipeline (at first: the connector at
      the bottom of the sifter) starts laying it: walk, and a joint goes down every PIPE_RUN metres behind you, one
      section each. F again (or running out) stops; the far end is the intake.
    - One pipeline for the whole camp (server.js world.pipe: nodes + broken runs; everyone can extend, use and fix it).

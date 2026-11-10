@@ -1,4 +1,4 @@
-# GREEN LAKE FIZZ soda machine
+# DRYWATER FIZZ soda machine
 
 Chunky faded red cabinet with a cream illuminated panel, original cartoon bottle
 and lightning logo, coin slot/return, three selection buttons, hinged delivery

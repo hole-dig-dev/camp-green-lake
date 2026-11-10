@@ -1,5 +1,13 @@
 # STORY BIBLE: "DRYWATER" (replaces every borrowing from the book/film *Holes*)
 
+> **Historical documents keep the old names on purpose.** These are dated records and correspondence (some written by
+> another collaborator), so they are not rewritten: `docs/HANDOFF.md`, `docs/FOR-CLAUDE-458.md`, `FOR_CLAUDE_457.md`,
+> `CHARACTER-HANDOFF.md`, `docs/plans/*`, `docs/claude-to-claude/*`, `docs/ui-redesign-spec.md`,
+> `docs/audio-narration-handoff.md`, `asset-library/audio/review-reels/*` and the screenshots under
+> `docs/camp-overhaul-screenshots/` and `docs/ui-screenshots/`. Where they say Camp Green Lake, Warden, Mr. Sir, D Tent,
+> KB tube, Sploosh, onions, Zeroni or the curse, read the names in the table below. This file itself names the old
+> things only in order to map them.
+
 Why: the game is headed for Steam. Camp Green Lake, Stanley, Zero, the Warden, Mr. Sir, Mr. Pendanski, the D Tent
 nicknames, Kissin' Kate Barlow, Sam and his onions, Madame Zeroni and her curse, yellow-spotted lizards, Sploosh,
 God's/Big Thumb, "There is no lake at Camp Green Lake" are all Louis Sachar's. None of them may remain in anything a

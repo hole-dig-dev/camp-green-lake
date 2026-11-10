@@ -47,7 +47,7 @@ const TUNE_DEFS=[
   {key:'haz.now.vultures',tab:'Hazards',label:'Vultures: spawn one now, near you',kind:'action',run:()=>hazNow('vultures now')},
   {key:'haz.on.lizards',tab:'Hazards',label:'Gold-eyed gilas: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.on.night',tab:'Hazards',label:'Night patrols and the Drowned Bride: on anyway (while ALL is off)',def:0,kind:'flag'},
-  // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
+  // ---- vehicles: Foreman Dutch's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Dutch\'s jeep (F at the driver\'s door; back it out of the service gate and drive the lake)',def:0,kind:'flag'},
   {key:'veh.respawn',tab:'Vehicles',label:'Put Dutch\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
   {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
@@ -173,7 +173,7 @@ const TUNE_DEFS=[
   {key:'env.tbDown',tab:'Environment',label:'Tumbleweed: lying there after it lets go',def:1,kind:'mul',range:3,unit:' s'},
   {key:'env.grabReach',tab:'Environment',label:'Grab reach (hold R on loot, a friend, the wheelbarrow)',def:4.5,kind:'mul',range:2,unit:' m'},
   {key:'env.bonkReach',tab:'Environment',label:'Shovel bonk reach',def:2.3,kind:'mul',range:2,unit:' m'},
-  // ---- monsters, events and the curse (the server reads these too, from the play-test server's saved sliders)
+  // ---- monsters, events and the bad luck (the server reads these too, from the play-test server's saved sliders)
   {key:'cart.spillKo',tab:'Grab',label:'Tipped out of the wheelbarrow while downed: knockout time lost',def:6,kind:'mul',range:3,zero:true,unit:' s'},
   {key:'ro.sheriffWin',tab:'Monsters',label:'The Marshal\'s ghost hunts loot carriers in the last part of the day',def:0.15,kind:'lin',span:0.15,min:0,max:1,unit:'%',pct:true},
   {key:'mon.hatchBite',tab:'Monsters',label:'Gila hatchling bite (poison)',def:8,kind:'mul',range:3,unit:' hp'},

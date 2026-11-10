@@ -1,5 +1,5 @@
 # blend: props.blend
-# Wreck Room supplies ported from Greg's branch: Sam's onion tonic, the first-aid kit and the walkie-talkie.
+# Company Store supplies ported from Greg's branch: the bitterroot tonic, the first-aid kit and the walkie-talkie.
 # Modelled to match their painted store icons (public/icons/gear/{tonic,medkit,walkie}.png; the raw sheet is
 # docs/art/supplies-icons-chatgpt-sheet.png). One scene per asset, exported to glb/Supply*.glb for public/models/.
 # Run inside Blender with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py supplies.py
@@ -18,7 +18,7 @@ def src(f,stop=None):
     s=open(os.path.join(HERE,f)).read()
     if stop:s=s.split(stop)[0]
     return re.sub(r"open\('[^']*/([\w.]+)'\)\.read\(\)",lambda m:f"src('{m.group(1)}')",s)
-exec(src('creatures.py','# ================== yellow'))   # toolkit (via finds.py), M_ materials, tube(), finish(), blob(), cone()
+exec(src('creatures.py','# ================== gold-eyed gila'))   # toolkit (via finds.py), M_ materials, tube(), finish(), blob(), cone()
 
 OUT=os.path.join(ART,'glb')
 
@@ -47,7 +47,7 @@ cyl('knob2',0.0055,0.01,(0.02,0,H/2+0.005),PLAS2,verts=10,bevel=0.002,parent=r)
 r.location.z=GRIP[n];bpy.context.view_layer.update();finish(n,elev=12,azim=-32,margin=1.3)
 print(export_glb(os.path.join(OUT,n+'.glb')))
 
-# ======================= Sam's onion tonic: corked amber bottle, paper label with an onion on it =======================
+# ======================= the bitterroot tonic: corked amber bottle, paper label with a bitterroot on it =======================
 AMBER=M_('s_amber',(0xb0,0x62,0x1c),0.15);TONIC=M_('s_tonic',(0x9a,0x4a,0x12),0.2);CORK=M_('s_cork',(0xb8,0x8a,0x58),0.95)
 PAPER=M_('s_paper',(0xe2,0xcc,0x98),0.95);ONI=M_('s_onion',(0xf0,0xe2,0xc4),0.7);ONI2=M_('s_onion_sk',(0xc8,0x98,0x5a),0.8);SPROUT=M_('s_sprout',(0x6a,0x9a,0x3a),0.8)
 n='SupplyTonic';scene(n);r=root(n);Z0=-0.055   # bottle bottom (origin mid-bottle)

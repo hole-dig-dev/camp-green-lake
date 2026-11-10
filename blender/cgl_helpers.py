@@ -1,4 +1,4 @@
-# Shared helpers for building the Camp Green Lake character in Blender.
+# Shared helpers for building the Camp Drywater character in Blender.
 # Load inside Blender with: exec(open(r"C:\Users\jthol\Projects\camp-green-lake\blender\cgl_helpers.py").read())
 import bpy, bmesh, math
 from mathutils import Euler, Vector
@@ -434,7 +434,7 @@ def hair(pre, r):
 
 
 def shades(pre, r, h):
-    """Mr. Sir's sunglasses: one dark bar across the eye line."""
+    """Foreman Dutch's sunglasses: one dark bar across the eye line."""
     stick(pre + "ShadesBar", bm_box(0.3, 0.03, 0.075), SHADES, r, h, 0, EYE_Z + 0.005, 0.03, bev=0.012)
 
 

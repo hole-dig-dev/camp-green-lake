@@ -49,7 +49,7 @@ for z in (4.55,5.35):tube(f'chord{z}',(-6.0,0,z),(6.0,0,z),0.07,m=DARK,parent=r,
 n=12
 for k in range(n):
     x0=-6+k*1.0;tube(f'web{k}',(x0,0,4.55 if k%2==0 else 5.35),(x0+1.0,0,5.35 if k%2==0 else 4.55),0.035,m=DARK,parent=r,sq=True)
-# arch sign above the truss: CAMP GREEN LAKE to the lake side, LAKE ACCESS to the camp side
+# arch sign above the truss: CAMP DRYWATER to the lake side, LAKE ACCESS to the camp side
 for x in (-2.6,2.6):tube(f'signpost{x}',(x,0,5.35),(x,0,5.75),0.05,m=DARK,parent=r,sq=True)
 sign_board('arch',6.6,1.15,6.3,[('LAKE ACCESS',0.55),('CAMP DRYWATER',0.62)],r)
 # gate leaves swung all the way open, lying flat against the outside of the fence

@@ -1,5 +1,5 @@
 # blend: gear.blend
-"""GREEN LAKE FIZZ: a ground-centred, Blender -Y-facing camp soda machine.
+"""DRYWATER FIZZ: a ground-centred, Blender -Y-facing camp soda machine.
 
 Rebuild from the repository root:
   VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json blender -b art/blender/gear.blend --gpu-backend vulkan --threads 4 --python-exit-code 1 --python art/blender/soda_machine.py

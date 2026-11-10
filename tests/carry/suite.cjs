@@ -59,7 +59,7 @@ await walkTo(A,0,31,20);await A.waitForTimeout(1500);await A.keyboard.up('r');
 check('carried inside the fence, they are back on their feet',await B.evaluate(()=>!S.ko),await B.evaluate(()=>`ko ${S.ko} at ${P.x.toFixed(1)},${P.z.toFixed(1)}`));
 
 await clearProps(A);await clearProps(B);
-// 6. the D Tent crew: grab one, carry, throw; he lands and gets back to work
+// 6. the Bunk D crew: grab one, carry, throw; he lands and gets back to work
 await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zach');z.state='dig';z.p.g.position.set(z.hole.x,groundAt(z.hole.x,z.hole.z),z.hole.z)});
 const zp=await A.evaluate(()=>{const g=bots.find(b=>b.d.n==='Zach').p.g.position;return[g.x,g.z]});
 await at(A,zp[0],zp[1]-2.2);await face(A,zp[0],zp[1]);await A.waitForTimeout(400);pr=await prompt(A);check('prompt: facing a crew member offers to grab him',/Zach.*R to grab|Grab Zach/.test(pr),pr);

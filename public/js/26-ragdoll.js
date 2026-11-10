@@ -200,7 +200,7 @@ function updateRagdolls(dt){
     }
     me.ragOn=!!st;
   }
-  // the D Tent crew (30-npcs.js crewRag): thrown about by the weather, knocked out by the animals
+  // the Bunk D crew (30-npcs.js crewRag): thrown about by the weather, knocked out by the animals
   for(const b of bots){const p=b.p;if(!p.model)continue;const st=crewRag(b);
     if(st){const gp=p.g.position;
       {const q=ragPelvis(p);if(q&&Math.hypot(q.x-gp.x,q.z-gp.z)>4){p.rag=null;p.ragBlend=0}}

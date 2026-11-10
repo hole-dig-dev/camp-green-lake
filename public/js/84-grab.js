@@ -11,12 +11,12 @@
    where the camera sees it (look down / up to lower / raise it); it's a leash, not a snap: when it falls behind your
    hands you slow down instead of losing it. Setting it down, or knocks while someone holds it, don't chip it; drops
    from a height and throws do. You can also grab a friend on their feet (they're dragged; two of you lift them; three
-   taps of Space and they wriggle free) and the D Tent crew (only you see that: they aren't networked). A rope pulls like another pair of
+   taps of Space and they wriggle free) and the Bunk D crew (only you see that: they aren't networked). A rope pulls like another pair of
    hands, but hauling something heavy up out of a hole with too few people on it (or running out of stamina) and THE ROPE
    SLIPS. The wheelbarrow rolls easily with anything in it, but hit a bump or a hole edge fast and it tips and spills.
    Downed friends: grab or rope them, or wheel them. While someone's got hold of you, your knockout timer stops, and
    being carried inside the camp fence picks you up. Sell loot by getting it (or the wheelbarrow with it inside) to
-   Mr. Sir's pickup; bumps chip value off.
+   Foreman Dutch's pickup; bumps chip value off.
    Networking: one camper "owns" a moving thing and runs its physics (the first grabber for loot and the cart; a downed
    camper always owns their own body). Everyone else holding on sends their hand ('phand', rope:true for ropes), which
    the server passes to the owner. Target ids: >= 0 a prop (PROPS, the cart is a prop), < 0 the body of camper -id. */
@@ -41,7 +41,7 @@ const iOwn=pr=>pr.body?true:(!online()||pr.owner===myId());
 function tuneGrab(k){return tuneOr('grab.'+k,SIM.GRAB[k.toUpperCase()]||0)}
 /* a grab target by id: a prop, or a remote downed camper's body */
 /* ids: >= 0 a prop; -pid a friend (knocked out, or on their feet: JT 2026-09-30, grab anyone, R.E.P.O.-style);
-   CREW_GRAB_ID - k the D Tent crew member bots[k] (they aren't networked, so only you see it: 30-npcs.js crewHeld) */
+   CREW_GRAB_ID - k the Bunk D crew member bots[k] (they aren't networked, so only you see it: 30-npcs.js crewHeld) */
 const CREW_GRAB_ID=-1e6;
 function targetOf(id){
   if(id==null)return null;

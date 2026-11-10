@@ -35,7 +35,7 @@ function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=d
   const up=Math.sin(Math.min(p.t/tune('finds.riseTime'),1)*Math.PI*0.5);p.m.position.y=p.y0+tune('finds.start')+up*tune('finds.rise');p.m.rotation.y+=dt*tune('finds.spin');
   if(p.t>tune('finds.hold')){p.m.scale.multiplyScalar(0.85);if(p.m.scale.x<0.05*p.s0){scene.remove(p.m);pops.splice(i,1)}}}}
 
-/* Warden's flags around the search area */
+/* Superintendent's flags around the search area */
 const flags=new T.Group();flags.visible=false;scene.add(flags);
 for(let i=0;i<14;i++){const a=i/14*Math.PI*2;const x=SEARCH.x+Math.cos(a)*SEARCH.r,z=SEARCH.z+Math.sin(a)*SEARCH.r;const g=new T.Group();const p=cyl(0.04,0.04,1.8,5,0xdcdcdc);p.position.y=0.9;const f=box(0.5,0.3,0.02,0xd12a2a);f.position.set(0.25,1.6,0);g.add(p,f);g.position.set(x,baseH(x,z),z);flags.add(g)}
 

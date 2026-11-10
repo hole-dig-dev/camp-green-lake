@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/29-nav.js -- how the D Tent crew find their way (JT 2026-10-02: in-depth crew pathing). Before this they
+/* public/js/29-nav.js -- how the Bunk D crew find their way (JT 2026-10-02: in-depth crew pathing). Before this they
    walked dead straight: through tents, crates and the fence, and across the camp to reach the gate.
    navPath(from, to): if nothing solid lies on the straight line (20-world.js colliders, the fence included) it's just
    [to]; otherwise an A* route on a NAV_CELL grid over the two points' box (+NAV_PAD): cells inside a collider (grown by

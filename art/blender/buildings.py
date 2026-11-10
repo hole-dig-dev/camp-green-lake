@@ -58,7 +58,7 @@ def tent(name,W,D,H,crew=False):
 tent('TentSmall',6.0,7.2,3.0)
 tent('TentCrew',7.2,10.4,3.5,crew=True)
 
-# ---- the Wreck Room's serving window: a concession stand cut into the front wall, clerk inside (public/js/30-npcs.js) ----
+# ---- the Company Store's serving window: a concession stand cut into the front wall, clerk inside (public/js/30-npcs.js) ----
 # The front wall gets a 2.2 m opening over a plank counter at 0.95 m (chest height for a camper), a booth behind it
 # with stocked shelves, and a top-hinged shutter propped up as an awning. Game side: the store spot is in front of the
 # counter, and the clerk stands in the booth at Blender (0, SHOP_CLERK_Y).
@@ -167,7 +167,7 @@ def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
         g=mesh_obj(f'gable{x}',[(x,-D/2,top),(x,D/2,top),(x,0,top+rise)],[(0,1,2) if x>0 else (2,1,0)],WALL,parent=r)
         g.modifiers.new('solid','SOLIDIFY').thickness=0.08
     box('ridgecap',(W+0.95,0.22,0.1),(0,0,top+rise+0.06),TRIM,bevel=0.02,parent=r)
-    # front (-Y): door + two windows with frames, sills and shutters (the Wreck Room: a serving window instead, below)
+    # front (-Y): door + two windows with frames, sills and shutters (the Company Store: a serving window instead, below)
     fy=-D/2-0.02
     if shop:shop_front(r,walls,W,D,H,WALL,TRIM,ROOF)
     else:
@@ -206,7 +206,7 @@ def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
         box('chimney',(0.9,0.9,H*0.9+1.4),(W*0.3,D*0.15,0.3+H*0.45+0.7+rise*0.4),('stone',(0x6d,0x59,0x48),0.95),bevel=0.03,parent=r)
         box('chimneycap',(1.05,1.05,0.12),(W*0.3,D*0.15,0.3+H*0.9+1.4+rise*0.4),TRIM,bevel=0.02,parent=r)
     else:
-        # Wreck Room: stovepipe, a bench and crates by the door, the swinging sign's spot
+        # Company Store: stovepipe, a bench and crates by the door, the swinging sign's spot
         cyl('stovepipe',0.12,1.6,(W*0.3,D*0.2,top+rise*0.6+0.4),('steel','steel',0.5,0.6),verts=10,bevel=0,parent=r)
         cyl('stovecap',0.2,0.16,(W*0.3,D*0.2,top+rise*0.6+1.25),('steel','steel',0.5,0.6),verts=10,r2=0.05,bevel=0,parent=r)
         if not shop:box('stoop',(2.2,1.0,0.18),(0,-D/2-0.5,0.09),('step',(0x87,0x72,0x57),0.9),bevel=0.015,parent=r)

@@ -42,7 +42,7 @@ In Options you can adjust mouse sensitivity, invert Y, touch look speed, field o
 
 The soundscape uses CC0 recordings for footsteps, digging, fabric/doors, birds, crickets, and rain, plus synthesized game cues and live proximity voice. The original wind remains the default; a recorded wind is available for A/B comparison with `audio wind new` in the developer console. [The sound inventory and recording credits](docs/audio-inventory.md) list every sound family and how it is made. The [single MP3 audio reel](docs/audio-showcase.mp3) previews the fixed sounds, with [cue times](docs/audio-showcase.md). The [asset library](asset-library/CATALOG.md) tracks every sound we use, liked, or retired.
 
-**The gold loop:** every scoop of a hole puts sand in your **bucket** (the bar under Water). A bucket holds 5 holes of sand (10 and 15 with the bigger buckets from the Company Store). Bring it to the **sifter** in camp and press F for gold: about 4 gold a hole on average, and some batches are rich (or a nugget turns up). Sell your finds to **Mr. Abel** at the Company Store window (heavy finds, carry them to his window). Talk to **the Warden** to put gold in the **crew bank**, the crew's shared gold for the big purchases. Water's free at the drums by the water truck.
+**The gold loop:** every scoop of a hole puts sand in your **bucket** (the bar under Water). A bucket holds 5 holes of sand (10 and 15 with the bigger buckets from the Company Store). Bring it to the **sifter** in camp and press F for gold: about 4 gold a hole on average, and some batches are rich (or a nugget turns up). Sell your finds to **Mr. Abel** at the Company Store window (heavy finds, carry them to his window). Talk to **the Superintendent** to put gold in the **crew bank**, the crew's shared gold for the big purchases. Water's free at the drums by the water truck.
 
 Find the gold card case engraved **LM** and take it to the Superintendent. She'll mark the search area with red flags. Lil's strongbox is buried deeper than five feet, so you'll need the long-handled shovel from the Company Store.
 
@@ -67,7 +67,7 @@ HOST_TOKEN=some-long-random-string npm start
 The server listens on `127.0.0.1:4300` (set `PORT` to change it). Put it behind a reverse proxy with HTTPS for friends to join — voice chat needs a secure context, same as the mic permission prompt does. WebSockets are served at `/ws`. Set `ICE_SERVERS` to a JSON array of `RTCIceServer` objects (e.g. `[{"urls":"turn:host:3478","username":"u","credential":"p"}]`) to give proximity voice a TURN server; without it, voice falls back to STUN only, which some players behind strict NATs won't be able to connect through. Caddy example:
 
 ```
-holes.example.com {
+drywater.example.com {
 	encode gzip
 	reverse_proxy localhost:4300
 }
@@ -113,7 +113,7 @@ Behind Funnel, every request arrives from `127.0.0.1`; Funnel adds an `X-Forward
 
 ### What's still client-authoritative
 
-Item locations, the seed count in your sack, and who found what are worked out in the browser from a shared deterministic random seed — the server never learns where the suitcase is. That means a modified client could, in principle, claim to have found the KB tube or the suitcase, or report a bigger sack value than it should. The server clamps and rate-limits what it can (dig distance/rate, sell amount/rate, chat/ping/hazard spam, connection limits) but can't fully verify loot without duplicating the client's world generation server-side — out of scope here. See the code comments in `server.js` near each `case` for what is and isn't checked.
+Item locations, the seed count in your sack, and who found what are worked out in the browser from a shared deterministic random seed — the server never learns where Lil's strongbox is. That means a modified client could, in principle, claim to have found the LM card case or Lil's strongbox, or report a bigger sack value than it should. The server clamps and rate-limits what it can (dig distance/rate, sell amount/rate, chat/ping/hazard spam, connection limits) but can't fully verify loot without duplicating the client's world generation server-side — out of scope here. See the code comments in `server.js` near each `case` for what is and isn't checked.
 
 ## Developer console
 
@@ -158,8 +158,8 @@ Every line has `ts` (wall-clock ISO time), `gt` (in-game clock "hh:mm", matching
 plus type-specific fields. Player events carry `id` (connection id) and `n` (display name). See the comment
 block at the top of `logger.js` for the full list of event types and fields — joins/leaves, position snapshots,
 chat/shouts, damage/knockouts/revives, lizard chases and bites, twister warnings and throws, item finds, heavy
-loot, console commands, the team quota/curfew/fired cycle, police/Zeroni mode changes, client JS errors, fps
-samples, and a compact "what this client sees nearby" report (lizards, D Tent bots, remote players, twisters —
+loot, console commands, the team quota/curfew/fired cycle, police/the Bride mode changes, client JS errors, fps
+samples, and a compact "what this client sees nearby" report (lizards, Bunk D bots, remote players, twisters —
 those live client-side, so each client reports its own view).
 
 ### Querying the logs: `scripts/logq.js`

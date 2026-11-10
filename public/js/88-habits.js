@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-habits.js -- the D Tent crew's habits (JT 2026-10-02: in-depth crew pathing and habits).
+/* public/js/88-habits.js -- the Bunk D crew's habits (JT 2026-10-02: in-depth crew pathing and habits).
    - Chatter that fits what's going on (crewChatter, from 30-npcs.js's idle talk): his own lines, plus the gold rush:
      a nearly full bucket, a long sifter queue, low morale, a rich vein glittering, an empty soda machine, a crewmate
      taken by the UFO, or one who's come back... different.

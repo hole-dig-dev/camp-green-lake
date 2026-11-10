@@ -93,7 +93,7 @@ addEventListener('keydown',e=>{
   if(k==='u')plantScarecrow();   /* 88-gear.js */
   if(k==='z')toggleHover();   /* 88-hover.js */
   if(k==='n')toggleHoverShoes();   /* 88-hover.js */
-  if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise an onion (81-badges.js)
+  if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise a bitterroot (81-badges.js)
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();

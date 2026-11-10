@@ -19,7 +19,7 @@ def heavy_finish(n,elev=18,azim=-32):
     studio(elev=elev,azim=azim,lens=50);frame(margin=1.2);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('kb_sand',(0xe3,0xbf,0x86),0.95))
     render(n,res=(512,512),samples=48);print(n,tris())
 
-# ======================= Mr. Sir's pickup (cab at -Y, tailgate at +Y) =======================
+# ======================= Foreman Dutch's pickup (cab at -Y, tailgate at +Y) =======================
 scene('MrSirTruck');r=root('MrSirTruck')
 PAINT=(0x5f,0x8a,0x7a);RUSTY=[(0,PAINT),(0.68,PAINT),(0.74,(0x8a,0x4b,0x2a)),(0.86,(0x5a,0x30,0x1a))]   # mostly paint, rust at the edges of patches
 def painted(o,seed):vpaint(o,RUSTY,freq=5,seed=seed)
@@ -44,7 +44,7 @@ box('backwin',(1.1,0.03,0.35),(0,0.11,1.6),M_('glass',(0x2f,0x3a,0x44),0.15,0.2)
 box('grille',(1.0,0.06,0.45),(0,-2.5,0.95),CHROME,bevel=0.02,parent=r)
 for k in range(7):box(f'gbar{k}',(0.04,0.08,0.42),(-0.42+k*0.14,-2.53,0.95),M_('h_dark',(0x22,0x22,0x22),0.5,0.3),bevel=0,parent=r)
 box('bumper',(1.8,0.14,0.16),(0,-2.62,0.62),CHROME,bevel=0.04,parent=r);box('rbumper',(1.7,0.12,0.14),(0,2.35,0.62),CHROME,bevel=0.03,parent=r)
-# the bed: floor, sides, headboard and the tailgate (dropped open, toward Mr. Sir)
+# the bed: floor, sides, headboard and the tailgate (dropped open, toward Foreman Dutch)
 box('bedfloor',(1.55,2.2,0.08),(0,1.2,0.78),M_('h_bedwood',(0x7a,0x5a,0x3a),0.9),bevel=0.01,parent=r)
 for s in (-1,1):
     w=dense_box(f'bedside{s}',(0.08,2.2,0.55),(s*0.75,1.2,1.07),r,cuts=4);painted(w,10+s)
@@ -100,7 +100,7 @@ cyl('padlock',0.09,0.05,(0,-0.56,0.6),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0
 bpy.ops.mesh.primitive_torus_add(major_radius=0.06,minor_radius=0.012,location=(0,-0.56,0.68));o=bpy.context.active_object;o.name='shackle';o.rotation_euler=(math.pi/2,0,0);_finish(o,CHROME,0,r)
 heavy_finish(n)
 
-# ======================= Kate's strongbox x5 (1.2 x 0.8 x 0.7) =======================
+# ======================= Lil's strongbox x5 (1.2 x 0.8 x 0.7) =======================
 n='Box_1';scene(n);r=root(n);b=dense_box('chest',(1.2,0.8,0.62),(0,0,0.31),r,cuts=5);vpaint(b,[(0,(0x6a,0x46,0x28)),(0.5,(0x7e,0x56,0x34)),(1,(0x5a,0x3a,0x22))],freq=3,seed=1)
 for x in (-0.4,0.4):box(f'band{x}',(0.1,0.84,0.66),(x,0,0.33),IRONd,bevel=0.01,parent=r)
 box('lidline',(1.24,0.84,0.04),(0,0,0.5),IRONd,bevel=0.005,parent=r);box('hasp',(0.12,0.04,0.18),(0,-0.42,0.45),IRONd,bevel=0.01,parent=r);cyl('lock',0.07,0.05,(0,-0.45,0.36),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r)
@@ -135,7 +135,7 @@ rivets('stud',r,pts,m=BRASS,r=0.015)
 for x in (-0.3,0.3):box(f'strap{x}',(0.1,0.84,0.64),(x,0,0.31),LEATH2,bevel=0.01,parent=r);box(f'buckle{x}',(0.12,0.03,0.1),(x,-0.43,0.4),BRASS,bevel=0.005,parent=r)
 heavy_finish(n)
 
-# ======================= Stanley Yelnats' suitcase x5 (~0.7 x 0.22 x 0.48) =======================
+# ======================= Lil's strongbox x5 (~0.7 x 0.22 x 0.48) =======================
 def case(parent,m,W=0.7,D=0.22,H=0.48,seed=0,paint=None):
     b=dense_box('case',(W,D,H),(0,0,H/2),parent,cuts=5)
     if paint:vpaint(b,paint,freq=6,seed=seed)

@@ -1,7 +1,7 @@
 'use strict';
 /* public/js/88-disarm.js -- the mine disarm kit (JT 2026-10-01: "a mine disarm tool that you can get for yourself and
    for NPCs; they can hold interact from just to the side of the mine to disarm it").
-   You (S.up.disarm, Supply Depot): stand just beside a landmine you can see (DISARM_MIN..DISARM_MAX m: any closer and
+   You (S.up.disarm, Company Store): stand just beside a landmine you can see (DISARM_MIN..DISARM_MAX m: any closer and
    you're on it) and hold F for mine.disarmTime seconds; the server takes it out quietly ('mineDisarm' → 'mineGone'),
    and the scrap's worth DISARM_GOLD to the crew wallet.
    The crew (their store's "Mine disarm kit"): a crew member with one spots a mine within DISARM_SEE m of him, stops,

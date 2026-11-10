@@ -1,18 +1,18 @@
 'use strict';
-/* public/js/87-truck.js -- Mr. Sir's pickup, drivable (JT, 2026-09-30) while the F2 flag "Make drivable" is on
+/* public/js/87-truck.js -- Foreman Dutch's pickup, drivable (JT, 2026-09-30) while the F2 flag "Make drivable" is on
    (Vehicles tab, veh.drivable; off by default).
    Four seats (JT): F at the left door to drive, F at the right door to ride shotgun, F at the back to sit on the edge
    of the dropped tailgate (two spots). F again to get out. Up front you're out of sight, "in the truck" (JT: no heads
    through the roof); on the tailgate you sit on the gate with your legs straight out past its end (SitEdge clip,
    blender/cgl_rig.py). Driving: W/S gas and brake/reverse, A/D steer, Space handbrake.
    With the flag on it waits just inside the service gate, nose into camp (JT: "back out of the service gate"): back it
-   out through the gate, swing round outside and drive off: north toward Big Thumb, up the ramp and over the trench
+   out through the gate, swing round outside and drive off: north toward Chimney Rock, up the ramp and over the trench
    (10-core.js NORTH). Come down in the trench and it's wrecked till dawn. Past it, the crew climbs the wall on foot
-   to win Act 1 (88-north.js). With the flag off it's parked by Mr. Sir as always.
+   to win Act 1 (88-north.js). With the flag off it's parked by Foreman Dutch as always.
    The driver's page runs the physics and sends where it is ~12 times a second; everyone else eases toward that. Solo,
    the page does all of it. The pickup parks back by the main gate when the flag goes off or the crew changes map.
    Sizes are the Blender model's (art/blender/heavy.py MrSirTruck): cab at the front (local +z), bed behind it. */
-const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Mr. Sir, tailgate toward him (flag off)
+const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Foreman Dutch, tailgate toward him (flag off)
 const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the service gate, nose into camp (flag on)
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
 /* The model is now a jeep (art/blender/jeep.py, from a free CC-BY model; it prints these numbers). Open top, so the
@@ -311,7 +311,7 @@ function updateTruck(dt){
   const T=TRUCK,on=truckOn();
   if(S.inTruck&&!on)truckOut();
   if(!online()&&T.wreck&&(RUN.day||1)!==T.wreck){T.wreck=0;truckLeaveLocal()}   // solo: hauled back overnight
-  if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck&&!T.wreck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Mr. Sir
+  if(on!==T.wasOn){T.wasOn=on;if(!online()&&!S.inTruck&&!T.wreck)truckLeaveLocal()}   // solo: to its spot by the service gate, or back by Foreman Dutch
   if(on&&truckOwner()===truckMe())truckPhys(dt);
   else if(T.tgt){   // ease toward the owner's last word, carried on by its speed in between
     const g=T.tgt,k=Math.min(1,dt*8);if(performance.now()-g.at<300){g.x+=g.vx*dt;g.z+=g.vz*dt}   // carried on by its speed only briefly between words
@@ -368,7 +368,7 @@ function truckMsg(m){
 }
 function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 
-/* put it back where you drive it from (JT): its spot by the service gate (or by Mr. Sir with the flag off), upright,
+/* put it back where you drive it from (JT): its spot by the service gate (or by Foreman Dutch with the flag off), upright,
    everyone out, not wrecked. Online the server does it for everyone. Console `truck respawn`, or F2 > Vehicles. */
 function truckRespawn(){
   if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Dutch\'s jeep back.'}

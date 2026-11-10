@@ -28,7 +28,7 @@ function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} diggers asleep`}
   else sleepEl.style.display='none';
   hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`/ ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);   // the crew bank / the Warden's quota (84-coop.js)
+  hq.quota.textContent=`/ ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);   // the crew bank / the Superintendent's quota (84-coop.js)
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   let curWarn=false;
@@ -129,7 +129,7 @@ function buildMapCache(night){
   g.fillStyle=night?'#3a463d':'#c4955f';g.fillRect(ccx(-40),ccz(27),ccs(70),ccs(29));
   g.strokeStyle=night?'rgba(237,226,200,.5)':'rgba(43,29,18,.55)';g.lineWidth=2;g.strokeRect(ccx(-40),ccz(27),ccs(70),ccs(29));
   g.fillStyle=night?'#4f5c4f':'#8d8f69';for(const t of TENTS)g.fillRect(ccx(t.x-t.hw),ccz(t.z-t.hd),ccs(t.hw*2),ccs(t.hd*2));
-  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Warden's cabin
+  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Superintendent's cabin
   g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
   if(WATER_TRUCK_ON){g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4))}   // water truck (out for now: 20-world.js)
 }
@@ -140,10 +140,10 @@ function readableOn(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 function initialsOf(name){const s=String(name||'').trim();if(!s)return'?';const parts=s.split(/\s+/);if(parts.length>=2)return(parts[0][0]+parts[1][0]).toUpperCase();return s.slice(0,2).toUpperCase()}
 
 /* ---------- minimap edge indicators (docs/ui-redesign-spec.md section 3) ----------
-   Camp, the revealed search area (or, before reveal, a pointer toward the Warden once you're
-   carrying the KB tube -- never the tube's own hidden position), the most recent active ping, and
+   Camp, the revealed search area (or, before reveal, a pointer toward the Superintendent once you're
+   carrying the LM card case -- never the case's own hidden position), the most recent active ping, and
    remote friends get a clamped arrow marker when they're outside the visible square. Threats
-   (police/twister/Zeroni) get the same treatment. NPCs and holes never do. Collisions (two
+   (police/twister/the Bride) get the same treatment. NPCs and holes never do. Collisions (two
    indicators landing in roughly the same direction) resolve by priority -- active threat first,
    then objective, ping, camp, friend last -- except overlapping FRIENDS collapse into one "+N"
    marker instead of dropping the lower one. */
@@ -173,7 +173,7 @@ function drawMapEdgeIndicators(W,night){
   if(ZER.active){const d=(ZER.x-mcx)**2+(ZER.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:ZER.x,z:ZER.z,color:'#3aa53a'}}}
   if(bestThreat)cands.push({kind:'threat',...bestThreat});
   if(S.revealed)cands.push({kind:'objective',x:SEARCH.x,z:SEARCH.z,color:night?'#ff6a5a':'#d12a2a',dist:true});
-  else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Warden, never the tube's real spot
+  else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Superintendent, never the case's real spot
   if(PINGS.length){const p=PINGS[PINGS.length-1];cands.push({kind:'ping',x:p.x,z:p.z,color:'#'+p.color.toString(16).padStart(6,'0')})}
   cands.push({kind:'camp',x:-5,z:41,color:night?'#EDE2C8':'#2b1d12',dist:true});
   for(const R of remotes.values())cands.push({kind:'friend',x:R.p.g.position.x,z:R.p.g.position.z,color:playerColorHex(R.ci)});
@@ -282,7 +282,7 @@ function drawMap(){
   drawMapEdgeIndicators(W,night);
 }
 
-/* ---- your coordinates, above the Field map button: X east, Y north (the map's up), whole metres. The Warden's note on
+/* ---- your coordinates, above the Field map button: X east, Y north (the map's up), whole metres. The Superintendent's note on
    the old town uses the same numbers (89-town.js). Down in the buried town there's no lake to measure from. ---- */
 const mapCoordsEl=$('#mapCoords');let mapCoordsTxt='';
 const coordXY=(x,z)=>[Math.round(x),Math.round(-z)];
@@ -292,7 +292,7 @@ function updateCoords(){
   if(t!==mapCoordsTxt){mapCoordsTxt=t;mapCoordsEl.textContent=t}
 }
 
-/* ---- the crew panel (JT 2026-10-01): what each of the D Tent crew is up to, with their health, stamina and water and
+/* ---- the crew panel (JT 2026-10-01): what each of the Bunk D crew is up to, with their health, stamina and water and
    how full their bucket is, so you can keep an eye on them while you get on with your own digging. Under the map;
    K hides / shows it (remembered). Hidden by default on a phone, where the screen's already full. ---- */
 let crewPanelOn=true,crewPanelT=0;const crewRowEls=[];

@@ -382,7 +382,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .seedline strong{font:900 30px/1 var(--display);color:var(--jump-deep);font-variant-numeric:tabular-nums}
 
 /* =====================================================================
-   Wreck Room store (docs/ui-redesign-spec.md section 2)
+   Company Store (docs/ui-redesign-spec.md section 2)
    ===================================================================== */
 #shop{padding-inline:16px}
 .shop-frame{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden;padding:0}
@@ -649,12 +649,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 /* another map (88-zones.js): the lake's curfew clock and walk-to-camp don't apply */
 #hud.zone-away #backRow,#hud.zone-away #curK,#hud.zone-away #curK+.v-wrap{display:none}
 
-/* the curse (81-mood.js) and a sandstorm blanking the minimap */
+/* the bad luck (81-mood.js) and a sandstorm blanking the minimap */
 #curseRow .v{color:#8a3a8a}
 #curseRow.hot .v{color:var(--danger);font-weight:700}
 #mapbox.sand canvas{filter:blur(6px) sepia(1) brightness(.8)}
 
-/* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Warden's note */
+/* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Superintendent's note */
 .map-coords{position:absolute;left:3px;top:3px;z-index:3;font:700 9px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:0.02em;color:var(--ink);background:rgba(242,231,205,.82);padding:2px 4px;border-radius:3px;pointer-events:none}   /* over the minimap's corner (JT) */
 
 /* the Wardrobe (81-wardrobe.js): a panel on the left; your camper faces you on the right */
@@ -672,7 +672,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .ward-btns button{flex:1;padding:0 8px}
 .ward-btns button.primary{background:var(--jump);color:#fff;border-color:var(--jump-deep)}
 @media (max-width:600px){.wardrobe{top:auto;bottom:12px;transform:none;max-height:55vh}}
-/* the one crew wallet (84-spend.js): what you can spend and still have the Warden's quota at curfew */
+/* the one crew wallet (84-spend.js): what you can spend and still have the Superintendent's quota at curfew */
 .shop-confirm__warn{color:var(--danger)}
 .shop-safe{margin-left:8px;font-size:13px;color:var(--ink-soft);font-weight:600}
 /* spectator mode (96-spectate.js) */

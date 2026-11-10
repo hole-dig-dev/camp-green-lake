@@ -1,5 +1,5 @@
 # blend: props.blend
-# WardenNote: a sheet of the Warden's notepaper left on her desk (public/js/89-town.js places it and makes it readable):
+# WardenNote: a sheet of the Superintendent's notepaper left on her desk (public/js/89-town.js places it and makes it readable):
 # where the old town lies under the lake, the X/Y the game's map readout shows, and how deep to dig. A rough sketch of
 # the old street, the X marked. Drawn at 30 x 22 cm, then scaled up SCALE times so it reads from the desk (JT: three
 # times bigger), flat, front edge toward Blender -Y (= game +z). Matches SIM.OLD_TOWN.

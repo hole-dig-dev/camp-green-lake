@@ -122,7 +122,7 @@ function scoop(){
   }
 }
 /* carried finds: about 1 in 3 ordinary finds is too big for the sack (more from deeper down), and comes up as a crate,
-   a tool bundle or a jug that has to be carried to the Supply Depot window, worth more than the sack version. Sliders: F2 > Finds. */
+   a tool bundle or a jug that has to be carried to the Company Store window, worth more than the sack version. Sliders: F2 > Finds. */
 function carryFind(it){
   const L=LOOT[it.type];if(L.key||L.heavy||S.inTown)return null;
   const p=tune('loot.carryOdds')+tune('loot.carryDeep')*clamp((it.depth-0.3)/1.15,0,1);if(Math.random()>=p)return null;
@@ -180,7 +180,7 @@ function siftBucket(){
 /* ---------- interactions ---------- */
 function nearSpot(){
   if(S.sit!=null)return seatedSpot();   // sitting down (86-sit.js)
-  {const t=truckSpot();if(t&&S.inTruck)return t}   // in Mr. Sir's pickup: F only gets you out (87-truck.js)
+  {const t=truckSpot();if(t&&S.inTruck)return t}   // in Foreman Dutch's pickup: F only gets you out (87-truck.js)
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
   {const j=jeepSpot();if(j)return j}   /* the jeep's tub: tip sand in, shovel it out at the sifter (88-jeephaul.js) */
   {const t=truckSpot();if(t)return t}

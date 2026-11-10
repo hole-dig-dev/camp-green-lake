@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // tests/smoke.mjs
 //
-// End-to-end smoke test for Camp Green Lake. Starts the real server (against a scratch data
+// End-to-end smoke test for Camp Drywater. Starts the real server (against a scratch data
 // directory, never the repo's own data/world.json), drives it with Playwright + headless
 // Chromium, and checks the basics actually work: the title screen renders, you can start, move,
 // dig, spawn a twister, use the developer console, and two browsers can see each other. Fails on
@@ -209,7 +209,7 @@ async function main() {
     record('holding W moves the player', true, `${moved.toFixed(1)}m`);
 
     // Room IDs matter for both shelter and multiplayer visibility. Exercise the real use action
-    // at each door, then verify the larger D room and the Warden's office are reachable.
+    // at each door, then verify the larger D room and the Superintendent's office are reachable.
     const rooms = await page1.evaluate(() => {
       const c = window.__cgl;
       c.P.x = 0; c.P.z = 47 - c.TENTS[2].hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
@@ -225,9 +225,9 @@ async function main() {
       c.P.yaw = 0; // the digging check below faces -z
       return { d, office, outside: c.S.tent === null };
     });
-    assert(rooms.d.inside && rooms.d.width >= 18 && rooms.d.depth >= 16, 'D Tent must open into a broad walkable room');
-    assert(rooms.office.inside && rooms.office.spot === 'office' && rooms.outside, "Warden's office must be enterable, usable and exitable");
-    record('large D Tent and Warden office work', true);
+    assert(rooms.d.inside && rooms.d.width >= 18 && rooms.d.depth >= 16, 'Bunk D must open into a broad walkable room');
+    assert(rooms.office.inside && rooms.office.spot === 'office' && rooms.outside, "Superintendent's office must be enterable, usable and exitable");
+    record('large Bunk D and Superintendent office work', true);
 
     const fence = await page1.evaluate(() => {
       const c = window.__cgl;
@@ -262,7 +262,7 @@ async function main() {
     const depthText = await page1.$eval('#depth', el => el.textContent);
     record('digging on the lake bed changes hole depth', true, depthText);
 
-    // The D Tent crew keep a schedule: home at the curfew siren, shovels on the rack, asleep without them (Jim Bob deals
+    // The Bunk D crew keep a schedule: home at the curfew siren, shovels on the rack, asleep without them (Jim Bob deals
     // until 01:00), and out again with their shovels in the morning. The clock is paused at each hour and the crew's
     // update is stepped by hand, so this doesn't wait on real time.
     const crew = await page1.evaluate(() => {
@@ -290,7 +290,7 @@ async function main() {
     assert(crew.nightOk, `crew not all in bed with shovels racked by 21:00: ${JSON.stringify(crew.night)}`);
     assert(crew.lateOk, `Jim Bob not in bed after 01:00: ${JSON.stringify(crew.late)}`);
     assert(crew.morningOk, `crew not all out with their shovels within 90 s of dawn: ${JSON.stringify(crew.morning)}`);
-    record('D Tent crew: home at the siren, shovels racked, Jim Bob deals till 01:00, out with shovels by morning', true);
+    record('Bunk D crew: home at the siren, shovels racked, Jim Bob deals till 01:00, out with shovels by morning', true);
 
     await page1.evaluate(() => window.__cgl.runCommand('twister 30'));
     await waitFor(page1, () => window.__cgl.TW_LIVE.size > 0, 5000, 'TW_LIVE to gain an entry'); // TW_LIVE is a Map -- .size, not .length
@@ -351,7 +351,7 @@ async function main() {
       c.P.x = t.x; c.P.z = t.z - t.hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
       c.use();
     });
-    assert(await page3.evaluate(() => window.__cgl.S.tent === 2), 'D Tent entry failed before reload');
+    assert(await page3.evaluate(() => window.__cgl.S.tent === 2), 'Bunk D entry failed before reload');
     await page3.waitForTimeout(3000); // saveSession()'s setInterval autosaves to sessionStorage every 2s
 
     const errorsBeforeReload = errors.length;
@@ -368,7 +368,7 @@ async function main() {
       return !!title && title.hidden && !!hud && !hud.hidden;
     });
     assert(resumedOk, 'saved session did not auto-resume after reload (#title should be hidden, #hud visible)');
-    assert(await page3.evaluate(() => window.__cgl.S.tent === 2 && window.__cgl.P.y === -4), 'saved interior position did not resume inside D Tent');
+    assert(await page3.evaluate(() => window.__cgl.S.tent === 2 && window.__cgl.P.y === -4), 'saved interior position did not resume inside Bunk D');
     const newErrors = errors.slice(errorsBeforeReload);
     assert(newErrors.length === 0, 'page/console errors after reload:\n' + newErrors.map(e => '  - ' + e).join('\n'));
     record('returning player auto-resumes after reload without errors', true);

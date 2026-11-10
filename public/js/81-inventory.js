@@ -1,8 +1,8 @@
 'use strict';
 /* public/js/81-inventory.js -- the inventory screen (I or Tab; tap the supplies panel / Bag button on touch).
    One place to see everything you're carrying: the finds in your sack, supplies (onions, flashlight,
-   water), the gear you've bought, and special items (the KB tube, heavy loot you're hauling).
-   It reuses the Supply Depot store's layout and card styles (.shop-*), so it looks like part of the same
+   water), the gear you've bought, and special items (the LM card case, heavy loot you're hauling).
+   It reuses the Company Store's layout and card styles (.shop-*), so it looks like part of the same
    UI, and it only *reads* the existing state (S.sack, S.onions, S.batt, S.up...) and calls the existing
    actions (eatOnion, toggleLight, dropBag): no new save format, nothing new on the wire.
    The game keeps running while it's open, same as the store. */
@@ -24,7 +24,7 @@ function invEntries(){
       loot:t,swatch:L.color,meta:`${L.val*n} gold`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
   }
   if(!types.length)out.push({id:'sack:empty',cat:'sack',name:'Empty sack',desc:`Nothing dug up yet. Room for ${sackMax()} finds.`,icon:'sack',meta:'',state:`0 / ${sackMax()}`,dim:true});
-  // special items: the KB tube, and heavy loot you're dragging
+  // special items: the LM card case, and heavy loot you're dragging
   if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Superintendent will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
   if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Dutch's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
@@ -179,7 +179,7 @@ function invMove(key){
   invSel=ids[next];renderInventory(false);const el=invCard(invSel);if(el)el.focus();
 }
 /* keyboard while the inventory is open (called from 55-input.js): I, Tab or Escape close it; arrows move;
-   Q still eats an onion. Everything else is swallowed so you don't walk off while reading. */
+   Q still eats a bitterroot. Everything else is swallowed so you don't walk off while reading. */
 function invKeydown(e){
   const k=e.key.toLowerCase();
   if(k==='escape'||k==='tab'||k===SETTINGS.binds.inventory){e.preventDefault();closeInventory();return}

@@ -32,7 +32,7 @@ function perfTick(now,gap){
   if(S.started&&++PERF.logN>=5){PERF.logN=0;logEv('perf',{fps:Math.round(PERF.fps),pr:+PERF.pr.toFixed(2),gpu:GPU_NAME,sw:SOFTWARE_GPU})}   // ~10s (perfTick fires every ~2s)
 }
 /* periodic "what does this client see nearby" snapshot for the play-test log: only lizards actively chasing/fleeing
-   (not all 48 wandering ones — that would be pure noise), nearby D Tent bots, nearby remote players, and any
+   (not all 48 wandering ones — that would be pure noise), nearby Bunk D bots, nearby remote players, and any
    twisters currently visible. Skipped entirely if there's nothing nearby worth a line. */
 let logReportT=0;
 function updateLogReport(dt){

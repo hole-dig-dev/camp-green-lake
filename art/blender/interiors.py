@@ -37,7 +37,7 @@ def window(name,x,y,z,w,h,face,parent,frame=(0x5a,0x3f,0x28),outside=(0xf6,0xe2,
         for k in range(9):box(f'{name}_slat{k}',(0.025,w-0.04,0.05),(x-face*0.06,y,z+h/2-0.08-k*0.06),('blind',(0xe8,0xdf,0xc8),0.8),rot=(0.4*face,0,0),bevel=0,parent=parent)
     if flap:cyl(name+'_flap',0.1,w+0.1,(x-face*0.1,y,z+h/2+0.12),('flap',flap,0.95),verts=8,rot=(math.pi/2,0,0),bevel=0,parent=parent)
 
-# ======================= tent rooms (A/B/C and the bigger D Tent) =======================
+# ======================= tent rooms (A/B/C and the bigger Bunk D) =======================
 def tent_room(name,W,D,crew=False):
     scene(name);r=root(name);H=2.5
     CAN=('canvas_in',(0xb8,0xa5,0x7a),0.95);CAN2=('canvas_in_dark',(0x9c,0x8b,0x63),0.95);WOOD=('frame_wood',(0x6b,0x4f,0x33),0.85)
@@ -76,7 +76,7 @@ def tent_room(name,W,D,crew=False):
     cyl('bulb',0.07,0.1,(0,0,2.88),('bulb',(0xff,0xe8,0xb0),0.3),verts=8,bevel=0,parent=r)
     # by the door: shovel rack and the rules board (door wall is +Y; doorway spans x -1.3..1.3)
     ry=D-0.2
-    # D Tent's rack is empty and six slots wide: the crew's own shovels hang here at night (the game draws them,
+    # Bunk D's rack is empty and six slots wide: the crew's own shovels hang here at night (the game draws them,
     # one per camper, see RACK in public/js/30-npcs.js). The small tents keep four shovels baked in.
     if crew:box('rackboard',(2.6,0.06,0.14),(-2.875,ry,1.55),WOOD,bevel=0.01,parent=r)
     else:box('rackboard',(2.2,0.06,0.14),(-3.2,ry,1.55),WOOD,bevel=0.01,parent=r)
@@ -112,7 +112,7 @@ def tent_room(name,W,D,crew=False):
 tent_room('TentRoomSmall',7,8)
 tent_room('TentRoomCrew',9,8.5,crew=True)
 
-# ======================= the Warden's office =======================
+# ======================= the Superintendent's office =======================
 scene('WardenRoom');r=root('WardenRoom');W,D,H=8,8,3.4
 WAIN=('wainscot',(0x5a,0x3a,0x24),0.7);PLASTER=('plaster',(0x9b,0xa5,0x86),0.95);TRIM=('trim_dark',(0x3a,0x26,0x18),0.7)
 planks(W,D,(0x5e,0x40,0x2a),board=0.22,parent=r,tag='hard')
@@ -141,7 +141,7 @@ cyl('fanmotor',0.16,0.18,(2,-1,H-0.46),('brass','brass',0.4,0.8),verts=12,bevel=
 for k in range(4):
     a=k*math.pi/2;box(f'blade{k}',(0.9,0.2,0.02),(2+math.cos(a)*0.55,-1+math.sin(a)*0.55,H-0.5),('fanblade',(0x5a,0x3b,0x24),0.7),rot=(0.08,0,a),bevel=0.005,parent=r)
 cyl('fanlight',0.12,0.1,(2,-1,H-0.6),('bulb',(0xff,0xe8,0xb0),0.3),verts=10,bevel=0,parent=r)
-# windows with blinds; an air conditioner in one (the Warden keeps her cabin cold)
+# windows with blinds; an air conditioner in one (the Superintendent keeps her cabin cold)
 for s in (-1,1):
     for y in (-3.5,2.5):window(f'win{s}{y}',s*(W-0.02),y,1.85,1.5,1.1,s,r,frame=(0x3a,0x26,0x18),blinds=True)
 box('ac',(0.6,0.9,0.5),(W-0.25,2.5,1.55),('ac',(0xd8,0xd2,0xc2),0.7),bevel=0.03,parent=r)
@@ -194,10 +194,10 @@ for k in range(3):
     a=k*2*math.pi/3;tube(f'coatfoot{k}',(rx,ryy,0.25),(rx+math.cos(a)*0.3,ryy+math.sin(a)*0.3,0.02),0.02,m=TRIM,parent=r)
 cyl('hat',0.2,0.1,(rx+0.12,ryy,1.85),('capcloth',(0xc9,0xb2,0x86),0.9),verts=12,bevel=0.01,parent=r)
 cyl('brim',0.3,0.02,(rx+0.12,ryy,1.8),('capcloth',(0xc9,0xb2,0x86),0.9),verts=12,bevel=0,parent=r)
-# a little table with her nail polish (rattlesnake venom, as the story goes)
+# a little table with her bottles of red ink (for the ledgers)
 box('sidetable',(0.6,0.45,0.05),(W-0.4,4.5,0.7),TRIM,bevel=0.01,parent=r)
 for s in (-1,1):box(f'stleg{s}',(0.05,0.4,0.68),(W-0.4+s*0.25,4.5,0.34),TRIM,bevel=0,parent=r)
-for k in range(4):cyl(f'polish{k}',0.03,0.09,(W-0.55+k*0.1,4.5,0.77),('polish',(0x9a,0x1c,0x2c),0.2),verts=8,bevel=0,parent=r);cyl(f'polishcap{k}',0.015,0.06,(W-0.55+k*0.1,4.5,0.84),('ink','ink',0.5),verts=6,bevel=0,parent=r)
+for k in range(4):cyl(f'inkbottle{k}',0.03,0.09,(W-0.55+k*0.1,4.5,0.77),('redink',(0x9a,0x1c,0x2c),0.2),verts=8,bevel=0,parent=r);cyl(f'inkcap{k}',0.015,0.06,(W-0.55+k*0.1,4.5,0.84),('ink','ink',0.5),verts=6,bevel=0,parent=r)
 studio(floor=False);cam=bpy.context.window.scene.camera;cam.data.lens=22
 cam.location=(W*0.45,D*0.9,2.6);cam.rotation_euler=(Vector((-W*0.2,-D*0.35,1.1))-cam.location).to_track_quat('-Z','Y').to_euler()
 L=bpy.data.objects.new('WardenRoom.lamp',bpy.data.lights.new('WardenRoom.lamp','POINT'));_link(L,'Studio');L.location=(0,0,2.65);L.data.energy=3000;L.data.color=(1,0.9,0.75)

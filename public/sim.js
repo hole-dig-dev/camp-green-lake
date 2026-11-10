@@ -1,12 +1,12 @@
-/* Shared rules for Camp Green Lake. The server runs these for everyone; solo play runs the same code in the page,
+/* Shared rules for Camp Drywater. The server runs these for everyone; solo play runs the same code in the page,
    so the clock, the quota, heavy loot and the monsters behave the same either way. Positions are x/z only. */
 (function (root) {
   const CYCLE = 12 * 60 * 1000, DAYMS = 9.5 * 60 * 1000, NIGHT_SPLIT = DAYMS + (CYCLE - DAYMS) / 2, EDGE = 595;
-  const SELL = { x: 16, z: 39, r: 5 }; // Mr. Pendanski's Supply Depot window (the gold rush, 2026-09-30): bring heavy loot here
+  const SELL = { x: 16, z: 39, r: 5 }; // Mr. Abel's Company Store window (the gold rush, 2026-09-30): bring heavy loot here
   /* ---- the gold rush (JT + Greg, 2026-09-30): dig sand into your bucket, sift it at camp for gold ----
      A bucket holds so many holes' worth of sand (a hole = 5 ft deep); the sifter turns a full one into about
      GOLD.perHole gold a hole, give or take luck (siftGold). Gold you carry is yours; deposit it in the crew bank (the
-     Warden's) for the big stuff everyone shares. */
+     Superintendent's) for the big stuff everyone shares. */
   /* the crew's upgrades (JT 2026-10-01: the store's "The crew" side): bought with your own gold, one crew member at a
      time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
   const CREW = ['Jim Bob', 'Randy', 'Stan', 'Pete', 'Larry', 'Zach'];
@@ -46,7 +46,7 @@
   }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   /* PAY DIRT (2026-11-10, from Greg's gold-dig "paystreaks" and Gold Fever's deposits): where you dig, and how deep,
-     now decides how much gold is in your sand. Green Lake was a lake, so its gold settled along old creek channels
+     now decides how much gold is in your sand. Lake Drywater was a lake, so its gold settled along old creek channels
      that wind across the bed, plus a few rich pockets; away from them the sand is poor.
        richAt(x,z)        0 (barren) .. 1 (the middle of a paystreak). A pure function of the spot: the same for every
                           camper and the server, no randomness, nothing on the wire.
@@ -99,7 +99,7 @@
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
   const RO_LAKE_ONLY = ['sir', 'warden'];
-  /* the Warden's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
+  /* the Superintendent's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
      of the crew bank at curfew. Short of it, the whole crew's fired and the run starts over from nothing.
      15, 37, 63, 93, 127 ... 357 on day 10; more campers, more gold (x1.6 for each extra). */
   /* 2026-11-10: gentler first days, steeper later (was 15 + 20d + 2d^2: a bare-handed camper could not make day 2).
@@ -167,7 +167,7 @@
 
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
   function carrySpeed(n) { return n >= 2 ? 3.5 : 1.2; }
-  // props: {id:{type,x,z,n}}; players: [{id,x,z,cy,dn}]. Returns ids that reached Mr. Sir's truck.
+  // props: {id:{type,x,z,n}}; players: [{id,x,z,cy,dn}]. Returns ids that reached Foreman Dutch's truck.
   function stepProps(props, players, dt) {
     const sold = [];
     for (const id in props) {
@@ -184,7 +184,7 @@
     return sold;
   }
 
-  /* ---- monsters: police trucks until 01:00, then Madame Zeroni until dawn ---- */
+  /* ---- monsters: police trucks until 01:00, then the Drowned Bride until dawn ---- */
   // M: {trucks:[], zer:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
   /* ---- the night patrol: four police officers on foot with flashlights (JT, 2026-09-27: no more cop cars, which
      only appeared around whoever was outside and "just teleport in") ----
@@ -208,7 +208,7 @@
   }
   function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
   function stepMonsters(M, players, t, dt, ev, opt) {
-    const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: Zeroni all night, no police
+    const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: the Bride all night, no police
     const night = t >= DAYMS, half = fm ? 'zeroni' : t < NIGHT_SPLIT ? 'police' : 'zeroni';
     if (!night) M.appeased = false;   // sung away: gone until the next night
     const outs = players.filter(p => !inCamp(p.x, p.z));
@@ -220,7 +220,7 @@
     else for (const c of M.trucks) if (c.mode !== 'home') { c.mode = 'home'; c.tgt = null; c.delay = 0; }
     for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
     M.trucks = M.trucks.filter(c => !c.gone);
-    // Madame Zeroni: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
+    // the Drowned Bride: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
     if (!(night && half === 'zeroni' && outs.length) || M.appeased) M.zer = null;
     else {
       if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
@@ -266,7 +266,7 @@
     }
     if (c.mode !== 'home') for (const p of outs) { if (p.dn || p.hd) continue; const pd = Math.hypot(p.x - c.x, p.z - c.z); if (pd < CURFEW.copCatch && (copLit(c, p) || towerSees(p, t))) ev.push({ k: 'down', id: p.id, by: 'police' }); }
   }
-  // put Zeroni near player p: behind them, or (front=true) right in front of them
+  // put the Bride near player p: behind them, or (front=true) right in front of them
   function place(z, p, dist, front) {
     if (!p) return false;
     for (let k = 0; k < 24; k++) {
@@ -431,7 +431,7 @@
   const LION_STALK_SPD = 3.2, LION_CIRCLE_SPD = 5.6, LION_BURST_SPD = 8.8, LION_POUNCE_SPD = 13.5, LION_LEAVE_SPD = 8;
   const LION_POUNCE_MIN = 6, LION_POUNCE_MAX = 9;   // it only lunges from this range, and only when unseen
   const LION_BITE_R = 1.7;          // contact distance for the lunge to land
-  const LION_DMG = 35;              // one pounce's damage; hurt() is called by the victim's own client (like Zeroni's 'down')
+  const LION_DMG = 35;              // one pounce's damage; hurt() is called by the victim's own client (like the Bride's 'down')
   const LION_PIN_TIME = 1.6;        // seconds pinned in place after a pounce lands
   const LION_COOLDOWN = 10;         // seconds before it will try another pounce on the same stalk
   const LION_GIVEUP = 14;           // seconds waiting near a hole rim before giving up on a target it can't reach
@@ -546,12 +546,12 @@
      Which kinds show up is picked each day (same pick on every client: seeded by the day), and it grows as the days go by:
        small  (from day 1)  hatch: lizard hatchlings in swarms, snake: rattlesnakes that rattle then strike,
                             scorp: scorpions that come up where you dig
-       medium (from day 2)  sir: Mr. Sir walks the lake and takes your sack if you stand around,
-                            sheriff: the Sheriff's ghost, near curfew, hunts whoever carries Kate Barlow's loot
-       big    (from day 3)  warden: the Warden knocks out whoever she catches idle, kate: Kate Barlow's ghost at night,
+       medium (from day 2)  sir: Foreman Dutch walks the lake and takes your sack if you stand around,
+                            sheriff: the Marshal's ghost, near curfew, hunts whoever carries Lil Marlow's loot
+       big    (from day 3)  warden: the Superintendent knocks out whoever she catches idle, kate: Lil Marlow's ghost at night,
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
-     players: simPlayers() on the server / meSim() solo, plus kt (holding Kate's loot), on (onion active), vy (camera yaw). */
+     players: simPlayers() on the server / meSim() solo, plus kt (holding Lil's loot), on (onion active), vy (camera yaw). */
   const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
   const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
   const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
@@ -582,13 +582,13 @@
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
     const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
     const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k) && !(ZONE_NOW !== 'lake' && RO_LAKE_ONLY.includes(k));
-    const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the curse (and the tester's rate slider): everything spawns faster
+    const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the bad luck (and the tester's rate slider): everything spawns faster
     if (o.rate === 0) { R.mobs = R.mobs.filter(m => !roSmall(m.k)); }
     if (ZONE_NOW !== 'lake') R.mobs = R.mobs.filter(m => !RO_LAKE_ONLY.includes(m.k));   // camp staff don't follow the crew off the lake
     const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];
-    // who's been standing around out on the lake (for Mr. Sir and the Warden)
+    // who's been standing around out on the lake (for Foreman Dutch and the Superintendent)
     for (const p of players) { const m = R.pm[p.id] || (R.pm[p.id] = { idle: 0, warned: 0 }); if (p.an === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } }
     if (live.length) {
       if (has('hatch') && !RO_OFF.has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
@@ -602,7 +602,7 @@
     }
     for (const m of R.mobs) {
       m.t += dt; m.cd = Math.max(0, m.cd - dt);
-      const pool = roSmall(m.k) ? live.filter(p => !p.on) : live;   // an onion keeps the small ones off you
+      const pool = roSmall(m.k) ? live.filter(p => !p.on) : live;   // a bitterroot keeps the small ones off you
       const tg = nearest(pool, m.x, m.z), d = tg ? Math.hypot(tg.x - m.x, tg.z - m.z) : 1e9;
       if (m.life != null && (m.life -= dt) <= 0) m.dead = true;
       switch (m.k) {
@@ -674,7 +674,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  /* ---- the buried town of Green Lake (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
+  /* ---- the buried town of Marlow's Landing (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
      The old town, a hundred-odd years under the lake bed. You get in by digging an 8 ft hole that breaks through (always
      inside OLD_TOWN on the lake, sometimes elsewhere), and out by climbing a shaft or the old well (you need help: a friend
      boosting you, a hand from the top, or a staked rope ladder) or walking up the collapsed stairwell at the west end of
@@ -692,7 +692,7 @@
   const TOWN = { X: 2000, Z: 0, Y: -30, H: 3.6, STREET: { x0: -34, x1: 34, z0: -7.5, z1: 7.5, h: 5.5 }, TUN_R: 1.3, TUN_H: 2.6 };
   const OLD_TOWN = { x: -230, z: -250, r: 70 };
   const TOWN_BREAK_DEPTH = 1.45;   // JT: much easier -- an ordinary 5 ft hole (no long shovel) at the spot breaks through
-  const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Warden's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
+  const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Superintendent's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
     ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
@@ -784,19 +784,19 @@
   }
   const inTownXZ = x => x > TOWN.X - 70;
   // does an 8 ft hole at (x,z) break through? Only at the one spot (JT, 2026-09-30: the same place every time, for
-  // building the level): the middle of the old town, the coordinates on the Warden's note. You always land in the same place.
+  // building the level): the middle of the old town, the coordinates on the Superintendent's note. You always land in the same place.
   const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < TOWN_NOTE_R;
 
-  /* ---- the Warden's mood and the curse (after Greg's branch; public/js/82-mood.js shows and applies them) ----
-     One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the curse rises). Day 1 is normal.
-     The curse (0-100) is the crew's: it rises when campers are out past curfew or get knocked out, eases each dawn, when
-     the quota's met, and when someone sings Madame Zeroni away. It spawns more monsters and hazards. */
+  /* ---- the Superintendent's mood and the bad luck (after Greg's branch; public/js/82-mood.js shows and applies them) ----
+     One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the bad luck rises). Day 1 is normal.
+     The bad luck (0-100) is the crew's: it rises when campers are out past curfew or get knocked out, eases each dawn, when
+     the quota's met, and when someone sings the Drowned Bride away. It spawns more monsters and hazards. */
   const MOODS = {
     normal: { name: 'A regular day', desc: 'Nothing special. Dig.' },
     heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
     sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
     breeding: { name: 'Gila breeding season', desc: 'Gila hatchlings everywhere, twice as many.' }, // never rolled while hatchlings are off (RO_OFF)
-    stingy: { name: 'Dutch is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
+    stingy: { name: 'Dutch is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Foreman Dutch (gold rush): never rolled
     fullmoon: { name: 'Full moon', desc: 'The Drowned Bride is out all night. No police.' },
     digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
     inspection: { name: 'Inspection day', desc: 'The Superintendent walks the lake all day. Look busy.' },

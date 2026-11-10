@@ -24,7 +24,7 @@ function setHat(p,l){
 
 /* ---- the crew bank (the gold rush, 2026-09-30): since 2026-10-01 the crew wallet (84-wallet.js): all the gold anyone has, shared by
    the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Warden's, out of the bank at curfew   // curse/mood: 81-mood.js
+const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Superintendent's, out of the bank at curfew   // curse/mood: 81-mood.js
 function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
 function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A digger')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A digger'} put ${v} gold in the crew bank.`,'gold',3200)}
@@ -49,7 +49,7 @@ function soloEndOfDay(){
   const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
 }
 
-/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
+/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Company Store window (sim.js SELL); the safe takes two to lift ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();

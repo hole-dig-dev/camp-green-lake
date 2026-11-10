@@ -42,7 +42,7 @@ async function freePort() {
       const gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
       const loaded = await new Promise((resolve, reject) => new T.GLTFLoader().load('models/EmployeeBoard.glb', resolve, undefined, reject));
       const board = loaded.scene;
-      // Between the tents and the Warden's yard; front remains game +Z.
+      // Between the tents and the Superintendent's yard; front remains game +Z.
       board.position.set(-19.5, baseH(-19.5, 38.5), 38.5);
       board.traverse(n => { if (n.isMesh) { n.material = gameMat(n.material).clone(); n.castShadow = true; n.receiveShadow = true; } });
       scene.add(board); board.updateMatrixWorld(true);

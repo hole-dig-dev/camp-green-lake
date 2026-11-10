@@ -153,8 +153,8 @@ try{
     ['Lizard hiss','hiss',1.2],['Lizard bite','bite',1.2],
   ])await capture('Hazards and wildlife',label,kind,seconds);
   for(const [label,kind,seconds] of [
-    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Zeroni drone and whisper','zeroni-drone',3.3],
-    ['Zeroni sting','zeroni-sting',2.8],['Jumpscare','jumpscare',1.4],
+    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Bride drone and whisper','zeroni-drone',3.3],
+    ['Bride sting','zeroni-sting',2.8],['Jumpscare','jumpscare',1.4],
   ])await capture('Night and patrol',label,kind,seconds);
   for(const [label,kind,seconds] of [
     ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Seeds or coin','coin',1.1],
@@ -164,7 +164,7 @@ try{
   ])await capture('Game cues',label,kind,seconds);
   await capture('Music','Disco party loop','disco',8);
 
-  let at=0;const lines=['# Camp Green Lake audio A/B reel','','[Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.','','| Time | Section | Sound |','| --- | --- | --- |'];
+  let at=0;const lines=['# Camp Drywater audio A/B reel','','[Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.','','| Time | Section | Sound |','| --- | --- | --- |'];
   const concat=[];
   for(let i=0;i<items.length;i++){
     const x=items[i],d=Math.min(x.seconds,duration(x.file)-x.offset),total=x.seconds+0.3;

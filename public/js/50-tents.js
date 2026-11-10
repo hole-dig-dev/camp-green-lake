@@ -36,7 +36,7 @@ function toggleBunk(bi){
 }
 function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold card case to the Superintendent. Red flags mark the search area.`,'gold',6000)}
 
-/* ---------- Supply Depot store (was the Wreck Room) (docs/ui-redesign-spec.md section 2) ---------- */
+/* ---------- Company Store (docs/ui-redesign-spec.md section 2) ---------- */
 // NOTE: the spec was written pre-split and points at 45-state.js for this; the actual store code
 // (and its `openShop`/`closeShop`/`renderShop`/`SHOP` symbols) lives here, in 50-tents.js -- this
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
@@ -294,7 +294,7 @@ function pollShopGamepad(){
 function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
 function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
 
-/* ---- Me | The crew (JT 2026-10-01): the crew side is a table, one column for each of the D Tent crew, one row for each
+/* ---- Me | The crew (JT 2026-10-01): the crew side is a table, one column for each of the Bunk D crew, one row for each
    upgrade (sim.js CREW_SHOP). Paid from your own gold; the server keeps who has what for the whole camp ('crewBuy').
    First click on a price asks "Sure?", the second buys. ---- */
 let shopMode='me',crewConfirm=null,crewConfirmT=0;const crewPending=new Map();
@@ -351,7 +351,7 @@ function crewMsg(m){
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
 function renderShop(){$('#shopSeeds').textContent=S.seeds;{const el=$('#shopSafe');if(el)el.textContent=`· safe to spend ${safeToSpend()} (cut ${RUN.quota})`}updateShopCardStates();renderShopDetail();renderCrewShop();
   const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
-/* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
+/* Mr. Abel buys what's in your sack (the gold rush: he took the job over from Foreman Dutch). Heavy finds you carry to
    his window instead (sim.js SELL, 84-grab.js). */
 function sackValue(){return S.sack.reduce((s,t)=>s+LOOT[t].val,0)}
 function sellSack(){
@@ -382,7 +382,7 @@ function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
   logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});sfx.ko();
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
-  countUp('kos',5,'squid');curseKo();   // the curse grows a little (81-mood.js)
+  countUp('kos',5,'squid');curseKo();   // the bad luck grows a little (81-mood.js)
   const lost=S.sack.length;dropBag();
   const sand=S.bucket>0.05;S.bucket=0;   // the gold rush: your bucket spills when you go down (the crew's too, 30-npcs.js crewKO)
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'')+(sand?' Your bucket spilled.':'');$('#ko').hidden=false;
