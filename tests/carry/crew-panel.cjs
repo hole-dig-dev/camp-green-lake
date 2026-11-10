@@ -18,5 +18,5 @@ check('low on water, Larry walks in to the drums, fills up and heads back out',f
 await p.keyboard.press('k');await p.waitForTimeout(400);check('K hides the panel',await p.evaluate(()=>$('#crewPanel').hidden));
 await p.keyboard.press('k');await p.waitForTimeout(400);check('K shows it again',await p.evaluate(()=>!$('#crewPanel').hidden));
 await p.evaluate(()=>{const b=bots.find(b=>b.d.n==='Zach');b.state='dig';crewKO(b,'liz')});await p.waitForTimeout(400);
-check('a knockout shows on the panel, in red, with health at 0',await p.evaluate(()=>{const r=[...document.querySelectorAll('.crew-row')].find(r=>r.querySelector('b').textContent==='Zach');return r.classList.contains('is-bad')&&/Knocked out .lizard./.test(r.textContent)&&r.querySelector('.crew-bar--hp i').style.width==='0%'}));
+check('a knockout shows on the panel, in red, with health at 0',await p.evaluate(()=>{const r=[...document.querySelectorAll('.crew-row')].find(r=>r.querySelector('b').textContent==='Zach');return r.classList.contains('is-bad')&&/Knocked out .gila./.test(r.textContent)&&r.querySelector('.crew-bar--hp i').style.width==='0%'}));
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)&&!errs.length?0:1)})();

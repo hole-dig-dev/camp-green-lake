@@ -23,7 +23,7 @@ const TRUCK_L=4.0,TRUCK_W=1.8,TRUCK_AXLE_F=1.46,TRUCK_AXLE_R=-0.88,TRUCK_TRACK=0
    animPerson mode you sit with. The tailgate is dropped flat at z -2.3..-2.8, top 0.81 (art/blender/heavy.py); its
    seats sit a thigh's thickness (~0.09) above that so the legs rest on it, not in it. */
 const TRUCK_SEATS={
-  drive:  {at:[0.27,-0.42],y:0.78,face:0,clip:10,cab:true,door:[1.3,-0.3],out:[1.6,-0.3],label:'Drive Mr. Sir\'s jeep'},
+  drive:  {at:[0.27,-0.42],y:0.78,face:0,clip:10,cab:true,door:[1.3,-0.3],out:[1.6,-0.3],label:'Drive Dutch\'s jeep'},
   shotgun:{at:[-0.31,-0.42],y:0.78,face:0,clip:10,cab:true,door:[-1.3,-0.3],out:[-1.6,-0.3],label:'Ride shotgun'},
   tail0:  {at:[0.6,-1.62],y:1.02,face:Math.PI,clip:11,door:[0,-2.8],out:[0.6,-3.1],label:'Sit on the back of the jeep'},
   tail1:  {at:[-0.6,-1.62],y:1.02,face:Math.PI,clip:11,door:[0,-2.8],out:[-0.6,-3.1],label:'Sit on the back of the jeep'}};
@@ -125,7 +125,7 @@ function truckOwner(){
   let lo=net.id;for(const id of remotes.keys())if(id<lo)lo=id;return lo;
 }
 function truckHurtIn(n){   // a hard landing or a big knock hurts whoever's on the tailgate (the cab is safe: hurt() skips it)
-  if(S.inTruck&&n>2)hurt(Math.min(40,n),'Truck','Thrown about on Mr. Sir\'s jeep.');
+  if(S.inTruck&&n>2)hurt(Math.min(40,n),'Truck','Thrown about on Dutch\'s jeep.');
 }
 const _tq=new THREE.Quaternion(),_ta=new THREE.Vector3(),_tb=new THREE.Vector3(),_tc=new THREE.Vector3(),_tr=new THREE.Vector3(),_tf=new THREE.Vector3();
 const truckUp=()=>_ta.set(0,1,0).applyQuaternion(TRUCK.q).y;   // 1 on its wheels, 0 on its side, -1 on its roof
@@ -231,7 +231,7 @@ function truckWreckCheck(dt){
   const down=K.z<t0+1&&K.z>t1-1&&K.y<-1&&Math.hypot(K.vx,K.vz)<1.2;   // in the trench, a metre or more below its rim, stopped
   K.downT=down?(K.downT||0)+dt:0;if(K.downT<1.5||K.wreck)return;
   logEv('truckWreck',{x:+K.x.toFixed(1)});
-  if(online())wsSend({t:'truck',op:'wreck'});else{K.wreck=RUN.day||1;K.seats={};truckSeated();toast('Mr. Sir\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000)}
+  if(online())wsSend({t:'truck',op:'wreck'});else{K.wreck=RUN.day||1;K.seats={};truckSeated();toast('Dutch\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000)}
 }
 /* heaving it back onto its wheels (anyone, F by it once it's stopped): turned back to its heading, then set down */
 function truckFlipStart(){
@@ -291,7 +291,7 @@ function truckPlayer(dt){
   if(!TRUCK_SEATS[S.inTruck].cab){   // on the tailgate: a hard jolt, a hard landing or leaving the ground throws you off
     const vy=dt>0?(T.y-(T.pY??T.y))/dt:0,dv=Math.hypot(T.vx-(T.pVx??T.vx),T.vz-(T.pVz??T.vz)),hard=(T.pVy??0)<-7&&vy>-1;
     T.pY=T.y;T.pVy=vy;T.pVx=T.vx;T.pVz=T.vz;
-    if(dv>4||hard||T.y>groundAt(T.x,T.z)+2.2){const k=hard?-(T.pVy||0):dv;hurt(Math.min(35,k*3),'Truck','Thrown off Mr. Sir\'s jeep.');truckEject(T.vx,4,T.vz);return}
+    if(dv>4||hard||T.y>groundAt(T.x,T.z)+2.2){const k=hard?-(T.pVy||0):dv;hurt(Math.min(35,k*3),'Truck','Thrown off Dutch\'s jeep.');truckEject(T.vx,4,T.vz);return}
   }
   P.yaw+=T.h-T.prevH;T.prevH=T.h;   // your view turns with the truck
   if(me)truckSit(me,S.inTruck,dt);
@@ -332,7 +332,7 @@ function truckRunOver(dt){
   const dx=P.x-T.x,dz=P.z-T.z,c=Math.cos(T.h),s=Math.sin(T.h),lx=dx*c-dz*s,lz=dx*s+dz*c;
   if(Math.abs(lx)>TRUCK_W/2+0.35||Math.abs(lz)>TRUCK_L/2+0.35||P.y>T.y+1.8||P.y+1.6<T.y)return;
   truckHitCool=1.5;const n=sp||1;
-  hurt(Math.min(70,(sp-tune('veh.hitSpeed')+1)*tune('veh.hitDmg')),'Truck','Hit by Mr. Sir\'s jeep.');
+  hurt(Math.min(70,(sp-tune('veh.hitSpeed')+1)*tune('veh.hitDmg')),'Truck','Hit by Dutch\'s jeep.');
   if(typeof ragKnock==='function')ragKnock(tune('rag.knockTime'),T.vx/n*Math.min(14,sp*1.1),4+sp*0.25,T.vz/n*Math.min(14,sp*1.1));
   logEv('truckHit',{sp:+sp.toFixed(1)});
 }
@@ -355,7 +355,7 @@ function truckMsg(m){
   if(m.st){const s=m.st,me_=truckMe(),wasDriver=truckDriver()===me_,seats={};
     if(s.seats&&typeof s.seats==='object')for(const k of TRUCK_SEAT_KEYS)if(s.seats[k]!=null)seats[k]=s.seats[k];
     if(!S.inTruck&&Date.now()-TRUCK.outAt<1500&&seats[TRUCK.outSeat]===me_)delete seats[TRUCK.outSeat];   // the seat I just got out of: old news
-    if(s.wreck&&!TRUCK.wreck)toast('Mr. Sir\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000);
+    if(s.wreck&&!TRUCK.wreck)toast('Dutch\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000);
     TRUCK.on=!!s.on;TRUCK.seats=seats;TRUCK.wreck=s.wreck?1:0;
     if(truckDriver()!==me_){if(s.park){TRUCK.x=num(s.x,-600,600,TRUCK.x);TRUCK.z=num(s.z,-600,600,TRUCK.z);TRUCK.h=num(s.h,-100,100,TRUCK.h);TRUCK.tgt=null;truckPose()}}
     else if(!wasDriver){TRUCK.escaped=false}
@@ -371,10 +371,10 @@ function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 /* put it back where you drive it from (JT): its spot by the service gate (or by Mr. Sir with the flag off), upright,
    everyone out, not wrecked. Online the server does it for everyone. Console `truck respawn`, or F2 > Vehicles. */
 function truckRespawn(){
-  if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Mr. Sir\'s jeep back.'}
-  TRUCK.wreck=0;truckLeaveLocal();return'Mr. Sir\'s jeep is back where you drive it from.';
+  if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Dutch\'s jeep back.'}
+  TRUCK.wreck=0;truckLeaveLocal();return'Dutch\'s jeep is back where you drive it from.';
 }
-command('truck',{usage:'truck [respawn]',help:'Mr. Sir\'s jeep: where it is and who is in it; respawn puts it back where you drive it from (upright, everyone out). Drivable only with the F2 flag Vehicles > Make drivable.',
+command('truck',{usage:'truck [respawn]',help:'Dutch\'s jeep: where it is and who is in it; respawn puts it back where you drive it from (upright, everyone out). Drivable only with the F2 flag Vehicles > Make drivable.',
   run([a]){
     if(a==='respawn'||a==='park'||a==='reset')return truckRespawn();
     return`Drivable: ${truckOn()?'yes':'no (F2 > Vehicles > Make drivable)'}. At ${TRUCK.x.toFixed(1)}, ${TRUCK.z.toFixed(1)}. Seats: ${TRUCK_SEAT_KEYS.map(k=>k+' '+(TRUCK.seats[k]??'-')).join(', ')}.`}});

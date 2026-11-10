@@ -27,17 +27,17 @@ function setHat(p,l){
 const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Warden's, out of the bank at curfew   // curse/mood: 81-mood.js
 function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
 function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
-function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A camper')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A camper'} put ${v} gold in the crew bank.`,'gold',3200)}
+function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A digger')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A digger'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
 function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
-  {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
+  {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Company let its cut slide. Today it wants ${RUN.quota} gold in the crew bank by lights-out.`:`Day ${RUN.day}. The Company took its ${m.paid||''} gold. Today it wants ${RUN.quota} in the crew bank by lights-out.`,'gold',7000);addXP(50)}
 /* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. (The crew wallet, S.seeds,
    is the server's: it starts the new run at 0, so it isn't wiped here.) */
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Warden wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
   Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
@@ -69,7 +69,7 @@ function addProp(id,type,x,z,val,val0){if(PROPS.has(id)||!(type in SIM.HEAVY||ty
 function removeProp(id){const pr=PROPS.get(id);if(!pr)return;scene.remove(pr.g);dropLabel(pr.L);PROPS.delete(id);if(S.carry===id)S.carry=null}
 function propSold(id,v,who){
   const pr=PROPS.get(id),name=pr?propName(pr):'heavy find';removeProp(id);
-  const mine=who.includes(myId());toast(`Mr. Pendanski paid ${v} gold for the ${name}.`+(who.length>1?' Split between everyone who carried it.':''),'good',4500);
+  const mine=who.includes(myId());toast(`Mr. Abel paid ${v} gold for the ${name}.`+(who.length>1?' Split between everyone who carried it.':''),'good',4500);
   if(mine){S.seeds+=Math.round(v/Math.max(1,who.length));foundGold(Math.round(v/Math.max(1,who.length)));addXP(50);sfx.coin();countUp('hauls',3,'hauler')}
 }
 function propNear(r){let best=null,bd=r*r;for(const pr of PROPS.values()){const d2=(pr.x-P.x)**2+(pr.z-P.z)**2;if(d2<bd){bd=d2;best=pr}}return best}
@@ -84,7 +84,7 @@ function addBag(id,x,z,items,n){
 function removeBag(id){const b=BAGS.get(id);if(!b)return;scene.remove(b.g);dropLabel(b.L);BAGS.delete(id)}
 function bagNear(r){let best=null,bd=r*r;for(const b of BAGS.values()){const d2=(b.x-P.x)**2+(b.z-P.z)**2;if(d2<bd){bd=d2;best=b}}return best}
 function dropBag(){if(!S.sack.length)return;const items=S.sack.slice(0,12);S.sack=[];if(online())wsSend({t:'bag',x:P.x,z:P.z,items});else addBag(bagSeq++,P.x,P.z,items,S.name)}
-function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a camper')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
+function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a digger')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
 
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
@@ -132,7 +132,7 @@ function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim()
 
 /* ---- flashlight (L): yours, plus the three nearest friends' ---- */
 const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45,1.2);scene.add(s,s.target);FL.push(s)}
-function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Supply Depot sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
+function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Company Store sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
 function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?tune('light.power'):0;if(!on)return;s.distance=tune('light.reach');s.angle=Math.min(1.4,tune('light.width'));s.penumbra=tune('light.soft');s.decay=tune('light.falloff');   // F2 > Flashlight
   s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
 function updateLights(dt){

@@ -25,7 +25,7 @@ function walletNo(m){
 }
 const quotaShort=cost=>Math.max(0,RUN.quota-(RUN.bank-cost));
 const safeToSpend=()=>Math.max(0,RUN.bank-RUN.quota);
-function quotaWarnText(cost){const s=quotaShort(cost);return s>0?`This leaves the crew ${s} short of tonight's quota (${RUN.quota}).`:''}
+function quotaWarnText(cost){const s=quotaShort(cost);return s>0?`This leaves the crew ${s} short of tonight's cut (${RUN.quota}).`:''}
 /* found today: mine for the HUD/log, the server keeps everyone's */
 const FOUND={mine:0};
 function foundGold(v){v=Math.round(v);if(!(v>0))return;FOUND.mine+=v;if(online())wsSend({t:'found',v});else{RUN.found=RUN.found||{};RUN.found[S.name]=(RUN.found[S.name]||0)+v}}

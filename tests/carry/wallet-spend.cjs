@@ -15,7 +15,7 @@ check('the one turned down is told',await (ha?B:A).evaluate(()=>__ev.some(e=>e[0
 // the quota warning
 await A.evaluate(()=>{S.seeds+=30});await A.waitForTimeout(1000);
 const w=await A.evaluate(()=>{openShop();openShopConfirm('shovel');const t=document.getElementById('shopConfirm').innerText;const safe=document.getElementById('shopSafe').textContent;closeShop&&closeShop();return{t,safe,q:RUN.quota,bank:RUN.bank}});
-check('buying below tonight\'s quota warns in the confirm panel; the store shows safe to spend',/short of tonight's quota/.test(w.t)&&/safe to spend/.test(w.safe),JSON.stringify(w));
+check('buying below tonight\'s quota warns in the confirm panel; the store shows safe to spend',/short of tonight's cut/.test(w.t)&&/safe to spend/.test(w.safe),JSON.stringify(w));
 // found today, read out at curfew
 await A.evaluate(()=>foundGold(30));await B.evaluate(()=>foundGold(12));await A.waitForTimeout(800);
 await A.evaluate(()=>jumpTo(SIM.DAYMS-2500));await A.waitForTimeout(6000);

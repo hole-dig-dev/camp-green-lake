@@ -1,6 +1,6 @@
-# Camp Green Lake: instructions for Claude
+# DRYWATER: instructions for Claude
 
-A multiplayer browser game inspired by the book *Holes*. JT (repo owner, `jth458`) directs the work; Greg (`buissong`) collaborates. Read `docs/HANDOFF.md` for the full history, current state and backlog, and `ARCHITECTURE.md` for how the code is laid out.
+DRYWATER ("The water's gone. The gold isn't."): a multiplayer browser co-op digging game set at Camp Drywater, a Company work camp on a dried-up lake with gold under it. The setting is original; all visible text follows [docs/STORY.md](docs/STORY.md), while identifiers, file names and old docs still say Camp Green Lake / warden / sploosh / onions (do not rename those). JT (repo owner, `jth458`) directs the work; Greg (`buissong`) collaborates. Read `docs/HANDOFF.md` for the full history, current state and backlog, and `ARCHITECTURE.md` for how the code is laid out.
 
 **Characters / animation / ragdoll work: read [CHARACTER-HANDOFF.md](CHARACTER-HANDOFF.md) first.** It identifies
 JT's approved continuously skinned camper, the smooth elbow update, all asset/runtime paths and the player/NPC

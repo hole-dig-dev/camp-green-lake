@@ -18,7 +18,7 @@ function crewChatter(b){
   const gone=others.find(o=>typeof isAbducted==='function'&&isAbducted(o)),alien=others.find(o=>typeof isAlien==='function'&&isAlien(o));
   if(gone)ctx.push(`Has anyone seen ${gone.d.n}?`,`${gone.d.n} just... went up. Into the sky.`);
   if(alien)ctx.push(`${alien.d.n}'s been weird lately.`,`Is it me, or is ${alien.d.n} kind of green?`,`${alien.d.n} keeps telling me he's ${alien.d.n}.`);
-  if(clockT()>tAtHour(11)&&clockT()<tAtHour(12))ctx.push('Is it lunch yet?','I could eat a lizard.');
+  if(clockT()>tAtHour(11)&&clockT()<tAtHour(12))ctx.push('Is it lunch yet?','I could eat a gila.');
   if(ctx.length&&r<0.55)return pick(ctx);
   return b.d.lines[Math.floor(botRng()*b.d.lines.length)];
 }

@@ -34,7 +34,7 @@ function toggleBunk(bi){
   else if(clockT()>=DAYMS){jumpTo(tAtHour(6));toast('You get some sleep. Morning already.','good',3200);S.inBed=null}
   else toast('You lie down and rest. Nothing to skip yet - it\'s still daytime.','',3200);
 }
-function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold tube to the Warden. Red flags mark the search area.`,'gold',6000)}
+function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold card case to the Superintendent. Red flags mark the search area.`,'gold',6000)}
 
 /* ---------- Supply Depot store (was the Wreck Room) (docs/ui-redesign-spec.md section 2) ---------- */
 // NOTE: the spec was written pre-split and points at 45-state.js for this; the actual store code
@@ -70,8 +70,8 @@ const SHOP=[
   {id:'sodaMachine',name:'Soda vending machine',desc:'For the whole camp, by the water drums: a fed-up crew member takes himself off for a soda break and comes back at full morale. Stock it: F at the machine loads your sodas, or 5 at a time from the crew wallet (15 each). Each break takes one.',cost:300,cat:'camp',camp:true,icon:'bucket'},
   {id:'washRocker',name:'Rocker box',desc:'For the whole camp: a cradle that rocks the sand over riffles. The bare sifter and the pan lose a quarter of the gold in your sand; the rocker keeps 88% of it. Every sift pays about 17% more.',cost:600,cat:'camp',camp:true,icon:'bucket'},
   {id:'washSluice',name:'Long tom & sluice',desc:'For the whole camp: twelve feet of riffled trough behind the sifter. Keeps all the gold a rocker can see: every sift pays about 14% more than the rocker.',cost:2200,cat:'camp',camp:true,campNeeds:'washRocker',icon:'bucket'},
-  {id:'washPlant',name:'Trommel wash plant',desc:'For the whole camp: a rattling drum that gets the fine gold too. Every sift pays 18% more than the sluice. The Warden will want to know where you got the money.',cost:6500,cat:'camp',camp:true,campNeeds:'washSluice',icon:'bucket'},
-  {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
+  {id:'washPlant',name:'Trommel wash plant',desc:'For the whole camp: a rattling drum that gets the fine gold too. Every sift pays 18% more than the sluice. The Company will want to know where you got the money.',cost:6500,cat:'camp',camp:true,campNeeds:'washSluice',icon:'bucket'},
+  {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). The clerk was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeSteel',name:'Reinforced pipe',desc:'For the whole camp: steel-banded pipe. Boulders, sinkholes, mines and dynamite never crack the pipeline again.',cost:400,cat:'camp',camp:true,icon:'bucket'},
@@ -79,8 +79,8 @@ const SHOP=[
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
   {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60,cat:'supplies',icon:'sack'},
-  {id:'onion',name:'Raw onion',desc:'Eat with Q. Lizards won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
-  {id:'tonic',name:'Sam\'s onion tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and lizards stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'onion'},
+  {id:'onion',name:'Bitterroot',desc:'Chew with Q. Gilas won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
+  {id:'tonic',name:'Bitterroot tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and gilas stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'onion'},
   {id:'medkit',name:'First-aid kit',desc:'Q: patches your injuries. Or pick up a downed friend in 1 second instead of 3 (uses one).',cost:30,stack:'medkit',cat:'survival',icon:'heart'},
   {id:'walkie',name:'Walkie-talkie',desc:'Your voice (P) and chat (Enter) reach anyone else with a walkie-talkie, anywhere on the lake, even in a tent. You hold it up to talk, so everyone can see who\'s on the radio.',cost:60,cat:'survival',icon:'ping'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
@@ -114,7 +114,7 @@ function shopEffect(it){
     case 'pack': case 'pack2': case 'pack3':{const t=it.id==='pack'?1:it.id==='pack2'?2:3;return {label:'You carry',from:bucketMax()+' holes of sand',to:Math.max(bucketMax(),BACKSACK_HOLES[t-1])+' holes, on your back'}}   /* 86-backsack.js */
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
     case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
-    case 'onion': return {label:'Lizard ward',from:`${S.onions} on hand`,to:'45 s protection per onion'};
+    case 'onion': return {label:'Gila ward',from:`${S.onions} on hand`,to:'45 s protection per root'};
     case 'battery': return {label:'Flashlight charge',from:Math.round(S.batt)+'%',to:'100%'};
   }
   return null;
@@ -321,7 +321,7 @@ function renderCrewShop(){
       if(st.k==='owned'){btn.textContent=it.id==='hire'?'✓ On the crew':'✓ Has it';btn.classList.add('is-owned');btn.disabled=true}
       else if(st.k==='locked'){btn.textContent=st.need==='hire'?'Hire him first':`Needs ${st.need}`;btn.disabled=true}
       else if(st.k==='short'){btn.textContent=`Need ${st.need} more`;btn.disabled=true}
-      else if(crewConfirm===key&&performance.now()-crewConfirmT<4000){btn.textContent=quotaShort(cost)>0?`Sure? ${cost} (crew short of quota!)`:`Sure? ${cost}`;btn.classList.add('is-confirm');btn.onclick=()=>crewBuy(n,it)}
+      else if(crewConfirm===key&&performance.now()-crewConfirmT<4000){btn.textContent=quotaShort(cost)>0?`Sure? ${cost} (crew short of the cut!)`:`Sure? ${cost}`;btn.classList.add('is-confirm');btn.onclick=()=>crewBuy(n,it)}
       else{btn.textContent=`${it.id==='hire'?'Hire':'Buy'} · ${cost}`;btn.onclick=()=>{crewConfirm=key;crewConfirmT=performance.now();renderCrewShop();const q=$(`.crew-buy[data-key="${CSS.escape(key)}"]`);if(q)q.focus()}}
       cell.appendChild(btn);grid.appendChild(cell)}
   }
@@ -348,7 +348,7 @@ function crewMsg(m){
   if(shopOpen)renderShop();
 }
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
-function renderShop(){$('#shopSeeds').textContent=S.seeds;{const el=$('#shopSafe');if(el)el.textContent=`· safe to spend ${safeToSpend()} (quota ${RUN.quota})`}updateShopCardStates();renderShopDetail();renderCrewShop();
+function renderShop(){$('#shopSeeds').textContent=S.seeds;{const el=$('#shopSafe');if(el)el.textContent=`· safe to spend ${safeToSpend()} (cut ${RUN.quota})`}updateShopCardStates();renderShopDetail();renderCrewShop();
   const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
 /* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
    his window instead (sim.js SELL, 84-grab.js). */
@@ -356,7 +356,7 @@ function sackValue(){return S.sack.reduce((s,t)=>s+LOOT[t].val,0)}
 function sellSack(){
   if(!S.sack.length)return;const n=S.sack.length,sum=sackValue();
   S.seeds+=sum;foundGold(sum);S.sack=[];sfx.coin();addXP(sum/2);clerk.waveT=1.6;logEv('sell',{n,v:sum});
-  toast(`Mr. Pendanski paid ${sum} gold for ${n} find${n===1?'':'s'}.`,'good',3000);
+  toast(`Mr. Abel paid ${sum} gold for ${n} find${n===1?'':'s'}.`,'good',3000);
   $('#shopFeedback').textContent=`Sold ${n} find${n===1?'':'s'} for ${sum} gold.`;animateShopSeeds();renderShop();
 }
 $('#shopSell').onclick=sellSack;
@@ -392,7 +392,7 @@ function respawn(){if(inTent())exitTent();if(S.inTown)exitTown(0,39,'');S.ko=0;c
 function triggerWin(who,mine){
   if(S.won)return;S.won=true;
   rain.visible=true;if(rainGain)rainGain.gain.setTargetAtTime(0.18,AC.currentTime,2);
-  $('#winText').textContent=mine?'You dug up Stanley Yelnats\'s suitcase. Kissin\' Kate\'s treasure has been in the ground for over a hundred years. +500 gold.':`${who} dug up Stanley Yelnats's suitcase. Kissin' Kate's treasure has been in the ground for over a hundred years.`;
+  $('#winText').textContent=mine?'You dug up Lil\'s strongbox. "Lucky" Lil Marlow sank it in 1887 and it has been down there ever since. +500 gold.':`${who} dug up Lil's strongbox. "Lucky" Lil Marlow sank it in 1887 and it has been down there ever since.`;
   if(mine){S.seeds+=500;wsSend({t:'win'})}
   setTimeout(()=>{$('#win').hidden=false;releaseLock()},1600);
 }

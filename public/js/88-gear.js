@@ -18,7 +18,7 @@ function scareMesh(s){scareLoad();if(s.obj||!SCARE.parts)return;const g=new T.Gr
 function scaresSet(list){for(const s of SCARE.list.values())if(s.obj)scene.remove(s.obj);SCARE.list.clear();for(const d of list||[]){const s={id:d.id,x:+d.x,z:+d.z,obj:null};SCARE.list.set(s.id,s);scareMesh(s)}}
 function plantScarecrow(){
   if(!S.started||S.ko||twSt||inTent()||S.inTown||uiOpen())return;
-  if(!(S.scarecrow>0)){toast('No scarecrow. The Supply Depot has them.','',2400);return}
+  if(!(S.scarecrow>0)){toast('No scarecrow. The Company Store has them.','',2400);return}
   if(inCamp(P.x,P.z)){toast('Out on the lake bed: that\'s where the vultures are.','',2600);return}
   S.scarecrow--;sfx.thud();toast(`Scarecrow up. Vultures won't come within ${SCARE_R} m of it.`,'good',3000);logEv('scarecrow',{x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa),x=+(P.x+fx*1.2).toFixed(2),z=+(P.z+fz*1.2).toFixed(2);

@@ -30,7 +30,7 @@ ADMIN.state=()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota,clock:clockText(),me
   crew:bots.filter(crewHired).map(b=>`${b.d.n}[${Object.keys(CREW_UP[b.d.n]||{}).filter(k=>k!=='hired').join('+')||'bare'}] ${b.state} m${Math.round(moraleOf(b))}`)});
 command('crew',{usage:'crew hire|fire|kit|fill|morale all|<name> [items|0-100]',help:'Admin: set up the crew (free, instant).',
   run([what,who,...rest]){const arg=rest.join(',');what=(what||'').toLowerCase();
-    if(what==='hire'||what==='fire'){ADMIN.crew(what,who);return`${what==='hire'?'Hired':'Fired'}: ${adminNames(who).join(', ')}`}
+    if(what==='hire'||what==='fire'){ADMIN.crew(what,who);return`${what==='hire'?'Hired':'Let go'}: ${adminNames(who).join(', ')}`}
     if(what==='kit'){const items=adminItems(arg);ADMIN.crewKit(who,items);return`Kit for ${adminNames(who).join(', ')}: ${items.join(', ')}`}
     if(what==='fill'){ADMIN.fill(who);return'Buckets full.'}
     if(what==='morale'){ADMIN.morale(who,arg);return`Morale ${arg}.`}
@@ -38,7 +38,7 @@ command('crew',{usage:'crew hire|fire|kit|fill|morale all|<name> [items|0-100]',
 command('kit',{usage:'kit item,item,... | kit none',help:'Admin: your own gear (S.up), free.',run(a){const it=adminItems(a.join(','));ADMIN.kit(it);return'Your gear: '+(Object.keys(S.up).join(', ')||'none')}});
 command('campup',{usage:'campup goldScale,pipeTee,pipePump,pipeSteel,sodaMachine | campup none',help:'Admin: camp upgrades, free.',run(a){ADMIN.camp(adminItems(a.join(',')));return'Camp upgrades set.'}});
 command('bank',{usage:'bank <gold>',help:'Admin: set the crew wallet.',run([v]){ADMIN.bank(v);return`Wallet: ${v}.`}});
-command('day',{usage:'day <n>',help:'Admin: set the day (and its quota).',run([v]){ADMIN.day(v);return`Day ${v}.`}});
+command('day',{usage:'day <n>',help:'Admin: set the day (and its cut).',run([v]){ADMIN.day(v);return`Day ${v}.`}});
 command('state',{usage:'state',help:'Admin: the game state in one line.',run(){return JSON.stringify(ADMIN.state())}});
 /* lay pipe through points, PIPE_RUN at a time, round nothing (it stops at anything solid, like laying it by hand) */
 ADMIN.pipe=(pts,from)=>{

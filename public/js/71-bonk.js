@@ -15,7 +15,7 @@ const BONK_CD=0.9;           // seconds between your bonks, so holding dig isn't
 const BONK_SPEED=6.5;        // how fast (m/s) the victim is knocked away along the swing
 const BONK_VY=6;             // upward pop (m/s): a ~1 m hop, enough for a proper tumble
 const BONK_DEEP=0.5;         // in a hole deeper than this (m) you only get dizzy, no launch (can't bonk anyone out of a hole)
-const BONK_LINES=['Hey! Watch it!','Ow! My head!','Do that again, I dare you.','That\'s going in my report to Mr. Sir.','Not cool, man.'];
+const BONK_LINES=['Hey! Watch it!','Ow! My head!','Do that again, I dare you.','That\'s going in my report to Foreman Dutch.','Not cool, man.'];
 let bonkT=0;                  // time (performance.now ms) of your last bonk swing
 /* Called at the top of scoop(): returns true if this swing hit someone (so no dirt gets dug) */
 function bonkSwing(){

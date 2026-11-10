@@ -15,13 +15,13 @@ const hoverOn=()=>HOV.on&&!!S.up.hover;   // the board
 const SHOE={on:true,sup:false,supT:0};
 const shoesOn=()=>!!S.up.hoverShoes&&SHOE.on&&!SHOE.sup&&!S.ko&&!twSt&&!tbSt&&!vSt;
 const floating=()=>hoverOn()||shoesOn();   /* 70-player.js rides HOVER_H over the undug ground; sinkholes/holes don't catch you */
-function toggleHoverShoes(){if(!S.started||uiOpen())return;if(!S.up.hoverShoes){toast('No hover shoes. The Supply Depot has them (late game).','',2400);return}
+function toggleHoverShoes(){if(!S.started||uiOpen())return;if(!S.up.hoverShoes){toast('No hover shoes. The Company Store has them (late game).','',2400);return}
   SHOE.on=!SHOE.on;SHOE.sup=false;tone(SHOE.on?520:380,0.18,'sine',0.045,SHOE.on?880:220);toast(SHOE.on?'Hover shoes on.':'Hover shoes off: down you go wherever you step.','',1800)}
 /* 45-state.js scoop: digging switches them off, quietly */
 function shoesDig(){if(S.up.hoverShoes&&SHOE.on){SHOE.sup=true;SHOE.supT=performance.now()}}
 function toggleHover(){
   if(!S.started||uiOpen())return;
-  if(!S.up.hover){toast('No hoverboard. The Supply Depot has them (late game).','',2400);return}
+  if(!S.up.hover){toast('No hoverboard. The Company Store has them (late game).','',2400);return}
   if(HOV.on){HOV.on=false;sfx.thud();toast('You step off your hoverboard.','',1600);return}
   if(S.ko||twSt||tbSt||vSt||inTent()||S.inTown){return}
   if(holeDepthHere()>0.4||isTrapped()||(typeof inSinkhole==='function'&&inSinkhole())){toast('Climb out first: you need level ground to hop on.','',2400);return}

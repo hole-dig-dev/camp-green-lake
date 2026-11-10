@@ -19,11 +19,11 @@ function sign(text,x,z,ry,w,h){
 /* Canvas dorms keep their small outdoor footprint, while the rooms below are broad, instanced spaces.
    Only the occupied room is drawn, so neighboring rooms may overlap underground without showing through. */
 const TENTS=[
-  {x:-16,z:47,name:'A Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:-8,z:47,name:'B Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:0,z:47,name:'D Tent',hw:3.6,hd:5.2,roomW:9,roomD:8.5,crew:true},
-  {x:8,z:47,name:'C Tent',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:-30,z:45,name:"Warden's House",hw:4,hd:3,roomW:8,roomD:8,house:true},
+  {x:-16,z:47,name:'Bunk A',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:-8,z:47,name:'Bunk B',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:0,z:47,name:'Bunk D',hw:3.6,hd:5.2,roomW:9,roomD:8.5,crew:true},
+  {x:8,z:47,name:'Bunk C',hw:3.0,hd:3.6,roomW:7,roomD:8},
+  {x:-30,z:45,name:"the Super's House",hw:4,hd:3,roomW:8,roomD:8,house:true},
 ];
 const D_TENT=TENTS.find(t=>t.crew);
 function tent(t){
@@ -149,7 +149,7 @@ function cabin(x,z,w,d,h,wall,roof){
 }
 const wreckCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
 solid(16,42.3,2.5,0.45);   // the serving-window counter sticks out past the front wall (WreckRoom.glb)
-const wreckSign=sign('SUPPLY\nDEPOT',20.2,41.4,Math.PI,2.6,1.1);
+const wreckSign=sign('COMPANY\nSTORE',20.2,41.4,Math.PI,2.6,1.1);
 const wardenCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);
 {
@@ -162,7 +162,7 @@ const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.
   const step=box(3,0.17,0.6,0x877257);step.position.set(0,0.09,-4.35);g.add(step);
   const chimney=box(0.9,2.15,0.9,0x6d5948);chimney.position.set(2.45,4.25,0.9);g.add(chimney);
   for(const x of[-3.45,3.45])solid(-30+x,45-4.05,0.35,0.35);   // porch pillars
-  const plaque=new T.Mesh(new T.PlaneGeometry(3.2,0.58),new T.MeshStandardMaterial({map:signTex('THE WARDEN',512,96,'#d9c396','#302016',39),roughness:1}));
+  const plaque=new T.Mesh(new T.PlaneGeometry(3.2,0.58),new T.MeshStandardMaterial({map:signTex('SUPERINTENDENT',512,96,'#d9c396','#302016',39),roughness:1}));
   plaque.position.set(0,2.72,-3.1);plaque.rotation.y=Math.PI;g.add(plaque);
 }
 function oak(x,z,s){const g=new T.Group();const tr=cyl(0.35*s,0.5*s,3.4*s,6,0x5a3f28);tr.position.y=1.7*s;g.add(tr);
@@ -188,8 +188,8 @@ if(WATER_TRUCK_ON){
 const FLAG_PROC=[];
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);solid(-4,38,0.4,0.4);
  const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);FLAG_PROC.push(p,f);}
-const campSign=sign('CAMP GREEN LAKE',-11,30.5,Math.PI,5,1.3);solid(-11,30.5,5.1,0.35);   // posts + the board overhead, as one wall
-sign('D TENT\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);solid(2.4,44.2,1.9,0.3);
+const campSign=sign('CAMP DRYWATER',-11,30.5,Math.PI,5,1.3);solid(-11,30.5,5.1,0.35);   // posts + the board overhead, as one wall
+sign('BUNK D\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);solid(2.4,44.2,1.9,0.3);
 
 /* ---------- secured perimeter ----------
    Dense steel panels and a solid collision line share the same gate gaps. A player can jump, but the

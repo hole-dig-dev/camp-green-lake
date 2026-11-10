@@ -175,7 +175,7 @@ function updateSoloRescues(dt){
       b.p.upper.rotation.x=lerp(b.p.upper.rotation.x,0.5,Math.min(1,dt*SINK_POSE_K));b.p.armR.rotation.x=lerp(b.p.armR.rotation.x,1.3,Math.min(1,dt*SINK_POSE_K));
       if(o.t>=SINK_SOLO_PULL_TIME){
         popOutOfSinkhole(targetSh,'Zach');
-        toast('Zach pulled you out with the line. "I like digging holes. Not falling in them."','good',3800);
+        toast('Zach pulled you out with the line. "Holes are for digging. Not for living in."','good',3800);
         logEv('sinkSoloRescued',{x:+targetSh.x.toFixed(1),z:+targetSh.z.toFixed(1)});
       }
     }
