@@ -638,3 +638,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 /* F2: the CHAOS knob, pinned above the tabs (JT) */
 .tune-chaos{border:2px solid var(--jump-deep);border-radius:6px;margin:6px 8px;padding:2px 6px;background:rgba(201,76,30,.08)}
 .tune-chaos label,.tune-chaos b,.tune-chaos span:first-child{font-weight:800}
+
+/* ---- 2026-11-10 (fable/overhaul): the in-game HUD strips let the world show through a little.
+   The picture pass made the world worth looking at; the solid cream panels were covering it. Menus, the store and
+   dialogs stay solid (they are read, not glanced at). ---- */
+#hud .hud-strip.ui-panel,#hud #mapbox{background:rgba(242,231,205,.86);backdrop-filter:blur(6px) saturate(1.1);-webkit-backdrop-filter:blur(6px) saturate(1.1);border-color:rgba(40,29,21,.85);box-shadow:0 3px 0 rgba(40,29,21,.32)}

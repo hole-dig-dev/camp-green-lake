@@ -50,3 +50,10 @@ function payMap(mx,wx,wz){
 }
 /* a crew member's bucket: worth what the ground at his hole is worth (5 ft holes) */
 function crewPay(b){try{const h=b.hole||b;return SIM.payMult(h.x,h.z,1.5)}catch(e){return 1}}
+/* gold glints in the dirt you throw up on good ground: a few bright sparks (88-vein.js sparkle), brighter than white so
+   the bloom makes them twinkle. Only on Promising ground or better, and not every scoop, so it rewards watching. */
+function payGlint(h,y){
+  if(!SIM.PAY.on)return;const r=SIM.richAt(h.x,h.z);if(r<0.45||Math.random()>r*0.55)return;
+  const n=r>0.8?3:r>0.6?2:1;
+  for(let i=0;i<n;i++){sparkle(h.x+(Math.random()-0.5)*1.1,y+0.1+Math.random()*0.5,h.z+(Math.random()-0.5)*1.1);const m=SPARKS[SPARKS.length-1].m;m.material.color.setRGB(2.6,2.0,0.7);m.scale.setScalar(0.6+Math.random()*0.5)}
+}
