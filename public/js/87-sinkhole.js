@@ -150,13 +150,13 @@ function popOutOfSinkhole(sh,by){
    fallback resolves in a bounded, predictable time -- worse than a friend, never a softlock. b.sinkOverride, set
    here, tells updateBots() (30-npcs.js) to leave this bot alone while it's set; updateSoloRescues() below drives it. */
 function startSoloRescue(sh){
-  const hired=bots.filter(b=>crewHired(b)),zero=hired.find(b=>b.d.n==='Zach')||hired[0]||bots.find(b=>b.d.n==='Zach');if(!zero||zero.sinkOverride)return;   // Zach comes even if he's not on the crew yet: never a softlock
-  zero.p.g.visible=true;zero.L.el.style.display='';
+  const hired=bots.filter(b=>crewHired(b)),zach=hired.find(b=>b.d.n==='Zach')||hired[0]||bots.find(b=>b.d.n==='Zach');if(!zach||zach.sinkOverride)return;   // Zach comes even if he's not on the crew yet: never a softlock
+  zach.p.g.visible=true;zach.L.el.style.display='';
   const a=Math.atan2(sh.x,sh.z-39)||0.001;   // roughly "away from camp", so he visibly walks in from outside
   const sx=sh.x+Math.sin(a)*(sh.r+SINK_SOLO_APPROACH_R),sz=sh.z+Math.cos(a)*(sh.r+SINK_SOLO_APPROACH_R);
-  zero.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};
-  zero.p.g.position.set(sx,groundAt(sx,sz),sz);
-  sh.soloBot=zero;
+  zach.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};
+  zach.p.g.position.set(sx,groundAt(sx,sz),sz);
+  sh.soloBot=zach;
   toast('Nobody else is around to pull you out... but Zach heard you and is coming with a line.','good',5000);
   logEv('sinkSolo',{x:+sh.x.toFixed(1),z:+sh.z.toFixed(1)});
 }

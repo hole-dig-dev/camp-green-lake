@@ -69,8 +69,8 @@
 //   sinkFellIn      {id,n,x,z}                               a camper fell into an open sinkhole
 //   sinkpull        {id,n,by,x,z}                            by finished pulling camper n out of a sinkhole (server-relayed, like 'pull')
 //   sinkRescuer     {id,n,by}                                camper n was credited XP for helping pull someone up
-//   sinkSolo        {id,n,x,z}                                nobody else online: Zero set out with a line
-//   sinkSoloRescued {id,n,x,z}                                Zero finished pulling a solo camper out
+//   sinkSolo        {id,n,x,z}                                nobody else online: Zach set out with a line
+//   sinkSoloRescued {id,n,x,z}                                Zach finished pulling a solo camper out
 //   sinkFilled      {id,n,x,z}                                a sinkhole finished filling back in (client-local)
 //   found           {id,n,item,type,value,x,z,heavy,lm}     dug up an item
 //   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
