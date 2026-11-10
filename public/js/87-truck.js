@@ -60,12 +60,12 @@ const truckDriver=()=>TRUCK.seats.drive??null;
 function truckSeatOf(id){for(const k of TRUCK_SEAT_KEYS)if(TRUCK.seats[k]===id)return k;return null}
 function truckSeat(){return truckSeatOf(truckMe())}
 function truckSpot(){
-  if(S.inTruck)return{id:'truck',label:'Get out of the truck',use:()=>truckOut()};
+  if(S.inTruck)return{id:'truck',label:'Get out of the jeep',use:()=>truckOut()};
   if(TRUCK.wreck)return Math.hypot(P.x-TRUCK.x,P.z-TRUCK.z)<5?{id:'truck',label:'Wrecked in the trench. Hauled back by morning.',use:()=>{}}:null;
   if(!truckOn()||S.inTown||inTent()||S.ko||S.carry!=null)return null;
   if(TRUCK.flipped){   // on its side or roof and stopped: heave it back onto its wheels (JT: the same button as getting in)
     if(TRUCK.flipT>0||Math.hypot(TRUCK.vx,TRUCK.vz)>1.5||Math.hypot(P.x-TRUCK.x,P.z-TRUCK.z)>4.5)return null;
-    return{id:'truck',label:'Flip the pickup back upright',use:truckFlip};
+    return{id:'truck',label:'Flip the jeep back upright',use:truckFlip};
   }
   let best=null,bd=1.7;
   for(const k of TRUCK_SEAT_KEYS){const q=TRUCK_SEATS[k];if(TRUCK.seats[k]!=null)continue;const d=truckAt(q.door[0],q.door[1]),dd=Math.hypot(P.x-d.x,P.z-d.z);if(dd<bd){bd=dd;best=k}}
@@ -85,7 +85,7 @@ function truckOut(){
 function truckSeated(){
   const seat=truckSeat();if(seat===(S.inTruck||null))return;
   if(seat){const was=S.inTruck;S.inTruck=seat;TRUCK.prevH=TRUCK.h;if(!was&&!FP){P.yaw=TRUCK.h+Math.PI;P.pitch=0.25}   // the view starts behind the truckTRUCK.pY=TRUCK.pVy=TRUCK.pVx=TRUCK.pVz=undefined;P.moving=false;digHeld=false;if(was)return;
-    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate, then north toward Big Thumb: jump the trench off the ramp.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the tailgate, legs over the edge. F to hop off.','',4500);sfx.thud();return}
+    toast(seat==='drive'?'W/S gas and brake, A/D steer, Space handbrake, F to get out. Back her out through the service gate and take her out on the lake: she carries four, and holes will bog a wheel.':seat==='shotgun'?'Riding shotgun. F to hop out.':'Sitting on the back of the jeep, legs over the edge. F to hop off.','',4500);sfx.thud();return}
   const was=S.inTruck;S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=was;if(me)me.g.visible=true;
   const o=TRUCK_SEATS[was].out,p=truckAt(o[0],o[1]);
   P.x=p.x;P.z=p.z;P.y=groundAt(p.x,p.z);P.vy=0;
@@ -125,7 +125,7 @@ function truckOwner(){
   let lo=net.id;for(const id of remotes.keys())if(id<lo)lo=id;return lo;
 }
 function truckHurtIn(n){   // a hard landing or a big knock hurts whoever's on the tailgate (the cab is safe: hurt() skips it)
-  if(S.inTruck&&n>2)hurt(Math.min(40,n),'Truck','Thrown about on Mr. Sir\'s pickup.');
+  if(S.inTruck&&n>2)hurt(Math.min(40,n),'Truck','Thrown about on Mr. Sir\'s jeep.');
 }
 const _tq=new THREE.Quaternion(),_ta=new THREE.Vector3(),_tb=new THREE.Vector3(),_tc=new THREE.Vector3(),_tr=new THREE.Vector3(),_tf=new THREE.Vector3();
 const truckUp=()=>_ta.set(0,1,0).applyQuaternion(TRUCK.q).y;   // 1 on its wheels, 0 on its side, -1 on its roof
@@ -231,7 +231,7 @@ function truckWreckCheck(dt){
   const down=K.z<t0+1&&K.z>t1-1&&K.y<-1&&Math.hypot(K.vx,K.vz)<1.2;   // in the trench, a metre or more below its rim, stopped
   K.downT=down?(K.downT||0)+dt:0;if(K.downT<1.5||K.wreck)return;
   logEv('truckWreck',{x:+K.x.toFixed(1)});
-  if(online())wsSend({t:'truck',op:'wreck'});else{K.wreck=RUN.day||1;K.seats={};truckSeated();toast('Mr. Sir\'s pickup is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000)}
+  if(online())wsSend({t:'truck',op:'wreck'});else{K.wreck=RUN.day||1;K.seats={};truckSeated();toast('Mr. Sir\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000)}
 }
 /* heaving it back onto its wheels (anyone, F by it once it's stopped): turned back to its heading, then set down */
 function truckFlipStart(){
@@ -282,16 +282,16 @@ function truckEject(vx,vy,vz){
   S.inTruck=null;TRUCK.outAt=Date.now();TRUCK.outSeat=k;if(me)me.g.visible=true;
   if(S.ko)return;   // knocked out in your seat: you're just out of it, where you are
   if(typeof ragKnock==='function')ragKnock(tune('rag.knockTime'),vx||0,vy||3,vz||0);
-  toast('You\'re thrown off the pickup!','bad',2000);
+  toast('You\'re thrown off the jeep!','bad',2000);
 }
 /* every frame from updatePlayer while you're in it (in place of walking) */
 function truckPlayer(dt){
   const T=TRUCK;
-  if(T.flipped){if(TRUCK_SEATS[S.inTruck].cab){truckOut();toast('The pickup\'s over. You climb out. F by it to heave it back on its wheels.','',3500)}else truckEject(T.vx,3,T.vz);return}
+  if(T.flipped){if(TRUCK_SEATS[S.inTruck].cab){truckOut();toast('The jeep\'s over. You climb out. F by it to heave it back on its wheels.','',3500)}else truckEject(T.vx,3,T.vz);return}
   if(!TRUCK_SEATS[S.inTruck].cab){   // on the tailgate: a hard jolt, a hard landing or leaving the ground throws you off
     const vy=dt>0?(T.y-(T.pY??T.y))/dt:0,dv=Math.hypot(T.vx-(T.pVx??T.vx),T.vz-(T.pVz??T.vz)),hard=(T.pVy??0)<-7&&vy>-1;
     T.pY=T.y;T.pVy=vy;T.pVx=T.vx;T.pVz=T.vz;
-    if(dv>4||hard||T.y>groundAt(T.x,T.z)+2.2){const k=hard?-(T.pVy||0):dv;hurt(Math.min(35,k*3),'Truck','Thrown off Mr. Sir\'s pickup.');truckEject(T.vx,4,T.vz);return}
+    if(dv>4||hard||T.y>groundAt(T.x,T.z)+2.2){const k=hard?-(T.pVy||0):dv;hurt(Math.min(35,k*3),'Truck','Thrown off Mr. Sir\'s jeep.');truckEject(T.vx,4,T.vz);return}
   }
   P.yaw+=T.h-T.prevH;T.prevH=T.h;   // your view turns with the truck
   if(me)truckSit(me,S.inTruck,dt);
@@ -332,7 +332,7 @@ function truckRunOver(dt){
   const dx=P.x-T.x,dz=P.z-T.z,c=Math.cos(T.h),s=Math.sin(T.h),lx=dx*c-dz*s,lz=dx*s+dz*c;
   if(Math.abs(lx)>TRUCK_W/2+0.35||Math.abs(lz)>TRUCK_L/2+0.35||P.y>T.y+1.8||P.y+1.6<T.y)return;
   truckHitCool=1.5;const n=sp||1;
-  hurt(Math.min(70,(sp-tune('veh.hitSpeed')+1)*tune('veh.hitDmg')),'Truck','Hit by Mr. Sir\'s pickup.');
+  hurt(Math.min(70,(sp-tune('veh.hitSpeed')+1)*tune('veh.hitDmg')),'Truck','Hit by Mr. Sir\'s jeep.');
   if(typeof ragKnock==='function')ragKnock(tune('rag.knockTime'),T.vx/n*Math.min(14,sp*1.1),4+sp*0.25,T.vz/n*Math.min(14,sp*1.1));
   logEv('truckHit',{sp:+sp.toFixed(1)});
 }
@@ -355,7 +355,7 @@ function truckMsg(m){
   if(m.st){const s=m.st,me_=truckMe(),wasDriver=truckDriver()===me_,seats={};
     if(s.seats&&typeof s.seats==='object')for(const k of TRUCK_SEAT_KEYS)if(s.seats[k]!=null)seats[k]=s.seats[k];
     if(!S.inTruck&&Date.now()-TRUCK.outAt<1500&&seats[TRUCK.outSeat]===me_)delete seats[TRUCK.outSeat];   // the seat I just got out of: old news
-    if(s.wreck&&!TRUCK.wreck)toast('Mr. Sir\'s pickup is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000);
+    if(s.wreck&&!TRUCK.wreck)toast('Mr. Sir\'s jeep is wrecked in the trench. It\'ll be hauled back by morning.','bad',5000);
     TRUCK.on=!!s.on;TRUCK.seats=seats;TRUCK.wreck=s.wreck?1:0;
     if(truckDriver()!==me_){if(s.park){TRUCK.x=num(s.x,-600,600,TRUCK.x);TRUCK.z=num(s.z,-600,600,TRUCK.z);TRUCK.h=num(s.h,-100,100,TRUCK.h);TRUCK.tgt=null;truckPose()}}
     else if(!wasDriver){TRUCK.escaped=false}
@@ -371,10 +371,10 @@ function truckHello(st){if(st&&typeof st==='object')truckMsg({st})}
 /* put it back where you drive it from (JT): its spot by the service gate (or by Mr. Sir with the flag off), upright,
    everyone out, not wrecked. Online the server does it for everyone. Console `truck respawn`, or F2 > Vehicles. */
 function truckRespawn(){
-  if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Mr. Sir\'s pickup back.'}
-  TRUCK.wreck=0;truckLeaveLocal();return'Mr. Sir\'s pickup is back where you drive it from.';
+  if(online()){wsSend({t:'truck',op:'respawn'});return'Putting Mr. Sir\'s jeep back.'}
+  TRUCK.wreck=0;truckLeaveLocal();return'Mr. Sir\'s jeep is back where you drive it from.';
 }
-command('truck',{usage:'truck [respawn]',help:'Mr. Sir\'s pickup: where it is and who is in it; respawn puts it back where you drive it from (upright, everyone out). Drivable only with the F2 flag Vehicles > Make drivable.',
+command('truck',{usage:'truck [respawn]',help:'Mr. Sir\'s jeep: where it is and who is in it; respawn puts it back where you drive it from (upright, everyone out). Drivable only with the F2 flag Vehicles > Make drivable.',
   run([a]){
     if(a==='respawn'||a==='park'||a==='reset')return truckRespawn();
     return`Drivable: ${truckOn()?'yes':'no (F2 > Vehicles > Make drivable)'}. At ${TRUCK.x.toFixed(1)}, ${TRUCK.z.toFixed(1)}. Seats: ${TRUCK_SEAT_KEYS.map(k=>k+' '+(TRUCK.seats[k]??'-')).join(', ')}.`}});
