@@ -130,7 +130,7 @@ function gfxSiftStep(dt){
   const running=t>2&&t<8.1,envelope=gfxEase(t,2,2.4)*(1-gfxEase(t,7.5,8.1));
   GFX.shake=Math.sin(t*48)*.006*envelope;if(gfxTray)gfxTray.position.y=GFX.shake;
   if(gfxCrank&&running)gfxCrank.rotation.z-=dt*9*envelope;
-  if(running){GFX.soundT+=dt;if(GFX.soundT>.18){GFX.soundT=0;noise(.07,360,0.8,.026,'lowpass')}
+  if(running){GFX.soundT+=dt;if(GFX.soundT>.18){GFX.soundT=0;sfx.siftShake()}
     GFX.dustEmit+=dt*19;while(GFX.dustEmit>=1){GFX.dustEmit--;if(gfxDust.length<GFX_DUST){const q=trayAt(Math.random()*.85,.28);gfxDust.push({x:q.x,y:q.y+.02,z:q.z,vx:.2,vy:.12,vz:-.38,age:0,s:.035+Math.random()*.035,m:'dust'})}}}
   /* Each sand bed follows the grains actually passing through that riffle bay.
      Its opaque surface recedes across the gold; no gold visibility/size switch is involved. */
@@ -250,11 +250,11 @@ function gfxPanStep(dt){
     while(GFX.dropEmit>=1){GFX.dropEmit--;const q=lip.clone().add(new T.Vector3(right.x*(Math.random()-.5)*.10,0,right.z*(Math.random()-.5)*.10));
       if(gfxDrops.length<GFX_DROP)gfxDrops.push({x:q.x,y:q.y,z:q.z,vx:-D.x*.22,vy:-.12,vz:-D.z*.22,s:.003+Math.random()*.004,sy:1.8,m:'drop'});
       if(left>.04&&gfxGr.length<GFX_SAND)gfxGr.push({x:q.x,y:q.y,z:q.z,vx:-D.x*.20,vy:-.05,vz:-D.z*.20,s:.004+Math.random()*.004,m:'spill'})}
-    GFX.washSound+=dt;if(GFX.washSound>.3){GFX.washSound=0;noise(.15,950,.6,.045,'bandpass')}
+    GFX.washSound+=dt;if(GFX.washSound>.3){GFX.washSound=0;sfx.panSwirl()}
   }
   gfxBallistic(gfxDrops,dt,tub.y-.014);gfxBallistic(gfxGr,dt,tub.y-.014);
   GFX.ripples.forEach((r,i)=>{const phase=((t+i*.3)%1.05)/1.05;r.position.copy(tub);r.position.y+=.018;r.scale.setScalar(.5+phase*1.5);gfxOpacity(r,(1-phase)*.20*wet*(t<5.8?1:0))});
-  if(GFX.splash===0&&t>1.02){GFX.splash=1;sfx.splash()}if(GFX.splash===1&&t>3.75){GFX.splash=2;sfx.splash()}
+  if(GFX.splash===0&&t>1.02){GFX.splash=1;sfx.panDunk()}if(GFX.splash===1&&t>3.75){GFX.splash=2;sfx.panDunk()}
   for(const g of gfxGd){const v=new T.Vector3(g.lx,.016,g.lz).applyMatrix4(pan.matrixWorld);g.x=v.x;g.y=v.y;g.z=v.z}
   GFX.lookT.copy(tub).add(new T.Vector3(D.x*(.10+.14*show),.12+.16*show,D.z*(.10+.14*show)));
   GFX.camT.set(tub.x+D.x*(.67-.06*show),tub.y+.63-.015*show,tub.z+D.z*(.67-.06*show));

@@ -171,7 +171,7 @@ function updateLizards(dt,t){
       L.m.tail.rotation.y=Math.sin(t*14+L.ph)*0.5;if(L.m.rig&&g2.visible)creatureAnim(L.m.rig,'Run',dt,1.3);continue}
     if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
     // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
-    else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.hiss();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
+    else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.lizard();if(Math.random()<0.6)toast('A yellow-spotted lizard is coming for you. Run, or eat an onion.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
     const dx=gx-L.x,dz=gz-L.z,d=Math.hypot(dx,dz);
     if(d>0.05){const s=Math.min(d,sp*dt),nx=L.x+dx/d*s,nz=L.z+dz/d*s;if(!nearCampZone(nx,nz)){L.x=nx;L.z=nz}L.yaw=Math.atan2(dx,dz)}
@@ -219,7 +219,7 @@ function hurt(n,title,text,kind){
   if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
   n*=tune('dmg.all')*tuneOr('dmg.'+title,1);   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
-  afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.thud();   // poison hold: a swarm stacks up, one bite still fades
+  afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.hurt(n);   // poison hold: a swarm stacks up, one bite still fades
   logEv('hurt',{amt:n,hp:Math.round(S.hp),title,text,kind:kind||'injury',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
   if(S.hp<=0)knockOut(title,text);
 }

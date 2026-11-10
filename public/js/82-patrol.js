@@ -50,7 +50,7 @@ const COP_LIGHT=2.2;   // flashlight SpotLight intensity (x the Curfew tab's bri
 // more are added if the Curfew tab asks for a bigger patrol.
 const trucks=[0,1,2,3].map(makeTruck);
 const CUR={phase:clockT()<DAYMS?'day':'night',warned:clockT()>DAYMS-60000,hunter:null,half:null,msgT:0};
-function siren(){for(let i=0;i<3;i++)setTimeout(()=>tone(450,1.4,'sawtooth',0.07,900),i*1500)}
+function siren(){if(sfx.siren())return;for(let i=0;i<3;i++)setTimeout(()=>tone(450,1.4,'sawtooth',0.07,900),i*1500)}
 /* trucks and Zeroni are moved by the shared rules in sim.js (on the server, or right here when you play solo). This just draws them. */
 function showTruck(tk,st,dt){
   if(!st){if(tk.active){tk.active=false;tk.g.position.y=-200;tk.spot.intensity=0;tk.beam.visible=false}return}

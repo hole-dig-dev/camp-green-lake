@@ -40,6 +40,7 @@ function payAssay(mult,quiet){
     logEv('assay',{x:Math.round(PAYDUG.x),z:Math.round(PAYDUG.z),g,mult:+mult.toFixed(2)});PAYDUG.w=0;
   }
   const line=['Barren sand: try somewhere else.','Trace of colour.','Promising ground.','Pay dirt! Keep digging there.','RICH ground! Mark that spot.'][g];
+  sfx.assay(g);   // Pay dirt / Rich get a rising sting (41-cues.js)
   if(quiet&&g>=3)toast(`${name}: ${line}`,'gold',3600);
   return`Assay: ${name}. ${g===0||g>=3?line:''}`.trim();
 }
@@ -56,4 +57,5 @@ function payGlint(h,y){
   if(!SIM.PAY.on)return;const r=SIM.richAt(h.x,h.z);if(r<0.45||Math.random()>r*0.55)return;
   const n=r>0.8?3:r>0.6?2:1;
   for(let i=0;i<n;i++){sparkle(h.x+(Math.random()-0.5)*1.1,y+0.1+Math.random()*0.5,h.z+(Math.random()-0.5)*1.1);const m=SPARKS[SPARKS.length-1].m;m.material.color.setRGB(2.6,2.0,0.7);m.scale.setScalar(0.6+Math.random()*0.5)}
+  sfx.glint(n);
 }

@@ -2,7 +2,7 @@
 
 The game starts Web Audio on the player's first game-start click. Master volume controls everything; Effects controls recordings, ambience, and synthesized effects; Music controls the synthesized disco track; Voice controls live proximity chat. **M** mutes the master bus. Recordings load asynchronously, so the first use of a clip can play its synthesized fallback.
 
-The **original synthesized wind remains the default**, because it already suits the lakebed. Other newly added recordings default on. To A/B at the same spot, open the developer console with backtick and use `audio wind old`, `audio wind new`, or `audio status`. `audio old` and `audio new` compare the whole soundscape. Categories are `wind`, `ambience` (birds/crickets), `rain`, `steps`, `dig`, `metal`, and `props` (tent/house/bunk). These choices affect only your browser and reset on reload. The old game had no footsteps, birds, crickets, or tent/bunk Foley, so their "old" mode is silent.
+The **original synthesized wind remains the default**, because it already suits the lakebed. Other newly added recordings default on. To A/B at the same spot, open the developer console with backtick and use `audio wind old`, `audio wind new`, or `audio status`. `audio old` and `audio new` compare the whole soundscape. Categories are `wind`, `ambience` (birds/crickets), `rain`, `steps`, `dig`, `metal`, `props` (tent/house/bunk), and, since the November 10 core-loop pass below, `rewards`, `ui` and `danger`. These choices affect only your browser and reset on reload. The old game had no footsteps, birds, crickets, or tent/bunk Foley, so their "old" mode is silent.
 
 ## Listening review (September 28, 2026)
 
@@ -24,6 +24,91 @@ JT listened to the [labeled reel](../asset-library/audio/review-reels/2026-09-28
 | Desert calls | Picked hawk, distant and near coyotes, owl, dove; clean up the background noise; play every 3–5 minutes by time of day | Five noise-reduced one-shots, one every 180–300 s from a random side |
 
 Most later cues (hazards, wildlife, patrol, Zeroni, game cues) still sound code-generated. They are not reviewed yet and are not a priority.
+
+## Core-loop sound pass (November 10, 2026): NOT yet reviewed by ear
+
+**Status: nobody has listened to these yet.** They were chosen and mixed by measurement (the author of this pass cannot hear), so every row below is "In game: not reviewed" until JT listens to the [review reel](../asset-library/audio/review-reels/2026-11-10-core-loop.mp3) ([order, timestamps and measured levels](../asset-library/audio/review-reels/2026-11-10-core-loop.md)). Nothing JT decided on September 28 was changed: wind, rain, metal, digging, crickets, footsteps, tent cloth, doors, tumbleweed, birds and desert calls are untouched.
+
+The code is in `public/js/41-cues.js`. The recordings are CC0 one-shots played like a small sampler: a struck-metal "ting", a glass "tick" and a bell are re-pitched into short rising phrases, each with a small random detune, so a reward never plays at quite the same pitch twice. Until a clip has decoded, the old synthesized cue plays.
+
+To compare in game, open the console with backtick: `audio rewards old`, `audio rewards new`, `audio ui old|new`, `audio danger old|new` (`audio old` / `audio new` switch everything). "Old" is the previous synthesized cue, or silence where there was no sound before. F2 → Audio has three new level sliders: "Gold, coins, finds and level-up", "Menu and button sounds", "Hurt, knocked out, siren, lizard hiss". All of it plays through the Effects bus, so the pause menu's Effects and Master volumes and the M mute apply; the start sting follows Music instead.
+
+| Cue (where) | Before | Now | Recordings used | A/B category |
+| --- | --- | --- | --- | --- |
+| `sfx.coin(n)`: a fleck while digging, a washed pan, a sifted bucket, selling, winnings | Two square-wave beeps | One of three struck-metal clinks in turn (pitch varies ±60 cents) over a small coin rustle. `n` is the gold: bigger payouts are louder and add a second clink a fourth or fifth higher | `coin-1/2/3`, `coins-small` | `rewards` |
+| `sfx.gold()`: nugget, rich batch, badge, big find | Five triangle-wave notes | A pouch of coins and four struck notes climbing a major chord | `coins-pouch`, `ting` | `rewards` |
+| `sfx.find()`: item into the sack | Three triangle-wave notes | Leather rustle and two soft glass notes rising a fourth | `leather`, `glass` | `rewards` |
+| `sfx.assay(g)`: assay grade from `payAssay` (new) | Silent | Pay dirt: three rising glass notes and a ringing top note, 0.7 s after the coin sound. Rich: five notes climbing further, over a bell. Barren, Trace and Promising stay silent | `glass`, `ting`, `bell` | `rewards` |
+| `sfx.glint(n)`: gold glints from `payGlint` (new) | Silent | One or two tiny high glass ticks just after the shovel, one per extra spark | `glass` | `rewards` |
+| `sfx.panSwirl()`, `sfx.panDunk()`: washing the pan (`89-goldfx.js`) | Band-pass noise ticks and a noise splash | Three water takes in turn while water runs over the lip; a deeper splash for the two dunks | `water-swirl-1/2/3`, `water-dunk` | `rewards` |
+| `sfx.siftShake()`: the sifter's tray (`89-goldfx.js`) | A near-inaudible low noise tick | The approved sand-step recordings, pitched up, low-passed and kept quiet, as a gritty rub on each shake | `step-sand-1/2/3` (already shipped) | `rewards` |
+| `sfx.buy()`: store and crew-store purchases | The coin beeps | Coins on the counter, the till's latch, one bright note | `coins-pouch`, `latch`, `ting` | `rewards` |
+| `sfx.quota()`: the nightly quota leaving the wallet at dawn | Silent | Coins poured out (lower and slower) and a ledger shut | `coins-pouch`, `ui-close` | `rewards` |
+| `sfx.levelUp()` | Same five notes as `gold` | A bell under five climbing notes; the top one is doubled so it rings on | `bell`, `ting` | `rewards` |
+| Menu open / close (pause, store, inventory, field map, cards) | Silent | A page turn; a soft thump | `ui-open`, `ui-close` | `ui` |
+| Button hover (mouse only) / press | Silent | A very quiet tick; a soft click | `ui-hover`, `ui-click` | `ui` |
+| `sfx.deny()`: pressing a greyed-out button ("Need 45 more gold"), or the server refusing a purchase | Silent | Two dull wooden knocks, the second lower | `ui-deny` | `ui` |
+| `sfx.hurt(n)`: any damage | An 80 Hz sine thud | One of two recorded body hits, louder for bigger damage | `hit-1/2` | `danger` |
+| `sfx.ko()`: knocked out | Silent | The hit, then a body falling in the dirt | `hit-2`, `bodyfall` | `danger` |
+| `sfx.lizard()`: a lizard starts chasing you | 0.6 s of band-pass noise | Still synthesized (no CC0 lizard recording was found): a dry hiss that swells and trails off, with a rattle on it. The twister and the dynamite fuse keep the plain `sfx.hiss` | none (Web Audio) | `danger` |
+| `sfx.siren()`: curfew in one minute | Three identical sawtooth sweeps | Still synthesized: a hand-cranked siren. Two detuned saws wind up, sag, wind up again and run down over 7.5 s through a low-pass that opens with the pitch, with an echo | none (Web Audio) | `danger` |
+| `sfx.startSting()`: the title screen's start press | Silent | The approved shovel hit, a low bell toll and two faint high notes. Skipped when a saved session resumes | `shovel` (already shipped), `bell`, `ting` | `ui` |
+
+**Not done, on purpose.** There is no ambient pad on the title screen: browsers do not let a page play sound before the first click, so it could only start after the start press, and no CC0 material found was good enough to judge without hearing it. The generic `sfx.thud` (rocks, tumbleweeds, falls), `sfx.hiss`, `sfx.splash` (canteen), `sfx.beep`, wildlife, Zeroni and the disco are unchanged and still synthesized.
+
+### What was checked without listening
+
+- Every new file decodes as mono 44.1 kHz MP3; sizes are 1.6 to 10.5 KB (106 KB for all 22). File levels are in the table below.
+- `scripts/render-core-loop-reel.mjs` plays each cue in the running game, records the master bus, counts the sources each cue scheduled on the AudioContext, and measures the result. It then drives the real paths: opening the pause menu and the store, hovering and pressing store buttons with the mouse, pressing a greyed-out Buy button, a real purchase, `payAssay` at each grade, `addXP` to a new level, a new day with the quota paid, `hurt 10`, a knockout and the siren. Each one started the expected clips, with no console errors; the results are at the end of the [reel's notes](../asset-library/audio/review-reels/2026-11-10-core-loop.md).
+- Mix levels were set against the approved digging clip, measured the same way: an ordinary coin sits about 3 dB under a dig, a nugget or level-up 2 to 3 dB over it, menu sounds 14 to 22 dB under it (the "no" knock 6 dB under), a heavy hit or a knockout 6 to 8 dB over it.
+
+### New recordings, sources and licence
+
+All are **CC0**. Each was trimmed, converted to mono 44.1 kHz MP3 and peak-normalised to -3 dBFS by `asset-library/audio/core-loop/build.sh`; the untouched originals are in `asset-library/audio/sources/core-loop/`.
+
+| Shipped file in `public/audio/` | Original | Source / licence |
+| --- | --- | --- |
+| `coin-1.mp3`, `coin-2.mp3`, `coin-3.mp3` | `impactMetal_light_001`, `_002`, `_004.ogg` | [Impact Sounds by Kenney](https://kenney.nl/assets/impact-sounds), CC0 |
+| `ting.mp3` | `impactMetal_light_003.ogg` | Impact Sounds by Kenney, CC0 |
+| `glass.mp3` | `impactGlass_light_000.ogg` | Impact Sounds by Kenney, CC0 |
+| `bell.mp3` | `impactBell_heavy_000.ogg` | Impact Sounds by Kenney, CC0 |
+| `ui-deny.mp3` | `impactWood_light_000.ogg` | Impact Sounds by Kenney, CC0 |
+| `hit-1.mp3`, `hit-2.mp3` | `impactPunch_medium_000`, `_003.ogg` | Impact Sounds by Kenney, CC0 |
+| `bodyfall.mp3` | `impactSoft_heavy_003.ogg` | Impact Sounds by Kenney, CC0 |
+| `coins-pouch.mp3`, `coins-small.mp3` | `handleCoins.ogg`, `handleCoins2.ogg` | [RPG Audio by Kenney](https://kenney.nl/assets/rpg-audio), CC0 |
+| `leather.mp3`, `latch.mp3` | `handleSmallLeather.ogg`, `metalLatch.ogg` | RPG Audio by Kenney, CC0 |
+| `ui-open.mp3`, `ui-close.mp3` | `bookFlip2.ogg`, `bookClose.ogg` | RPG Audio by Kenney, CC0 |
+| `ui-hover.mp3`, `ui-click.mp3` | `rollover2.ogg`, `click3.ogg` | [UI Audio by Kenney](https://kenney.nl/assets/ui-audio), CC0 |
+| `water-swirl-1.mp3`, `-2`, `-3`, `water-dunk.mp3` | `splash_06`, `splash_13`, `splash_15`, `splash_04.ogg` | [40 CC0 water / splash / slime SFX by rubberduck](https://opengameart.org/content/40-cc0-water-splash-slime-sfx) on OpenGameArt, CC0 |
+
+### File levels
+
+Measured with `ffprobe`, `ffmpeg -af volumedetect` and `ffmpeg -af loudnorm=print_format=summary`. Most clips are too short for an integrated loudness reading, so the in-game levels in the reel's notes are the ones to compare.
+
+| File | Bytes | Length s | Peak dBFS | Mean dBFS | Integrated LUFS | True peak dBTP |
+| --- | --- | --- | --- | --- | --- | --- |
+| `coin-1.mp3` | 2206 | 0.29 | -3.0 | -22.1 | too short | -2.9 |
+| `coin-2.mp3` | 2075 | 0.26 | -2.4 | -22.2 | too short | -2.3 |
+| `coin-3.mp3` | 2128 | 0.26 | -3.1 | -22.3 | too short | -3.0 |
+| `coins-small.mp3` | 6277 | 0.34 | -2.8 | -24.8 | too short | -2.8 |
+| `coins-pouch.mp3` | 10549 | 0.84 | -3.0 | -31.4 | -26.9 | -2.4 |
+| `ting.mp3` | 3298 | 0.52 | -2.5 | -22.2 | -18.9 | -2.5 |
+| `glass.mp3` | 2049 | 0.26 | -3.3 | -23.2 | too short | -3.2 |
+| `bell.mp3` | 7067 | 1.52 | -3.0 | -28.1 | -29.5 | -3.0 |
+| `leather.mp3` | 3510 | 0.31 | -3.1 | -25.6 | too short | -3.1 |
+| `latch.mp3` | 3720 | 0.29 | -3.0 | -24.9 | too short | -2.6 |
+| `water-swirl-1.mp3` | 8050 | 0.50 | -3.0 | -25.8 | -22.1 | -2.9 |
+| `water-swirl-2.mp3` | 9847 | 0.81 | -3.0 | -28.3 | -24.4 | -2.4 |
+| `water-swirl-3.mp3` | 7973 | 0.50 | -3.0 | -29.5 | -25.8 | -3.0 |
+| `water-dunk.mp3` | 10287 | 1.04 | -3.0 | -25.5 | -23.5 | -2.9 |
+| `ui-open.mp3` | 7371 | 0.47 | -3.0 | -30.5 | -27.4 | -2.9 |
+| `ui-close.mp3` | 3121 | 0.24 | -3.2 | -21.9 | too short | -3.1 |
+| `ui-hover.mp3` | 1582 | 0.08 | -3.0 | -25.3 | too short | -3.0 |
+| `ui-click.mp3` | 1921 | 0.13 | -3.1 | -29.4 | too short | -3.0 |
+| `ui-deny.mp3` | 2179 | 0.31 | -3.1 | -24.2 | too short | -3.0 |
+| `hit-1.mp3` | 3662 | 0.47 | -3.0 | -19.1 | -21.6 | -3.0 |
+| `hit-2.mp3` | 4132 | 0.50 | -3.0 | -20.3 | -21.9 | -3.0 |
+| `bodyfall.mp3` | 3193 | 0.57 | -3.0 | -18.5 | -23.7 | -3.0 |
 
 ## A/B against the previous game audio
 
