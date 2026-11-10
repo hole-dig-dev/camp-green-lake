@@ -153,6 +153,11 @@ function updateCamera(dt){
 /* the title screen's camera is titleCamera(dt) in 61-title-scene.js */
 
 /* lizards */
+/* A bite used to knock you out on the spot (2026-11-10: the first-day playtest bot was down within seconds of reaching
+   the creek). Now it costs LIZ_BITE health: a digger in good shape staggers on, and a second bite before you have
+   healed, or a first one when you are already hurt, still puts you down. */
+const LIZ_BITE=55;
+function gilaBite(text){if(S.hp>LIZ_BITE+1)hurt(LIZ_BITE,'Bitten',text+' Get away from it and catch your breath.');else knockOut('Bitten',text)}
 function updateLizards(dt,t){
   if(PARTY.on)return;
   if(!hazOn('lizards')){for(const L of lizards)L.m.g.visible=false;return}   /* the hazards switch (88-hazards.js) */
@@ -180,7 +185,7 @@ function updateLizards(dt,t){
     let dr=L.yaw-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*10);
     L.m.tail.rotation.y=Math.sin(t*(L.mode==='wander'?5:14)+L.ph)*0.5;
     if(L.m.rig&&g.visible)creatureAnim(L.m.rig,L.mode==='wander'?'Walk':'Run',dt,L.mode==='wander'?1:1.3);
-    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});knockOut('Bitten','A gold-eyed gila bit you.');L.mode='wander';L.calmT=4}   /* backs off after a bite: in god mode (no knockout) it used to bite and hiss every frame, deafeningly (JT) */
+    if(alive&&L.mode==='chase'&&dp<0.75){sfx.bite();logEv('lizBite',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1)});gilaBite('A gold-eyed gila bit you.');L.mode='wander';L.calmT=4}   /* backs off after a bite: in god mode (no knockout) it used to bite and hiss every frame, deafeningly (JT) */
   }
 }
 

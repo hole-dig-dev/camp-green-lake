@@ -182,7 +182,9 @@ function nearSpot(){
   if(S.sit!=null)return seatedSpot();   // sitting down (86-sit.js)
   {const t=truckSpot();if(t&&S.inTruck)return t}   // in Mr. Sir's pickup: F only gets you out (87-truck.js)
   const dn=remoteNear(R=>R.f&2,2.4);if(dn)return{id:'revive',...dn};
+  {const j=jeepSpot();if(j)return j}   /* the jeep's tub: tip sand in, shovel it out at the sifter (88-jeephaul.js) */
   {const t=truckSpot();if(t)return t}
+  {const c=cacheSpot();if(c)return c}   /* something to find at each landmark (49-caches.js) */
   if(S.inTown)return townSpot();   // the buried town's own spots (89-town.js)
   const tr=remoteNear(R=>R.f&16,3);if(tr)return{id:'pull',...tr};
   const sk=remoteNear(R=>R.f&32,SINK_RESCUE_R);if(sk)return{id:'sinkRescue',...sk};   // link hands with a sinkhole-trapped friend (hold F: see 87-sinkhole.js)

@@ -189,7 +189,8 @@ function checkCampfire() {
 const TRUCK_PARK = { x: 6.1, z: 31.2, h: Math.PI / 2 }, TRUCK_GATE_PARK = { x: 25.4, z: 39, h: -Math.PI / 2 }, TRUCK_SEATS = ['drive', 'shotgun', 'tail0', 'tail1'];
 const TRUCK = { x: TRUCK_PARK.x, z: TRUCK_PARK.z, h: TRUCK_PARK.h, seats: {} };
 const truckSeatOf = id => TRUCK_SEATS.find(k => TRUCK.seats[k] === id) || null;
-const truckOn = () => tuneS('veh.drivable', 0) >= 0.5 && (world.zone || 'lake') === 'lake' && !TRUCK.wreck;
+const truckOn = () => (tuneS('veh.drivable', 0) >= 0.5 || !!(world.camp && world.camp.jeepKeys)) &&   /* the tester's switch, or the crew bought the keys (88-jeephaul.js) */
+  (world.zone || 'lake') === 'lake' && !TRUCK.wreck;
 let truckWasOn = false;
 const truckMsg = park => ({ t: 'truck', st: { x: TRUCK.x, z: TRUCK.z, h: TRUCK.h, seats: TRUCK.seats, on: truckOn(), park: !!park, wreck: !!TRUCK.wreck } });
 // whose page runs its physics: the driver, or with nobody driving the camper with the lowest id (87-truck.js truckOwner)
@@ -996,7 +997,7 @@ wss.on('connection', (ws, req) => {
       case 'pipeFlow': broadcast({ t: 'pipeFlow', leaf: num(m.leaf, 1, 1e4, 1) | 0 }, c.id); break;
       case 'campBuy': { // a camp upgrade (public/js/84-camp.js), paid from the crew wallet by walletSpend just before this
         if (m.rid != null && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return;
-        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant'].includes(id)) return;
+        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant', 'jeepKeys'].includes(id)) return;
         const camp = world.camp || (world.camp = {});
         if (camp[id]) { world.run.bank += num(m.cost, 0, 10000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
         camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
@@ -1172,7 +1173,7 @@ wss.on('connection', (ws, req) => {
             if (m.what === 'hire') k.hired = true; else if (m.what === 'fire') world.crew[n] = {};
             else if (m.what === 'kit') { const keep = { hired: !!k.hired }; world.crew[n] = keep; const add = id => { const it = SIM.CREW_SHOP.find(i => i.id === id); if (!it) return; keep[id] = true; if (it.needs) add(it.needs); }; for (const it of items) add(it); } }
           broadcast({ t: 'crew', up: world.crew });
-        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
+        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant', 'jeepKeys'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
         else if (m.op === 'pipe') { const p = pipeW();   // lay pipe without walking it (the client checked nothing solid is in the way)
           if (m.clear) { p.nodes = []; p.broken = {}; }
           for (const a of (Array.isArray(m.add) ? m.add.slice(0, 200) : [])) {

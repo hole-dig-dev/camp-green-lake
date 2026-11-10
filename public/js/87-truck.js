@@ -32,7 +32,7 @@ const TRUCK_SEND=1/12;                                        // the driver send
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,vx:0,vz:0,vy:0,q:new THREE.Quaternion(),w:new THREE.Vector3(),air:false,flipped:false,flipT:0,bog:0,lift:0,hitCool:{},seats:{},on:false,
   root:null,col:null,sendT:0,tgt:null,escaped:false,outGate:false,prevH:TRUCK_PARK.h,outAt:0,wasOn:false};
 const truckMe=()=>online()?net.id:'me';
-const truckOn=()=>(online()?TRUCK.on:tune('veh.drivable')>=0.5&&!TRUCK.wreck)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
+const truckOn=()=>(online()?TRUCK.on:(tune('veh.drivable')>=0.5||campHas('jeepKeys'))&&!TRUCK.wreck)&&(typeof ZONE==='undefined'||ZONE.id==='lake');
 /* local truck coordinates -> world */
 function truckAt(lx,lz,T=TRUCK){const c=Math.cos(T.h),s=Math.sin(T.h);return{x:T.x+lx*c+lz*s,z:T.z-lx*s+lz*c}}
 

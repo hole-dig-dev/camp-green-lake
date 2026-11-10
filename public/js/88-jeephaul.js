@@ -4,13 +4,13 @@
      - The crew buys the jeep keys at the store (Camp tab, `jeepKeys`, a camp upgrade like the washers). From then on it
        waits inside the service gate and anyone can drive it (87-truck.js truckOn, server.js truckOn).
      - Its tub carries JEEP_HOLES holes of sand, six big buckets' worth. Stand at the back with sand in your bucket: F
-       tips it in. The sand keeps its richness (48-paydirt.js). Park within JEEP_UNLOAD_R of the sifter: F at the jeep
+       tips it in. The sand keeps its richness (48-paydirt.js). Park within JEEP_UNLOAD_R of the sifter (its own spot inside the service gate counts): F at the jeep
        shovels the load out, into your hopper if you have one (what doesn't fit goes straight through the sifter).
      So the far paystreaks are worth working: dig there all morning, drive the lot home in one trip.
    The load is each digger's own (S.jeepSand, saved with S), like the hopper's: two diggers can both load the same
    jeep. A mound in the tub shows your load. Hooks: nearSpot() in 45-state.js asks jeepSpot(); 90-loop.js calls
    updateJeepHaul(). */
-const JEEP_HOLES=30,JEEP_UNLOAD_R=11,JEEP_TAIL=[0,-2.35],JEEP_REACH=2.3;
+const JEEP_HOLES=30,JEEP_UNLOAD_R=18,JEEP_TAIL=[0,-2.35],JEEP_REACH=2.3;
 const jeepOwned=()=>typeof campHas==='function'&&campHas('jeepKeys');
 const jeepSand=()=>Math.max(0,S.jeepSand||0);
 let JEEP_MOUND=null;
