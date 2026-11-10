@@ -48,7 +48,7 @@ const TUNE_DEFS=[
   {key:'haz.on.lizards',tab:'Hazards',label:'Yellow-spotted lizards: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.on.night',tab:'Hazards',label:'Night patrols and Madame Zeroni: on anyway (while ALL is off)',def:0,kind:'flag'},
   // ---- vehicles: Mr. Sir's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
-  {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s pickup (F at the driver\'s door; out the service gate = escape to the next map)',def:0,kind:'flag'},
+  {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Mr. Sir\'s jeep (F at the driver\'s door; back it out of the service gate and drive the lake)',def:0,kind:'flag'},
   {key:'veh.respawn',tab:'Vehicles',label:'Put Mr. Sir\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
   {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
   {key:'veh.accel',tab:'Vehicles',label:'Acceleration',def:6,kind:'mul',range:3,unit:' m/s²'},

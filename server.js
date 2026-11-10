@@ -212,6 +212,7 @@ function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUC
    (and not down in the buried town) has to be up there. */
 function checkSummit() {
   if ((world.zone || 'lake') !== 'lake') return;
+  if (SIM.GOLD.NO_ESCAPE) return;   // the gold rush: nobody leaves the lake
   const js = joined().filter(c => !c.town), at = js.filter(c => c.summit).length;
   broadcast({ t: 'sumstat', at, total: js.length });
   const next = ZONE_ORDER[ZONE_ORDER.indexOf('lake') + 1];
