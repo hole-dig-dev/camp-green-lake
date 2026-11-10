@@ -3,8 +3,9 @@
 > **Historical documents keep the old names on purpose.** These are dated records and correspondence (some written by
 > another collaborator), so they are not rewritten: `docs/HANDOFF.md`, `docs/FOR-CLAUDE-458.md`, `FOR_CLAUDE_457.md`,
 > `CHARACTER-HANDOFF.md`, `docs/plans/*`, `docs/claude-to-claude/*`, `docs/ui-redesign-spec.md`,
-> `docs/audio-narration-handoff.md`, `asset-library/audio/review-reels/*` and the screenshots under
-> `docs/camp-overhaul-screenshots/` and `docs/ui-screenshots/`. Where they say Camp Green Lake, Warden, Mr. Sir, D Tent,
+> `docs/audio-narration-handoff.md`, `asset-library/audio/review-reels/*`, `art/characters/archived/*`, the raw icon
+> sheets and design notes in `docs/art/`, and the screenshots under `docs/camp-overhaul-screenshots/` and
+> `docs/ui-screenshots/`. Where they say Camp Green Lake, Warden, Mr. Sir, D Tent,
 > KB tube, Sploosh, onions, Zeroni or the curse, read the names in the table below. This file itself names the old
 > things only in order to map them.
 
@@ -66,7 +67,7 @@ the same treatment: replace with something in the Company's deadpan voice, or de
 
 ## Rules for applying it
 
-1. **Visible and audible text only**: strings shown in the HUD, toasts, dialogue, store, signs, title, pause menu,
+1. **Visible and audible text**: strings shown in the HUD, toasts, dialogue, store, signs, title, pause menu,
    console help, README player-facing parts, HTML title/meta, alt text, and text baked into models/signs (see 4).
    **Identifiers follow the same names** (since 2026-11-10; see "Identifiers" below): variables, object keys used
    as ids, network message types and fields, save keys, file and model names, CSS ids, tune keys, console commands

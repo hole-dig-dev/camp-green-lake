@@ -88,7 +88,7 @@ const SHOP=[
 ];
 // painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
 // and inventory cards in place of the SVG line icons, which stay as the fallback for anything without art
-const GEAR_ART=new Set(['bitterroot','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds','tonic','medkit','walkie']);
+const GEAR_ART=new Set(['bitterroot','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','tonic','medkit','walkie']);
 function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg':''}" src="icons/${path}.png" alt="">`}
 function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
 const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'},{id:'camp',label:'Camp'}];

@@ -52,7 +52,7 @@ hb=dense_box('headboard',(1.55,0.08,0.55),(0,0.12,1.07),r,cuts=4);painted(hb,12)
 tg=dense_box('tailgate',(1.5,0.5,0.06),(0,2.55,0.78),r,cuts=4);painted(tg,13)   # dropped flat, hinged at the end of the bed
 text('tgtxt','CGL',(0,2.55,0.815),0.22,M_('h_white',(0xee,0xe0,0xbc),0.8),fontname='BigShouldersStencilDisplay',rot=(0,0,math.pi),extrude=0.004,parent=r)
 for s in (-1,1):tube(f'tgchain{s}',(s*0.72,2.3,1.3),(s*0.72,2.78,0.82),0.01,IRON,r)
-# in the bed: shovel, jerry can, and his sack of sunflower seeds
+# in the bed: shovel, jerry can, and a feed sack
 tube('shovelh',(-0.5,0.4,0.85),(0.2,2.0,0.9),0.025,M_('h_handle',(0x8a,0x6a,0x44),0.85),r)
 box('shovelb',(0.26,0.34,0.03),(0.3,2.2,0.9),M_('h_blade',(0x70,0x74,0x72),0.6,0.3),rot=(0,0,-0.4),bevel=0.01,parent=r)
 box('jerry',(0.18,0.34,0.44),(0.5,0.45,1.04),M_('h_red',(0x9a,0x2e,0x22),0.6,0.2),bevel=0.03,parent=r)
