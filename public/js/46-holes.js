@@ -24,7 +24,9 @@ const FOOT=0.3048;
 /* ---- the terrain cut: chunk fragments inside a lined hole's (rim + HL_CUT) are discarded ---- */
 // one entry per liner slot: (x, z, radius, depth); radius 0 = slot unused
 const hlHoleU={value:Array.from({length:HL_N},()=>new T.Vector4(0,0,0,0))};
-chunkMat.onBeforeCompile=sh=>{
+const gdHook=chunkMat.onBeforeCompile;   // 15-terrain.js's dry-lake-bed detail: run it first, then add the hole cut
+chunkMat.onBeforeCompile=(sh,r)=>{
+  gdHook(sh,r);
   sh.uniforms.uHoles=hlHoleU;
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vHW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvHW=(modelMatrix*vec4(transformed,1.0)).xz;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>\nvarying vec2 vHW;uniform vec4 uHoles[${HL_N}];`)

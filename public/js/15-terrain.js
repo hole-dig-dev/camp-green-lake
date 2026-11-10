@@ -88,7 +88,42 @@ function shade(col,i,x,z,b,h,tn){
   else if(h>b+0.02)tmpC.lerp(C_DIRT,clamp((h-b)/0.35,0,1)*0.85);
   col[i*3]=tmpC.r;col[i*3+1]=tmpC.g;col[i*3+2]=tmpC.b;
 }
+/* THE DRY LAKE BED (ground detail). The sand was one flat colour per triangle. This adds, in the ground's shader:
+   - mud plates: the cracked polygons of a dried lake bed (cell noise), each plate a slightly different shade,
+     with a dark crack line between them that stays the same width on screen far away (so it never shimmers);
+   - only on ground that faces up (hole walls and mound sides keep their plain bands);
+   - fading out with distance, and softer inside camp where the ground is trampled.
+   Both the near chunks and the far terrain use it, so there is no visible seam where they meet. */
+const GROUND_DETAIL={plate:1.15,crack:0.29,tint:0.06,far:120};   // plate size (m), how dark the cracks are, plate-to-plate shade difference, fade-out distance (m)
+function groundDetail(mat,wVar){
+  const prev=mat.onBeforeCompile;
+  mat.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);
+    sh.uniforms.uGD={value:new T.Vector4(GROUND_DETAIL.plate,GROUND_DETAIL.crack,GROUND_DETAIL.tint,GROUND_DETAIL.far)};
+    if(!wVar)sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vGW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvGW=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    const W=wVar||'vGW';if(LOW_POWER)sh.fragmentShader='#define GD_LOW\n'+sh.fragmentShader;
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+(wVar?'':'varying vec3 vGW;')+`uniform vec4 uGD;
+      vec2 gdH(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return fract(sin(p)*43758.5453);}
+      /* cell noise: x = distance to the nearest plate edge (metres-ish), y = a random number per plate */
+      vec2 gdCell(vec2 x){vec2 n=floor(x),f=fract(x),mg,mr;float md=8.;
+        for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){vec2 g=vec2(float(i),float(j)),o=gdH(n+g)*0.82+0.09,r=g+o-f;float d=dot(r,r);if(d<md){md=d;mr=r;mg=g;}}
+        md=8.;for(int j=-2;j<=2;j++)for(int i=-2;i<=2;i++){vec2 g=mg+vec2(float(i),float(j)),o=gdH(n+g)*0.82+0.09,r=g+o-f;if(dot(mr-r,mr-r)>1e-5)md=min(md,dot(0.5*(mr+r),normalize(r-mr)));}
+        return vec2(md,gdH(n+mg).x);}`)
+      .replace('#include <color_fragment>',`#include <color_fragment>
+      {vec3 gn=normalize(cross(dFdx(${W}),dFdy(${W})));float up=smoothstep(0.80,0.96,abs(gn.y)),gd=distance(${W},cameraPosition),fade=up*(1.-smoothstep(uGD.w*0.35,uGD.w,gd));
+       if(fade>0.01){vec2 q=${W}.xz/uGD.x;q+=0.18*vec2(sin(q.y*1.7),cos(q.x*1.3));     /* a little wobble so the plates aren't a grid */
+         vec2 c=gdCell(q);float w=max(fwidth(q.x),fwidth(q.y))*0.9+0.016,line=1.-smoothstep(w*0.5,w*1.15,c.x);
+         #ifndef GD_LOW
+         {vec2 q2=q*2.83+7.3;vec2 c2=gdCell(q2);float w2=max(fwidth(q2.x),fwidth(q2.y))*0.9+0.03;line=max(line,(1.-smoothstep(w2*0.5,w2*1.1,c2.x))*0.38*(1.-smoothstep(18.,45.,gd)));}   /* hairline cracks inside each plate, close up only */
+         #endif
+         float camp=1.-0.78*smoothstep(46.,30.,max(abs(${W}.x),abs(${W}.z-39.)));           /* softer where the camp is */
+         diffuseColor.rgb*=1.+(c.y-0.5)*uGD.z*2.*fade*camp;
+         diffuseColor.rgb*=1.-line*uGD.y*fade*camp*(0.6+0.4*smoothstep(0.,40.,gd)*0.+0.4);
+         diffuseColor.rgb*=1.-0.05*fade*smoothstep(0.10,0.,c.x);}}                        /* plates dip slightly toward their edges */`);
+  };
+  mat.customProgramCacheKey=()=>'gd'+(wVar||'');
+}
 const chunks=new Map(),chunkMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
+groundDetail(chunkMat);
 const ckey=(i,j)=>(i+100)*1000+(j+100);
 /* st = 1 for a full-detail chunk, COARSE_STEP for a coarse one. Each chunk remembers its own grid (C.cn cells
    per side, C.res metres per cell), so everything that reads chunk data works with either detail level. */
@@ -148,6 +183,7 @@ const farU={uFocus:{value:new T.Vector2(0,12)},uR:{value:LOAD_R-3}};
   mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,farU);
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;').replace('#include <begin_vertex>','#include <begin_vertex>\nvFarW=(modelMatrix*vec4(transformed,1.0)).xyz;');
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;uniform vec2 uFocus;uniform float uR;').replace('void main() {','void main() {\nif(distance(vFarW.xz,uFocus)<uR)discard;')};
+  groundDetail(mat,'vFarW');   // the same dry-lake-bed plates as the near chunks (reuses this shader's world position)
   const far=new T.Mesh(g,mat);far.receiveShadow=true;scene.add(far);FAR_TERRAIN=far;
 }
 streamChunks(0,12,999);

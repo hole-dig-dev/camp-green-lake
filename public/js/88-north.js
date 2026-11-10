@@ -38,6 +38,8 @@ function updateNorth(dt){
   northVy=P.vy;
   const top=northOnTop()&&!S.ko;
   if(top!==northTop){northTop=top;
+    if(top&&SIM.GOLD.NO_ESCAPE){toast('Nothing up here but more desert. The gold is back down on the lake.','',5000);logEv('summit',{x:+P.x.toFixed(1),noEscape:1});return}   // the gold rush: no way out (sim.js GOLD.NO_ESCAPE)
+    if(SIM.GOLD.NO_ESCAPE)return;
     if(top){toast('You\'re at the top of the wall. Big Thumb is right there. Get the whole crew up here.','gold',5000);logEv('summit',{x:+P.x.toFixed(1)})}
     if(online())wsSend({t:'summit',on:top});
     else if(top){const next=ZONE_ORDER[ZONE_ORDER.indexOf(ZONE.id)+1];if(next)zoneFade(()=>zoneEnter(next))}}

@@ -51,6 +51,7 @@ function frame(now){
   updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateThumbHaze();updateWatchtowers();
   updateEmotes(dt);updateWalkie(dt);updateHopper(dt);updateMines(dt);updatePipeline(dt);updateDynamite(dt);updateDisarm(dt);updateDogs(dt);updateGear(dt);updateMorale(dt);updateVein(dt);updateSparks(dt);updateEotd(dt);updateHover(dt);updateUfo(dt);updateHabits(dt);updateHazardSwitch();updateGrab(dt);updateRoster(dt);updateBots(dt,now);updateClerk(dt);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateTruck(dt);updateNorth(dt);updateCoords();updateCrewPanel(dt);updateRagdolls(dt);updateParts(dt);updatePops(dt);updateHoles(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);updateZones(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
+  updateSky(dt);   // 82-sky.js: sun path, sky and light colours for the time of day (before the storm/mood blends below)
   updateHaboob(dt);updateMood(dt);updateTown(dt);   // updateTown: the buried town is dark (89-town.js)   // final blend on top of whatever fog/sky/light the day-night/disco/win code left this frame (see 75-haboob.js)
   updateFootsteps(dt);updateAudioScene();
   sendPresence(now);
@@ -60,7 +61,7 @@ function frame(now){
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
   updateGoldFx(dt);updateWardrobeCam();   // panning / sifting you watch (89-goldfx.js): drives the view while it runs
-  renderer.render(scene,camera);
+  lookRender(scene,camera);   // 14-look.js: the scene through the AO / bloom / grade passes (plain render if they're unavailable)
   updateLabels(now);
   requestAnimationFrame(frame);
 }

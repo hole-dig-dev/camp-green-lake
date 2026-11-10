@@ -66,6 +66,7 @@ const numArg=(v,def,a,b)=>{if(v===undefined)return def;const n=Number(v);if(!Num
 
 command('help',{needsGame:false,usage:'help',help:'List every command.',run(){return[...CMDS.values()].map(c=>c.usage.padEnd(22)+c.help).join('\n')}});
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
+command('look',{needsGame:false,usage:'look on|off|ao|bloom <n>',help:'The picture pass (14-look.js): off for the plain render, on to bring it back; ao toggles contact shadows; bloom <0-1> sets the glow.',run([a,b]){if(a==='off')LOOK.on=false;else if(a==='on')LOOK.on=true;else if(a==='ao')LOOK.ao=!LOOK.ao;else if(a==='bloom'&&isFinite(+b))LOOK.bloom=+b;return`look ${LOOK.on&&LOOK.ok?'on':'off'}  ao ${LOOK.ao?'on':'off'}  bloom ${LOOK.bloom}`}});
 command('audio',{usage:'audio [status|call|old|new|<cat> old|new]',help:'A/B old vs new sounds here (cat: wind ambience rain steps dig metal props); call = a desert call now',
   run([a,b]){
     a=(a||'').toLowerCase();b=(b||'').toLowerCase();

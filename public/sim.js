@@ -32,7 +32,9 @@
      than the last. They show up with bare hands and a gold pan, like you did. */
   const CREW_HIRE = [40, 60, 90, 130, 180, 240];
   const crewHirePrice = hired => CREW_HIRE[Math.min(CREW_HIRE.length - 1, Math.max(0, hired | 0))];
-  const GOLD = { perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
+  /* NO_ESCAPE (2026-11-10): the gold rush has no way out. The lake is the whole game: climbing the north wall no longer
+     moves the crew on to the next map (88-north.js, server.js checkSummit). Set it false to bring the escape back. */
+  const GOLD = { NO_ESCAPE: true, perHole: 4, buckets: [5, 10, 15], SIFTER: { x: 10.6, z: 39.2, ry: 0 }, SIFT_R: 2.4, WATER: { x: 7.6, z: 34.6, r: 3.2 } };
   /* the sifter's take for `holes` holes of sand: about perHole a hole; a batch runs from about half to double that, and
      about 1 in 16 turns up a nugget (2-4x). rnd: a 0..1 random function; mult: dig day doubles it. */
   function siftGold(holes, rnd, perHole = GOLD.perHole, mult = 1) {
