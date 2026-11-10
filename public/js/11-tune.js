@@ -175,7 +175,7 @@ const TUNE_DEFS=[
   {key:'env.bonkReach',tab:'Environment',label:'Shovel bonk reach',def:2.3,kind:'mul',range:2,unit:' m'},
   // ---- monsters, events and the bad luck (the server reads these too, from the play-test server's saved sliders)
   {key:'cart.spillKo',tab:'Grab',label:'Tipped out of the wheelbarrow while downed: knockout time lost',def:6,kind:'mul',range:3,zero:true,unit:' s'},
-  {key:'ro.sheriffWin',tab:'Monsters',label:'The Marshal\'s ghost hunts loot carriers in the last part of the day',def:0.15,kind:'lin',span:0.15,min:0,max:1,unit:'%',pct:true},
+  {key:'ro.marshalWin',tab:'Monsters',label:'The Marshal\'s ghost hunts loot carriers in the last part of the day',def:0.15,kind:'lin',span:0.15,min:0,max:1,unit:'%',pct:true},
   {key:'mon.hatchBite',tab:'Monsters',label:'Gila hatchling bite (poison)',def:8,kind:'mul',range:3,unit:' hp'},
   {key:'aff.poisonHold',tab:'Monsters',label:'Poison stops wearing off for this long after a bite',def:4,kind:'mul',range:3,zero:true,unit:' s'},
   {key:'mon.roster',tab:'Monsters',label:'Roster monsters spawn rate',def:1,kind:'mul',range:4,zero:true,unit:'×'},

@@ -547,14 +547,14 @@
        small  (from day 1)  hatch: lizard hatchlings in swarms, snake: rattlesnakes that rattle then strike,
                             scorp: scorpions that come up where you dig
        medium (from day 2)  dutch: Foreman Dutch walks the lake and takes your sack if you stand around,
-                            sheriff: the Marshal's ghost, near curfew, hunts whoever carries Lil Marlow's loot
-       big    (from day 3)  supt: the Superintendent knocks out whoever she catches idle, kate: Lil Marlow's ghost at night,
+                            marshal: the Marshal's ghost, near curfew, hunts whoever carries Lil Marlow's loot
+       big    (from day 3)  supt: the Superintendent knocks out whoever she catches idle, lil: Lil Marlow's ghost at night,
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
-     players: simPlayers() on the server / meSim() solo, plus kt (holding Lil's loot), on (onion active), vy (camera yaw). */
+     players: simPlayers() on the server / meSim() solo, plus ml (holding Lil's loot), on (onion active), vy (camera yaw). */
   const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
-  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'sheriff'], RO_BIG = ['supt', 'kate'];
-  const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'sheriff', 'supt', 'kate'];   // wire format: index into this
+  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'marshal'], RO_BIG = ['supt', 'lil'];
+  const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'marshal', 'supt', 'lil'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   function rosterFor(day, curse) {
     const c = clamp(curse || 0, 0, 100);
@@ -596,9 +596,9 @@
       if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * cmul * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
       if (has('dutch') && !night && !count('dutch')) roSpawn(R, 'dutch', pickP(), 40, 60, {});
       if (has('supt') && !night && !count('supt')) roSpawn(R, 'supt', pickP(), 50, 70, {});
-      const kt = live.filter(p => p.kt);
-      if (has('sheriff') && (t > cur - DAYMS * (o.sheriffWin == null ? 0.15 : o.sheriffWin) || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
-      if (has('kate') && (night || R.force.includes('kate')) && !count('kate')) { if (roSpawn(R, 'kate', pickP(), 35, 45, {})) ev.push({ k: 'kate' }); }
+      const ml = live.filter(p => p.ml);
+      if (has('marshal') && (t > cur - DAYMS * (o.marshalWin == null ? 0.15 : o.marshalWin) || R.force.includes('marshal')) && ml.length && !count('marshal')) { if (roSpawn(R, 'marshal', ml[0], 45, 55, {})) ev.push({ k: 'marshal' }); }
+      if (has('lil') && (night || R.force.includes('lil')) && !count('lil')) { if (roSpawn(R, 'lil', pickP(), 35, 45, {})) ev.push({ k: 'lil' }); }
     }
     for (const m of R.mobs) {
       m.t += dt; m.cd = Math.max(0, m.cd - dt);
@@ -633,19 +633,19 @@
           } else { if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 3) { const p = pickP(); m.goal = { x: p.x + (Math.random() - 0.5) * 30, z: p.z + (Math.random() - 0.5) * 30 }; } roChase(m, m.goal, 2.4, dt); }
           break;
         }
-        case 'sheriff': {
-          const p = nearest(live.filter(q => q.kt), m.x, m.z);
+        case 'marshal': {
+          const p = nearest(live.filter(q => q.ml), m.x, m.z);
           if (!p) { if (m.life == null) m.life = 4; m.st = 1; break; }
           m.st = 0; m.life = null;
-          if (roChase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'sheriff' }); m.dead = true; }
+          if (roChase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'marshal' }); m.dead = true; }
           break;
         }
-        case 'kate': {
-          if ((!night && !R.force.includes('kate')) || !live.length) { m.dead = true; break; }
+        case 'lil': {
+          if ((!night && !R.force.includes('lil')) || !live.length) { m.dead = true; break; }
           // she only moves while nobody is looking at her (vy: where each camper's camera points)
           const watched = players.some(p => { if (p.dn || inCamp(p.x, p.z)) return false; const dx = m.x - p.x, dz = m.z - p.z, dd = Math.hypot(dx, dz); if (dd > 45) return false; const vx = -Math.sin(p.vy || 0), vz = -Math.cos(p.vy || 0); return (dx * vx + dz * vz) / (dd || 1) > 0.72; });
           m.st = watched ? 1 : 0;
-          if (!watched && tg && roChase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'kate' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
+          if (!watched && tg && roChase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'lil' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
           break;
         }
       }
@@ -666,7 +666,7 @@
   // console/testing: put one of kind k near camper p right now (the natural spawn distances, a bit closer)
   function rosterSpawnNow(R, k, p) {
     R.mobs = R.mobs || []; R.nid = R.nid || 1;
-    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], dutch: [20, 30, {}], sheriff: [25, 30, {}], supt: [20, 30, {}], kate: [25, 30, {}] }[k];
+    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], dutch: [20, 30, {}], marshal: [25, 30, {}], supt: [20, 30, {}], lil: [25, 30, {}] }[k];
     if (!D) return null;
     const m = roSpawn(R, k, p, D[0], D[1], Object.assign({}, D[2]));
     if (m && k === 'hatch') for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: m.x + (Math.random() - 0.5) * 2, z: m.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 });
@@ -696,9 +696,9 @@
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
     ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
-    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['sheriff', "Marshal's office", 'M'], ['jail', 'Jail', 'M'],
+    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['marshal', "Marshal's office", 'M'], ['jail', 'Jail', 'M'],
     ['post', 'Post office', 'M'], ['boatshed', 'Boat shed', 'M'], ['doctor', "Doctor's office", 'M'], ['barber', 'Barbershop', 'S'],
-    ['kate', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
+    ['lil', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
   const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
   const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
   const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
@@ -710,7 +710,7 @@
   // who stands where (JT: the town doesn't reshuffle). Stable, doctor, barbershop and post office are built (art/blender/town.py)
   // but not placed; swap one in here.
   const TOWN_PLAN = { MW: 'saloon', MM: 'store', ME: 'hotel', SW: 'church', SM: 'school', SE: 'bank',
-    N1: 'sheriff', N2: 'jail', N3: 'boatshed', S1: 'kate', S2: 'well', S3: 'cellar', E: 'vault' };
+    N1: 'marshal', N2: 'jail', N3: 'boatshed', S1: 'lil', S2: 'well', S3: 'cellar', E: 'vault' };
   // the tunnels that can be dug: [from spot, its wall (world side), to spot or 'street', its side, waypoints between]
   const northEdges = [
     ['MW', 'N', 'N1', 'S', [[-22, 23], [-25, 28]]], ['MM', 'N', 'N2', 'S', [[0, 24], [1, 30]]], ['ME', 'N', 'N3', 'S', [[22, 23], [25, 28]]],

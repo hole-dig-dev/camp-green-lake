@@ -186,8 +186,8 @@ cyl('bottle',0.17,0.45,(W-0.35,-0.6,1.18),('water_blue',(0x6f,0xa3,0xc4),0.2),ve
 box('poster',(0.03,0.75,1.0),(W-0.07,0.6,1.9),('poster',(0xe0,0xcf,0xa3),0.95),bevel=0,parent=r)
 text('wanted','WANTED',(W-0.1,0.6,2.25),0.14,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
 box('mugshot',(0.02,0.4,0.36),(W-0.1,0.6,1.93),('mugshot',(0x6a,0x55,0x44),0.9),bevel=0,parent=r)
-text('kate1','"LUCKY" LIL',(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
-text('kate2','MARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,math.pi/2),parent=r)
+text('lil1','"LUCKY" LIL',(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
+text('lil2','MARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,math.pi/2),parent=r)
 rx,ryy=-3.0,D-0.5
 tube('coatpole',(rx,ryy,0.05),(rx,ryy,1.9),0.03,m=TRIM,parent=r)
 for k in range(3):

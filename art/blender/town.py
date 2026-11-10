@@ -391,7 +391,7 @@ def _(r,k,W,D):
     shelf('bookshelf',-hw+0.3,qy,math.pi/2,r,w=1.6,rows=4,fill=books,lean=0.05);col(k,-hw+0.3,qy,0.5,1.6)
     Cy('globestand',0.03,0.8,(-qx,qy+0.5,0.4),mBRASS,p=r);blob('globeball',(-qx,qy+0.5,0.95),(0.2,0.2,0.2),M_('globe',(0x5a,0x6a,0x5a)),r)
     for j in range(6):B(f'paper{j}',(0.21,0.28,0.004),(rnd.uniform(-hw+1,-1.6),rnd.uniform(-hd+1,-1.6),0.01),mPAPER,rot=(0,0,J(3)),p=r)
-@bldg('sheriff',"Marshal's office",'M')
+@bldg('marshal',"Marshal's office",'M')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
     table('desk',qx,qy-0.3,0.1,r,w=2.0,d=1.0);col(k,qx,qy-0.3,2.0,1.0);chair('dchair',qx,qy-1.2,0,r,fallen=True)
@@ -473,7 +473,7 @@ def _(r,k,W,D):
     for j in range(4):Cy(f'stripe{j}',0.102,0.1,(0,0,0.35+j*0.35),M_('polered',(0x8a,0x2a,0x1c)),v=10,rot=(0.3,0,0),p=g)
     chair('wchair1',-qx,qy,math.pi,r);chair('wchair2',-qx+0.8,qy,math.pi,r,fallen=True)
     for j in range(8):blob(f'hair{j}',(rnd.uniform(-hw+0.5,hw-0.5),rnd.uniform(-hd+0.8,-1.4),0.02),(0.12,0.08,0.02),M_('hair',(0x3a,0x2a,0x1e)),r,seg=6,rings=3)
-@bldg('kate',"Lil's house",'S')
+@bldg('lil',"Lil's house",'S')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
     bed('bed',-qx,-qy+0.2,0,r);col(k,-qx,-qy+0.2,1.2,2.2)
