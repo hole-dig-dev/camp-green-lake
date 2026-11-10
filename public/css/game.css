@@ -643,3 +643,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
    The picture pass made the world worth looking at; the solid cream panels were covering it. Menus, the store and
    dialogs stay solid (they are read, not glanced at). ---- */
 #hud .hud-strip.ui-panel,#hud #mapbox{background:rgba(242,231,205,.86);backdrop-filter:blur(6px) saturate(1.1);-webkit-backdrop-filter:blur(6px) saturate(1.1);border-color:rgba(40,29,21,.85);box-shadow:0 3px 0 rgba(40,29,21,.32)}
+
+/* the "next task" line (81-nexttask.js): top centre, between the camper strip and the crew panel */
+.hud-next{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:min(440px,calc(100vw - 470px));display:flex;gap:8px;align-items:baseline;
+  background:rgba(40,29,21,.82);color:var(--canvas);font:600 15px/1.25 var(--ui);letter-spacing:.01em;padding:7px 12px;border-radius:6px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+.hud-next .k{color:var(--lizard);font:700 12px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;flex:none}
+.hud-next .t{flex:none;font:700 11px/1 var(--ui);color:var(--canvas-2);border:1px solid rgba(242,231,205,.4);border-radius:3px;padding:2px 4px;opacity:.7}
+@media (max-width:900px){.hud-next{display:none}}
