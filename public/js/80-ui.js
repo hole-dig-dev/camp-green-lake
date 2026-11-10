@@ -230,7 +230,7 @@ const PARTY_LINES=[n=>n+'! '+n+'! '+n+'!',n=>'Everybody dance for '+n+'!',()=>'B
 function stepTo(g,gx,gz,dt,sp){const dx=gx-g.position.x,dz=gz-g.position.z,d=Math.hypot(dx,dz);if(d>0.02){const s=Math.min(d,dt*sp);g.position.x+=dx/d*s;g.position.z+=dz/d*s}return d}
 function updateParty(dt,now){
   if(!PARTY.on){
-    const nf=nightF(),tS=(S.won?0.45:1.05)*(1-nf*0.97),tH=(S.won?0.8:0.62)*(1-nf*0.84),k=Math.min(1,dt*1.5);
+    const nf=lookNightF(),tS=(S.won?0.45:1.05)*(1-nf*0.97),tH=(S.won?0.8:0.62)*(1-nf*0.84),k=Math.min(1,dt*1.5);
     sun.intensity=lerp(sun.intensity,tS,k);hemi.intensity=lerp(hemi.intensity,tH,k);
     SKY_T.copy(WHITE).lerp(NIGHT_SKY,nf);sky.material.color.lerp(SKY_T,k);if(!S.won){FOG_T.copy(FOG_DAY).lerp(NIGHT_FOG,nf);scene.fog.color.lerp(FOG_T,k)}
     sunDisc.visible=nf<0.6;stars.material.opacity=nf*0.9;

@@ -13,7 +13,8 @@ let moodShownDay=-1,sneakT=25;
 function moodAnnounce(){
   if(!S.started||moodShownDay===RUN.day)return;moodShownDay=RUN.day;
   const M=SIM.MOODS[moodOf()];if(!M)return;
-  toast(`Day ${RUN.day}. The Warden's mood: ${M.name}. ${M.desc}`,moodOf()==='normal'?'':'bad',8000);
+  /* one short line: an ordinary day is just the day number; a special mood still says what it changes */
+  if(moodOf()==='normal')toast(`Day ${RUN.day}. ${M.name}.`,'',3500);else toast(`Day ${RUN.day}. ${M.name}: ${M.desc}`,'bad',7000);
 }
 function moodHud(){
   const M=SIM.MOODS[moodOf()];$('#dayTag').textContent='Day '+RUN.day+(M&&moodOf()!=='normal'?' · '+M.name:'');

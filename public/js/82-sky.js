@@ -81,12 +81,12 @@ function updateDust(dt){
     if(a[k+2]-cz>h)a[k+2]-=DUST.box;else if(a[k+2]-cz<-h)a[k+2]+=DUST.box;
     if(a[k+1]-cy>4.5)a[k+1]-=7;else if(a[k+1]-cy<-2.5)a[k+1]+=7}
   P3.needsUpdate=true;
-  DUST.pts.material.color.copy(SKY.sun).multiplyScalar(1.5);DUST.pts.material.opacity=0.4*(1-nightF());
+  DUST.pts.material.color.copy(SKY.sun).multiplyScalar(1.5);DUST.pts.material.opacity=0.4*(1-lookNightF());
 }
 const SUN_UP=62*Math.PI/180,SUN_MIN=15*Math.PI/180;   // how high the noon sun gets, and how low it's allowed to go (long shadows, but not endless ones)
 function updateSky(dt){
   SKY.cloudT+=dt;sky.material.uniforms.uT.value=SKY.cloudT;updateDust(dt);
-  const t=clockT(),h=hourOf(t),day=t<DAYMS,hd=day?h:20;
+  const t=lookT(),h=hourOf(t),day=t<DAYMS,hd=day?h:20;
   if(Math.abs(h-SKY.lastH)<0.004)return;SKY.lastH=h;   // colours only need re-mixing when the clock has visibly moved
   let i=0;while(i<SKY_KEYS.length-2&&hd>=SKY_KEYS[i+1].h)i++;
   const A=SKY_KEYS[i],B=SKY_KEYS[i+1];let f=clamp((hd-A.h)/(B.h-A.h),0,1);f=f*f*(3-2*f);
@@ -100,7 +100,7 @@ function updateSky(dt){
     SUN_DIR.set(Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*0.45*Math.cos(el)+0.22).normalize()}
   else SUN_DIR.set(-0.35,0.8,-0.45).normalize();
   sunDisc.position.copy(SUN_DIR).multiplyScalar(800);
-  sky.material.uniforms.uNight.value=nightF();
+  sky.material.uniforms.uNight.value=lookNightF();
   if(typeof LOOK!=='undefined'){LOOK.exposure=lerp(A.ex,B.ex,f);LOOK.saturation=lerp(A.sat,B.sat,f);
     LOOK.warm.setRGB(lerp(A.warm[0],B.warm[0],f),lerp(A.warm[1],B.warm[1],f),lerp(A.warm[2],B.warm[2],f))}
 }

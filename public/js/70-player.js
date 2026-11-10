@@ -150,8 +150,7 @@ function updateCamera(dt){
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);
 }
-let titleA=0;
-function titleCamera(dt){titleA+=dt*0.04;const r=34;camera.position.set(Math.sin(titleA)*r,11,10+Math.cos(titleA)*r);camera.lookAt(0,0,12)}
+/* the title screen's camera is titleCamera(dt) in 61-title-scene.js */
 
 /* lizards */
 function updateLizards(dt,t){

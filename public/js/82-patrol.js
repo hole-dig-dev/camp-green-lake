@@ -7,6 +7,10 @@ const CLK={off:0,paused:false,pt:0};
 const wrapT=t=>((t%CYCLE)+CYCLE)%CYCLE;
 function clockT(){return CLK.paused?CLK.pt:wrapT(Date.now()+CLK.off)}
 function nightF(){const t=clockT();if(t<DAYMS)return sm((t-(DAYMS-50000))/50000);return t>CYCLE-25000?1-sm((t-(CYCLE-25000))/25000):1}
+/* The "look" clock: what the sky and the lights draw. It is the shared clock, except on the title screen, which is
+   always shown at golden hour (61-title-scene.js). Only rendering reads these; rules and hazards read clockT/nightF. */
+function lookT(){return titleView()?tAtHour(TITLE_HOUR):clockT()}
+function lookNightF(){return titleView()?0:nightF()}
 function hourOf(t){return t<DAYMS?6+t/DAYMS*14:(20+(t-DAYMS)/(CYCLE-DAYMS)*10)%24}
 function tAtHour(h){h=((h%24)+24)%24;return h>=6&&h<20?(h-6)/14*DAYMS:DAYMS+((h<6?h+24:h)-20)/10*(CYCLE-DAYMS)}
 function clockText(){const h=hourOf(clockT()),hh=Math.floor(h)%24,mi=Math.floor((h%1)*60);return String(hh).padStart(2,'0')+':'+String(mi).padStart(2,'0')}
