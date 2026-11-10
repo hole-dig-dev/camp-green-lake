@@ -382,7 +382,7 @@ function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
   logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});sfx.ko();
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
-  countUp('kos',5,'squid');badluckKo();   // the bad luck grows a little (81-mood.js)
+  countUp('kos',5,'punchingbag');badluckKo();   // the bad luck grows a little (81-mood.js)
   const lost=S.sack.length;dropBag();
   const sand=S.bucket>0.05;S.bucket=0;   // the gold rush: your bucket spills when you go down (the crew's too, 30-npcs.js crewKO)
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'')+(sand?' Your bucket spilled.':'');$('#ko').hidden=false;

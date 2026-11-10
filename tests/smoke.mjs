@@ -268,7 +268,7 @@ async function main() {
     const crew = await page1.evaluate(() => {
       const step = (h, secs) => { CLK.paused = true; CLK.pt = tAtHour(h); for (let i = 0; i < secs * 10; i++) updateBots(0.1, performance.now()) };
       crewMsg({ up: Object.fromEntries(SIM.CREW.map(n => [n, { hired: true, shovel: true, bucket: true }])) }); // the crew start unhired now (hire them in the store): take them all on
-      const snap = () => bots.map(b => ({ n: b.d.n, st: b.state, stowed: !!b.p.stowed, racked: RACK[bots.indexOf(b)].mesh.visible, xs: !!b.xraySleeps, y: +b.p.g.position.y.toFixed(1) }));
+      const snap = () => bots.map(b => ({ n: b.d.n, st: b.state, stowed: !!b.p.stowed, racked: RACK[bots.indexOf(b)].mesh.visible, xs: !!b.dealerSleeps, y: +b.p.g.position.y.toFixed(1) }));
       const OUT = new Set(['dig', 'rest', 'walk', 'return', 'gatebackin', 'gatebackout']);
       step(17, 2);
       step(19, 0.1); const atSiren = snap();

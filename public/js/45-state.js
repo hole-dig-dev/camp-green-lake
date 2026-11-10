@@ -111,7 +111,7 @@ function scoop(){
   if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)*fleckMult(h.x,h.z)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,FP?2:6);sfx.scoop();throwClods(h,2);payGlint(h,y);   // clods arc onto the spoil pile (46-holes.js)
-  if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Bucket: ${Math.floor(S.bucket*10)/10} of ${bucketMax()} holes of sand.`,'good');sfx.thud()}
+  if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'shovelhead');toast(`Hole #${S.holesDone} finished. Bucket: ${Math.floor(S.bucket*10)/10} of ${bucketMax()} holes of sand.`,'good');sfx.thud()}
   for(const it of items){
     if(it.found)continue;const dx=it.x-h.x,dz=it.z-h.z;
     if(dx*dx+dz*dz<(h.r*0.9)**2&&it.depth>h.d&&it.depth-h.d<HINT_AHEAD)hintFind(it,h);   // the shovel clinks on it a scoop or two early
@@ -137,7 +137,7 @@ function foundItem(it,h){
     toast(`You dug up a ${C.name.toLowerCase()} (${cv.val} gold). Too big for your sack: grab it (hold R) and carry it to Mr. Abel's window at the Company Store. ${C.note}`,'gold',6500);
     if(online())wsSend({t:'prop',item:it.id,type:cv.type,x:h.mx,z:h.mz,val:cv.val});else addProp(it.id,cv.type,h.mx,h.mz,cv.val);return}
   logEv('found',{item:it.id,type:it.type,value:L.val,x:+h.x.toFixed(1),z:+h.z.toFixed(1),heavy:!!L.heavy,lm:it.type==='lmcase'});
-  if(it.type==='lilstrongbox'){badge('stanley');sfx.gold();triggerWin(S.name,true);return}
+  if(it.type==='lilstrongbox'){badge('lucky');sfx.gold();triggerWin(S.name,true);return}
   if(it.type==='lmcase'){S.hasLM=true;sfx.gold();toast('A gold card case engraved "LM"! The Superintendent will want this. Take it to her cabin.','gold',6000);shout(2);return}
   if(L.heavy){sfx.clank();sfx.gold();addXP(20);toast(`You hit something big: ${L.name} (${L.val} gold). It won't fit in your sack. Grab it with F and haul it to Mr. Abel's window at the Company Store. Two diggers carry it much faster.`,'gold',7000);
     if(online())wsSend({t:'prop',item:it.id,type:it.type,x:h.mx,z:h.mz});else addProp(it.id,it.type,h.mx,h.mz);return}

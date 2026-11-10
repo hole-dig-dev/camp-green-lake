@@ -19,7 +19,7 @@ function startEmote(p,k,L){
 function emoteVol(p){const d=Math.hypot(p.g.position.x-P.x,p.g.position.z-P.z);return clamp(1-d/45,0,1)}
 function twerk(){
   if(!S.started||S.ko||uiOpen()||S.carry!=null||(me&&me.emote&&me.emote.k==='twerk'))return;
-  digHeld=false;S.noise=1;countUp('twerks',20,'barfbag');startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
+  digHeld=false;S.noise=1;countUp('twerks',20,'loosehips');startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
 }
 let singT=0;
 function updateSinging(dt){

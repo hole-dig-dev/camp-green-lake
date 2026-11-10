@@ -51,7 +51,7 @@ const shot = async (page, file) => { const v = page.viewportSize(), big = v.widt
 
 let exit = 1;
 try {
-  const p1 = await openPlayer('p1', 'Stanley');
+  const p1 = await openPlayer('p1', 'Dusty');
   const p2 = await openPlayer('p2', 'Blisters');
   await waitFor(p1, () => remotes.size === 1, 15000, 'p1 to see p2');
   // no random hazards, roster monsters (the Superintendent KOs idle campers) or curfew police in the middle of a measurement (they do run in the canyon: that's the point, but not here)
@@ -145,7 +145,7 @@ try {
   await shot(p1, 'canyon-campfire-chimney-1280.png');
 
   // --- a phone-sized view ---
-  const phone = await openPlayer('p3', 'Squid', 360, 800);
+  const phone = await openPlayer('p3', 'Mudcat', 360, 800);
   await waitFor(phone, () => ZONE.id === 'canyon', 30000, 'a late joiner lands in the canyon');
   check('a late joiner lands in the canyon at the start', await phone.evaluate(() => Math.hypot(P.x - ZONES.canyon.arrive.x, P.z - ZONES.canyon.arrive.z) < 8));
   await shot(phone, 'canyon-start-phone.png');

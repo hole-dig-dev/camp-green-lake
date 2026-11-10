@@ -547,7 +547,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .seedpill{font-size:16px;display:inline-flex;align-items:center;gap:5px}.seedpill strong{font:900 26px/1 var(--display);color:#ffd27a;font-variant-numeric:tabular-nums}
 .bet-pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:var(--r-pill);padding:3px 10px}
 .bj-status{margin:0;font:700 12px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:#a8c9a8}
-.xray{margin:0;font-size:17px;min-height:2.6em;font-style:italic;color:#e6dcc0}
+.dealer-say{margin:0;font-size:17px;min-height:2.6em;font-style:italic;color:#e6dcc0}
 .hand .lbl{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#cfe3cf;margin-bottom:6px}
 .hand .lbl b{font:900 20px/1 var(--display);color:#fff;margin-left:6px;letter-spacing:.02em}
 .row-cards{display:flex;gap:8px;min-height:88px;flex-wrap:wrap}
