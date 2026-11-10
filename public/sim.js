@@ -27,7 +27,7 @@
   ];
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
      a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
-  const HANDS = { depth: 0.45, scoop: 0.03, fleck: 0.04 }, PAN = 1, SHOVEL_FLECK = 0.02;
+  const HANDS = { depth: 0.45, scoop: 0.06, fleck: 0.04 }, PAN = 2, SHOVEL_FLECK = 0.02;
   /* hiring the crew (JT 2026-10-01: "start with no crew members, hire them for a price"): each one you take on costs more
      than the last. They show up with bare hands and a gold pan, like you did. */
   const CREW_HIRE = [40, 60, 90, 130, 180, 240];
@@ -47,7 +47,7 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   /* PAY DIRT (2026-11-10, from Greg's gold-dig "paystreaks" and Gold Fever's deposits): where you dig, and how deep,
      now decides how much gold is in your sand. Green Lake was a lake, so its gold settled along old creek channels
-     that wind across the bed, plus a few rich pockets; away from them the sand is nearly barren.
+     that wind across the bed, plus a few rich pockets; away from them the sand is poor.
        richAt(x,z)        0 (barren) .. 1 (the middle of a paystreak). A pure function of the spot: the same for every
                           camper and the server, no randomness, nothing on the wire.
        payMult(x,z,d)     what a hole of sand from here is worth, as a multiple of GOLD.perHole. PAY.barren on dead
@@ -55,9 +55,11 @@
                           surface, x1 at 5 ft, x1.5 at 8 ft, so the long-handled shovel pays.
        gradeOf(mult)      the assay word for a batch: Barren, Trace, Promising, Pay dirt, Rich (index 0-4).
      One creek is always in the same place, PAY.creek: it runs across the lake just past the camp gate, so a new
-     camper's first pans have something in them. Nothing marks the rest: you find them by washing samples. */
-  const PAY = { on: true, barren: 0.4, rich: 3.4, streakW: 0.06, streakScale: 0.011, pocketScale: 0.045, pocketAt: 0.8,
-    creek: { z: -78, amp: 16, wave: 0.03, half: 10, rich: 0.8 }, grades: ['Barren', 'Trace', 'Promising', 'Pay dirt', 'Rich'], cuts: [0.6, 1.0, 1.7, 2.6] };
+     camper's first pans have something in them. It is only middling ground (about x1.7) and its sand gets dug out,
+     so the crew has to prospect outward for the real streaks. Nothing marks those: you find them by washing samples.
+     Balance notes and the day-by-day model: scripts/balance-sim.mjs. */
+  const PAY = { on: true, barren: 0.5, rich: 3.4, streakW: 0.075, streakScale: 0.011, pocketScale: 0.045, pocketAt: 0.8,
+    creek: { z: -56, amp: 12, wave: 0.03, half: 10, rich: 0.5 }, grades: ['Barren', 'Trace', 'Promising', 'Pay dirt', 'Rich'], cuts: [0.6, 1.0, 1.7, 2.6] };
   const payHash = (x, z) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
   const payNoise = (x, z) => { const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi, u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
     const a = payHash(xi, zi), b = payHash(xi + 1, zi), c = payHash(xi, zi + 1), d = payHash(xi + 1, zi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
@@ -100,7 +102,9 @@
   /* the Warden's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
      of the crew bank at curfew. Short of it, the whole crew's fired and the run starts over from nothing.
      15, 37, 63, 93, 127 ... 357 on day 10; more campers, more gold (x1.6 for each extra). */
-  const quotaFor = (day, n) => { const d = Math.max(0, day - 1); return Math.round((15 + 20 * d + 2 * d * d) * (1 + 0.6 * Math.max(0, n - 1))); };
+  /* 2026-11-10: gentler first days, steeper later (was 15 + 20d + 2d^2: a bare-handed camper could not make day 2).
+     Solo: 8, 20, 38, 63, 94, 132 ... 344 on day 10, 755 on day 15, 1326 on day 20. Modelled in scripts/balance-sim.mjs. */
+  const quotaFor = (day, n) => { const d = Math.max(0, day - 1); return Math.round((8 + 9 * d + 3.2 * d * d) * (1 + 0.6 * Math.max(0, n - 1))); };
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
   const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };

@@ -24,7 +24,11 @@ Status meanings and rules are in the [README](README.md). Verdicts come from JT'
 | Birds (day) | Off (level 0) | `public/audio/birds.mp3` | JT: the always-on day loop was too much. The file stays; `BIRDS_LEVEL` in `public/js/40-fx.js` is 0. An occasional call might return later |
 | Bunk cloth | In game: not reviewed | `public/audio/cloth2.mp3` | |
 | Recorded wind | In game: not reviewed | `public/audio/wind.mp3` | A/B option only (`audio wind new`) |
-| Hazards, wildlife, patrol, Zeroni, game cues, disco | In game: not reviewed | code in `public/js/` | JT: most still sound code-generated; not a priority yet |
+| Core-loop cues, November 10, 2026: coin, nugget, find, assay, glint, pan wash, sifter, store, quota, level-up | In game: not reviewed | `public/audio/coin-1..3.mp3`, `coins-small.mp3`, `coins-pouch.mp3`, `ting.mp3`, `glass.mp3`, `bell.mp3`, `leather.mp3`, `latch.mp3`, `water-swirl-1..3.mp3`, `water-dunk.mp3`; code in `public/js/41-cues.js` | Chosen and mixed by measurement, not by ear. A/B with `audio rewards old|new`. Sources in the [sound inventory](../docs/audio-inventory.md#core-loop-sound-pass-november-10-2026-not-yet-reviewed-by-ear) |
+| Menu sounds: open, close, hover, press, "can't afford" | In game: not reviewed | `public/audio/ui-open.mp3`, `ui-close.mp3`, `ui-hover.mp3`, `ui-click.mp3`, `ui-deny.mp3` | New; there were none. `audio ui old` turns them off |
+| Hurt and knocked out | In game: not reviewed | `public/audio/hit-1.mp3`, `hit-2.mp3`, `bodyfall.mp3` | Replace the sine thud for damage; the knockout was silent. `audio danger old|new` |
+| Curfew siren, lizard hiss (synthesized, redesigned), title start sting | In game: not reviewed | code in `public/js/41-cues.js` | Still Web Audio synthesis: no fitting CC0 recording |
+| Other hazards, wildlife, patrol, Zeroni, remaining game cues, disco | In game: not reviewed | code in `public/js/` | JT: most still sound code-generated; not a priority yet |
 
 ## Digging variants (liked)
 
@@ -43,6 +47,11 @@ The numbers match round 2 of the dig review. The game rotates all four.
 | --- | --- | --- | --- |
 | `audio/sources/shovel-themightyglider.ogg` | Source | [Shovel Sound by themightyglider](https://opengameart.org/content/shovel-sound) (full length; `shovel.mp3` is trimmed) | CC0 |
 | `audio/sources/Fantozzi-SandL1.ogg`, `SandR1`, `SandL3`, `SandR3` | Source | [Fantozzi's Footsteps](https://opengameart.org/content/fantozzis-footsteps-grasssand-stone) | CC0 |
+| `audio/sources/core-loop/impact*.ogg` (10 files) | Source | [Impact Sounds by Kenney](https://kenney.nl/assets/impact-sounds) | CC0 |
+| `audio/sources/core-loop/handleCoins.ogg`, `handleCoins2`, `handleSmallLeather`, `metalLatch`, `bookFlip2`, `bookClose` | Source | [RPG Audio by Kenney](https://kenney.nl/assets/rpg-audio) | CC0 |
+| `audio/sources/core-loop/rollover2.ogg`, `click3.ogg` | Source | [UI Audio by Kenney](https://kenney.nl/assets/ui-audio) | CC0 |
+| `audio/sources/core-loop/rubberduck-splash_04.ogg`, `_06`, `_13`, `_15` | Source | [40 CC0 water / splash / slime SFX by rubberduck](https://opengameart.org/content/40-cc0-water-splash-slime-sfx) | CC0 |
+| `audio/core-loop/build.sh` | Build script | Turns the `sources/core-loop` originals into the shipped MP3s | |
 
 ## Retired
 
@@ -55,6 +64,7 @@ The numbers match round 2 of the dig review. The game rotates all four.
 | File | What it is |
 | --- | --- |
 | `audio/review-reels/2026-09-28-full-reel-labeled.mp3` and [its map](audio/review-reels/2026-09-28-full-reel-labeled.md) | All 56 game sounds, each named before it plays, with the four A/B pairs first |
+| `audio/review-reels/2026-11-10-core-loop.mp3` and [its map](audio/review-reels/2026-11-10-core-loop.md) | The core-loop pass, recorded from the running game: each cue's old sound, then the new one. No spoken labels; the map has the times and measured levels. Not yet listened to |
 | `audio/review-reels/2026-09-28-dig-round1-18-candidates.mp3` | Current shovel + 18 single-sound candidates |
 | `audio/review-reels/2026-09-28-dig-round2-20-layered.mp3` | 20 shovel-layered variants. JT liked #2–#5 |
 | `audio/review-reels/2026-09-28-dig-round3-focus-2-5.mp3` | #2–#5 alone, then all four rotating. JT picked the rotation |

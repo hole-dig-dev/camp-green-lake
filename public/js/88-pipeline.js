@@ -129,7 +129,7 @@ let PIPE_PAY=1;   // how rich the sand last sent down the pipe was (48-paydirt.j
 function pipeArrive(holes){
   let rest=holes;const cap=hopperCap();
   if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));sandMix('hopper',put,PIPE_PAY);S.hopper+=put;rest-=put}
-  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole')*goldScale()*PIPE_PAY,RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
+  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole')*goldScale()*PIPE_PAY,RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin(r.gold);
     toast(`Your sand came through the pipeline: the sifter shakes ${r.gold} gold out of it.`+(holes-rest>0.01?` (${Math.round((holes-rest)*10)/10} holes went in your hopper.)`:''),r.nugget?'gold':'good',3800)}
   else toast(`Your sand came through the pipeline into your hopper (${Math.floor(S.hopper)}/${cap}).`,'good',3000);
   logEv('pipeArrive',{holes:+holes.toFixed(2)});

@@ -19,7 +19,7 @@ function walletSpend(cost,undo,label){
 }
 function walletNo(m){
   const p=SPEND.pending.get(m.rid);if(!p)return;SPEND.pending.delete(m.rid);
-  try{p.undo&&p.undo()}catch(e){}
+  try{p.undo&&p.undo()}catch(e){}sfx.deny();
   toast(`Someone on the crew spent that gold first: ${p.label||'that'} wasn't bought.`,'bad',4000);logEv('walletNo',{label:p.label||''});
   if(typeof renderShop==='function'&&shopOpen)renderShop();
 }

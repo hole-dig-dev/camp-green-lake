@@ -36,7 +36,7 @@ function startGame(resume){
   me=makePerson(Object.assign(playerLook(S.name,S.color),{suit:JUMPSUITS[mySuit()].c}));scene.add(me.g);me.suitIdx=mySuit();me.ward=MY_WARD;   // jumpsuit colour: 81-badges.js
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
-  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;titleEnd();initAudio();applyVolume();
+  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;titleEnd();initAudio();applyVolume();if(!S.resumed)sfx.startSting();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
   if(S.revealed===false&&S.reported)reveal('You');
   lockMouse();
