@@ -15,7 +15,7 @@ function hourOf(t){return t<DAYMS?6+t/DAYMS*14:(20+(t-DAYMS)/(CYCLE-DAYMS)*10)%2
 function tAtHour(h){h=((h%24)+24)%24;return h>=6&&h<20?(h-6)/14*DAYMS:DAYMS+((h<6?h+24:h)-20)/10*(CYCLE-DAYMS)}
 function clockText(){const h=hourOf(clockT()),hh=Math.floor(h)%24,mi=Math.floor((h%1)*60);return String(hh).padStart(2,'0')+':'+String(mi).padStart(2,'0')}
 
-/* hidden admin clock: type "sploosh" in game. On a server it only opens for the host, and the server ignores clock changes from anyone else. */
+/* hidden admin clock: type "peachshine" in game. On a server it only opens for the host, and the server ignores clock changes from anyone else. */
 function setClock(m){if(!m||typeof m!=='object')return;CLK.off=num(m.off,-1e13,1e13,0);CLK.paused=m.paused===true;CLK.pt=wrapT(num(m.pt,0,CYCLE,0));renderAdmin()}
 function applyClock(c){Object.assign(CLK,c);wsSend({t:'clock',off:CLK.off,paused:CLK.paused,pt:CLK.pt});renderAdmin()}
 function jumpTo(t){t=wrapT(t);if(CLK.paused)applyClock({pt:t});else applyClock({off:t-Date.now()})}
@@ -169,7 +169,7 @@ function updateCurfew(dt){
 const MONL={trucks:[],bride:null},MONV={trucks:[],bride:null};
 function myId(){return online()?net.id:'me'}
 function meSim(){const dep=baseH(P.x,P.z)-P.y;return{id:myId(),x:S.inTown?0:P.x,z:S.inTown?40:P.z,   // down in the buried town: out of reach, like being in camp
-  fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,ml:lilLoot(),on:S.onionT>0,vy:P.yaw}}
+  fa:P.fa,cy:S.carry==null?-1:S.carry,cr:!!P.crouch,hd:!!(P.crouch&&dep>0.95),dn:S.ko>0,nz:S.noise,hp:S.hp,an:P.anim,lt:!!S.light,ml:lilLoot(),on:S.bitterrootT>0,vy:P.yaw}}
 function stepSoloMonsters(dt){
   if(online())return;const ev=[];if(!ZONE_H&&hazOn('night'))SIM.stepMonsters(MONL,[meSim()],clockT(),dt,ev,{mood:RUN.mood});else{MONL.trucks=[];MONL.bride=null}   // police/the Bride: lake only (88-zones.js)
   MONV.trucks=MONL.trucks.map(k=>({x:k.x,z:k.z,h:k.h,chase:k.mode==='chase'}));MONV.bride=MONL.bride?{x:MONL.bride.x,z:MONL.bride.z,tgt:MONL.bride.tgt,drag:MONL.bride.drag}:null;

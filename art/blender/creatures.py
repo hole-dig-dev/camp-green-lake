@@ -16,7 +16,7 @@ def eye(name,loc,r,parent,iris=(0x1a,0x14,0x10),white=None):
     if white:blob(name+'w',loc,(r*1.3,)*3,M_('c_eyewhite',white,0.3),parent,seg=8,rings=5)
     blob(name,loc,(r,)*3,M_('c_eye_'+name,iris,0.15),parent,seg=8,rings=5)
 def shot(n,elev=22,azim=-38,margin=1.25):
-    studio(elev=elev,azim=azim,lens=60);frame(margin=margin);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('kb_sand',(0xe3,0xbf,0x86),0.95))
+    studio(elev=elev,azim=azim,lens=60);frame(margin=margin);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('find_sand',(0xe3,0xbf,0x86),0.95))
     render(n,res=(512,512),samples=40);print(n,tris())
 
 # ================== gold-eyed gila (~0.7 m nose to tail; faces -Y) ==================

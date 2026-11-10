@@ -107,7 +107,7 @@ try{
         case 'cards':cardSnd();break;
         case 'flashlight':tone(1800,0.05,'square',0.05);break;
         case 'flashlight-off':tone(1200,0.05,'square',0.05);break;
-        case 'onion':tone(220,0.3,'triangle',0.1,160);break;
+        case 'bitterroot':tone(220,0.3,'triangle',0.1,160);break;
         case 'chat':tone(700,0.06,'triangle',0.05);break;
         case 'landslide-warning':tone(1500,1.3,'sine',0.16,260);noise(0.7,2400,0.6,0.13,'highpass');break;
         default:throw Error(`unknown cue: ${kind}`);
@@ -160,7 +160,7 @@ try{
     ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Seeds or coin','coin',1.1],
     ['Detector beep','beep',1.1],['Shout','shout',1.1],['Canteen splash','splash',1.1],['Impact or damage','thud',1.1],
     ['Card click','cards',1.1],['Flashlight on','flashlight',1.1],['Flashlight off','flashlight-off',1.1],
-    ['Onion use','onion',1.1],['Chat notification','chat',1.1],
+    ['Bitterroot use','bitterroot',1.1],['Chat notification','chat',1.1],
   ])await capture('Game cues',label,kind,seconds);
   await capture('Music','Disco party loop','disco',8);
 

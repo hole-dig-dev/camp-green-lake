@@ -6,7 +6,7 @@
 # Run once per file, headless:
 #   ~/blender/blender -b art/blender/props.blend --factory-startup --python art/blender/story_retext.py
 #   (also buildings.blend, town.blend, gear.blend, finds.blend).  Not done here: TentRoomCrew (its .blend scene no longer
-#   matches the shipped GLB), EmployeeBoard and KBTube (lettering merged or cut into the body: they need their build scripts).  Add "-- --asis" to export unchanged into /tmp
+#   matches the shipped GLB; see bunk_board.py) and EmployeeBoard (lettering merged into the body: it needs its build script).  Add "-- --asis" to export unchanged into /tmp
 #   (to check the .blend still matches the shipped GLB before touching it).
 import bpy, os, sys, math, shutil
 HERE = os.path.dirname(os.path.abspath(bpy.data.filepath)); globals()['__file__'] = os.path.join(HERE, 'story_retext.py')
@@ -39,7 +39,7 @@ JOBS = {
   'TownBldg_boatshed': (None, [('dstxt.003', 'BOAT SHED', 0.2, 'Anton', 0.006, 1.0, 1.0), ('boattxt.001', 'ROYAL FLUSH', 0.18, 'Anton', 0.006, 1.0, 1.25)]),
   'TownBldg_lil': (None, [('dstxt.006', "LIL'S HOUSE", 0.2, 'Anton', 0.006, 1.0, 1.0), ('heart.001', 'L. M.', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
   'TownBldg_cellar': (None, [('dstxt.007', 'ROOT CELLAR', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
-  'TownBldg_vault': (None, [('dstxt.008', "LIL'S VAULT", 0.2, 'Anton', 0.006, 1.0, 1.0), ('kb.003', 'LM', 0.5, 'Anton', 0.006, 1.0, 1.1)]),
+  'TownBldg_vault': (None, [('dstxt.008', "LIL'S VAULT", 0.2, 'Anton', 0.006, 1.0, 1.0), ('lmtxt', 'LM', 0.5, 'Anton', 0.006, 1.0, 1.1)]),
   'TownBldg_school': (None, [('chalk2.001', 'NO GAMBLING', 0.2, 'Anton', 0.006, 1.0, 1.25)]),
  },
  'gear.blend': {
@@ -47,7 +47,6 @@ JOBS = {
  },
  'finds.blend': {
   'Safe_1': ('FindSafe', [('co', 'MARLOW BANK', 0.06, 'Anton', 0.003, 1.0, 1.0)]),
-  'Case_4': ('FindSuitcase', [('tag1.003', 'LIL', 0.022, 'Anton', 0.0008, 1.0, 1.0), ('tag2.003', 'MARLOW', 0.022, 'Anton', 0.0008, 1.0, 1.0)]),
  },
 }
 def export_scene(sc, path):

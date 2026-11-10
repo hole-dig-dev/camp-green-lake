@@ -126,7 +126,7 @@ function cyBuild(group){
 function isNightNow(){try{return scene.fog.color.r<0.35}catch(e){return false}}
 
 function cyItems(rnd){
-  const W=[['jar',14],['arrow',14],['shoe',10],['fossil',10],['spoon',8],['can',8],['lipstick',4],['locket',3],['pistol',2],['sploosh',2]],WS=W.reduce((s,w)=>s+w[1],0);
+  const W=[['jar',14],['arrow',14],['shoe',10],['fossil',10],['spoon',8],['can',8],['matchsafe',4],['locket',3],['pistol',2],['shine',2]],WS=W.reduce((s,w)=>s+w[1],0);
   const pick=()=>{let r=rnd()*WS;for(const[k,v]of W)if((r-=v)<0)return k;return 'can'};
   const out=[],clear=z=>!CY_STEPS.some(L=>Math.abs(L.z-z)<3)&&Math.abs(CY_FALL.z-z)>3;
   for(let i=0;i<90;i++){const z=CY_Z1+25+rnd()*(CY_Z0-CY_Z1-40);if(!clear(z))continue;out.push({type:pick(),x:cyX(z)+(rnd()*2-1)*cyW(z)*0.75,z,depth:0.3+rnd()*1.1})}

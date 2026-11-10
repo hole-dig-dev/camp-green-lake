@@ -9,7 +9,7 @@ let roHissT=0;
      scorp    scorpions come up where you're digging: poison                     squash
      dutch      Foreman Dutch walks the lake: stand around and he warns you, then takes your whole sack
      supt   the Superintendent: stand around and she knocks you out
-     marshal  near curfew, the Marshal's ghost hunts whoever carries Lil Marlow's loot (lipstick, pistol, locket, strongbox)
+     marshal  near curfew, the Marshal's ghost hunts whoever carries Lil Marlow's loot (matchsafe, pistol, locket, strongbox)
      lil     at night, Lil Marlow's ghost only moves while nobody is looking at her
    A bitterroot keeps the small ones off you. Poison is an affliction on your stamina bar (70-player.js). */
 const RO_LOCAL={mobs:[]};                 // solo play's roster state (online, the server owns it)
@@ -111,7 +111,7 @@ function rosterSwing(){
   else{const ev=[];SIM.rosterSwat(RO_LOCAL,{id:myId(),x:P.x,z:P.z,fa:P.fa},ev);rosterSnapshot(SIM.packRoster(RO_LOCAL));for(const e of ev)rosterEvent(e)}
   return true;
 }
-function lilLoot(){return S.sack.some(t=>t==='lipstick'||t==='pistol'||t==='locket')||(S.carry!=null&&typeof PROPS!=='undefined'&&PROPS.has(S.carry)&&PROPS.get(S.carry).type==='strongbox')}
+function lilLoot(){return S.sack.some(t=>t==='matchsafe'||t==='pistol'||t==='locket')||(S.carry!=null&&typeof PROPS!=='undefined'&&PROPS.has(S.carry)&&PROPS.get(S.carry).type==='strongbox')}
 
 /* ---- every frame ---- */
 let roLocalT=0;

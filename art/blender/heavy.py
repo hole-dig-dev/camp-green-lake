@@ -16,7 +16,7 @@ def dense_box(name,size,loc,parent,cuts=6):
     for p in o.data.polygons:p.use_smooth=False
     _link(o);o.parent=parent;return o
 def heavy_finish(n,elev=18,azim=-32):
-    studio(elev=elev,azim=azim,lens=50);frame(margin=1.2);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('kb_sand',(0xe3,0xbf,0x86),0.95))
+    studio(elev=elev,azim=azim,lens=50);frame(margin=1.2);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('find_sand',(0xe3,0xbf,0x86),0.95))
     render(n,res=(512,512),samples=48);print(n,tris())
 
 # ======================= Foreman Dutch's pickup (cab at -Y, tailgate at +Y) =======================
@@ -100,7 +100,7 @@ cyl('padlock',0.09,0.05,(0,-0.56,0.6),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0
 bpy.ops.mesh.primitive_torus_add(major_radius=0.06,minor_radius=0.012,location=(0,-0.56,0.68));o=bpy.context.active_object;o.name='shackle';o.rotation_euler=(math.pi/2,0,0);_finish(o,CHROME,0,r)
 heavy_finish(n)
 
-# ======================= Lil's strongbox x5 (1.2 x 0.8 x 0.7) =======================
+# ======================= the bank cashbox x5 (1.2 x 0.8 x 0.7) =======================
 n='Box_1';scene(n);r=root(n);b=dense_box('chest',(1.2,0.8,0.62),(0,0,0.31),r,cuts=5);vpaint(b,[(0,(0x6a,0x46,0x28)),(0.5,(0x7e,0x56,0x34)),(1,(0x5a,0x3a,0x22))],freq=3,seed=1)
 for x in (-0.4,0.4):box(f'band{x}',(0.1,0.84,0.66),(x,0,0.33),IRONd,bevel=0.01,parent=r)
 box('lidline',(1.24,0.84,0.04),(0,0,0.5),IRONd,bevel=0.005,parent=r);box('hasp',(0.12,0.04,0.18),(0,-0.42,0.45),IRONd,bevel=0.01,parent=r);cyl('lock',0.07,0.05,(0,-0.45,0.36),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r)
@@ -125,7 +125,7 @@ for x in (-0.45,0,0.45):
     for v in o.data.vertices:
         v.co.z=max(v.co.z,-0.02)*0.6
     _finish(o,IRONd,0,r)
-text('kb','BANK',(0,-0.405,0.26),0.14,GOLDT,extrude=0.006,parent=r);cyl('lock',0.06,0.04,(0,-0.42,0.42),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r);heavy_finish(n)
+text('banktxt','BANK',(0,-0.405,0.26),0.14,GOLDT,extrude=0.006,parent=r);cyl('lock',0.06,0.04,(0,-0.42,0.42),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r);heavy_finish(n)
 n='Box_4';scene(n);r=root(n);b=dense_box('box',(1.2,0.8,0.62),(0,0,0.31),r,cuts=6);rust_over([b],0.12,4)
 pts=[(x,-0.405,z) for x in (-0.55,-0.3,-0.05,0.2,0.45) for z in (0.08,0.54)]+[(x,-0.405,z) for x in (-0.55,0.55) for z in (0.23,0.38)]
 rivets('rv',r,pts,m=IRONd,r=0.022);box('lidseam',(1.22,0.82,0.03),(0,0,0.48),IRONd,bevel=0,parent=r);heavy_finish(n)
@@ -135,35 +135,5 @@ rivets('stud',r,pts,m=BRASS,r=0.015)
 for x in (-0.3,0.3):box(f'strap{x}',(0.1,0.84,0.64),(x,0,0.31),LEATH2,bevel=0.01,parent=r);box(f'buckle{x}',(0.12,0.03,0.1),(x,-0.43,0.4),BRASS,bevel=0.005,parent=r)
 heavy_finish(n)
 
-# ======================= Lil's strongbox x5 (~0.7 x 0.22 x 0.48) =======================
-def case(parent,m,W=0.7,D=0.22,H=0.48,seed=0,paint=None):
-    b=dense_box('case',(W,D,H),(0,0,H/2),parent,cuts=5)
-    if paint:vpaint(b,paint,freq=6,seed=seed)
-    else:b.data.materials.append(mat(*m))
-    bev=b.modifiers.new('b','BEVEL');bev.width=0.03;bev.segments=2
-    tube('handle1',(-0.1,0,H+0.005),(-0.08,0,H+0.07),0.015,LEATH,parent);tube('handle2',(0.08,0,H+0.07),(0.1,0,H+0.005),0.015,LEATH,parent);tube('handle3',(-0.08,0,H+0.07),(0.08,0,H+0.07),0.016,LEATH,parent)
-    return b
-def nametag(parent,x,z,D=0.22):
-    box('tag',(0.14,0.006,0.08),(x,-D/2-0.012,z),TAG,rot=(0,0,0),bevel=0.002,parent=parent)
-    text('tag1','LIL',(x,-D/2-0.016,z+0.015),0.022,INK,extrude=0.0008,parent=parent);text('tag2','MARLOW',(x,-D/2-0.016,z-0.015),0.022,INK,extrude=0.0008,parent=parent)
-n='Case_1';scene(n);r=root(n);case(r,LEATH)
-for x in (-0.2,0.2):box(f'strap{x}',(0.05,0.235,0.49),(x,0,0.245),LEATH2,bevel=0.004,parent=r);box(f'buck{x}',(0.06,0.02,0.05),(x,-0.12,0.33),BRASS,bevel=0.003,parent=r)
-nametag(r,0.0,0.18);heavy_finish(n,elev=15)
-n='Case_2';scene(n);r=root(n);case(r,LEATH2)
-for k,(x,z,c) in enumerate(((-0.22,0.33,(0xc8,0x3a,0x2a)),(0.18,0.12,(0x2f,0x5f,0x8a)),(0.22,0.35,(0xd9,0xa2,0x1a)),(-0.18,0.12,(0x3f,0x6a,0x3a)))):
-    cyl(f'sticker{k}',0.07,0.004,(x,-0.113,z),M_(f'h_st{k}',c,0.8),verts=12,rot=(math.pi/2,0,rnd.uniform(0,1)),bevel=0,parent=r)
-nametag(r,0.0,0.24);heavy_finish(n,elev=15)
-n='Case_3';scene(n);r=root(n);case(r,None,paint=[(0,(0x5a,0x3a,0x22)),(0.45,(0x6a,0x46,0x28)),(0.6,(0xa0,0x80,0x55)),(0.8,(0xc4,0xa2,0x70))],seed=3)
-for x in (-0.22,0.22):box(f'latch{x}',(0.07,0.02,0.05),(x,-0.115,0.44),BRASS,bevel=0.003,parent=r)
-for sx in (-1,1):
-    for sz in (0,1):box(f'corner{sx}{sz}',(0.07,0.24,0.07),(sx*0.33,0,0.035+sz*0.41),BRASS,bevel=0.008,parent=r)
-clump(r,8,0.02,0.04,rad=(0.35,0.5),seed=3);nametag(r,0.0,0.22);heavy_finish(n,elev=15)
-n='Case_4';scene(n);r=root(n);case(r,CANV)
-for sx in (-1,1):
-    for sz in (0,1):box(f'lcorner{sx}{sz}',(0.09,0.235,0.09),(sx*0.32,0,0.045+sz*0.39),LEATH,bevel=0.01,parent=r)
-box('trim',(0.71,0.235,0.03),(0,0,0.3),LEATH,bevel=0.004,parent=r);nametag(r,0.0,0.16);heavy_finish(n,elev=15)
-n='Case_5';scene(n);r=root(n);b=dense_box('trunk',(0.72,0.36,0.42),(0,0,0.21),r,cuts=4);b.data.materials.append(mat(*OAK))
-for x in (-0.24,0.24):box(f'band{x}',(0.05,0.38,0.44),(x,0,0.22),BRASS,bevel=0.004,parent=r)
-box('lid',(0.74,0.38,0.04),(0,0,0.36),LEATH,bevel=0.005,parent=r);cyl('lock',0.035,0.02,(0,-0.19,0.33),BRASS,verts=10,rot=(math.pi/2,0,0),bevel=0.004,parent=r)
-nametag(r,0.0,0.15,D=0.36);heavy_finish(n,elev=15)
+# Lil's strongbox (the find that wins the game) has its own script: art/blender/lil_strongbox.py.
 bpy.ops.wm.save_mainfile()

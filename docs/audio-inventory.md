@@ -143,7 +143,7 @@ The [original wind capture](audio-ab/wind-old.webm) and [level-matched recorded 
 | Landslides, sinkholes | Low filtered-noise rumble loops; landslides add a rising tone and hiss warning. Nearby bouncing rocks and falls trigger `thud`. |
 | Vultures, javelinas, mountain lion | Vulture screech = band-pass noise plus a descending sawtooth; javelina squeals/snorts = sawtooth sweeps; lion growl/roar = low oscillator and noise; lion stalking also adds a synthesized heartbeat. |
 | Curfew and the Drowned Bride | The curfew warning is three synthesized siren sweeps. Police spotting adds two warning beeps and a browser text-to-speech line. the Bride has a low drone, whisper-like filtered noise, sting, heartbeat, jumpscare, and browser text-to-speech. Old police car siren/engine loop nodes are silent because officers now walk. |
-| Cards, chat, flashlight, onion | Brief synthesized clicks, noise ticks, or oscillator sweeps. Blackjack win/loss reuses coin/thud. |
+| Cards, chat, flashlight, bitterroot | Brief synthesized clicks, noise ticks, or oscillator sweeps. Blackjack win/loss reuses coin/thud. |
 | Disco party | A four-bar sequenced Web Audio composition: synthesized kick, hat, snare, bass, and chords. It is the game's only continuous music. |
 | Other campers talking | Live WebRTC microphone audio, heard through a positional HRTF panner. Browser text-to-speech is used for the police/the Bride lines above, not for regular text dialogue. |
 

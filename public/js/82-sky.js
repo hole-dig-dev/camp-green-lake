@@ -26,7 +26,7 @@ const SKY_KEYS=[
 ];
 const SKY={zen:new T.Color(),hor:new T.Color(),sun:new T.Color(),hs:new T.Color(),hg:new T.Color(),fog:new T.Color(),a:new T.Color(),b:new T.Color(),
   lastH:-1,cloud:0.5,cloudT:Math.random()*100};
-const skyMix=(out,ka,kb,key,f)=>{SKY.a.setHex(ka[key]);SKY.b.setHex(kb[key]);out.copy(SKY.a).lerp(SKY.b,f)};
+const skyMix=(out,k0,k1,key,f)=>{SKY.a.setHex(k0[key]);SKY.b.setHex(k1[key]);out.copy(SKY.a).lerp(SKY.b,f)};
 
 sky.material=(()=>{
   const m=new T.ShaderMaterial({side:T.BackSide,fog:false,depthWrite:false,

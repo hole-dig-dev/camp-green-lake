@@ -138,7 +138,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .row.big .v{font:900 26px/1 var(--display);color:var(--jump-deep)}
 .hud-warn{margin:0;font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--danger)}
 .hud-warn-icon{color:var(--danger);width:1em;height:1em}
-/* bottom-left: seeds/sack always, onion/flashlight/detector contextual (hidden via JS) */
+/* bottom-left: seeds/sack always, bitterroot/flashlight/detector contextual (hidden via JS) */
 .hud-strip--supplies{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:196px}
 .hud-strip--supplies .row.big .v small{font-size:.55em;margin-left:3px;color:var(--ink-soft)}   /* tonight's quota, next to the wallet */
 /* bottom-right: current shovel/reach glyphs, above the touch buttons */
@@ -194,7 +194,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 #tools{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 #tools .tool-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--ink);color:var(--canvas);border-radius:var(--r-control)}
 #tools .tool-badge svg{width:18px;height:18px}
-#tools .tool-badge.onion{background:var(--leaf)}
+#tools .tool-badge.bitterroot{background:var(--leaf)}
 #tools span.tool-badge--text{width:auto;height:auto;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 7px}
 
 /* ---- minimap: shallow metal survey frame (docs/ui-redesign-spec.md section 3) ---- */

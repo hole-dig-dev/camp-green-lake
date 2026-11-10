@@ -110,7 +110,7 @@ function oneLine(r) {
     case 'twWarn': return `${head}${r.n} warned of a twister ${r.dist} m to the ${r.dir} @ (${r.x},${r.z})`;
     case 'twSuckUp': return `${head}a twister's core caught ${r.n} @ (${r.x},${r.z})`;
     case 'twThrow': return `${head}a twister threw ${r.n} for ${r.dmg} dmg @ (${r.x},${r.z})`;
-    case 'found': return `${head}${r.n} found ${r.type} (${r.value} seeds)${r.heavy ? ' [heavy]' : ''}${r.kb ? ' [LM card case]' : ''} @ (${r.x},${r.z})`;
+    case 'found': return `${head}${r.n} found ${r.type} (${r.value} seeds)${r.heavy ? ' [heavy]' : ''}${r.lm ? ' [LM card case]' : ''} @ (${r.x},${r.z})`;
     case 'tentEnter': return `${head}${r.n} went into ${r.name} @ (${r.x},${r.z})`;
     case 'tentExit': return `${head}${r.n} left ${r.name} @ (${r.x},${r.z})`;
     case 'sleep': return `${head}${r.n} ${r.on ? 'lay down in a bunk' : 'got up'}`;
@@ -121,7 +121,7 @@ function oneLine(r) {
     case 'propSold': return `${head}sold a ${r.type} for ${r.v} seeds (carried by ${(r.who || []).join(', ') || '?'})`;
     case 'bagDrop': return `${head}${r.n}'s sack fell @ (${r.x},${r.z}): ${(r.items || []).join(', ')}`;
     case 'bagGrab': return `${head}${r.n} grabbed sack #${r.bagId}`;
-    case 'kb': return `${head}${r.n} gave the LM card case to the Superintendent`;
+    case 'lmcase': return `${head}${r.n} gave the LM card case to the Superintendent`;
     case 'win': return `${head}${r.n} dug up Lil's strongbox — GAME WON`;
     case 'cmd': return `${head}${r.n} ran "${r.line}"${r.error ? ' -> ERROR: ' + r.error : r.reply ? ' -> ' + r.reply : ''}`;
     case 'env': return `${head}${r.n} spawned a ${r.k} @ (${r.x},${r.z})`;

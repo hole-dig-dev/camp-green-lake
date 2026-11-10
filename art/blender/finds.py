@@ -28,7 +28,7 @@ def clump(parent,n,r0,r1,zmax=0.01,rad=(0.03,0.06),seed=0):
         a=rr.uniform(0,6.28);d=rr.uniform(*rad);bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1,radius=rr.uniform(r0,r1),location=(math.cos(a)*d,math.sin(a)*d,rr.uniform(0,zmax)));o=bpy.context.active_object;o.name=f'dirt{k}';_finish(o,DIRT,0,parent)
 def finish(n,elev=28,azim=-28,margin=1.35):
     studio(elev=elev,azim=azim,lens=85);frame(margin=margin)
-    f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('kb_sand',(0xe3,0xbf,0x86),0.95))
+    f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('find_sand',(0xe3,0xbf,0x86),0.95))
     render(n,res=(512,512),samples=48);print(n,tris())
 
 # ---------------- bottle cap (2.6 cm) ----------------
@@ -158,7 +158,7 @@ def jar(name,parent,lid=TIN,fill=0.8,label=False,cloth=False,bail=False,dusty=Fa
     else:cyl(name+'_lid',0.031,0.012,(0,0,0.118),lid,verts=20,bevel=0.002,parent=parent)
     if label:
         cyl(name+'_label',0.0355,0.045,(0,0,0.05),LABEL,verts=20,bevel=0,parent=parent)
-        text(name+'_lt1','SPICED',(0,-0.036,0.058),0.009,INK,extrude=0.0003,parent=parent);text(name+'_lt2','PEACHES',(0,-0.036,0.045),0.009,RED,extrude=0.0003,parent=parent)
+        text(name+'_lt1','BRANDIED',(0,-0.036,0.058),0.009,INK,extrude=0.0003,parent=parent);text(name+'_lt2','PEACHES',(0,-0.036,0.045),0.009,RED,extrude=0.0003,parent=parent)
 n='Jar_1';scene(n);r=root(n);jar('j',r);finish(n,elev=20)
 n='Jar_2';scene(n);r=root(n);jar('j',r,label=True);finish(n,elev=18)
 n='Jar_3';scene(n);r=root(n);jar('j',r,bail=True);finish(n,elev=20)

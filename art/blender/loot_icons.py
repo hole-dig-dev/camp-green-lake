@@ -18,10 +18,10 @@ RAW = os.path.join(HERE, 'renders', 'icons')
 PUB = os.path.join(HERE, '..', '..', 'public')
 # out (under public/icons), model, azimuth and elevation of the camera (degrees), roll of the object (degrees, 0 = upright)
 ICONS = [
-    ('loot/kb.png',          'LMCase',           -30, 14, -14),
-    ('loot/suitcase.png', 'FindLilStrongbox', -32, 20, 0),
-    ('loot/lipstick.png',   'FindMatchSafe',    -30, 14, 16),
-    ('gear/onion.png',       'bitterroot',       -20, 12, 0),
+    ('loot/lmcase.png',          'LMCase',           -30, 14, -14),
+    ('loot/lilstrongbox.png', 'FindLilStrongbox', -32, 20, 0),
+    ('loot/matchsafe.png',   'FindMatchSafe',    -30, 14, 16),
+    ('gear/bitterroot.png',       'bitterroot',       -20, 12, 0),
 ]
 OUTLINE = (58, 34, 18)                 # the sheets' dark brown
 SIZE = 128

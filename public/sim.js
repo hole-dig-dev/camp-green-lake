@@ -23,7 +23,7 @@
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
     { id: 'soda', name: 'Soda', desc: 'Cheers him right up (+45 morale). Drunk on the spot.', cost: 15, use: true },
     { id: 'disarm', name: 'Mine disarm kit', desc: 'He spots landmines in his way and stops to disarm them, instead of walking into them.', cost: 50 },
-    { id: 'onions', name: 'Sack of bitterroot', desc: 'He chews it all day. Gilas leave him alone.', cost: 45 },
+    { id: 'bitterroots', name: 'Sack of bitterroot', desc: 'He chews it all day. Gilas leave him alone.', cost: 45 },
   ];
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
      a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
@@ -551,7 +551,7 @@
        big    (from day 3)  supt: the Superintendent knocks out whoever she catches idle, lil: Lil Marlow's ghost at night,
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
-     players: simPlayers() on the server / meSim() solo, plus ml (holding Lil's loot), on (onion active), vy (camera yaw). */
+     players: simPlayers() on the server / meSim() solo, plus ml (holding Lil's loot), on (bitterroot active), vy (camera yaw). */
   const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
   const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'marshal'], RO_BIG = ['supt', 'lil'];
   const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'marshal', 'supt', 'lil'];   // wire format: index into this
@@ -701,7 +701,7 @@
     ['lil', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
   const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
   const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
-  const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
+  const TOWN_LOOT = ['matchsafe', 'locket', 'pistol', 'shine', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
   const PI = Math.PI;
   // where buildings stand: the six on Main Street (always the big ones, fronts on the street) and the seven off it
   const TOWN_SPOTS = {

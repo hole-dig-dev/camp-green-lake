@@ -331,8 +331,8 @@ function updateLandslides(dt){
         if(lsHitT<=0){
           lsHitT=LS_HIT_GRACE;
           const dmg=Math.max(6,Math.round((speed-LS_HURT_SPEED)*b.r*LS_DMG_K));
-          const nx=d>0.05?dx/d:1,nz=d>0.05?dz/d:0,kb=Math.min(22,5+speed*1.1);
-          P.kx=nx*kb;P.kz=nz*kb;P.vy=Math.max(P.vy,4+Math.min(8,speed*0.3));P.grounded=false;
+          const nx=d>0.05?dx/d:1,nz=d>0.05?dz/d:0,knock=Math.min(22,5+speed*1.1);
+          P.kx=nx*knock;P.kz=nz*knock;P.vy=Math.max(P.vy,4+Math.min(8,speed*0.3));P.grounded=false;
           hurt(dmg,'Landslide','A boulder from the rockslide hit you.');
           if(!S.ko)toast(`A boulder hit you! -${dmg} health`,'bad',3000);
         }

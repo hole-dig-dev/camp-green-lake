@@ -25,7 +25,7 @@
 //   bagGrab         {id,n,bagId}                         someone grabbed a dropped sack
 //   revive          {id,n,by,x,z}                        by picked up downed camper n
 //   pull            {id,n,by,x,z}                        by pulled camper n out of a deep hole
-//   kb              {id,n}                               gave the gold LM card case to the Superintendent
+//   lm              {id,n}                               gave the gold LM card case to the Superintendent
 //   win             {id,n}                               dug up Lil's strongbox
 //   clock           {id,n,off,paused,pt,prevOff,prevPaused,prevPt}   host changed the camp clock
 //   env             {id,n,k,x,z,a}                       hazard spawned from the console (e.g. a twister)
@@ -72,7 +72,7 @@
 //   sinkSolo        {id,n,x,z}                                nobody else online: Zero set out with a line
 //   sinkSoloRescued {id,n,x,z}                                Zero finished pulling a solo camper out
 //   sinkFilled      {id,n,x,z}                                a sinkhole finished filling back in (client-local)
-//   found           {id,n,item,type,value,x,z,heavy,kb}     dug up an item
+//   found           {id,n,item,type,value,x,z,heavy,lm}     dug up an item
 //   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
 //   tentExit        {id,n,tent,name,x,z}                    stepped back outside a tent
 //   pause           {id,n,action}                           used the pause menu (action: 'restart' or 'quit')

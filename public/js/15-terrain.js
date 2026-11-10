@@ -43,22 +43,22 @@ const LOOT={
   arrow:{name:'Arrowhead',val:16,color:0x4a4038},
   jar:{name:'Jar of brandied peaches',val:22,color:0xd98a3a},
   fossil:{name:'Fossil fish',val:30,color:0xd8ccb0},
-  lipstick:{name:'Silver match safe',val:40,color:0xe0e0e8},
-  sploosh:{name:'Old jar of peach shine',val:48,color:0xe8a040},
+  matchsafe:{name:'Silver match safe',val:40,color:0xe0e0e8},
+  shine:{name:'Old jar of peach shine',val:48,color:0xe8a040},
   locket:{name:'Gold locket',val:60,color:0xd4af37},
   pistol:{name:'Lil\'s old pistol',val:75,color:0x2a2a2a},
   safe:{name:'Old iron safe',val:120,color:0x3b3f45,heavy:true},
-  strongbox:{name:'Old bank cashbox',val:80,color:0x5b3a1e,heavy:true},   // ids keep their old names (saves, the server): 'strongbox' is this cashbox, 'suitcase' Lil's strongbox, 'kb' the LM card case, 'sploosh' peach shine, 'onions' bitterroot
+  strongbox:{name:'Old bank cashbox',val:80,color:0x5b3a1e,heavy:true},   // the ordinary heavy find; Lil's own strongbox is 'lilstrongbox' below
   // carried finds (45-state.js carryFind): what a find becomes when it's too big for the sack. val is typical; each one's is set when dug
   crate:{name:'Crate of brandied peaches',val:60,color:0x9a7448,heavy:true,carry:true,note:'Glass jars: it chips if you drop it.'},
   tools:{name:'Bundle of old tools',val:35,color:0x5a524a,heavy:true,carry:true,note:'Iron: it can take a knock.'},
   jug:{name:'Big jug of peach shine',val:120,color:0xe6d8b4,heavy:true,carry:true,note:'Pottery: one bad drop and it cracks.'},
-  kb:{name:'Gold card case engraved "LM"',val:0,color:0xd4af37,key:true},
-  suitcase:{name:'Lil\'s strongbox',val:500,color:0x6b3e1f,key:true},
+  lmcase:{name:'Gold card case engraved "LM"',val:0,color:0xd4af37,key:true},
+  lilstrongbox:{name:'Lil\'s strongbox',val:500,color:0x6b3e1f,key:true},
   goldbar:{name:'Gold bar',val:90,color:0xd4af37},   // only in the buried town's vault (89-town.js)
-  sneakers:{name:'Pair of old boots',val:30,color:0xf0f0f0}   // they fall out of the sky when the bad luck is high (81-mood.js)   // only in the buried town's vault (89-town.js)
+  oldboots:{name:'Pair of old boots',val:30,color:0xf0f0f0}   // they fall out of the sky when the bad luck is high (81-mood.js)   // only in the buried town's vault (89-town.js)
 };
-const WEIGHTS=[['cap',30],['can',24],['spoon',14],['shoe',12],['arrow',9],['jar',6],['fossil',5],['lipstick',2],['sploosh',1.6],['locket',1.2],['pistol',0.8]];
+const WEIGHTS=[['cap',30],['can',24],['spoon',14],['shoe',12],['arrow',9],['jar',6],['fossil',5],['matchsafe',2],['shine',1.6],['locket',1.2],['pistol',0.8]];
 const WSUM=WEIGHTS.reduce((s,w)=>s+w[1],0);
 /* farther from camp, the rarer finds get more common */
 function pickType(f){const w=WEIGHTS.map(([k,v],i)=>[k,v*(1+f*i*0.9)]);let r=rng()*w.reduce((s,e)=>s+e[1],0);for(const[k,v]of w){if((r-=v)<0)return k}return 'cap'}
@@ -66,10 +66,10 @@ function pickType(f){const w=WEIGHTS.map(([k,v],i)=>[k,v*(1+f*i*0.9)]);let r=rng
 function spotAround(minD,maxD,pw,minPre){for(let k=0;k<400;k++){const a=rng()*Math.PI*2,d=minD+(maxD-minD)*Math.pow(rng(),pw);const x=Math.cos(a)*d,z=20+Math.sin(a)*d;if(Math.max(Math.abs(x),Math.abs(z))>EDGE-6||nearCampZone(x,z))continue;if(holeNear(x,z,minPre))continue;return{x,z}}return{x:-80,z:-80}}
 const items=[];
 for(let i=0;i<5000;i++){const p=spotAround(14,EDGE*1.35,1.35,1.7);items.push({id:i,type:pickType(clamp(Math.hypot(p.x,p.z-20)/450,0,1)),x:p.x,z:p.z,depth:0.3+rng()*1.15,found:false})}
-{const p=spotAround(120,320,1,2.5);items.push({id:items.length,type:'kb',x:p.x,z:p.z,depth:1.2,found:false})}
-let SUITCASE;
-{const p=spotAround(220,480,1,2.8);SUITCASE={id:items.length,type:'suitcase',x:p.x,z:p.z,depth:2.3,found:false};items.push(SUITCASE)}
-const SEARCH={x:SUITCASE.x+(rng()-0.5)*9,z:SUITCASE.z+(rng()-0.5)*9,r:10};
+{const p=spotAround(120,320,1,2.5);items.push({id:items.length,type:'lmcase',x:p.x,z:p.z,depth:1.2,found:false})}
+let LILBOX;
+{const p=spotAround(220,480,1,2.8);LILBOX={id:items.length,type:'lilstrongbox',x:p.x,z:p.z,depth:2.3,found:false};items.push(LILBOX)}
+const SEARCH={x:LILBOX.x+(rng()-0.5)*9,z:LILBOX.z+(rng()-0.5)*9,r:10};
 /* heavy finds, buried deeper than a plain shovel reaches (you need the long-handled shovel) */
 for(let i=0;i<220;i++){const p=spotAround(40,EDGE*1.3,1.1,2.2);items.push({id:items.length,type:rng()<0.4?'safe':'strongbox',x:p.x,z:p.z,depth:1.6+rng()*0.9,found:false})}
 

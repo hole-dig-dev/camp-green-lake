@@ -57,7 +57,7 @@
 | 01:46.8 | Game cues | Card click |
 | 01:48.2 | Game cues | Flashlight on |
 | 01:49.6 | Game cues | Flashlight off |
-| 01:51.0 | Game cues | Onion use |
+| 01:51.0 | Game cues | Bitterroot use |
 | 01:52.4 | Game cues | Chat notification |
 | 01:53.8 | Music | Disco party loop |
 

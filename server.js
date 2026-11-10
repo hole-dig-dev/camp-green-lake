@@ -135,7 +135,7 @@ const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Digger';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
-const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'goldbar', 'sneakers'];
+const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'matchsafe', 'shine', 'locket', 'pistol', 'goldbar', 'oldboots'];
 
 /* Peak-style maps (public/js/88-zones.js). The whole crew is always in ONE map (world.zone, 'lake' when unset), so
    everything else here runs unchanged on whichever map is loaded. Each map keeps its own holes, finds, heavy loot,
@@ -220,7 +220,7 @@ function checkSummit() {
   if (js.length && at === js.length && next) { LOG.log('summit', { n: js.length }); for (const c of js) c.summit = false; zoneSwitch(next, 'the crew climbed the north wall'); }
 }
 function freshRun() { return { day: 1, bank: 0, peak: 1, badluck: 0, mood: 'normal' }; }
-function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
+function freshWorld(day) { return { day, holes: {}, got: [], lm: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -537,7 +537,7 @@ function sanitizeLogFields(o) {
 }
 const clients = new Map();
 let nextId = 1;
-let kbHolder = null, kbItem = -1; // who is carrying the LM card case (not yet reported)
+let lmHolder = null, lmItem = -1; // who is carrying the LM card case (not yet reported)
 let partyUntil = 0; // easter egg: a dance party is running until this time
 
 function send(c, msg) { if (c.ws.readyState === 1) c.ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg)); }
@@ -593,7 +593,7 @@ wss.on('connection', (ws, req) => {
       t: 'hello', id: c.id, day: world.day, iceServers: ICE_SERVERS,
       zone: world.zone || 'lake', zflags: world.zflags || {}, // which map the crew is in; the holes etc. below are that map's
       holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
-      got: [...gotSet], kb: world.kb, won: world.won, clock: world.clock,
+      got: [...gotSet], lm: world.lm, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
       peers: [...clients.values()].filter(p => p.joined && !p.spectator && p.id !== c.id).map(peerInfo),
@@ -709,7 +709,7 @@ wss.on('connection', (ws, req) => {
         const item = num(m.item, 0, MAX_ITEM, -1) | 0;
         if (item < 0 || gotSet.has(item)) return;
         gotSet.add(item); dirty = true;
-        if (m.kb === true && !world.kb) { kbHolder = c.id; kbItem = item; }
+        if (m.lm === true && !world.lm) { lmHolder = c.id; lmItem = item; }
         broadcast({ t: 'got', id: c.id, item }, c.id);
         break;
       }
@@ -1322,11 +1322,11 @@ wss.on('connection', (ws, req) => {
         LOG.log('shout', { id: c.id, n: c.n, i: num(m.i, 0, 4, 0) | 0 });
         broadcast({ t: 'say', id: c.id, i: num(m.i, 0, 4, 0) | 0 }, c.id);
         break;
-      case 'kb':
-        if (world.kb) return;
-        world.kb = c.n; dirty = true; kbHolder = null;
-        LOG.log('kb', { id: c.id, n: c.n });
-        broadcast({ t: 'kb', n: c.n }, c.id);
+      case 'lmcase':
+        if (world.lm) return;
+        world.lm = c.n; dirty = true; lmHolder = null;
+        LOG.log('lmcase', { id: c.id, n: c.n });
+        broadcast({ t: 'lmcase', n: c.n }, c.id);
         break;
       case 'win':
         if (world.won) return;
@@ -1366,10 +1366,10 @@ wss.on('connection', (ws, req) => {
       p.grab = (p.grab || []).filter(g => g !== c.id); p.ropes = (p.ropes || []).filter(g => g !== c.id); passOwner(p, c.id);
       broadcast({ t: 'pown', id: +pid, owner: p.owner, grab: p.grab, ropes: p.ropes });
     }
-    if (kbHolder === c.id && !world.kb) {
-      // The camper walked off with the gold tube without reporting it: put it back in the ground.
-      kbHolder = null;
-      if (gotSet.delete(kbItem)) { dirty = true; broadcast({ t: 'ungot', item: kbItem }); }
+    if (lmHolder === c.id && !world.lm) {
+      // The camper walked off with the LM card case without reporting it: put it back in the ground.
+      lmHolder = null;
+      if (gotSet.delete(lmItem)) { dirty = true; broadcast({ t: 'ungot', item: lmItem }); }
     }
     truckLeave(c.id);
     if (c.joined && !c.spectator) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); else checkSummit(); }
@@ -1488,7 +1488,7 @@ function endOfDay() {
     LOG.log('fired', { bank: got, quota, day: world.run.day });
     const wasZone = world.zone || 'lake';
     world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun(), crew: {}, director: world.director }); ensureCart();
-    gotSet = new Set(); kbHolder = null; dirty = true; save();
+    gotSet = new Set(); lmHolder = null; dirty = true; save();
     broadcast({ t: 'fired', bank: got, quota, found: foundWas });
     broadcast({ t: 'crew', up: world.crew }); broadcast(runInfo());
     if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
@@ -1565,7 +1565,7 @@ setInterval(() => {
     c.alive = false; try { c.ws.ping(); } catch (e) { /* closing */ }
   }
   if (world.won && Date.now() - world.wonAt > NEW_DAY_AFTER_WIN_MS) {
-    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); ensureCart(); gotSet = new Set(); kbHolder = null; dirty = true; save();
+    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); ensureCart(); gotSet = new Set(); lmHolder = null; dirty = true; save();
     broadcast({ t: 'reset' });
   }
 }, 30000);

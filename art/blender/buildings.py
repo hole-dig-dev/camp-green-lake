@@ -85,7 +85,7 @@ def shop_front(r,walls,W,D,H,WALL,TRIM,ROOF):
     for k,z in enumerate((0.9,1.4,1.9)):
         box(f'shelf{k}',(SHOP_W+0.6,0.34,0.04),(0,by-0.2,z),SHELF,bevel=0.004,parent=r)
     JUG=('water_jug',(0x5a,0x8a,0xb8),0.35);CAN=('can_red',(0xb8,0x3a,0x2a),0.5,0.4);CAN2=('can_grn',(0x4a,0x7a,0x3a),0.5,0.4)
-    SACK=('onion_sack',(0xc8,0xa8,0x6a),0.95);ONION=('onion',(0xc8,0x8a,0x4a),0.6);BATT=('batt_box',(0xe0,0x8a,0x1e),0.7)
+    SACK=('bitterroot_sack',(0xc8,0xa8,0x6a),0.95);BITTERROOT=('bitterroot',(0xc8,0x8a,0x4a),0.6);BATT=('batt_box',(0xe0,0x8a,0x1e),0.7)
     TONIC=('tonic',(0x7a,0x4a,0x22),0.3);KIT=('kit',(0xd8,0xd4,0xc8),0.6);CROSS=('kit_cross',(0xc0,0x28,0x20),0.6)
     for i,x in enumerate((-1.2,-0.95,-0.7)):   # top shelf: water jugs
         cyl(f'jug{i}',0.1,0.26,(x,by-0.2,1.92+0.13),JUG,verts=12,bevel=0.02,parent=r);cyl(f'jugcap{i}',0.035,0.04,(x,by-0.2,2.2),('cap',(0xe8,0xe8,0xe0),0.6),verts=8,bevel=0,parent=r)
@@ -96,9 +96,9 @@ def shop_front(r,walls,W,D,H,WALL,TRIM,ROOF):
     for i in range(2):   # walkies
         box(f'walkie{i}',(0.07,0.04,0.13),(0.5+i*0.13,by-0.2,1.42+0.065),('walkie',(0x2a,0x2c,0x2e),0.6),bevel=0.01,parent=r)
         tube(f'ant{i}',(0.52+i*0.13,by-0.2,1.49),(0.52+i*0.13,by-0.2,1.58),0.006,('walkie',(0x2a,0x2c,0x2e),0.6),r)
-    for i,x in enumerate((-1.1,-0.6)):   # bottom shelf: onion sacks
+    for i,x in enumerate((-1.1,-0.6)):   # bottom shelf: bitterroot sacks
         cyl(f'sack{i}',0.2,0.3,(x,by-0.2,0.92+0.15),SACK,verts=12,r2=0.12,bevel=0.05,parent=r)
-        for j in range(3):bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05,segments=10,ring_count=6,location=(x-0.05+j*0.05,by-0.3,0.92+0.31));o=bpy.context.active_object;o.name=f'onion{i}{j}';_finish(o,ONION,0,r)
+        for j in range(3):bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05,segments=10,ring_count=6,location=(x-0.05+j*0.05,by-0.3,0.92+0.31));o=bpy.context.active_object;o.name=f'bitterroot{i}{j}';_finish(o,BITTERROOT,0,r)
     for i in range(3):   # shovels leaning in the corner (the long-handled one for sale among them)
         x=1.15-i*0.14;tube(f'shovel{i}',(x,by-0.12,0.35),(x-0.08,by-0.3,1.75+i*0.12),0.018,('handle',(0x8a,0x62,0x3a),0.9),r)
         box(f'blade{i}',(0.2,0.03,0.26),(x+0.01,by-0.1,0.48),('steel','steel',0.5,0.6),bevel=0.01,parent=r)

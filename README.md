@@ -137,7 +137,7 @@ Press **`** (the key left of 1) in game to open the console, or tap the **>_** b
 | `event <kind>` | Force the director to place one event of `<kind>` near you now. |
 | `events` | Print the director's state: next roll, per-kind cooldowns, active events, current intensity. |
 
-Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (the play-test server does) to give everyone host powers, including the console and the hidden `sploosh` admin panel. Solo offline play can always use it.
+Only the host can use it on a normal server. Run the server with `DEV_MODE=1` (the play-test server does) to give everyone host powers, including the console and the hidden `peachshine` admin panel. Solo offline play can always use it.
 
 **Adding a command:** one line near the other `command(...)` calls in `public/index.html`:
 `command('name', {usage: 'name <arg>', help: 'what it does', run(args) { ...; return 'reply'; }})`

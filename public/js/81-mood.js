@@ -9,7 +9,7 @@
    someone sings the Drowned Bride away (hold H close to her). It means more monsters and hazards, likelier bad moods, and
    from 40 up, a pair of old boots falls out of the sky. */
 const moodOf=()=>RUN.mood||'normal';
-let moodShownDay=-1,sneakT=25;
+let moodShownDay=-1,bootT=25;
 function moodAnnounce(){
   if(!S.started||moodShownDay===RUN.day)return;moodShownDay=RUN.day;
   const M=SIM.MOODS[moodOf()];if(!M)return;
@@ -38,13 +38,13 @@ function updateMood(dt){
   // sandstorm: murky air out on the lake by day (on top of whatever the sky code set this frame)
   if(moodOf()==='sandstorm'&&t<DAYMS&&!inCamp(P.x,P.z)&&!inTent()&&!S.inTown&&!ZONE_H){scene.fog.color.lerp(new T.Color(0xc9a070),0.6);scene.fog.near=Math.min(scene.fog.near,4);scene.fog.far=Math.min(scene.fog.far,70)}
   // the bad luck: a pair of old boots falls out of the sky
-  if((RUN.badluck||0)>=40&&t<DAYMS&&!inCamp(P.x,P.z)&&!inTent()&&!S.inTown&&!S.ko&&(sneakT-=dt)<=0){sneakT=20;if(Math.random()<((RUN.badluck||0)-30)/140)sneakersFall()}
+  if((RUN.badluck||0)>=40&&t<DAYMS&&!inCamp(P.x,P.z)&&!inTent()&&!S.inTown&&!S.ko&&(bootT-=dt)<=0){bootT=20;if(Math.random()<((RUN.badluck||0)-30)/140)bootsFall()}
 }
-function sneakersFall(){
-  countUp('clyde',1,'clyde');sfx.thud();tone(900,0.5,'sine',0.05,300);say(meL,'OW!',2500);
+function bootsFall(){
+  countUp('bootfall',1,'bootfall');sfx.thud();tone(900,0.5,'sine',0.05,300);say(meL,'OW!',2500);
   hurt(8,'Old boots','A pair of old boots fell out of the sky and hit you on the head.');
   toast('A pair of old boots fell out of the sky and hit you on the head. They are still wet. (Lil\'s luck)','bad',6000);
-  if(S.sack.length<sackMax())S.sack.push('sneakers');logEv('sneakers',{});
+  if(S.sack.length<sackMax())S.sack.push('oldboots');logEv('oldboots',{});
 }
 /* solo: singing close to the Drowned Bride */
 let brideSongSolo=0;

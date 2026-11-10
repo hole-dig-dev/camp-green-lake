@@ -8,8 +8,8 @@ const BADGES={
   caveman:['Shovelhead','Finish 25 holes'],
   ladder:['Human ladder','Help a friend up 10 times (pull them out, pick them up, carry them home)'],
   pallbearer:['Pallbearer','Carry a downed friend back inside the fence'],
-  sploosh:['Sweet Tooth','Finish 5 jars of peach shine or peaches'],
-  onion:['Root breath','Chew 10 bitterroots'],
+  shine:['Sweet Tooth','Finish 5 jars of peach shine or peaches'],
+  bitterroot:['Root breath','Chew 10 bitterroots'],
   magnet:['Sticky Fingers','Pick up 3 dropped sacks'],
   squid:['Punching Bag','Get knocked out 5 times'],
   barfbag:['Loose Hips','Twerk 20 times'],
@@ -19,7 +19,7 @@ const BADGES={
   knots:['Knots','Tie your rope to something 10 times'],
   butter:['Butterfingers','Knock 50 gold off heavy loot by dropping it'],
   stanley:['Lucky','Dig up Lil\'s strongbox'],
-  clyde:['Boot to the Head','Get hit by falling boots'],
+  bootfall:['Boot to the Head','Get hit by falling boots'],
 };
 const JUMPSUITS=[
   {n:'Orange (standard issue)',c:0xe8742a,ok:()=>true},
@@ -68,7 +68,7 @@ function renderBadges(){
 function useSupply(){
   if(S.ko)return;
   if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}
-  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.onionT=Math.max(S.onionT,30);
+  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.bitterrootT=Math.max(S.bitterrootT,30);
     tone(330,0.3,'triangle',0.1,220);toast('You drink some bitterroot tonic. The sting fades, and gilas won\'t like your smell for 30 seconds.','good',4000);logEv('tonic',{});return}
-  eatOnion();
+  eatBitterroot();
 }
