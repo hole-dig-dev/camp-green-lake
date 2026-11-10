@@ -157,7 +157,7 @@ try{
     ['Bride sting','bride-sting',2.8],['Jumpscare','jumpscare',1.4],
   ])await capture('Night and patrol',label,kind,seconds);
   for(const [label,kind,seconds] of [
-    ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Seeds or coin','coin',1.1],
+    ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Gold or coin','coin',1.1],
     ['Detector beep','beep',1.1],['Shout','shout',1.1],['Canteen splash','splash',1.1],['Impact or damage','thud',1.1],
     ['Card click','cards',1.1],['Flashlight on','flashlight',1.1],['Flashlight off','flashlight-off',1.1],
     ['Bitterroot use','bitterroot',1.1],['Chat notification','chat',1.1],

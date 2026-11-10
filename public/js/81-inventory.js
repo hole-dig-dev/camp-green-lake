@@ -42,7 +42,7 @@ function invEntries(){
   const gear=SHOP.filter(it=>!it.stack);
   for(const it of [...gear.filter(g=>S.up[g.id]),...gear.filter(g=>!S.up[g.id])]){
     const own=!!S.up[it.id];
-    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
+    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} gold`,state:own?'In use':'Not owned',dim:!own});
   }
   if(!S.up.shovel)out.push({id:'hands',cat:'gear',name:'Bare hands',icon:'teammate',desc:'All you start with. Slow, and only 1.5 feet down. A camp shovel is 25 gold at the Company Store.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
   return out;

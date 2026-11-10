@@ -78,7 +78,7 @@ def patch(tag,body,origin,direction,sx,sy,m,parent,thick=0.006):
     """a flat marking stuck onto the surface (nose pad, snout disc)."""
     p,n=surf(body,origin,direction);o=blob(tag,p+n*thick*0.3,(sx,sy,thick),m,parent,seg=10,rings=5);o.rotation_euler=n.to_track_quat('Z','Y').to_euler();return p,n
 
-# ======================= GILA (theme #1: green, bright spots) =======================
+# ======================= GILA (theme #1: olive, orange beading, gold eyes) =======================
 scene('Lizard');r=root('Lizard')
 N=[(0,-0.37,0.055,0.022,0.016),(0,-0.31,0.07,0.042,0.03),(0,-0.25,0.075,0.05,0.036),(0,-0.19,0.07,0.044,0.032),
    (0,-0.1,0.07,0.068,0.04),(0,0.02,0.072,0.076,0.042),(0,0.13,0.066,0.062,0.036),
@@ -91,7 +91,7 @@ def leg(root_i,side,base,front):
 paws=[]
 for s in (-1,1):paws.append((leg(4,s,N[4],True),s,True));paws.append((leg(6,s,N[6],False),s,False))
 body=skin('liz',N,E,r,vox=0.005)
-GREEN=lin((0x6a,0x7a,0x2a));DARK=lin((0x3e,0x4a,0x1c));BELLY=lin((0xc8,0xb8,0x6a));YEL=lin((0xf0,0xcc,0x1a))
+GREEN=lin((0x6a,0x7a,0x2a));DARK=lin((0x3e,0x4a,0x1c));BELLY=lin((0xc8,0xb8,0x6a));YEL=lin((0xe8,0x78,0x38))   # the spots: gila orange (the name is from when they were yellow)
 def lizpaint(c,n):
     t=mix(BELLY,GREEN,(n.z+0.4)/0.8);t=mix(t,DARK,max(0,noise.noise(c*18)*0.8))
     if n.z>0.2 and c.y<0.5:

@@ -113,7 +113,7 @@ Behind Funnel, every request arrives from `127.0.0.1`; Funnel adds an `X-Forward
 
 ### What's still client-authoritative
 
-Item locations, the seed count in your sack, and who found what are worked out in the browser from a shared deterministic random seed — the server never learns where Lil's strongbox is. That means a modified client could, in principle, claim to have found the LM card case or Lil's strongbox, or report a bigger sack value than it should. The server clamps and rate-limits what it can (dig distance/rate, sell amount/rate, chat/ping/hazard spam, connection limits) but can't fully verify loot without duplicating the client's world generation server-side — out of scope here. See the code comments in `server.js` near each `case` for what is and isn't checked.
+Item locations, the gold count in your sack, and who found what are worked out in the browser from a shared deterministic random seed — the server never learns where Lil's strongbox is. That means a modified client could, in principle, claim to have found the LM card case or Lil's strongbox, or report a bigger sack value than it should. The server clamps and rate-limits what it can (dig distance/rate, sell amount/rate, chat/ping/hazard spam, connection limits) but can't fully verify loot without duplicating the client's world generation server-side — out of scope here. See the code comments in `server.js` near each `case` for what is and isn't checked.
 
 ## Developer console
 

@@ -49,7 +49,7 @@
 | 01:34.7 | Night and patrol | Jumpscare |
 | 01:36.4 | Game cues | Ordinary find |
 | 01:37.9 | Game cues | Important find or level up |
-| 01:39.8 | Game cues | Seeds or coin |
+| 01:39.8 | Game cues | Gold or coin |
 | 01:41.2 | Game cues | Detector beep |
 | 01:42.6 | Game cues | Shout |
 | 01:44.0 | Game cues | Canteen splash |
