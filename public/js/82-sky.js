@@ -69,7 +69,7 @@ const DUST={n:LOW_POWER?140:380,box:26,pts:null,vel:null};
   g.setAttribute('position',new T.BufferAttribute(p,3));
   const cv=document.createElement('canvas');cv.width=cv.height=32;const c2=cv.getContext('2d'),gr=c2.createRadialGradient(16,16,0,16,16,16);
   gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.4,'rgba(255,255,255,0.35)');gr.addColorStop(1,'rgba(255,255,255,0)');c2.fillStyle=gr;c2.fillRect(0,0,32,32);
-  DUST.pts=new T.Points(g,new T.PointsMaterial({map:new T.CanvasTexture(cv),size:0.09,sizeAttenuation:true,transparent:true,opacity:0.5,depthWrite:false,fog:true,blending:T.AdditiveBlending}));
+  DUST.pts=new T.Points(g,new T.PointsMaterial({map:new T.CanvasTexture(cv),size:0.06,sizeAttenuation:true,transparent:true,opacity:0.4,depthWrite:false,fog:true,blending:T.AdditiveBlending}));
   DUST.pts.frustumCulled=false;scene.add(DUST.pts);
 }
 function updateDust(dt){
@@ -81,7 +81,7 @@ function updateDust(dt){
     if(a[k+2]-cz>h)a[k+2]-=DUST.box;else if(a[k+2]-cz<-h)a[k+2]+=DUST.box;
     if(a[k+1]-cy>4.5)a[k+1]-=7;else if(a[k+1]-cy<-2.5)a[k+1]+=7}
   P3.needsUpdate=true;
-  DUST.pts.material.color.copy(SKY.sun).multiplyScalar(1.5);DUST.pts.material.opacity=0.55*(1-nightF());
+  DUST.pts.material.color.copy(SKY.sun).multiplyScalar(1.5);DUST.pts.material.opacity=0.4*(1-nightF());
 }
 const SUN_UP=62*Math.PI/180,SUN_MIN=15*Math.PI/180;   // how high the noon sun gets, and how low it's allowed to go (long shadows, but not endless ones)
 function updateSky(dt){
