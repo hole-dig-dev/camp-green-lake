@@ -60,7 +60,7 @@ function frame(now){
   sun.position.set(fx+SUN_DIR.x*80,SUN_DIR.y*80,fz+SUN_DIR.z*80);sun.target.position.set(fx,0,fz);sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
   updateGoldFx(dt);updateWardrobeCam();   // panning / sifting you watch (89-goldfx.js): drives the view while it runs
-  renderer.render(scene,camera);
+  lookRender(scene,camera);   // 14-look.js: the scene through the AO / bloom / grade passes (plain render if they're unavailable)
   updateLabels(now);
   requestAnimationFrame(frame);
 }
