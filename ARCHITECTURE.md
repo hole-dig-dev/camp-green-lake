@@ -52,6 +52,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/50-tents.js` | entering/leaving tents, bunks, sleeping |
 | `public/js/55-input.js` | keyboard/mouse/touch input (with the key-remap layer) |
 | `public/js/60-title.js` | title screen, camp password, session save/resume, start-game flow |
+| `public/js/61-title-scene.js` | the title as a scene: cinematic camera shots, golden-hour look clock (title only), off-centre lens, Controls/Options buttons |
 | `public/js/65-net.js` | WebSocket client, remote players, server messages, play-test log batching |
 | `public/js/70-player.js` | player movement/physics, camera, health and healing |
 | `public/js/71-bonk.js` | shovel bonk: whack a friend (harmless tumble), server-checked (`bonk` message) |

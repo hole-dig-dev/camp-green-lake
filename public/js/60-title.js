@@ -36,13 +36,12 @@ function startGame(resume){
   me=makePerson(Object.assign(playerLook(S.name,S.color),{suit:JUMPSUITS[mySuit()].c}));scene.add(me.g);me.suitIdx=mySuit();me.ward=MY_WARD;   // jumpsuit colour: 81-badges.js
   meL=makeLabel(me.g,S.name+' (you)','');loadProg();loadRun();meL.n.textContent=myTag();setHat(me,myLevel());
   $('#hudName').textContent=S.name;
-  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;initAudio();applyVolume();
+  $('#title').hidden=true;$('#hud').hidden=false;S.started=true;titleEnd();initAudio();applyVolume();
   if(!S.resumed){P.yaw=0;P.fa=Math.PI}
   if(S.revealed===false&&S.reported)reveal('You');
   lockMouse();
   if(S.resumed){toast('Welcome back to camp. Your progress was saved.','good',3500)}
-  else{setTimeout(()=>say(clerkL,'There\'s gold in that lake bed. Fill your bucket and bring it to the sifter.',6000),800);
-  setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig. Every scoop fills your bucket with sand; sift it at camp for gold. An old creek bed runs across the lake just past the gate: the gold settled along creeks like it.','',6500),1500)}
+  else setTimeout(()=>say(clerkL,'There\'s gold in that lake bed. Fill your bucket and bring it to the sifter.',6000),800);   // no how-to toast here: the "next task" line at the top (81-nexttask.js) already says where to dig and how
   sendJoin();
 }
 const campIn=$('#campPass'),campWrap=$('#campWrap'),campErr=$('#campErr'),startBtn=$('#startBtn');

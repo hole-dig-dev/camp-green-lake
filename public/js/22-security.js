@@ -85,7 +85,7 @@ function towerBeamGeometry(){   // rebuilt only when the Curfew tab's reach/widt
   g.setAttribute('color',new T.BufferAttribute(col,3));return g;
 }
 function updateWatchtowers(){
-  const n=nightF(),t=clockT(),C=SIM.CURFEW,on=n>0.04,key=C.towerReach+','+C.towerHalf,tl=SIM.towerTilt(),glow=tuneOr('curfew.towerGlow',1);
+  const n=lookNightF(),t=clockT(),C=SIM.CURFEW,on=n>0.04,key=C.towerReach+','+C.towerHalf,tl=SIM.towerTilt(),glow=tuneOr('curfew.towerGlow',1);
   if(on&&key!==towerBeamKey){towerBeamKey=key;for(const o of WATCHTOWERS){o.beam.geometry.dispose();o.beam.geometry=towerBeamGeometry()}}
   SL_U.uSLGain.value=on?TOWER_POOL*n*glow:0;if(TOWER_LENS_MAT)TOWER_LENS_MAT.emissiveIntensity=on?1.3*n*Math.min(glow,1.5):0;SL_U.uSLCos.value=Math.cos(C.towerHalf);
   for(let i=0;i<WATCHTOWERS.length;i++){
