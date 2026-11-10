@@ -45,7 +45,7 @@ const SHOP=[
   {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel',needs:'shovel'},
   {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long',needs:'shovel'},
   {id:'detector',name:'Metal detector',desc:'Beeps faster when you stand over buried things. Range 7 m.',cost:70,cat:'dig',icon:'detector'},
-  {id:'pan',name:'Gold pan',desc:'Your first tool. Fill it digging (one hole of sand) and wash it at the water drums for gold.',cost:10,cat:'dig',icon:'bucket'},
+  {id:'pan',name:'Gold pan',desc:'Your first tool. Fill it digging (two holes of sand) and wash it at the water drums for gold.',cost:10,cat:'dig',icon:'bucket'},
   {id:'shovel',name:'Camp shovel',desc:'Dig properly: three times faster than your hands, and down to 5 feet.',cost:25,cat:'dig',icon:'shovel'},
   {id:'bucket',name:'Bucket',desc:'Carries 5 holes of sand to the sifter in camp. Much more gold per trip than the pan.',cost:45,cat:'dig',icon:'bucket'},
   {id:'bucket2',name:'Big bucket',desc:'Tier 2 bucket: holds 10 holes of sand before you have to sift, instead of 5.',cost:60,cat:'dig',icon:'bucket',needs:'bucket'},
@@ -107,9 +107,9 @@ function shopEffect(it){
     case 'hopper': return {label:'At the sifter',from:'Stand and sift each bucket',to:'Dump and go: 20 holes, a hole every 8 s'};
     case 'hopper2': return {label:'Hopper',from:'20 holes, a hole every 8 s',to:'50 holes, a hole every 4 s'};
     case 'hopper3': return {label:'Hopper',from:'50 holes, a hole every 4 s',to:'120 holes, a hole every 1.5 s'};
-    case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' hole, washed at the water drums'};
+    case 'pan': return {label:'Carry sand',from:'Nothing (it goes on the pile)',to:SIM.PAN+' holes, washed at the water drums'};
     case 'shovel': return {label:'Digging',from:'Bare hands, 1.5 ft deep',to:'Shovel, 3x faster, 5 ft deep'};
-    case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: 1 hole':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
+    case 'bucket': return {label:'Carry sand',from:S.up.pan?'Pan: '+SIM.PAN+' holes':'Nothing',to:SIM.GOLD.buckets[0]+' holes, to the sifter'};
     case 'bucket2': case 'bucket3':{const H=SIM.GOLD.buckets,i=it.id==='bucket2'?1:2;return {label:'Bucket holds',from:H[i-1]+' holes of sand',to:H[i]+' holes of sand'}}
     case 'pack': case 'pack2': case 'pack3':{const t=it.id==='pack'?1:it.id==='pack2'?2:3;return {label:'You carry',from:bucketMax()+' holes of sand',to:Math.max(bucketMax(),BACKSACK_HOLES[t-1])+' holes, on your back'}}   /* 86-backsack.js */
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};

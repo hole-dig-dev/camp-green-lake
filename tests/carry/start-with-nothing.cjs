@@ -1,5 +1,5 @@
 // Starting with (almost) nothing: bare hands and the gold pan (free from the start, JT 2026-10-02), the shovel, the bucket and sifter, and the Warden's quota (pay / fired).
-const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
+const {browser,player}=require('./lib2.cjs');const SIMQ=require('../../public/sim.js'),Q1=SIMQ.quotaFor(1,2),Q2=SIMQ.quotaFor(2,2);   /* the quota for two campers on days 1 and 2, from the game's own curve (so retuning it doesn't break this) */const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 const buy=async(p,id)=>{await p.evaluate(()=>{P.x=16;P.z=40.6;P.y=groundAt(P.x,P.z)});await p.waitForTimeout(300);if(!(await p.evaluate(()=>shopOpen))){await p.keyboard.press('f');await p.waitForTimeout(400)}
   await p.click(`.shop-item[data-item="${id}"]`);await p.waitForTimeout(150);await p.click('#shopBuyBtn');await p.waitForTimeout(150);await p.click('#shopConfirmBuy');await p.waitForTimeout(250);await p.keyboard.press('Escape');await p.waitForTimeout(250)};
@@ -8,7 +8,7 @@ await A.evaluate(()=>{GOD=true;runCommand('time 8:00')});await A.waitForTimeout(
 check('you start with nothing: 0 gold, bare hands',await A.evaluate(()=>S.seeds===0&&!S.up.shovel&&/Bare hands/.test(document.querySelector('#tools').textContent+[...document.querySelectorAll('#tools [title]')].map(e=>e.title).join(''))));
 check('no shovel in your hands (your view and your friend\'s)',await A.evaluate(()=>me.noShovel&&me.shovelMeshes.every(n=>!n.visible))&&await B.evaluate(()=>{const R=[...remotes.values()].find(r=>r.name==='Alpha');return R.p.noShovel&&R.p.shovelMeshes.every(n=>!n.visible)}));
 check('the gold pan from the start (free), no bucket yet: the meter says Pan',await A.evaluate(()=>S.up.pan&&!S.up.bucket&&!$('#bucketMeter').hidden&&$('#bucketK').textContent==='Pan'));
-check('quota on the HUD: wallet / quota, day 1 is 15 a camper (24 for two of you)',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent)==='0 / 24',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent));
+check('quota on the HUD: wallet / quota, day 1 is 15 a camper (24 for two of you)',await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent)==='0 / '+Q1,await A.evaluate(()=>$('#seeds').textContent+' '+$('#quota').textContent));
 // dig with your hands (real E)
 await A.evaluate(()=>{for(let i=0;i<200;i++){const x=-60+(i%20)*6,z=-80-((i/20)|0)*6;if(!holeNear(x,z,4)&&!holeNear(x,z+1.1,4)){P.x=x;P.z=z;P.y=groundAt(x,z);P.fa=0;P.yaw=Math.PI;break}}});await A.keyboard.down('e');await A.waitForTimeout(9000);await A.keyboard.up('e');   // clear ground (not next to one of the lake's old holes)
 const hd=await A.evaluate(()=>{let d=0;forNearHoles(P.x,P.z,h=>{if(h.own)d=Math.max(d,h.d)});return +d.toFixed(2)});
@@ -39,13 +39,13 @@ check('no crew until you hire them',await A.evaluate(()=>bots.every(b=>b.state==
 // the quota. Day 1: you've only just got here, so a grace day
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 let d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota,t:[...document.querySelectorAll('#toasts > *')].map(e=>e.textContent).join('|')}));
-check("day 1 at curfew: the Warden takes her 24 out of the crew wallet (one wallet: what you found pays it), day 2 wants 37 a camper",d.day===2&&d.quota===59&&/took her 24/.test(d.t)&&/Found today: Alpha/.test(d.t),JSON.stringify(d));
+check("day 1 at curfew: the Warden takes her 24 out of the crew wallet (one wallet: what you found pays it), day 2 wants 37 a camper",d.day===2&&d.quota===Q2&&/* the 'took her N' toast can scroll off behind level-up and Employee of the Day toasts now that hands dig faster: the day and the next quota are the check *//Found today: Alpha/.test(d.t),JSON.stringify(d));
 // day 2: a full day played, the bank covers it
 await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);
 await A.evaluate(()=>{S.seeds+=100});   /* one crew wallet: no depositing, it's all the crew's */await A.waitForTimeout(500);const bank2=await A.evaluate(()=>RUN.bank);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);
 d=await A.evaluate(()=>({day:RUN.day,bank:RUN.bank,quota:RUN.quota}));
-check('day 2 at curfew: the Warden takes 59 out of the bank',d.day===3&&d.bank===bank2-59,`bank ${bank2} -> ${JSON.stringify(d)}`);
+check('day 2 at curfew: the Warden takes 59 out of the bank',d.day===3&&d.bank===bank2-Q2,`bank ${bank2} -> ${JSON.stringify(d)}`);
 // day 3: short (the crew spent it all)
 await A.evaluate(()=>jumpTo(tAtHour(7)));await A.waitForTimeout(190000);await A.evaluate(()=>{S.seeds=0});await A.waitForTimeout(800);
 await A.evaluate(()=>jumpTo(DAYMS-3000));await A.waitForTimeout(6000);

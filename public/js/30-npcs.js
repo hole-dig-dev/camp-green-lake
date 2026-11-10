@@ -60,7 +60,7 @@ const CREW_HOLES=5;   // a crew member's bucket, until someone buys him a bigger
 /* his upgrades from the store's "The crew" side (sim.js CREW_SHOP; the server keeps them, 65-net.js 'crew') */
 const CREW_UP={};
 const crewHas=(b,id)=>!!(CREW_UP[b.d.n]&&CREW_UP[b.d.n][id]);
-const crewBucketMax=b=>crewPack(b)?BACKSACK_HOLES[crewPackTier(b)-1]:crewHas(b,'bucket3')?SIM.GOLD.buckets[2]:crewHas(b,'bucket2')?SIM.GOLD.buckets[1]:crewHas(b,'bucket')?SIM.GOLD.buckets[0]:SIM.PAN;   // no bucket: his gold pan (one hole of sand)
+const crewBucketMax=b=>crewPack(b)?BACKSACK_HOLES[crewPackTier(b)-1]:crewHas(b,'bucket3')?SIM.GOLD.buckets[2]:crewHas(b,'bucket2')?SIM.GOLD.buckets[1]:crewHas(b,'bucket')?SIM.GOLD.buckets[0]:1 /* a hired hand's pan stays one hole (the camper's holds SIM.PAN): he walks it in himself */;   // no bucket: his gold pan (one hole of sand)
 /* hired or not (JT 2026-10-01: start with no crew; hire them in the store). A new hand shows up with bare hands and a pan,
    like you: shallow holes, washed at the water drums. A shovel and a bucket (the sifter) are up to you. */
 const crewHired=b=>crewHas(b,'hired');
