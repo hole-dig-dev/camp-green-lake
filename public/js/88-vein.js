@@ -24,7 +24,7 @@ function veinLook(){
 /* gold straight to the wallet: v holes' worth dug (or scooped) inside the vein */
 function veinPay(v){
   VEIN.acc+=v*tune('gold.perHole')*goldScale()*tune('vein.mult');
-  const g=Math.floor(VEIN.acc);if(g<1)return;VEIN.acc-=g;S.seeds+=g;foundGold(g);sfx.coin();
+  const g=Math.floor(VEIN.acc);if(g<1)return;VEIN.acc-=g;S.seeds+=g;foundGold(g);sfx.coin(g);
   if(performance.now()-(veinPay.t||0)>3500){veinPay.t=performance.now();toast(`Rich vein! +${g} gold as you dig.`,'gold',1800)}
 }
 function veinDynamite(f){   /* 88-dynamite.js: it went off inside the vein: nuggets for whoever lit it */

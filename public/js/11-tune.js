@@ -210,6 +210,9 @@ const TUNE_DEFS=[
   {key:'vol.metal',tab:'Audio',label:'Metal clink (find coming)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.props',tab:'Audio',label:'Doors and cloth',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   {key:'vol.synth',tab:'Audio',label:'Beeps, chimes and thuds',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'vol.rewards',tab:'Audio',label:'Gold, coins, finds and level-up (41-cues.js)',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'vol.ui',tab:'Audio',label:'Menu and button sounds',def:1,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'vol.danger',tab:'Audio',label:'Hurt, knocked out, siren, lizard hiss',def:1,kind:'mul',range:4,zero:true,unit:'×'},
   // ---- curfew: the police patrol and the watchtower searchlights. The curfew.* keys named in SIM.CURFEW_DEF (sim.js)
   // are shared rules: the play-test server runs them and sends everyone its values. towerGlow/copLight are just the look.
   {key:'curfew.towerReach',tab:'Curfew',label:'Searchlight reach (where the far edge lands)',def:SIM.CURFEW_DEF.towerReach,kind:'mul',range:3,unit:' m'},

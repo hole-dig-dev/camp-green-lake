@@ -150,7 +150,7 @@ function washPan(){   // the gold pan (no bucket yet): wash your sand at the dru
   if(panBusy||gfxBusy())return;const holes=S.bucket;panBusy=true;
   const pm=sandRich('bucket'),r=SIM.siftGold(holes,Math.random,tune('gold.perHole')*goldScale()*pm,RUN.mood==='digday'?2:1);   // what's in it is decided now; the pan shows it (89-goldfx.js)
   const pay=()=>{panBusy=false;S.bucket=0;S.seeds+=r.gold;foundGold(r.gold);addXP(4+r.gold/2);
-    if(r.nugget||r.luck>1.4)sfx.gold();else sfx.coin();toast(`${r.nugget?'A NUGGET in the pan! ':''}You wash ${r.gold} gold out of your pan. ${payAssay(pm)}`,r.nugget||pm>=SIM.PAY.cuts[2]?'gold':'good',4600);logEv('pan',{holes:+holes.toFixed(2),gold:r.gold,pay:+pm.toFixed(2)});sandReset('bucket')};
+    if(r.nugget||r.luck>1.4)sfx.gold();else sfx.coin(r.gold);toast(`${r.nugget?'A NUGGET in the pan! ':''}You wash ${r.gold} gold out of your pan. ${payAssay(pm)}`,r.nugget||pm>=SIM.PAY.cuts[2]?'gold':'good',4600);logEv('pan',{holes:+holes.toFixed(2),gold:r.gold,pay:+pm.toFixed(2)});sandReset('bucket')};
   if(!gfxStart('pan',{gold:r.gold},pay))pay();
 }
 function fillCanteen(){
@@ -170,7 +170,7 @@ function siftBucket(){
     siftBusy=false;S.bucket=0;
     S.seeds+=r.gold;foundGold(r.gold);addXP(5+r.gold/2);
     const how=r.nugget?'A NUGGET! ':r.luck>1.4?'A rich batch! ':r.luck<0.7?'Thin sand. ':'';
-    if(r.nugget||r.luck>1.4){sfx.gold()}else sfx.coin();
+    if(r.nugget||r.luck>1.4){sfx.gold()}else sfx.coin(r.gold);
     toast(`${how}The sifter shakes ${r.gold} gold out of ${Math.round(holes*10)/10} holes of sand. ${payAssay(pm)}`,r.nugget||r.luck>1.4||pm>=SIM.PAY.cuts[2]?'gold':'good',4800);sandReset('bucket');
     logEv('sift',{holes:+holes.toFixed(2),gold:r.gold,luck:+r.luck.toFixed(2),nugget:r.nugget});
   };

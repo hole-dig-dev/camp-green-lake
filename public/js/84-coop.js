@@ -11,7 +11,7 @@ function saveProg(){try{localStorage.setItem('cgl-prog-'+S.name.toLowerCase(),JS
 function myTag(){return`${S.name} (you) · LV ${myLevel()}`}
 function addXP(n){
   if(!S.started||!(n>0))return;const before=myLevel();PROG.xp+=n;saveProg();const l=myLevel();
-  if(l>before){sfx.gold();const perk=PERKS.filter(p=>p[0]>before&&p[0]<=l).map(p=>p[1]).join(', ');toast(`LEVEL ${l}!`+(perk?` You unlocked ${perk}.`:''),'gold',5500);setHat(me,l);meL.n.textContent=myTag()}
+  if(l>before){sfx.levelUp();const perk=PERKS.filter(p=>p[0]>before&&p[0]<=l).map(p=>p[1]).join(', ');toast(`LEVEL ${l}!`+(perk?` You unlocked ${perk}.`:''),'gold',5500);setHat(me,l);meL.n.textContent=myTag()}
 }
 setInterval(()=>{if(online()&&PROG.xp!==PROG.sent){PROG.sent=PROG.xp;wsSend({t:'xp',xp:PROG.xp})}},5000);
 function sackMax(){const l=myLevel();return 6+(S.up.bigsack?3:0)+(l>=5?1:0)+(l>=16?1:0)}
@@ -31,7 +31,7 @@ function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId
 function setRun(m){
   RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
 }
-function newDay(m){m=m||{};moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
+function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
   {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Warden let the quota slide. Today she wants ${RUN.quota} gold in the crew bank by curfew.`:`Day ${RUN.day}. The Warden took her ${m.paid||''} gold. Today she wants ${RUN.quota} in the crew bank by curfew.`,'gold',7000);addXP(50)}
 /* short at curfew: the whole crew's fired. Everything starts over from nothing; your level stays. (The crew wallet, S.seeds,
    is the server's: it starts the new run at 0, so it isn't wiped here.) */

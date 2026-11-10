@@ -236,11 +236,11 @@ function hideShopConfirm(){
    when the confirm panel opened, so a second tab or a fast double-activation can't double-charge. */
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
-  if(it.camp){campBuy(it);sfx.coin();hideShopConfirm();it.justBought=performance.now();toast(`Bought for the camp: ${it.name}`,'good',2400);$('#shopFeedback').textContent=`${it.name}: the whole camp has it now. ${S.seeds} gold left.`;animateShopSeeds();renderShop();setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);return}
+  if(it.camp){campBuy(it);sfx.buy();hideShopConfirm();it.justBought=performance.now();toast(`Bought for the camp: ${it.name}`,'good',2400);$('#shopFeedback').textContent=`${it.name}: the whole camp has it now. ${S.seeds} gold left.`;animateShopSeeds();renderShop();setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);return}
   const undo=()=>{if(it.stack==='onions')S.onions=Math.max(0,S.onions-1);else if(it.stack&&it.stack!=='batt')S[it.stack]=Math.max(0,(S[it.stack]||0)-1);else if(!it.stack)delete S.up[it.id]};
   walletSpend(it.cost,undo,it.name);   /* the crew wallet, checked by the server (84-spend.js) */
   if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}
-  sfx.coin();hideShopConfirm();it.justBought=performance.now();
+  sfx.buy();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
   $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} gold left.`;
   animateShopSeeds();renderShop();
@@ -330,7 +330,7 @@ function crewBuy(n,it){
   crewConfirm=null;if(crewItemState(n,it).k!=='buy'){renderCrewShop();return}
   const cost=it.id==='hire'?SIM.crewHirePrice(crewHiredCount()):it.cost,key=it.id==='hire'?'hired':it.id;
   const rid=walletSpend(cost,()=>{if(CREW_UP[n])delete CREW_UP[n][key];crewPending.delete(n+'|'+it.id);renderCrewShop()},it.id==='hire'?`hiring ${n}`:`${n}'s ${it.name.toLowerCase()}`);   /* 84-spend.js */
-  sfx.coin();clerk.waveT=1.6;addXP(cost/5);logEv('crewBuy',{crew:n,item:it.id,cost});
+  sfx.buy();clerk.waveT=1.6;addXP(cost/5);logEv('crewBuy',{crew:n,item:it.id,cost});
   if(!it.use)(CREW_UP[n]=CREW_UP[n]||{})[key]=true;   // straight away on your screen; the server's 'crew' confirms it (a soda's drunk, not kept)
   if(online()){crewPending.set(n+'|'+it.id,cost);wsSend({t:'crewBuy',n,id:it.id,cost,rid})}
   else try{localStorage.setItem('cgl-crew',JSON.stringify(CREW_UP))}catch(e){}
@@ -379,7 +379,7 @@ $('#shopClose').onclick=closeShop;
 function knockOut(title,text){
   if(GOD)return;   // god mode: nothing knocks you out
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
-  logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
+  logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});sfx.ko();
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
   countUp('kos',5,'squid');curseKo();   // the curse grows a little (81-mood.js)
   const lost=S.sack.length;dropBag();

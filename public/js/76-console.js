@@ -68,14 +68,14 @@ command('help',{needsGame:false,usage:'help',help:'List every command.',run(){re
 command('clear',{needsGame:false,usage:'clear',help:'Clear the console.',run(){conLog.textContent=''}});
 command('assay',{usage:'assay',help:'Testing: how rich the ground under you is (pay dirt, sim.js PAY).',run(){const r=SIM.richAt(P.x,P.z),m=SIM.payMult(P.x,P.z,1.5);return`rich ${r.toFixed(2)}  x${m.toFixed(2)} at 5 ft  (${SIM.PAY.grades[SIM.gradeOf(m)]})  bucket x${sandRich('bucket').toFixed(2)}`}});   /* 48-paydirt.js */
 command('look',{needsGame:false,usage:'look on|off|ao|bloom <n>',help:'The picture pass (14-look.js): off for the plain render, on to bring it back; ao toggles contact shadows; bloom <0-1> sets the glow.',run([a,b]){if(a==='off')LOOK.on=false;else if(a==='on')LOOK.on=true;else if(a==='ao')LOOK.ao=!LOOK.ao;else if(a==='bloom'&&isFinite(+b))LOOK.bloom=+b;return`look ${LOOK.on&&LOOK.ok?'on':'off'}  ao ${LOOK.ao?'on':'off'}  bloom ${LOOK.bloom}`}});
-command('audio',{usage:'audio [status|call|old|new|<cat> old|new]',help:'A/B old vs new sounds here (cat: wind ambience rain steps dig metal props); call = a desert call now',
+command('audio',{usage:'audio [status|call|old|new|<cat> old|new]',help:'A/B old vs new sounds here (cat: wind ambience rain steps dig metal props rewards ui danger); call = a desert call now',
   run([a,b]){
     a=(a||'').toLowerCase();b=(b||'').toLowerCase();
     if(!a||a==='status')return audioModeStatus();
     if(a==='call'){const n=desertCallNow();return n?`Playing ${n}.`:'No desert call fits this time of day yet (or it is still loading; try again).'}
     const modes={old:'original',new:'recorded',original:'original',recorded:'recorded'};
     if(modes[a]&&!b)return setAudioMode('all',modes[a]);
-    if(!(a in AUDIO_MODE)||!modes[b])throw new Error('Usage: audio old | audio new | audio <wind|ambience|rain|steps|dig|metal|props> <old|new> | audio status');
+    if(!(a in AUDIO_MODE)||!modes[b])throw new Error('Usage: audio old | audio new | audio <'+Object.keys(AUDIO_MODE).join('|')+'> <old|new> | audio status');
     return setAudioMode(a,modes[b]);
   }});
 command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in front of you, heading your way. Everyone sees it.',
