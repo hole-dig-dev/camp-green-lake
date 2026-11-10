@@ -15,16 +15,18 @@
 const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Mr. Sir, tailgate toward him (flag off)
 const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the service gate, nose into camp (flag on)
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
-const TRUCK_L=5.2,TRUCK_W=2.0,TRUCK_AXLE_F=1.45,TRUCK_AXLE_R=-1.35,TRUCK_TRACK=0.86,TRUCK_WB=2.8;
+/* The model is now a jeep (art/blender/jeep.py, from a free CC-BY model; it prints these numbers). Open top, so the
+   driver and passenger are seen sitting in it; the two back spots sit on the rear edge of the tub, either side of the spare. */
+const TRUCK_L=4.0,TRUCK_W=1.8,TRUCK_AXLE_F=1.46,TRUCK_AXLE_R=-0.88,TRUCK_TRACK=0.70,TRUCK_WB=2.34;
 /* the seats, in truck coordinates (x: its left, z: forward): where your hips go, the seat's height, which way you face
-   (0 forward, PI backward), where you stand to get in, where you step out; hide: in the cab, out of sight; clip: the
+   (0 forward, PI backward), where you stand to get in, where you step out; cab: a front seat (belted in: bumps don't throw you out); clip: the
    animPerson mode you sit with. The tailgate is dropped flat at z -2.3..-2.8, top 0.81 (art/blender/heavy.py); its
    seats sit a thigh's thickness (~0.09) above that so the legs rest on it, not in it. */
 const TRUCK_SEATS={
-  drive:  {at:[0.38,0.3],y:0.9,face:0,hide:true,door:[1.45,0.35],out:[1.75,0.35],label:'Drive Mr. Sir\'s pickup'},
-  shotgun:{at:[-0.38,0.3],y:0.9,face:0,hide:true,door:[-1.45,0.35],out:[-1.75,0.35],label:'Ride shotgun'},
-  tail0:  {at:[0.42,-2.55],y:0.9,face:Math.PI,clip:11,door:[0,-3.4],out:[0.6,-3.9],label:'Sit on the tailgate'},
-  tail1:  {at:[-0.42,-2.55],y:0.9,face:Math.PI,clip:11,door:[0,-3.4],out:[-0.6,-3.9],label:'Sit on the tailgate'}};
+  drive:  {at:[0.27,-0.42],y:0.78,face:0,clip:10,cab:true,door:[1.3,-0.3],out:[1.6,-0.3],label:'Drive Mr. Sir\'s jeep'},
+  shotgun:{at:[-0.31,-0.42],y:0.78,face:0,clip:10,cab:true,door:[-1.3,-0.3],out:[-1.6,-0.3],label:'Ride shotgun'},
+  tail0:  {at:[0.6,-1.62],y:1.02,face:Math.PI,clip:11,door:[0,-2.8],out:[0.6,-3.1],label:'Sit on the back of the jeep'},
+  tail1:  {at:[-0.6,-1.62],y:1.02,face:Math.PI,clip:11,door:[0,-2.8],out:[-0.6,-3.1],label:'Sit on the back of the jeep'}};
 const TRUCK_SEAT_KEYS=Object.keys(TRUCK_SEATS);
 const TRUCK_SEND=1/12;                                        // the driver sends where it is this often (s)
 const TRUCK={x:TRUCK_PARK.x,z:TRUCK_PARK.z,h:TRUCK_PARK.h,v:0,steer:0,y:0,pitch:0,roll:0,vx:0,vz:0,vy:0,q:new THREE.Quaternion(),w:new THREE.Vector3(),air:false,flipped:false,flipT:0,bog:0,lift:0,hitCool:{},seats:{},on:false,
@@ -266,7 +268,7 @@ function truckHazards(dt){
   // things that hit it: an impulse of (their mass x speed) / its mass, no lift; a cooldown per thing
   const bump=(id,vx,vz,m,kick)=>{const now=performance.now();if((T.hitCool[id]||0)>now)return;T.hitCool[id]=now+700;
     const dv=Math.min(9,m*Math.hypot(vx,vz)/M),n=Math.hypot(vx,vz)||1;T.vx+=vx/n*dv;T.vz+=vz/n*dv;T.vy+=Math.min(0.6,dv*0.08);   // a jolt, never a liftT.wz+=(Math.random()-0.5)*dv*0.3;
-    sfx.thud();if(kick)truckHurtIn(dv*3);if(S.inTruck&&!TRUCK_SEATS[S.inTruck].hide&&dv>2.5)truckEject(vx/n*dv,3,vz/n*dv)};
+    sfx.thud();if(kick)truckHurtIn(dv*3);if(S.inTruck&&!TRUCK_SEATS[S.inTruck].cab&&dv>2.5)truckEject(vx/n*dv,3,vz/n*dv)};
   const near=(x,y,z,r)=>{const dx=x-T.x,dz=z-T.z,c=Math.cos(T.h),s=Math.sin(T.h),lx=dx*c-dz*s,lz=dx*s+dz*c;   // into the truck's own frame
     return Math.abs(lx)<TRUCK_W/2+r&&Math.abs(lz)<TRUCK_L/2+r&&y-r<T.y+2.1&&y+r>T.y};
   if(typeof tbWeeds!=='undefined')for(const w of tbWeeds)if(!w.dead&&near(w.x,w.y,w.z,w.r*0.8))bump('tb'+(w.id??tbWeeds.indexOf(w)),Math.cos(w.head)*w.speed,Math.sin(w.head)*w.speed,tune('veh.tbMass'),false);
@@ -285,8 +287,8 @@ function truckEject(vx,vy,vz){
 /* every frame from updatePlayer while you're in it (in place of walking) */
 function truckPlayer(dt){
   const T=TRUCK;
-  if(T.flipped){if(TRUCK_SEATS[S.inTruck].hide){truckOut();toast('The pickup\'s over. You climb out. F by it to heave it back on its wheels.','',3500)}else truckEject(T.vx,3,T.vz);return}
-  if(!TRUCK_SEATS[S.inTruck].hide){   // on the tailgate: a hard jolt, a hard landing or leaving the ground throws you off
+  if(T.flipped){if(TRUCK_SEATS[S.inTruck].cab){truckOut();toast('The pickup\'s over. You climb out. F by it to heave it back on its wheels.','',3500)}else truckEject(T.vx,3,T.vz);return}
+  if(!TRUCK_SEATS[S.inTruck].cab){   // on the tailgate: a hard jolt, a hard landing or leaving the ground throws you off
     const vy=dt>0?(T.y-(T.pY??T.y))/dt:0,dv=Math.hypot(T.vx-(T.pVx??T.vx),T.vz-(T.pVz??T.vz)),hard=(T.pVy??0)<-7&&vy>-1;
     T.pY=T.y;T.pVy=vy;T.pVx=T.vx;T.pVz=T.vz;
     if(dv>4||hard||T.y>groundAt(T.x,T.z)+2.2){const k=hard?-(T.pVy||0):dv;hurt(Math.min(35,k*3),'Truck','Thrown off Mr. Sir\'s pickup.');truckEject(T.vx,4,T.vz);return}
