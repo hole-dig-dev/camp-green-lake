@@ -694,3 +694,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .hud-next .k{color:var(--lizard);font:700 12px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;flex:none}
 .hud-next .t{flex:none;font:700 11px/1 var(--ui);color:var(--canvas-2);border:1px solid rgba(242,231,205,.4);border-radius:3px;padding:2px 4px;opacity:.7}
 @media (max-width:900px){.hud-next{display:none}}
+
+/* ---- quieter HUD (2026-11-10, with 79-hud-tidy.js): smaller strips, less ink, nothing shown that isn't news ---- */
+#hud .hud-strip{padding:8px 10px;gap:5px;font-size:14px}
+#hud .hud-strip--camper{width:172px}
+#hud .hud-strip--supplies{width:172px}
+#hud #stats .who b{font-size:19px}
+#hud .hud-strip .row.big .v{font-size:24px}
+#hud .crew-panel.crew-panel--none{display:none}          /* nobody hired yet: the next-task line says how to hire */
+#hud #mapbox{transform:scale(.9);transform-origin:top right}
