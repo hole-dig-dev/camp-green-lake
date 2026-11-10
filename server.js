@@ -996,9 +996,9 @@ wss.on('connection', (ws, req) => {
       case 'pipeFlow': broadcast({ t: 'pipeFlow', leaf: num(m.leaf, 1, 1e4, 1) | 0 }, c.id); break;
       case 'campBuy': { // a camp upgrade (public/js/84-camp.js), paid from the crew wallet by walletSpend just before this
         if (m.rid != null && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return;
-        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine'].includes(id)) return;
+        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant'].includes(id)) return;
         const camp = world.camp || (world.camp = {});
-        if (camp[id]) { world.run.bank += num(m.cost, 0, 2000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
+        if (camp[id]) { world.run.bank += num(m.cost, 0, 10000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
         camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
       }   // someone sent sand down it: everyone sees the plug go
       case 'dyn': { // a lit stick of dynamite (public/js/88-dynamite.js): the server runs the fuse so everyone sees the same boom
@@ -1172,7 +1172,7 @@ wss.on('connection', (ws, req) => {
             if (m.what === 'hire') k.hired = true; else if (m.what === 'fire') world.crew[n] = {};
             else if (m.what === 'kit') { const keep = { hired: !!k.hired }; world.crew[n] = keep; const add = id => { const it = SIM.CREW_SHOP.find(i => i.id === id); if (!it) return; keep[id] = true; if (it.needs) add(it.needs); }; for (const it of items) add(it); } }
           broadcast({ t: 'crew', up: world.crew });
-        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
+        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
         else if (m.op === 'pipe') { const p = pipeW();   // lay pipe without walking it (the client checked nothing solid is in the way)
           if (m.clear) { p.nodes = []; p.broken = {}; }
           for (const a of (Array.isArray(m.add) ? m.add.slice(0, 200) : [])) {

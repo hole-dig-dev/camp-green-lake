@@ -10,7 +10,13 @@
    A purchase goes through walletSpend (84-spend.js) and 'campBuy'; the server answers with everyone's 'camp'. */
 const CAMP={};
 const campHas=k=>!!CAMP[k];
-const goldScale=()=>campHas('goldScale')?1.1:1;
+/* THE WASHERS (2026-11-10; port plan phase 3, from Gold Fever's rocker / long tom / wash plant): how much of the gold in
+   the sand the camp actually recovers. The bare sifter and the pan lose a quarter of it; each washer the crew buys
+   catches more, and the wash plant gets fine gold the others never see. Dry-lake versions: no water needed.
+   It multiplies every sift through goldScale(), like the brass scale does. */
+const WASHERS=[{id:'washRocker',rec:0.88},{id:'washSluice',rec:1.0},{id:'washPlant',rec:1.18}],WASH_BASE=0.75;
+const washRecovery=()=>{let r=WASH_BASE;for(const w of WASHERS)if(campHas(w.id))r=w.rec;return r};
+const goldScale=()=>(campHas('goldScale')?1.1:1)*washRecovery();
 let CAMP_SCALE=null,CAMP_SODA=null;const SODA_AT={x:5.6,z:34.2,ry:Math.PI};   /* by the water drums, facing the yard */
 function campSet(c){for(const k of Object.keys(CAMP))delete CAMP[k];if(c&&typeof c==='object')for(const k in c)if(c[k]===true||(typeof c[k]==='number'&&Number.isFinite(c[k])))CAMP[k]=c[k];   /* numbers: the soda machine's stock */
   if(typeof PIPE!=='undefined')PIPE.dirty=true;campLook();if(typeof renderShop==='function'&&shopOpen)renderShop()}
