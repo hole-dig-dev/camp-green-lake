@@ -25,7 +25,7 @@ function dumpHopper(){
   const cap=hopperCap(),room=cap-S.hopper;
   if(S.bucket<0.05){toast(`Your ${backsackOn()?'backsack':'bucket'}'s empty. Go dig. (The hopper has ${fmtHoles(S.hopper)} of ${cap} holes of sand in it.)`,'',3200);return}
   if(room<0.05){toast(`The hopper's full (${cap} holes). It's sifting: give it a minute.`,'',3200);return}
-  const amt=Math.min(S.bucket,room);S.bucket=Math.max(0,S.bucket-amt);S.hopper+=amt;sfx.scoop();
+  const amt=Math.min(S.bucket,room);sandMix('hopper',amt,sandRich('bucket'));payAssay(sandRich('bucket'),true);S.bucket=Math.max(0,S.bucket-amt);if(S.bucket<0.05)sandReset('bucket');S.hopper+=amt;sfx.scoop();   /* the sand keeps its richness in the hopper (48-paydirt.js) */
   const G=SIM.GOLD.SIFTER;puff(G.x-0.85,baseH(G.x,G.z)+1.9,G.z,G.x-0.85,G.z,6);
   toast(`You dump ${fmtHoles(amt)} holes of sand into the hopper (${fmtHoles(S.hopper)}/${cap}). It sifts while you dig: the gold comes to you.`+(S.bucket>0.05?` ${fmtHoles(S.bucket)} didn't fit.`:''),'good',3800);
   logEv('hopper',{holes:+amt.toFixed(2),inHopper:+S.hopper.toFixed(2)});
@@ -37,7 +37,7 @@ function updateHopper(dt){
   if(t&&S.hopper>0&&S.started){
     const d=Math.min(S.hopper,dt/HOPPER[t-1].secs*tune('gold.hopperSpeed'));S.hopper-=d;HOP.acc+=d;if(S.hopper<1e-4)S.hopper=0;
     if(HOP.acc>=1||(S.hopper===0&&HOP.acc>0)){   // a hole's worth through: its gold is yours
-      const r=SIM.siftGold(HOP.acc,Math.random,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);HOP.acc=0;S.seeds+=r.gold;foundGold(r.gold);HOP.gold+=r.gold;addXP(1+r.gold/4);
+      const r=SIM.siftGold(HOP.acc,Math.random,tune('gold.perHole')*goldScale()*sandRich('hopper'),RUN.mood==='digday'?2:1);HOP.acc=0;S.seeds+=r.gold;foundGold(r.gold);HOP.gold+=r.gold;addXP(1+r.gold/4);
       if(r.nugget){sfx.gold();toast(`A NUGGET in the sifter! +${r.gold} gold.`,'gold',3000)}else sfx.coin();
       if(S.hopper===0){toast(`The sifter's through your sand: ${HOP.gold} gold in all.`,'good',3600);logEv('hopperDone',{gold:HOP.gold});HOP.gold=0}
     }

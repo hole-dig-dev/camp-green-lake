@@ -116,7 +116,7 @@ const LION_REACH = 3;                        // max distance a swat message can 
 const MAX_DEPOSIT = 100000;                  // gold per crew-bank deposit; trims a hacked client's ceiling
 const MAX_WALLET_D = 100000;               // gold per crew-wallet change (public/js/84-wallet.js); trims a hacked client's ceiling
 const WALLET_RATE = 30, WALLET_WINDOW_MS = 5000; // wallet changes per connection per window (flecks, sifts, blackjack hands, purchases)
-const MAX_CREW_DEPOSIT = 600;                // one D Tent crew bucket (5 holes, a nugget on a dig day: ~200)
+const MAX_CREW_DEPOSIT = 2500;   /* was 600: pay dirt (sim.js PAY) makes a crew bucket off a paystreak worth several times more */  //                // one D Tent crew bucket (5 holes, a nugget on a dig day: ~200)
 const CREW_NAMES = SIM.CREW; // the D Tent crew (public/js/30-npcs.js BOTDEF)
 
 const ipConnWindow = new Map(); // ip -> recent connection timestamps (rate limiting)

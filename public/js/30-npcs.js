@@ -405,13 +405,13 @@ function updateBots(dt,now){
       animPerson(b.p,5,dt);   // the Drink clip
       if((b.t-=dt)<=0){b.water=crewWaterMax(b);b.t=null;b.errand=null;if(campHas('sodaMachine')&&b.soda&&sodaStock()>0){sodaTake();b.morale=100;if(nearCam(wx,wz,30))say(b.L,pick(['Ahh. Back to it.','That hit the spot.']),2200)}b.soda=false;   /* the soda machine by the drums (88-morale.js) */
         /* his pan, washed at the drums: the gold goes in the crew bank (a water-only trip leaves his sand be) */
-        if(b.wash){if(b.bucket>0.05){const r=SIM.siftGold(b.bucket,botRng,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);crewDeposit(b,r.gold);say(b.L,pick(['A bit of color. Crew bank.','Washed out. Into the bank.']),2600)}b.bucket=0}
+        if(b.wash){if(b.bucket>0.05){const r=SIM.siftGold(b.bucket,botRng,tune('gold.perHole')*goldScale()*crewPay(b),RUN.mood==='digday'?2:1);crewDeposit(b,r.gold);say(b.L,pick(['A bit of color. Crew bank.','Washed out. Into the bank.']),2600)}b.bucket=0}
         b.wash=false;b.state='gatebackin';b.tx=gateX(b);b.tz=CREW_GATE.in}
     }else if(b.state==='sifting'){
       const G=SIM.GOLD.SIFTER;b.t-=dt;animPerson(b.p,b.t>2.8?2:0,dt,b.t>2.8?(3.6-b.t)/0.8:0);   // tip the bucket in, then watch it shake
       if((b.puffT-=dt)<=0&&nearCam(G.x,G.z,30)){b.puffT=0.6;puff(G.x+(botRng()-0.5)*1.2,groundAt(G.x,G.z)+1.1,G.z+(botRng()-0.5)*0.8,G.x,G.z,6);if(nearCam(G.x,G.z,18))noise(0.25,500,0.5,0.06,'bandpass')}
       if(b.t<=0){
-        const r=SIM.siftGold(b.bucket||CREW_HOLES,botRng,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);
+        const r=SIM.siftGold(b.bucket||CREW_HOLES,botRng,tune('gold.perHole')*goldScale()*crewPay(b),RUN.mood==='digday'?2:1);
         crewDeposit(b,r.gold);say(b.L,r.nugget?'A nugget! Into the crew bank.':r.luck>1.4?'Good batch. Into the crew bank.':pick(['Into the crew bank.','For the crew.','There. Crew bank.']),3200);
         b.bucket=0;b.errand=null;leaveSiftQ(b);if(b.water<crewWaterMax(b)*0.7){b.state='drink';b.t=null}else{b.state='gatebackin';b.tx=gateX(b);b.tz=CREW_GATE.in}
       }

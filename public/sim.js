@@ -45,6 +45,32 @@
     return { gold: Math.max(1, Math.round(holes * perHole * luck * mult)), luck, nugget };
   }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  /* PAY DIRT (2026-11-10, from Greg's gold-dig "paystreaks" and Gold Fever's deposits): where you dig, and how deep,
+     now decides how much gold is in your sand. Green Lake was a lake, so its gold settled along old creek channels
+     that wind across the bed, plus a few rich pockets; away from them the sand is nearly barren.
+       richAt(x,z)        0 (barren) .. 1 (the middle of a paystreak). A pure function of the spot: the same for every
+                          camper and the server, no randomness, nothing on the wire.
+       payMult(x,z,d)     what a hole of sand from here is worth, as a multiple of GOLD.perHole. PAY.barren on dead
+                          ground up to PAY.rich on a streak, and deeper sand is richer (gold sinks): x0.7 at the
+                          surface, x1 at 5 ft, x1.5 at 8 ft, so the long-handled shovel pays.
+       gradeOf(mult)      the assay word for a batch: Barren, Trace, Promising, Pay dirt, Rich (index 0-4).
+     One creek is always in the same place, PAY.creek: it runs across the lake just past the camp gate, so a new
+     camper's first pans have something in them. Nothing marks the rest: you find them by washing samples. */
+  const PAY = { on: true, barren: 0.4, rich: 3.4, streakW: 0.06, streakScale: 0.011, pocketScale: 0.045, pocketAt: 0.8,
+    creek: { z: -78, amp: 16, wave: 0.03, half: 10, rich: 0.8 }, grades: ['Barren', 'Trace', 'Promising', 'Pay dirt', 'Rich'], cuts: [0.6, 1.0, 1.7, 2.6] };
+  const payHash = (x, z) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const payNoise = (x, z) => { const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi, u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+    const a = payHash(xi, zi), b = payHash(xi + 1, zi), c = payHash(xi, zi + 1), d = payHash(xi + 1, zi + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
+  function richAt(x, z) {
+    const n = payNoise(x * PAY.streakScale + 31.7, z * PAY.streakScale - 12.3) * 0.65 + payNoise(x * PAY.streakScale * 2.3 - 8.1, z * PAY.streakScale * 2.3 + 40.2) * 0.35;
+    const streak = 1 - Math.abs(n - 0.5) / PAY.streakW;                                          // a winding channel where the noise crosses its middle
+    const pocket = Math.max(0, payNoise(x * PAY.pocketScale + 5.1, z * PAY.pocketScale + 77.2) - PAY.pocketAt) / (1 - PAY.pocketAt) * 0.9;
+    const C = PAY.creek, dz = Math.abs(z - (C.z + C.amp * Math.sin(x * C.wave))), creek = C.rich * Math.max(0, 1 - (dz / C.half) * (dz / C.half));
+    return clamp(Math.max(streak, pocket, creek), 0, 1);
+  }
+  const payDepth = d => 0.7 + 0.3 * clamp(d / 1.5, 0, 1) + 0.5 * clamp((d - 1.5) / 1.1, 0, 1);
+  function payMult(x, z, d) { if (!PAY.on) return 1; const r = richAt(x, z); return (PAY.barren + (PAY.rich - PAY.barren) * Math.pow(r, 1.3)) * payDepth(d == null ? 1.5 : d); }
+  function gradeOf(mult) { let i = 0; while (i < PAY.cuts.length && mult >= PAY.cuts[i]) i++; return i; }
   const wrapT = t => ((t % CYCLE) + CYCLE) % CYCLE;
   const clockT = (c, now) => (c && c.paused ? wrapT(c.pt) : wrapT(now + (c ? c.off : 0)));
   // the camp only exists on the lake: in another map (88-zones.js) there's no safe fence box (setZone below)
@@ -779,7 +805,7 @@
   }
   const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  const SIM = { PAY, richAt, payMult, gradeOf, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, CURSE,
