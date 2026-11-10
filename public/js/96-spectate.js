@@ -15,7 +15,7 @@ const SPEC={on:/[?&]spectate\b/.test(location.search),mode:'free',pos:new T.Vect
   target:null,r:9,h:3,spin:0.25,orbitA:0,keys:null,path:null,pathT:0,joined:false,help:true};
 function specJoin(){wsSend({t:'join',n:'Spectator',c:0,u:0,v:2,spec:true,host:HOST||undefined,p:PASS||undefined});SPEC.joined=true}
 function specStart(){
-  if(!SPEC.on)return;$('#title').hidden=true;$('#hud').hidden=true;initAudio();applyVolume();
+  if(!SPEC.on)return;$('#title').hidden=true;titleEnd();$('#hud').hidden=true;initAudio();applyVolume();
   if(online())specJoin();
   let el=document.getElementById('specHelp');if(!el){el=document.createElement('div');el.id='specHelp';el.className='ui-panel spec-help';document.body.appendChild(el)}
   el.innerHTML='<b>Spectator</b> · WASD fly · mouse look (click) · Space/C up/down · Shift fast · wheel speed<br>F follow the next person · R free flight · H hide this';el.hidden=!SPEC.help;

@@ -107,42 +107,48 @@
   </div>
 </div>
 
+<!-- Title: the live 3D camp fills the screen (titleCamera in 61-title-scene.js); the logo, nickname and Start sit
+     lower-left over a dark gradient. The story and the controls are behind the Controls button (#titleInfo). -->
 <div id="title" class="overlay">
-  <div class="card title-card">
-    <h1 class="stencil">Camp Green Lake<small>There is no lake. Only holes.</small></h1>
+  <div class="title-shade" aria-hidden="true"></div>
+  <div class="title-hero">
+    <h1 class="stencil title-logo">Camp<br>Green Lake<small>There is no lake. Only holes.</small></h1>
+    <div class="field title-start">
+      <label for="nick">Your camp nickname</label>
+      <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
+      <button id="startBtn" class="ui-button ui-button--primary" disabled>Start digging</button>
+    </div>
+    <div class="field title-pass" id="campWrap" hidden>
+      <label for="campPass">Camp password</label>
+      <input type="text" id="campPass" maxlength="64" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="fine" id="campErr" hidden></p>
+    <div class="title-secondary">
+      <button id="titleInfoBtn" class="ui-button ui-button--sm title-ghost" type="button" aria-expanded="false" aria-controls="titleInfo">Controls</button>
+      <button id="titleOptionsBtn" class="ui-button ui-button--sm title-ghost" type="button">Options</button>
+    </div>
+    <div id="lobby">Connecting to camp…</div>
+  </div>
+  <div id="titleInfo" class="card title-info" hidden role="dialog" aria-labelledby="titleInfoHead">
+    <div class="title-info-top"><h2 id="titleInfoHead">How to play</h2><button id="titleInfoClose" class="ui-button ui-button--quiet ui-button--sm" type="button">Close</button></div>
     <p class="title-premise">There's gold in the dry lake bed. Dig, fill your bucket with sand, and sift it at camp. Sell what you dig up to Mr. Pendanski, gear up, and pool your gold with the crew. Keep away from the yellow-spotted lizards, and be back inside the fence by curfew.</p>
     <div class="title-objectives">
       <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-shovel"></use></svg><b>Dig</b><span>Every hole fills your bucket with sand.</span></div>
       <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-seed"></use></svg><b>Sift</b><span>Sift your sand at camp for gold.</span></div>
       <div class="obj-card"><svg class="ui-icon ui-icon--lg" aria-hidden="true"><use href="#icon-clock"></use></svg><b>Be back by curfew</b><span>Or the police come looking.</span></div>
     </div>
-    <div class="field">
-      <label for="nick">Your camp nickname</label>
-      <input type="text" id="nick" maxlength="16" autocomplete="off" spellcheck="false">
-      <button id="startBtn" class="ui-button ui-button--primary" disabled>Start digging</button>
-    </div>
-    <div class="field" id="campWrap" hidden>
-      <label for="campPass">Camp password</label>
-      <input type="text" id="campPass" maxlength="64" autocomplete="off" spellcheck="false">
-    </div>
-    <p class="fine" id="campErr" hidden></p>
-    <div id="lobby">Connecting to camp…</div>
-    <p class="fine title-legend">Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot -- the curse on the lake only breaks when someone finds it.</p>
     <div class="controls" id="controlsEssential">
       <div><kbd class="ui-kbd">WASD</kbd> walk, <kbd class="ui-kbd">Shift</kbd> run</div>
       <div><kbd class="ui-kbd">Click</kbd> lock mouse to look</div>
       <div><kbd class="ui-kbd">Hold click</kbd> or <kbd class="ui-kbd">E</kbd> dig</div>
       <div><kbd class="ui-kbd">F</kbd> talk / buy / sell</div>
       <div><kbd class="ui-kbd">V</kbd> first / third person</div>
+      <div><kbd class="ui-kbd">Q</kbd> eat an onion</div>
+      <div><kbd class="ui-kbd">1</kbd>–<kbd class="ui-kbd">5</kbd> shout at friends</div>
+      <div><kbd class="ui-kbd">C</kbd> crouch (hide from police)</div>
+      <div><kbd class="ui-kbd">Esc</kbd> pause, options, every key</div>
     </div>
-    <details class="controls-more">
-      <summary class="ui-button ui-button--quiet ui-button--sm">Show all controls</summary>
-      <div class="controls">
-        <div><kbd class="ui-kbd">Q</kbd> eat an onion</div>
-        <div><kbd class="ui-kbd">1</kbd>–<kbd class="ui-kbd">5</kbd> shout at friends</div>
-        <div><kbd class="ui-kbd">C</kbd> crouch (hide from police)</div>
-      </div>
-    </details>
+    <p class="fine title-legend">Somewhere out there is a gold tube marked <b>KB</b>. Take it to the Warden, and she'll show you where Kissin' Kate buried her loot -- the curse on the lake only breaks when someone finds it.</p>
     <p class="fine">Anyone with this page open shows up in your camp. Share the link and dig together.</p>
   </div>
 </div>
@@ -455,6 +461,7 @@
 <script src="js/50-tents.js"></script>
 <script src="js/55-input.js"></script>
 <script src="js/60-title.js"></script>
+<script src="js/61-title-scene.js"></script>
 <script src="js/65-net.js"></script>
 <script src="js/70-player.js"></script>
 <script src="js/71-fp-scoop.js"></script>

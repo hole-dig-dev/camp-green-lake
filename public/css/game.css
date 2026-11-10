@@ -284,30 +284,75 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding-inline:16px;padding-block:24px;overflow:auto;z-index:25}
 .overlay[hidden]{display:none}
 .eyebrow{margin:0 0 2px;font:700 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
-/* the title card reads as a tall stamped camp sign: heavy stencil headline, a couple of
-   registration-mark strokes in the corners, no photorealistic texture (docs/ui-redesign-spec.md
-   section 5) */
-#title{background:linear-gradient(180deg,rgba(201,160,106,0) 0%,rgba(90,52,24,.35) 100%)}
+/* The title is a game poster over the live 3D camp (camera: 61-title-scene.js): logo, nickname and Start sit
+   lower-left on a dark gradient, never on a solid slab, so the scene stays in view. The story and the controls
+   live in the small #titleInfo card behind the Controls button. */
+#title{align-items:flex-end;justify-content:flex-start;overflow:hidden auto;
+  padding:clamp(16px,4.5vh,56px) clamp(16px,4.5vw,84px);padding-bottom:calc(clamp(16px,5vh,60px) + env(safe-area-inset-bottom,0px))}
+body:has(#title:not([hidden])) :is(#labels,#touch,#tPause){display:none}   /* no floating name tags or touch buttons over the title's scene */
+/* --cut (0..1) is the dip to black between camera shots; the gradients are what the text is read against */
+.title-shade{position:absolute;inset:0;pointer-events:none;--cut:0;
+  background:linear-gradient(rgba(12,8,5,var(--cut)),rgba(12,8,5,var(--cut))),
+    linear-gradient(78deg,rgba(18,12,8,.86) 0%,rgba(18,12,8,.62) 24%,rgba(18,12,8,.2) 46%,rgba(18,12,8,0) 62%),
+    linear-gradient(0deg,rgba(18,12,8,.6) 0%,rgba(18,12,8,0) 34%),
+    linear-gradient(180deg,rgba(18,12,8,.28) 0%,rgba(18,12,8,0) 16%)}
+.title-hero{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:clamp(10px,1.8vh,18px);width:min(100%,560px);color:var(--canvas)}
 .card{background:var(--canvas);border:3px solid var(--ink);border-radius:4px;box-shadow:0 8px 0 rgba(43,29,18,.45);padding:22px 24px;max-width:560px;width:100%;display:flex;flex-direction:column;gap:14px}
-.title-card{max-width:640px;position:relative}
-.title-card::before,.title-card::after{content:"";position:absolute;top:10px;width:12px;height:12px;border-top:2px solid var(--canvas-deep);opacity:.7;pointer-events:none}
-.title-card::before{left:10px;border-left:2px solid var(--canvas-deep)}
-.title-card::after{right:10px;border-right:2px solid var(--canvas-deep)}
 .stencil{font:900 clamp(48px,11vw,96px)/.86 var(--display);letter-spacing:.01em;text-transform:uppercase;color:var(--jump-deep);margin:0;text-wrap:balance}
 .stencil small{display:block;font-size:.34em;letter-spacing:.14em;color:var(--ink);margin-top:10px}
-.title-premise{margin:0;font-size:18px;line-height:1.35;max-width:62ch}
-.title-objectives{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.obj-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--canvas-2);border:1px solid var(--divider);border-radius:var(--r-card);padding:10px 12px}
+.title-logo{font-size:clamp(54px,min(8vw,16vh),136px);line-height:.84;white-space:nowrap;color:var(--canvas);text-shadow:0 3px 0 rgba(24,17,11,.55),0 0 34px rgba(24,17,11,.5);margin-bottom:clamp(2px,1.2vh,12px)}
+.title-logo small{font-size:.2em;letter-spacing:.2em;color:var(--lizard);margin-top:.7em;padding-top:.7em;border-top:3px solid var(--jump);width:fit-content;text-shadow:0 2px 0 rgba(24,17,11,.6)}
+.title-start,.title-pass{width:min(100%,430px)}
+.title-hero .field label{color:var(--canvas-2);font-size:12px;text-shadow:0 1px 0 rgba(24,17,11,.7)}
+.title-hero input[type=text]{font-size:20px;padding:9px 12px;background:rgba(24,17,11,.55);color:var(--canvas);border-color:rgba(242,231,205,.55);backdrop-filter:blur(3px)}
+.title-hero input[type=text]:focus{border-color:var(--canvas);background:rgba(24,17,11,.72)}
+.title-start input{flex:1 1 150px}
+#startBtn{flex:1 1 100%;min-height:58px;font:900 26px/1 var(--display);letter-spacing:.08em;border-color:var(--ink);box-shadow:0 4px 0 var(--ink),0 0 0 1px rgba(242,231,205,.25)}
+#startBtn:not(:disabled):hover{background:#e87534}
+.title-secondary{display:flex;gap:8px;flex-wrap:wrap}
+.title-ghost{background:rgba(24,17,11,.5);color:var(--canvas);border-color:rgba(242,231,205,.5);box-shadow:none;backdrop-filter:blur(3px);letter-spacing:.08em}
+.title-ghost:hover{background:rgba(242,231,205,.18)}
+.title-ghost:active{transform:translateY(1px)}
+.title-hero #campErr{margin:0;font-size:14px;color:var(--lizard)}
+#lobby{font-size:13px;font-weight:600;line-height:1.3;color:var(--canvas-2);opacity:.85;max-width:44ch;text-shadow:0 1px 0 rgba(24,17,11,.7)}
+/* the Controls panel: a small paper card on the right, clear of the logo */
+.title-info{position:absolute;right:clamp(16px,4.5vw,84px);bottom:clamp(16px,5vh,60px);max-width:440px;max-height:calc(100dvh - 2*clamp(16px,5vh,60px));overflow:auto;padding:16px 18px;gap:12px;animation:tin var(--dur-panel) var(--ease-ui)}
+.title-info[hidden]{display:none}
+.title-info-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.title-info-top h2{margin:0;font:900 26px/1 var(--display);text-transform:uppercase;letter-spacing:.03em;color:var(--jump-deep)}
+.title-info .title-premise{margin:0;font-size:16px;line-height:1.35;max-width:62ch}
+.title-info .fine{font-size:14px}
+.title-objectives{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.obj-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--canvas-2);border:1px solid var(--divider);border-radius:var(--r-card);padding:8px 10px}
 .obj-card svg{color:var(--jump-deep)}
 .obj-card b{font:900 15px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
 .obj-card span{font-size:13px;color:var(--ink-soft);line-height:1.25}
 .title-legend{margin:0}
-.controls-more{border-top:2px dashed var(--ink-soft);padding-top:10px}
-.controls-more summary{list-style:none;cursor:pointer;width:fit-content}
-.controls-more summary::-webkit-details-marker{display:none}
-.controls-more[open] summary{margin-bottom:10px}
-.controls-more .controls{border-top:0;padding-top:0}
-@media (max-width:700px){.title-objectives{grid-template-columns:1fr}}
+/* phones and narrow or upright windows: the hero spans the bottom, the gradient rises from below, the panel covers
+   the screen. Sizes are in vw so the poster keeps its proportions whatever width the phone lays the page out at. */
+@media (max-width:700px),(orientation:portrait){
+  .title-shade{background:linear-gradient(rgba(12,8,5,var(--cut)),rgba(12,8,5,var(--cut))),
+    linear-gradient(0deg,rgba(18,12,8,.92) 0%,rgba(18,12,8,.78) 30%,rgba(18,12,8,.34) 52%,rgba(18,12,8,0) 68%)}
+  #title{padding-inline:5vw}
+  .title-hero{width:100%;gap:clamp(10px,3vw,30px)}
+  .title-logo{font-size:clamp(50px,20.5vw,230px)}
+  .title-start,.title-pass{width:100%}
+  .title-hero .field label{font-size:clamp(12px,3.2vw,30px)}
+  .title-hero input[type=text]{font-size:clamp(20px,5.4vw,52px);padding:.45em .6em}
+  #startBtn{min-height:clamp(58px,15vw,150px);font-size:clamp(26px,7.4vw,72px)}
+  .title-ghost{font-size:clamp(13px,3.6vw,34px);min-height:clamp(40px,10vw,96px);padding:.5em .9em}
+  #lobby{font-size:clamp(13px,3.4vw,32px);max-width:none}
+  .title-info{left:12px;right:12px;top:12px;bottom:12px;max-width:none;max-height:none}
+  .title-objectives{grid-template-columns:1fr}
+}
+/* short landscape windows (a phone on its side): shrink the logo so Start is never pushed off the screen */
+@media (max-height:520px){
+  .title-logo{font-size:clamp(34px,13vh,64px)}
+  .title-hero{gap:8px}
+  #startBtn{flex:0 0 auto;min-height:46px;font-size:22px}
+  #lobby{display:none}
+}
+@media (prefers-reduced-motion:reduce){.title-info{animation:none}}
 .card p{margin:0;font-size:18px;line-height:1.35;max-width:62ch}
 .card .fine{font-size:15px;color:var(--ink-soft)}
 .field{display:flex;gap:8px;flex-wrap:wrap}
@@ -321,7 +366,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 16px;font-size:15px;border-top:2px dashed var(--ink-soft);padding-top:12px}
 .controls div{display:flex;gap:8px;align-items:baseline}
 .controls kbd{font:700 13px/1 var(--ui);background:var(--ink);color:var(--canvas);padding:3px 6px;border-radius:2px;min-width:14px;text-align:center}
-#lobby{font-size:15px;font-weight:600;color:var(--leaf)}
 
 #win h2,#ko h2{font:900 40px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
 /* one shared outcome-card layout (docs/ui-redesign-spec.md section 5): a small event label, the
