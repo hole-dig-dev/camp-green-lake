@@ -14,6 +14,8 @@ check('two buying at once from a wallet that covers one: exactly one gets it, th
 check('the one turned down is told',await (ha?B:A).evaluate(()=>__ev.some(e=>e[0]==='toast'&&/spent that gold first/.test(e[2]))));
 // the quota warning
 await A.evaluate(()=>{S.seeds+=30});await A.waitForTimeout(1000);
+/* leave the wallet at tonight's cut + 10: the 25-gold shovel then takes it below the cut whatever the quota curve is */
+await A.evaluate(()=>{S.seeds+=Math.max(RUN.quota+10,30)-RUN.bank});await A.waitForTimeout(1000);   /* at least 30 so the shovel is affordable */
 const w=await A.evaluate(()=>{openShop();openShopConfirm('shovel');const t=document.getElementById('shopConfirm').innerText;const safe=document.getElementById('shopSafe').textContent;closeShop&&closeShop();return{t,safe,q:RUN.quota,bank:RUN.bank}});
 check('buying below tonight\'s quota warns in the confirm panel; the store shows safe to spend',/short of tonight's cut/.test(w.t)&&/safe to spend/.test(w.safe),JSON.stringify(w));
 // found today, read out at curfew
