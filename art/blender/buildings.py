@@ -211,7 +211,7 @@ def cabin(name,W,D,H,wall,roof,supt=False,shop=False):
         cyl('stovecap',0.2,0.16,(W*0.3,D*0.2,top+rise*0.6+1.25),('steel','steel',0.5,0.6),verts=10,r2=0.05,bevel=0,parent=r)
         if not shop:box('stoop',(2.2,1.0,0.18),(0,-D/2-0.5,0.09),('step',(0x87,0x72,0x57),0.9),bevel=0.015,parent=r)
     studio(elev=18,azim=-33,lens=40);frame(margin=1.08);print(name,tris());render()
-cabin('WreckRoom',7,5,3.2,(0x9b,0x7b,0x58),(0x6d,0x5a,0x44),shop=True)
+cabin('CompanyStore',7,5,3.2,(0x9b,0x7b,0x58),(0x6d,0x5a,0x44),shop=True)
 cabin('SuptHouse',8,6,3.4,(0xb0,0x76,0x50),(0x5a,0x3a,0x2a),supt=True)
 
 # ================= watchtower (2.1 m leg square, deck at 7.25, cab rail 8.08, roof 8.94, lamp 8.55) =================

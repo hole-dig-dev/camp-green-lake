@@ -17,11 +17,11 @@ STENCIL = 'BigShouldersStencilDisplay'
 JOBS = {
  'props.blend': {
   'SignCampEntrance': (None, [('title', 'CAMP DRYWATER', 0.62, 'Anton', 0.006, 1.05, 1.0), ('sub', 'DRYWATER RECLAMATION COMPANY', 0.27, 'Anton', 0.006, 1.1, 1.0)]),
-  'SignWreckRoom': (None, [('txt-0.03', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0), ('txt0.03', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0)]),
+  'SignCompanyStore': (None, [('txt-0.03', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0), ('txt0.03', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0)]),
   'SignLizardWarning': (None, [('l1', 'GOLD-EYED', 0.15, 'Anton', 0.006, 1.0, 1.0), ('l2', 'GILAS', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
   'SignDirections': (None, [('t.002', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0), ('t.003', 'COMPANY STORE', 0.19, 'Anton', 0.006, 1.0, 1.0),
                             ('t.004', 'BUNK D', 0.19, 'Anton', 0.006, 1.0, 1.05), ('t.005', 'BUNK D', 0.19, 'Anton', 0.006, 1.0, 1.05)]),
-  'SignBigThumb': (None, [('p1', 'CAMP DRYWATER', 0.12, 'Anton', 0.006, 1.0, 1.0)]),
+  'SignChimney': (None, [('p1', 'CAMP DRYWATER', 0.12, 'Anton', 0.006, 1.0, 1.0)]),
   'SupplyCrate': (None, [('stencil', 'DRC', 0.22, STENCIL, 0.002, 1.0, 1.1)]),
   'SuptNote': (None, [('t4', "DON'T TELL DUTCH", 0.011, 'Anton', 0.0004, 1.0, 1.0)]),
  },
@@ -30,20 +30,20 @@ JOBS = {
   'SuptHouse': (None, [('plaquetxt', 'SUPERINTENDENT', 0.28, 'Anton', 0.006, 1.0, 1.15)]),
   'SuptRoom': (None, [('maptitle', 'LAKE DRYWATER - SEARCH GRID', 0.1, 'Anton', 0.006, 1.0, 1.0), ('lil1', '"LUCKY" LIL', 0.07, 'Anton', 0.006, 1.0, 1.0), ('lil2', 'MARLOW', 0.08, 'Anton', 0.006, 1.0, 1.0)]),
   'WaterTower': (None, [('tanktxt', 'DRC', 0.8, STENCIL, 0.01, 1.0, 1.1)]),
-  'WreckRoom': (None, [('menu0', 'WATER  BITTERROOT', 0.13, 'Anton', 0.006, 1.0, 1.25), ('menu_s', 'GOLD ONLY', 0.12, 'Anton', 0.006, 1.0, 1.0)]),
+  'CompanyStore': (None, [('menu0', 'WATER  BITTERROOT', 0.13, 'Anton', 0.006, 1.0, 1.25), ('menu_s', 'GOLD ONLY', 0.12, 'Anton', 0.006, 1.0, 1.0)]),
   'TentRoomSmall': (None, [('rule0', '1. DIG', 0.05, 'Anton', 0.006, 1.0, 1.0), ('rule1', '2. THE COMPANY THANKS YOU', 0.05, 'Anton', 0.006, 1.0, 1.0)]),
   'ShowerBlock': (None, [('signtxt', 'SHOWERS - 10 CENTS', 0.16, 'Anton', 0.006, 1.0, 1.0)]),
  },
  'town.blend': {
   'TownBldg_marshal': (None, [('dstxt', "MARSHAL'S OFFICE", 0.2, 'Anton', 0.006, 1.0, 1.0)]),
-  'TownBldg_boatshed': (None, [('dstxt.003', 'BOAT SHED', 0.2, 'Anton', 0.006, 1.0, 1.0), ('maryloutxt.001', 'ROYAL FLUSH', 0.18, 'Anton', 0.006, 1.0, 1.25)]),
+  'TownBldg_boatshed': (None, [('dstxt.003', 'BOAT SHED', 0.2, 'Anton', 0.006, 1.0, 1.0), ('boattxt.001', 'ROYAL FLUSH', 0.18, 'Anton', 0.006, 1.0, 1.25)]),
   'TownBldg_lil': (None, [('dstxt.006', "LIL'S HOUSE", 0.2, 'Anton', 0.006, 1.0, 1.0), ('heart.001', 'L. M.', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
   'TownBldg_cellar': (None, [('dstxt.007', 'ROOT CELLAR', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
   'TownBldg_vault': (None, [('dstxt.008', "LIL'S VAULT", 0.2, 'Anton', 0.006, 1.0, 1.0), ('kb.003', 'LM', 0.5, 'Anton', 0.006, 1.0, 1.1)]),
   'TownBldg_school': (None, [('chalk2.001', 'NO GAMBLING', 0.2, 'Anton', 0.006, 1.0, 1.25)]),
  },
  'gear.blend': {
-  'SodaMachine': (None, [('brand_green_lake', 'DRYWATER', 0.113, 'Anton', 0, 1.0, 1.0)]),
+  'SodaMachine': (None, [('brand_drywater', 'DRYWATER', 0.113, 'Anton', 0, 1.0, 1.0)]),
  },
  'finds.blend': {
   'Safe_1': ('FindSafe', [('co', 'MARLOW BANK', 0.06, 'Anton', 0.003, 1.0, 1.0)]),

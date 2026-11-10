@@ -6,7 +6,7 @@ lights and floor.
 
 | File | Scenes | Build scripts |
 | --- | --- | --- |
-| `buildings.blend` | tents, tent rooms, Superintendent's house and office, Company Store, watchtower, water tower, fence, gates, yard (flag pole, hammock, lamp post, mess table, oak, outhouse, shower block, water truck) | `buildings.py`, `interiors.py`, `fence.py`, `gates.py`, `yard.py`, `wreckroom.py` |
+| `buildings.blend` | tents, tent rooms, Superintendent's house and office, Company Store, watchtower, water tower, fence, gates, yard (flag pole, hammock, lamp post, mess table, oak, outhouse, shower block, water truck) | `buildings.py`, `interiors.py`, `fence.py`, `gates.py`, `yard.py`, `companystore.py` |
 | `props.blend` | signs, furniture, supplies, carried loot, Foreman Dutch's truck, rocks, boulders, tumbleweed | `signs.py`, `signs_export.py`, `furniture.py`, `supplies.py`, `carryloot.py`, `rocks.py` |
 | `finds.blend` | the dig-up finds, including the five-way variant scenes (`Can_1`..`Can_5`, `KB_v01`..`KB_v10`, ...) the final finds were picked from | `finds.py`, `finds2.py`, `finds3.py`, `heavy.py`, `kb.py`, `kbfinal.py` |
 | `creatures.blend` | lizard, javelina, mountain lion, vulture (rigged, with clips), plus their first-round variants (`Liz_1`..) | `creatures.py`, `beasts.py`, `rig.py`, `vulture.py` |
@@ -35,14 +35,14 @@ The build scripts recreate their scenes from scratch:
 | Script | Scenes |
 | --- | --- |
 | `fence.py` | FencePost, FenceSpan (2.5 m, chain-link texture, barbed-wire arm) |
-| `signs.py` (+ `signs_export.py`) | SignCampEntrance, SignWreckRoom (reads SUPPLY DEPOT), SignLizardWarning, SignDirections |
+| `signs.py` (+ `signs_export.py`) | SignCampEntrance, SignCompanyStore (reads COMPANY STORE), SignLizardWarning, SignDirections |
 | `furniture.py` | BunkBed, Cot, Footlocker, CardTable, Stool, SuptDesk, SupplyCrate, WaterDrum, Bench |
-| `buildings.py` | TentSmall, TentCrew, WreckRoom (the Company Store: serving window + booth, `shop_front`), SuptHouse, Watchtower, WaterTower |
-| `wreckroom.py` | Rebuilds only WreckRoom from `buildings.py` and exports `glb/WreckRoom.glb` |
+| `buildings.py` | TentSmall, TentCrew, CompanyStore (the Company Store: serving window + booth, `shop_front`), SuptHouse, Watchtower, WaterTower |
+| `companystore.py` | Rebuilds only CompanyStore from `buildings.py` and exports `glb/CompanyStore.glb` |
 | `camper_export.py` | Rebuilds the camper from `characters.blend` (rig, wardrobe, every clip in `/blender/cgl_rig.py`, now including Sit and SitEdge) and writes `public/models/camper.glb` |
 | `beasts.py` + `rig.py` | Lizard, Javelina, Lion: modelled, then rigged, animated and exported to `glb/Creature*.glb` |
 | `suptnote.py` | SuptNote: the note on the Superintendent's desk with the old town's X/Y (the town's only way in) |
-| `north.py` | NorthRamp, NorthCliff5, NorthCliff2, SignTrench, SignBigThumb: the end of Act 1 at the lake's north edge (the jump ramp, rock faces for the trench and the wall's ledges, the signs); the shapes are in the ground (`public/js/10-core.js` NORTH) |
+| `north.py` | NorthRamp, NorthCliff5, NorthCliff2, SignTrench, SignChimney: the end of Act 1 at the lake's north edge (the jump ramp, rock faces for the trench and the wall's ledges, the signs); the shapes are in the ground (`public/js/10-core.js` NORTH) |
 | `carryloot.py` | LootCrate, LootTools, LootJug: carried finds (the middle loot tier, too big for the sack), grabbed and hauled like the safe |
 | `supplies.py` | SupplyWalkie, SupplyTonic, SupplyMedkit: the Company Store supplies, matched to their painted store icons, stood on their base with the grip height recorded for the game's hand props (`public/js/86-walkie.js`) |
 | `vulture.py` | Vulture, standalone: model with rigged legs and talons, Glide/Flap/Reach/Carry clips, a `gripR` bone the game hangs a carried camper from; run it with the checkout's .blend open, then copy the GLB to `public/models/` |

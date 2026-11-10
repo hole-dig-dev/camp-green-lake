@@ -108,7 +108,7 @@ function towerLampMount(parts){
   const TENT_MODEL=t=>t.crew?'TentCrew':'TentSmall';
   for(const t of TENTS)if(!t.house)
     placeModel(TENT_MODEL(t),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:Math.PI}).then(()=>hideProc(t.ext)).catch(()=>{});   // door faces the yard (-z)
-  placeModel('WreckRoom',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(wreckCabin)).catch(()=>{});
+  placeModel('CompanyStore',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(storeCabin)).catch(()=>{});
   placeModel('SuptHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
   // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
@@ -119,9 +119,9 @@ function towerLampMount(parts){
   // fence: posts where 20-world.js put them; spans stretched to each gap (the model is 2.5 m long)
   Promise.all([instanceModel('FencePost',FENCE_POSTS),instanceModel('FenceSpan',FENCE_SPANS.map(s=>Object.assign({sx:s.len/2.5},s)))])
     .then(()=>hideProc(FENCE_PROC)).catch(()=>{});
-  // signs: the painted camp sign and the Company Store's blade sign (SignWreckRoom) on its front corner
+  // signs: the painted camp sign and the Company Store's blade sign (SignCompanyStore) on its front corner
   placeModel('SignCampEntrance',{x:-11,y:baseH(-11,30.5),z:30.5,ry:Math.PI}).then(()=>hideProc(campSign)).catch(()=>{});
-  placeModel('SignWreckRoom',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(wreckSign)).catch(()=>{});
+  placeModel('SignCompanyStore',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(storeSign)).catch(()=>{});
   // gates: the arch gate at the lake side and the sliding service gate on the east fence (outside faces away from camp)
   placeModel('MainGate',{x:0,y:baseH(0,FENCE_Z0),z:FENCE_Z0,ry:0}).then(()=>{hideProc(GATE_PROC);hideProc(mainGateSign)}).catch(()=>{});
   placeModel('ServiceGate',{x:FENCE_X1,y:baseH(FENCE_X1,39),z:39,ry:-Math.PI/2}).then(()=>hideProc(serviceGateSign)).catch(()=>{});

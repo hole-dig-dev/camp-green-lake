@@ -189,8 +189,8 @@ const farU={uFocus:{value:new T.Vector2(0,12)},uR:{value:LOAD_R-3}};
 streamChunks(0,12,999);
 
 /* outer desert + mountains + Chimney Rock */
-let updateThumbHaze;   // assigned inside the block below; declared out here so frame() can call it every frame
-const TH_X=185, TH_Z=-1080;   // Chimney Rock's position: north side of the lake, off to the side, ~350-480 m past the ±600 edge
+let updateChimneyHaze;   // assigned inside the block below; declared out here so frame() can call it every frame
+const CHIM_X=185, CHIM_Z=-1080;   // Chimney Rock's position: north side of the lake, off to the side, ~350-480 m past the ±600 edge
                                // (hoisted out of the block below so the landslide code further down can read it too)
 {
   const mat=new T.MeshStandardMaterial({color:0xd4a266,flatShading:true,roughness:1});
@@ -203,41 +203,41 @@ const TH_X=185, TH_Z=-1080;   // Chimney Rock's position: north side of the lake
   }
   /* Chimney Rock: a huge rock landmark, hundreds of metres tall, well outside the playable
      square so nobody can ever reach it -- just see it from camp and most of the lake. It's a stack of a few cheap
-     primitives (scree slope, a rounded "fist" base, banded strata ledges, the thumb shaft, a rounded tip) so it's
+     primitives (scree slope, a rounded "fist" base, banded strata ledges, the chimney shaft, a rounded tip) so it's
      static and cheap forever: no shadows (nothing that big and that far away needs one you'd ever notice). */
-  const TH_SCREE_R=250, TH_SCREE_H=42;       // loose scree slope skirting the foot (radius/height, m)
-  const TH_BASE_R0=185, TH_BASE_R1=118, TH_BASE_H=95;  // the big rounded mass the thumb rises out of (bottom/top radius, height)
-  const TH_LEDGE_H=24, TH_LEDGE_N=4;         // strata ledges stacked above the base: height each, how many
-  const TH_SHAFT_R0=44, TH_SHAFT_R1=33, TH_SHAFT_H=175; // the thumb's own vertical column (bottom/top radius, height)
-  const TH_TIP_R=38;                          // the rounded tip ("nail") on top
-  const TH_TILT=0.05;                         // a small lean, so it doesn't read as a machined cylinder
-  const TH_HAZE=0.55;                         // how strongly it blends into the current sky/fog colour -- see thumbMat()
-  const thumbMats=[];   // {m,base} pairs refreshed against the current fog colour every frame by updateThumbHaze()
-  function thumbMat(hex){
+  const CHIM_SCREE_R=250, CHIM_SCREE_H=42;       // loose scree slope skirting the foot (radius/height, m)
+  const CHIM_BASE_R0=185, CHIM_BASE_R1=118, CHIM_BASE_H=95;  // the big rounded mass the chimney rises out of (bottom/top radius, height)
+  const CHIM_LEDGE_H=24, CHIM_LEDGE_N=4;         // strata ledges stacked above the base: height each, how many
+  const CHIM_SHAFT_R0=44, CHIM_SHAFT_R1=33, CHIM_SHAFT_H=175; // the chimney's own vertical column (bottom/top radius, height)
+  const CHIM_TIP_R=38;                          // the rounded tip ("nail") on top
+  const CHIM_TILT=0.05;                         // a small lean, so it doesn't read as a machined cylinder
+  const CHIM_HAZE=0.55;                         // how strongly it blends into the current sky/fog colour -- see chimneyMat()
+  const chimneyMats=[];   // {m,base} pairs refreshed against the current fog colour every frame by updateChimneyHaze()
+  function chimneyMat(hex){
     // Chimney Rock sits past the fog's 1000 m range (real THREE.Fog would just swallow it), so its materials skip fog
-    // entirely and updateThumbHaze() fakes the same "fades into the haze" look by hand, blending toward whatever
+    // entirely and updateChimneyHaze() fakes the same "fades into the haze" look by hand, blending toward whatever
     // colour scene.fog.color currently is -- which already tracks day, dusk, night and the disco party.
     const base=new T.Color(hex);
     const m=new T.MeshStandardMaterial({color:hex,flatShading:true,roughness:1,metalness:0,fog:false});
-    thumbMats.push({m,base});return m;
+    chimneyMats.push({m,base});return m;
   }
-  const thumb=new T.Group();
-  const scree=new T.Mesh(new T.ConeGeometry(TH_SCREE_R,TH_SCREE_H,9),thumbMat(0xc7a172));scree.position.y=TH_SCREE_H*0.5;thumb.add(scree);
-  let thy=TH_SCREE_H*0.72;
-  const thBase=new T.Mesh(new T.CylinderGeometry(TH_BASE_R1,TH_BASE_R0,TH_BASE_H,9),thumbMat(0x8c6d51));thBase.position.y=thy+TH_BASE_H*0.5;thumb.add(thBase);
-  thy+=TH_BASE_H;
+  const chimney=new T.Group();
+  const scree=new T.Mesh(new T.ConeGeometry(CHIM_SCREE_R,CHIM_SCREE_H,9),chimneyMat(0xc7a172));scree.position.y=CHIM_SCREE_H*0.5;chimney.add(scree);
+  let chimY=CHIM_SCREE_H*0.72;
+  const chimBase=new T.Mesh(new T.CylinderGeometry(CHIM_BASE_R1,CHIM_BASE_R0,CHIM_BASE_H,9),chimneyMat(0x8c6d51));chimBase.position.y=chimY+CHIM_BASE_H*0.5;chimney.add(chimBase);
+  chimY+=CHIM_BASE_H;
   const LEDGE_COLORS=[0x9c7a5a,0x876048];   // alternating shades so the stacked ledges read as strata bands
-  let ledgeR0=TH_BASE_R1;
-  for(let i=0;i<TH_LEDGE_N;i++){
-    const r1=lerp(TH_BASE_R1,TH_SHAFT_R0,(i+1)/TH_LEDGE_N);
-    const ledge=new T.Mesh(new T.CylinderGeometry(r1,ledgeR0,TH_LEDGE_H,9),thumbMat(LEDGE_COLORS[i%2]));
-    ledge.position.y=thy+TH_LEDGE_H*0.5;thumb.add(ledge);thy+=TH_LEDGE_H;ledgeR0=r1;
+  let ledgeR0=CHIM_BASE_R1;
+  for(let i=0;i<CHIM_LEDGE_N;i++){
+    const r1=lerp(CHIM_BASE_R1,CHIM_SHAFT_R0,(i+1)/CHIM_LEDGE_N);
+    const ledge=new T.Mesh(new T.CylinderGeometry(r1,ledgeR0,CHIM_LEDGE_H,9),chimneyMat(LEDGE_COLORS[i%2]));
+    ledge.position.y=chimY+CHIM_LEDGE_H*0.5;chimney.add(ledge);chimY+=CHIM_LEDGE_H;ledgeR0=r1;
   }
-  const thShaft=new T.Mesh(new T.CylinderGeometry(TH_SHAFT_R1,TH_SHAFT_R0,TH_SHAFT_H,9),thumbMat(0xa9835f));thShaft.position.y=thy+TH_SHAFT_H*0.5;thumb.add(thShaft);
-  thy+=TH_SHAFT_H;
-  const thTip=new T.Mesh(new T.SphereGeometry(TH_TIP_R,10,7),thumbMat(0xb99269));thTip.scale.y=0.82;thTip.position.y=thy+TH_TIP_R*0.7;thumb.add(thTip);
-  thumb.rotation.set(TH_TILT,0.3,TH_TILT*0.6);thumb.position.set(TH_X,OUTER_Y-2,TH_Z);scene.add(thumb);
-  updateThumbHaze=()=>{for(const t of thumbMats)t.m.color.copy(t.base).lerp(scene.fog.color,TH_HAZE)};
+  const chimShaft=new T.Mesh(new T.CylinderGeometry(CHIM_SHAFT_R1,CHIM_SHAFT_R0,CHIM_SHAFT_H,9),chimneyMat(0xa9835f));chimShaft.position.y=chimY+CHIM_SHAFT_H*0.5;chimney.add(chimShaft);
+  chimY+=CHIM_SHAFT_H;
+  const chimTip=new T.Mesh(new T.SphereGeometry(CHIM_TIP_R,10,7),chimneyMat(0xb99269));chimTip.scale.y=0.82;chimTip.position.y=chimY+CHIM_TIP_R*0.7;chimney.add(chimTip);
+  chimney.rotation.set(CHIM_TILT,0.3,CHIM_TILT*0.6);chimney.position.set(CHIM_X,OUTER_Y-2,CHIM_Z);scene.add(chimney);
+  updateChimneyHaze=()=>{for(const t of chimneyMats)t.m.color.copy(t.base).lerp(scene.fog.color,CHIM_HAZE)};
   for(let i=0;i<30;i++){
     const x=(rng()*2-1)*54,z=(rng()*2-1)*54;if(inCamp(x,z))continue;
     const rock=new T.Mesh(new T.DodecahedronGeometry(0.3+rng()*0.5,0),M(0x9c7552));

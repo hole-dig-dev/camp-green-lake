@@ -142,7 +142,7 @@ try {
   const line2 = await p1.evaluate(() => document.querySelector('#zoneLine').textContent);
   check('the whole crew at the campfire', /whole crew made it/i.test(line2), { line2 });
   await p1.evaluate(() => { P.yaw = 0; P.pitch = -0.08; });
-  await shot(p1, 'canyon-campfire-big-thumb-1280.png');
+  await shot(p1, 'canyon-campfire-chimney-1280.png');
 
   // --- a phone-sized view ---
   const phone = await openPlayer('p3', 'Squid', 360, 800);

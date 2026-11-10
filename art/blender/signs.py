@@ -23,8 +23,8 @@ for x in (-2.0,2.0):   # bolts
     for z in (2.72,3.98):cyl(f'bolt{x}{z}',0.03,0.03,(x,-0.13,z),('steel','steel',0.4,0.8),verts=6,rot=(math.pi/2,0,0),bevel=0,parent=r)
 studio(elev=10,azim=-24,lens=45);frame();print('entrance tris',tris());render()
 
-# ---------- SignWreckRoom (reads COMPANY STORE; the scene keeps its old name): plank sign hung from a wall bracket by two chains ----------
-scene('SignWreckRoom');r=root('SignWreckRoom')
+# ---------- SignCompanyStore (reads COMPANY STORE; the scene keeps its old name): plank sign hung from a wall bracket by two chains ----------
+scene('SignCompanyStore');r=root('SignCompanyStore')
 box('wallplate',(0.12,0.04,0.3),(0,0.02,2.9),('steel','steel',0.5,0.7),parent=r)
 box('bracket',(0.05,1.0,0.05),(0,-0.48,3.0),('steel','steel',0.5,0.7),parent=r)
 box('brace',(0.04,0.55,0.04),(0,-0.25,2.85),('steel','steel',0.5,0.7),rot=(math.radians(-35),0,0),parent=r)
@@ -33,7 +33,7 @@ for y in (-0.08,-0.88):
 brd=box('board',(0.05,1.15,0.42),(0,-0.48,2.52),('wood_pale','wood_pale',0.9),bevel=0.015,parent=r)
 for sx,rx in ((-0.03,-math.pi/2),(0.03,math.pi/2)):   # lettering on both faces
     text(f'txt{sx}','COMPANY STORE',(sx,-0.48,2.52),0.19,('ink','ink',0.8),rot=(math.pi/2,0,rx),parent=r)
-studio(elev=12,azim=-65,lens=50,target=(0,-0.4,2.6));frame(margin=1.3);print('wreck tris',tris());render()
+studio(elev=12,azim=-65,lens=50,target=(0,-0.4,2.6));frame(margin=1.3);print('store sign tris',tris());render()
 
 # ---------- SignLizardWarning: dented tin sign on a steel post ----------
 scene('SignLizardWarning');r=root('SignLizardWarning')

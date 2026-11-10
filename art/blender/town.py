@@ -432,10 +432,10 @@ def _(r,k,W,D):
 @bldg('boatshed',"Boat shed",'M','timber')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
-    g=grp('boat',(-qx,-qy+0.3,0.55),(0,math.pi,0.2),r)   # the Mary Lou, upside down on sawhorses
+    g=grp('boat',(-qx,-qy+0.3,0.55),(0,math.pi,0.2),r)   # a rowing boat, upside down on sawhorses
     blob('hull',(0,0,0),(0.85,2.2,0.5),M_('hull',(0x6a,0x7a,0x7a),0.9),g,seg=12,rings=6);B('keel',(0.08,4.2,0.1),(0,0,0.5),mTIM,p=g)
     col(k,-qx,-qy+0.3,2.0,4.2)
-    text('maryloutxt','ROYAL FLUSH',(-qx+0.9,-qy+0.3,0.35),0.18,M_('paintred',(0x8a,0x2a,0x1c)),rot=(math.pi/2,0,math.pi/2+0.2),parent=r)
+    text('boattxt','ROYAL FLUSH',(-qx+0.9,-qy+0.3,0.35),0.18,M_('paintred',(0x8a,0x2a,0x1c)),rot=(math.pi/2,0,math.pi/2+0.2),parent=r)
     for j in range(2):tube(f'oar{j}',(hw-0.3,-qy+j*0.4,0.1),(hw-0.4,-qy+j*0.5,2.6),0.03,mGREY,r,v=5)
     for j in range(4):
         x,y=qx+(j%2)*0.75-0.4,qy+(j//2)*0.75-0.4;crate(f'onc{j}',x,y,J(0.2),r,s=0.65)

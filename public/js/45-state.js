@@ -201,7 +201,7 @@ function nearSpot(){
   {const p=pipeSpot();if(p)return p}   /* the sand pipeline: lay it, dump into it, fix it (88-pipeline.js) */
   for(const s of SPOTS){
     const roomSpot=s.id==='exit'||s.id==='bunk'||s.id==='cards'||s.id==='office';
-    if(roomSpot?S.tent==null||(s.ti!=null&&s.ti!==S.tent)||(s.id==='bunk'&&BUNKS[s.bi].tent!==S.tent)||(s.id==='cards'&&S.tent!==TENTS.indexOf(D_TENT)):S.tent!=null)continue;
+    if(roomSpot?S.tent==null||(s.ti!=null&&s.ti!==S.tent)||(s.id==='bunk'&&BUNKS[s.bi].tent!==S.tent)||(s.id==='cards'&&S.tent!==TENTS.indexOf(BUNK_D)):S.tent!=null)continue;
     if((P.x-s.x)**2+(P.z-s.z)**2<s.r*s.r)return s;
   }
   {const t=sitSpot();if(t)return t}   // a free bench or stool (86-sit.js)

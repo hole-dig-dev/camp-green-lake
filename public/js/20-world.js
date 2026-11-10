@@ -25,7 +25,7 @@ const TENTS=[
   {x:8,z:47,name:'Bunk C',hw:3.0,hd:3.6,roomW:7,roomD:8},
   {x:-30,z:45,name:"the Super's House",hw:4,hd:3,roomW:8,roomD:8,house:true},
 ];
-const D_TENT=TENTS.find(t=>t.crew);
+const BUNK_D=TENTS.find(t=>t.crew);
 function tent(t){
   if(t.house)return;
   const g=new T.Group(),canvas=0x777f65,edge=0x444b39;
@@ -124,7 +124,7 @@ TENTS.forEach((t,ti)=>{
       addF(0.8,0.03,0.5,0xb99c70,dx,Y+0.88,dz);
       spots.push({m:'CardTable',x:dx,y:Y,z:dz,ry:0});
       tentSolid(list,dx,dz,2.4,2.4);
-      D_TENT.table={x:dx,z:dz-1.75};D_TENT.dealerSeat={x:dx,z:dz+1.75};
+      BUNK_D.table={x:dx,z:dz-1.75};BUNK_D.dealerSeat={x:dx,z:dz+1.75};
     }else{
       for(const side of[-1,1])for(let i=0;i<2;i++)bunk(t.x+side*(t.roomW-1.55),t.z-t.roomD+3+i*3.4,false);
     }
@@ -147,9 +147,9 @@ function cabin(x,z,w,d,h,wall,roof){
   for(const s of[-1,1]){const win=box(1,0.8,0.08,0x2f3a44);win.position.set(s*w*0.3,1.6,-d/2-0.03);g.add(win)}
   g.position.set(x,baseH(x,z),z);scene.add(g);solid(x,z,w,d);return g;
 }
-const wreckCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
-solid(16,42.3,2.5,0.45);   // the serving-window counter sticks out past the front wall (WreckRoom.glb)
-const wreckSign=sign('COMPANY\nSTORE',20.2,41.4,Math.PI,2.6,1.1);
+const storeCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
+solid(16,42.3,2.5,0.45);   // the serving-window counter sticks out past the front wall (CompanyStore.glb)
+const storeSign=sign('COMPANY\nSTORE',20.2,41.4,Math.PI,2.6,1.1);
 const suptCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);
 {

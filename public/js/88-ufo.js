@@ -34,7 +34,7 @@ function ufoLureStep(b,dt){
     L.go=true;b.ufo=true;leaveSiftQ(b);b.errand=null;if(b.p.held&&b.p.held.k==='bucket')releaseProp(b.p,'bucket');
     const inside=b.state==='inside'||b.state==='indoor'||g.position.y<TENT_FLOOR_Y+1,asleep=inside&&(curfewSoon()||clockT()>=DAYMS);
     b.state='ufocall';   /* not 'inside' any more: 30-npcs.js would keep him hidden */
-    if(inside){g.position.set(D_TENT_DOOR.x,groundAt(D_TENT_DOOR.x,D_TENT_DOOR.z),D_TENT_DOOR.z);g.rotation.y=Math.PI}   /* out of Bunk D's door */
+    if(inside){g.position.set(BUNK_D_DOOR.x,groundAt(BUNK_D_DOOR.x,BUNK_D_DOOR.z),BUNK_D_DOOR.z);g.rotation.y=Math.PI}   /* out of Bunk D's door */
     g.visible=true;b.L.el.style.display='';
     const x=g.position.x,z=g.position.z;
     if(ufoInCamp(x,z)||inside){L.tx=gateX(b)+(botRng()-0.5)*6;L.tz=UFO_LURE_Z-botRng()*4}else{L.tx=x;L.tz=z}
