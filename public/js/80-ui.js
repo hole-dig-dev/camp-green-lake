@@ -45,7 +45,7 @@ const BOT_TALK={
     return reply('Pete',t,back)}}]},
   'Larry':{hi:['Hey. You didn\'t see anybody\'s chewing gum, did you?','I found it. Finding isn\'t stealing.'],special:[{label:'What\'s in your pockets?',go:back=>({name:'Larry',text:'Oh, just stuff I found. Or borrowed. Ten gold gets you a mystery item. No refunds.',opts:[{label:'Here, 10 gold.',go:()=>{if(S.seeds<10)return reply('Larry','You ain\'t got ten gold, man.',back);S.seeds-=10;const t=pick(['cap','can','spoon','shoe','arrow','jar','fossil']);S.sack.push(t);sfx.find();return reply('Larry',`Pleasure doing business. You got: ${LOOT[t].name}. Mr. Abel pays ${LOOT[t].val} for that.`,back)}},{label:'Pass.',go:back},LEAVE]})}]},
   'Zach':{hi:['...','Hi.'],special:[
-    {label:'Want to dig together?',go:back=>{S.zeroT=90;return reply('Zach','Okay. I like digging. I\'ll help with your next hole. (You dig twice as fast for 90 seconds.)',back)}},
+    {label:'Want to dig together?',go:back=>{S.zachT=90;return reply('Zach','Okay. I like digging. I\'ll help with your next hole. (You dig twice as fast for 90 seconds.)',back)}},
     {label:'How do you dig so fast?',go:back=>reply('Zach','...I don\'t stop. That is the whole trick. You can watch if you want.',back)}]},
 };
 function botNode(b,first){

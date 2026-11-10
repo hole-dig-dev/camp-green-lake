@@ -39,12 +39,12 @@
 //   daybreak        {asleep}                              every joined camper was asleep in a bunk; the night was
 //                                                          skipped straight to dawn (asleep = how many campers)
 //   mobsOn/mobsOff  {kind}                               police trucks / the Drowned Bride / the mountain lion appear
-//                                                          or leave (kind: 'police'/'zeroni'/'lion')
+//                                                          or leave (kind: 'police'/'bride'/'lion')
 //   spot / lost     {id,n,x,z}                            a police truck spotted / lost a camper
 //   down            {id,n,x,z,by}                         knocked down by police or the Bride ("by")
 //   blink/drop/gone {id,n,x,z,front?}                     the Bride teleports near / lets go of / drags off a camper
-//   zspawn          {x,z}                                 the Drowned Bride appears for the night
-//   mon             {trucks,zer,lion}                     periodic (~2s) position/mode snapshot while mobs are out
+//   bridespawn        {x,z}                                 the Drowned Bride appears for the night
+//   mon             {trucks,bride,lion}                     periodic (~2s) position/mode snapshot while mobs are out
 //   lionSpawn       {id,x,z}                               the mountain lion appears (natural window, or the
 //                                                          'lion' console command); id = its first target, if any
 //   lionSpawnCmd    {id,n,x,z}                             host used the 'lion' console command

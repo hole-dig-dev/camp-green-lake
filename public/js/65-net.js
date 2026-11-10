@@ -78,7 +78,7 @@ function onMsg(m){
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
-      monFromServer(m.mon||{trucks:[],zer:null});
+      monFromServer(m.mon||{trucks:[],bride:null});
       // event director state: whether it's running, and any of its events already in progress (twister can't be
       // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;

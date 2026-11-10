@@ -47,10 +47,10 @@ function sneakersFall(){
   if(S.sack.length<sackMax())S.sack.push('sneakers');logEv('sneakers',{});
 }
 /* solo: singing close to the Drowned Bride */
-let zSongSolo=0;
+let brideSongSolo=0;
 function moodSing(){
-  if(online()||!MONL.zer)return;
-  if(Math.hypot(MONL.zer.x-P.x,MONL.zer.z-P.z)<14&&++zSongSolo>=SIM.CURSE.SONG){zSongSolo=0;MONL.zer=null;MONL.appeased=true;MONV.zer=null;monEvent({k:'appeased',by:S.name});soloCurse(-tune('curse.lullaby'),'you sang the Drowned Bride away')}
+  if(online()||!MONL.bride)return;
+  if(Math.hypot(MONL.bride.x-P.x,MONL.bride.z-P.z)<14&&++brideSongSolo>=SIM.CURSE.SONG){brideSongSolo=0;MONL.bride=null;MONL.appeased=true;MONV.bride=null;monEvent({k:'appeased',by:S.name});soloCurse(-tune('curse.lullaby'),'you sang the Drowned Bride away')}
 }
 command('curse',{usage:'curse [0-100]',help:'Show or set the crew\'s bad luck (testing).',
   run([a]){if(a==null)return`Bad luck: ${Math.round(RUN.curse||0)}%.`;const v=numArg(a,0,0,100);if(online())wsSend({t:'runset',curse:v});else{RUN.curse=v;saveRun();moodHud()}return`Bad luck set to ${v}%.`}});

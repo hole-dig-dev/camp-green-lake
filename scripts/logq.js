@@ -139,8 +139,8 @@ function oneLine(r) {
     case 'blink': return `${head}the Bride blinked near ${r.n}${r.front ? ' (right in front!)' : ''}`;
     case 'drop': return `${head}the Bride let go of ${r.n}`;
     case 'gone': return `${head}the Bride dragged ${r.n} off the edge of the lake`;
-    case 'zspawn': return `${head}the Drowned Bride appeared @ (${r.x},${r.z})`;
-    case 'mon': return `${head}trucks=${JSON.stringify(r.trucks)} zer=${JSON.stringify(r.zer)}`;
+    case 'bridespawn': return `${head}the Drowned Bride appeared @ (${r.x},${r.z})`;
+    case 'mon': return `${head}trucks=${JSON.stringify(r.trucks)} bride=${JSON.stringify(r.bride)}`;
     case 'err': return `${head}${r.n} CLIENT ERROR: ${r.msg}${r.src ? ' (' + r.src + ':' + r.line + ')' : ''}`;
     case 'perf': return `${head}${r.n} ${r.fps} fps @ ${r.pr}x — ${r.gpu}${r.sw ? ' [software renderer!]' : ''}`;
     case 'report': return `${head}${r.n} sees: lizards=${(r.liz || []).length} bots=${(r.bots || []).length} players=${(r.rp || []).length} twisters=${(r.tw || []).length}`;

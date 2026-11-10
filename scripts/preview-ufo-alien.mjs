@@ -83,7 +83,7 @@ try{
   const ufo=await placeModel('UFO',{x:at.x,y:5.5,z:at.z});
   const gltf=await new Promise((res,rej)=>new T.GLTFLoader().load('models/AlienHead.glb',res,undefined,rej));
   // The real Bunk D NPC keeps its body, skeleton and game materials.
-  const b=bots.find(b=>b.d.n==='Zero')||bots[1];
+  const b=bots.find(b=>b.d.n==='Zach')||bots[1];
   updateBots=()=>{};b.p.g.visible=true;b.p.g.position.set(at.x,groundAt(at.x,at.z),at.z);b.p.g.rotation.set(0,0,0);
   b.p.mixer.stopAllAction();setClip(b.p,'Idle',0);b.p.mixer.update(.2);
   const m=b.p.model,head=m.getObjectByName('head');

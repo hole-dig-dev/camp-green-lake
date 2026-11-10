@@ -33,7 +33,7 @@ function updatePlayerTent(dt){
   if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);setHp(S.hp+8*dt)}
   else S.water=Math.max(0,S.water-0.15*dt/tune('water.last'));
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
-  if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
+  if(S.zachT>0)S.zachT=Math.max(0,S.zachT-dt);
 }
 function updatePlayer(dt){
   if(S.inTruck&&(S.ko||twSt||tbSt||vSt>=3||lionPinT>0))truckEject(0,2,0);   // something's got you: out of the pickup first (87-truck.js)
@@ -95,7 +95,7 @@ function updatePlayer(dt){
   S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(RUN.mood==='heatwave'?tune('mood.heat'):1)*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
   if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
-  if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
+  if(S.zachT>0)S.zachT=Math.max(0,S.zachT-dt);
 }
 /* first person with a real body (JT: "just drop in the third person animation shown through 1st person"): you look out
    of your own camper's eyes, so digging, the walkie and the tonic are the very same Blender clips friends see. Only

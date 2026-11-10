@@ -1305,10 +1305,10 @@ wss.on('connection', (ws, req) => {
         const now = Date.now(); if (now - (c.emoteAt || 0) < 800) return; c.emoteAt = now;
         if (k === 'tonic' || k === 'medkit' || k === 'dynamite' || k === 'disarm' || k === 'grapple') { broadcast({ t: 'emote', id: c.id, k }, c.id); break } // tools in hand (public/js/88-*.js)
         c.nz = 1; // noisy: draws the Drowned Bride like a shout
-        if (k === 'sing' && MON.zer && Math.hypot(MON.zer.x - c.x, MON.zer.z - c.z) < 14) { // the lullaby, close to her: she fades away for the night
-          MON.zer.song = (MON.zer.song || 0) + 1;
-          if (MON.zer.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
-            const zx = MON.zer.x, zz = MON.zer.z; MON.appeased = true; MON.zer = null;
+        if (k === 'sing' && MON.bride && Math.hypot(MON.bride.x - c.x, MON.bride.z - c.z) < 14) { // the lullaby, close to her: she fades away for the night
+          MON.bride.song = (MON.bride.song || 0) + 1;
+          if (MON.bride.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
+            const zx = MON.bride.x, zz = MON.bride.z; MON.appeased = true; MON.bride = null;
             LOG.log('appeased', { by: c.n }); broadcast({ t: 'mon', ...monSnapshot(), ev: [{ k: 'appeased', x: r1(zx), z: r1(zz), by: c.n }] });
             addCurse(-tuneS('curse.lullaby', 20), `${c.n} sang the Drowned Bride away`);
           }
@@ -1377,7 +1377,7 @@ wss.on('connection', (ws, req) => {
 });
 
 /* ---- shared rules, 10 times a second: heavy loot, night monsters, the new day at curfew, and the event director ---- */
-const MON = { trucks: [], zer: null };
+const MON = { trucks: [], bride: null };
 const dirState = DIRECTOR.createState(); dirState.enabled = world.director.on; // one director for the whole camp; the server is its only authority
 let lastDirInfoT = 0; // throttle for the 'dirinfo' status broadcast (host "events" command reads it)
 const LION = { active: false, armed: true, x: 0, z: 0, h: 0, mode: 'stalk', tgt: null, hp: 0 }; // the one mountain lion; see SIM.stepLion
@@ -1389,7 +1389,7 @@ let lionEvQ = []; // events from message handlers (a shovel swat) waiting for th
 // monsters are gone and keep rendering whatever it saw last.
 function monSnapshot() {
   return {
-    trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), zer: MON.zer ? [r2(MON.zer.x), r2(MON.zer.z), MON.zer.tgt, MON.zer.drag] : null,
+    trucks: MON.trucks.map(k => [r2(k.x), r2(k.z), r2(k.h), k.mode === 'chase' ? 1 : 0]), bride: MON.bride ? [r2(MON.bride.x), r2(MON.bride.z), MON.bride.tgt, MON.bride.drag] : null,
     // [x,z,h,modeIndex,targetId,hp] -- modeIndex indexes SIM.LION_MODES; hp is sent raw (0..SIM.LION_HP) so the
     // client doesn't need to duplicate that constant just to draw a bar or gate a sound.
     lion: LION.active ? [r2(LION.x), r2(LION.z), r2(LION.h), Math.max(0, SIM.LION_MODES.indexOf(LION.mode)), LION.tgt, Math.round(LION.hp)] : null,
@@ -1457,7 +1457,7 @@ function tickJavelinas(t, dt, players) {
   javOn = on;
 }
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
-let policeOn = false, zerOn = false, lionOn = false, lastMonLogT = 0;
+let policeOn = false, brideOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
   const cab = [TRUCK.seats.drive, TRUCK.seats.shotgun];   // inside Foreman Dutch's pickup's cab (87-truck.js): out of reach too
   return joined().filter(c => !c.town && !cab.includes(c.id)).map(c => ({   // campers down in the buried town (89-town.js) are out of reach of the lake
@@ -1514,7 +1514,7 @@ setInterval(() => {
   for (const id in world.props) { const p = world.props[id]; if (p.owner != null && !clients.has(p.owner)) { p.owner = null; p.grab = (p.grab || []).filter(g => clients.has(g)); } }
   // monsters
   const ev = [];
-  if ((world.zone || 'lake') === 'lake' && hazOnS('night')) SIM.stepMonsters(MON, players, t, dt, ev, { mood: world.run.mood }); else { MON.trucks = []; MON.zer = null; } // police and the Bride are the lake's (88-zones.js)
+  if ((world.zone || 'lake') === 'lake' && hazOnS('night')) SIM.stepMonsters(MON, players, t, dt, ev, { mood: world.run.mood }); else { MON.trucks = []; MON.bride = null; } // police and the Bride are the lake's (88-zones.js)
   if (lionEvQ.length) { ev.push(...lionEvQ); lionEvQ.length = 0; } // shovel swats reported since the last tick (see the 'swat' case)
   LION.noNatural = dirState.enabled || !hazOnS('lion'); if (!hazOnS('lion')) LION.active = false; // ditto for the lion's own pre-curfew window
   SIM.stepLion(LION, players, t, dt, ev);
@@ -1525,18 +1525,18 @@ setInterval(() => {
     if (e.by) fields.by = e.by;
     if (e.front !== undefined) fields.front = e.front;
     if (e.why !== undefined) fields.why = e.why;
-    if (e.k === 'zspawn' && MON.zer) { fields.x = r1(MON.zer.x); fields.z = r1(MON.zer.z); }
+    if (e.k === 'bridespawn' && MON.bride) { fields.x = r1(MON.bride.x); fields.z = r1(MON.bride.z); }
     if ((e.k === 'lionSpawn' || e.k === 'pounce') && LION.active) { fields.x = r1(LION.x); fields.z = r1(LION.z); }
     LOG.log(e.k, fields);
   }
-  const policeNow = MON.trucks.length > 0, zerNow = !!MON.zer, lionNow = LION.active;
+  const policeNow = MON.trucks.length > 0, brideNow = !!MON.bride, lionNow = LION.active;
   if (policeNow !== policeOn) { LOG.log(policeNow ? 'mobsOn' : 'mobsOff', { kind: 'police' }); policeOn = policeNow; }
-  if (zerNow !== zerOn) { LOG.log(zerNow ? 'mobsOn' : 'mobsOff', { kind: 'zeroni' }); zerOn = zerNow; }
+  if (brideNow !== brideOn) { LOG.log(brideNow ? 'mobsOn' : 'mobsOff', { kind: 'bride' }); brideOn = brideNow; }
   if (lionNow !== lionOn) { LOG.log(lionNow ? 'mobsOn' : 'mobsOff', { kind: 'lion' }); lionOn = lionNow; }
-  const on = policeNow || zerNow || lionNow;
+  const on = policeNow || brideNow || lionNow;
   if (on && now - lastMonLogT >= 2000) {
     lastMonLogT = now;
-    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), zer: MON.zer ? { x: r2(MON.zer.x), z: r2(MON.zer.z), tgt: MON.zer.tgt, drag: MON.zer.drag } : null, lion: LION.active ? { x: r2(LION.x), z: r2(LION.z), mode: LION.mode, tgt: LION.tgt, hp: Math.round(LION.hp) } : null });
+    LOG.log('mon', { trucks: MON.trucks.map(k => ({ x: r2(k.x), z: r2(k.z), mode: k.mode })), bride: MON.bride ? { x: r2(MON.bride.x), z: r2(MON.bride.z), tgt: MON.bride.tgt, drag: MON.bride.drag } : null, lion: LION.active ? { x: r2(LION.x), z: r2(LION.z), mode: LION.mode, tgt: LION.tgt, hp: Math.round(LION.hp) } : null });
   }
   if (on || monOn) broadcast({ t: 'mon', ...monSnapshot(), ev });
   monOn = on;

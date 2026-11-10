@@ -34,7 +34,7 @@ function updateHUD(){
   let curWarn=false;
   {const t=clockT();hc.clock.textContent=clockText();
    if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Lights-out in';hc.cur.textContent=fmtT(left);curWarn=left<60}
-   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'THE BRIDE!':'Lights out';curWarn=!!CUR.hunter}
+   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='bride'?'THE BRIDE!':'Lights out';curWarn=!!CUR.hunter}
    hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
   {const pc=v=>(v/HP_MAX*100).toFixed(1)+'%',st=Math.min(S.stam,S.hp);hq.stam.style.width=pc(st);hq.room.style.width=pc(S.hp-st);
@@ -53,7 +53,7 @@ function updateHUD(){
   hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
   const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} gold`:(S.hasKB?'Gold tube':'empty');
   hw.battRow.hidden=!(S.light||S.batt<30);
-  const tools=[!S.up.shovel?'Bare hands':S.up.spade?'Spade':'Camp shovel',!S.up.shovel?'1.5 ft reach':S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'LM card case':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zach is helping':'');
+  const tools=[!S.up.shovel?'Bare hands':S.up.spade?'Spade':'Camp shovel',!S.up.shovel?'1.5 ft reach':S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'LM card case':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zachT>0?'|Zach is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
     const label=t==='onion'?'Bitterroot breath':t,icon=TOOL_ICON[t];
     const s=document.createElement('span');s.setAttribute('title',label);
@@ -170,7 +170,7 @@ function drawMapEdgeIndicators(W,night){
   let bestThreat=null,bestThreatD=Infinity;
   for(const tk of trucks)if(tk.active){const d=(tk.x-mcx)**2+(tk.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tk.x,z:tk.z,color:'#d12a2a'}}}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const d=(tw.x-mcx)**2+(tw.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tw.x,z:tw.z,color:'#5a4a3a'}}}
-  if(ZER.active){const d=(ZER.x-mcx)**2+(ZER.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:ZER.x,z:ZER.z,color:'#3aa53a'}}}
+  if(BRIDE.active){const d=(BRIDE.x-mcx)**2+(BRIDE.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:BRIDE.x,z:BRIDE.z,color:'#3aa53a'}}}
   if(bestThreat)cands.push({kind:'threat',...bestThreat});
   if(S.revealed)cands.push({kind:'objective',x:SEARCH.x,z:SEARCH.z,color:night?'#ff6a5a':'#d12a2a',dist:true});
   else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Superintendent, never the case's real spot
@@ -269,7 +269,7 @@ function drawMap(){
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
-  if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
+  if(BRIDE.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(BRIDE.x),wz(BRIDE.z),7,0,6.3);mx.fill()}
   /* lizards: only within 25 m of the player (48 exist across the whole lake bed -- drawing them all
      would clutter the map and reveal distant threats), small yellow hazard triangles */
   if(S.started)for(const L of lizards){const dx=L.x-P.x,dz=L.z-P.z;if(dx*dx+dz*dz>625)continue;

@@ -79,7 +79,7 @@ try{
         case 'haboob':hbSound(1);hbWind.gain.value=0.5;reset=()=>hbWind.gain.value=0;break;
         case 'landslide':lsSound(1);lsRumbleNode.gain.value=0.55;reset=()=>lsRumbleNode.gain.value=0;break;
         case 'sinkhole':sinkSound(1);sinkRumbleNode.gain.value=0.6;reset=()=>sinkRumbleNode.gain.value=0;break;
-        case 'zeroni-drone':loops();LOOP.drone.gain.value=0.16;LOOP.whisper.gain.value=0.05;reset=()=>{LOOP.drone.gain.value=0;LOOP.whisper.gain.value=0};break;
+        case 'bride-drone':loops();LOOP.drone.gain.value=0.16;LOOP.whisper.gain.value=0.05;reset=()=>{LOOP.drone.gain.value=0;LOOP.whisper.gain.value=0};break;
         case 'disco':startMusic();reset=()=>stopMusic();break;
         case 'find':sfx.find();break;
         case 'gold':sfx.gold();break;
@@ -102,7 +102,7 @@ try{
         case 'curfew':siren();break;
         case 'patrol-arrival':tone(200,1.2,'sawtooth',0.08,120);break;
         case 'spot':tone(900,0.4,'square',0.06,1400);setTimeout(()=>tone(900,0.4,'square',0.06,1400),450);break;
-        case 'zeroni-sting':zeroniSting();break;
+        case 'bride-sting':brideSting();break;
         case 'jumpscare':jumpScare();break;
         case 'cards':cardSnd();break;
         case 'flashlight':tone(1800,0.05,'square',0.05);break;
@@ -153,8 +153,8 @@ try{
     ['Lizard hiss','hiss',1.2],['Lizard bite','bite',1.2],
   ])await capture('Hazards and wildlife',label,kind,seconds);
   for(const [label,kind,seconds] of [
-    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Bride drone and whisper','zeroni-drone',3.3],
-    ['Bride sting','zeroni-sting',2.8],['Jumpscare','jumpscare',1.4],
+    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Bride drone and whisper','bride-drone',3.3],
+    ['Bride sting','bride-sting',2.8],['Jumpscare','jumpscare',1.4],
   ])await capture('Night and patrol',label,kind,seconds);
   for(const [label,kind,seconds] of [
     ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Seeds or coin','coin',1.1],

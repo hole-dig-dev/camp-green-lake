@@ -185,7 +185,7 @@
   }
 
   /* ---- monsters: police trucks until 01:00, then the Drowned Bride until dawn ---- */
-  // M: {trucks:[], zer:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
+  // M: {trucks:[], bride:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
   /* ---- the night patrol: four police officers on foot with flashlights (JT, 2026-09-27: no more cop cars, which
      only appeared around whoever was outside and "just teleport in") ----
      At curfew they walk out of the main gate one by one, then patrol a loop around the camp just outside the watchtower
@@ -209,7 +209,7 @@
   function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
   function stepMonsters(M, players, t, dt, ev, opt) {
     const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: the Bride all night, no police
-    const night = t >= DAYMS, half = fm ? 'zeroni' : t < NIGHT_SPLIT ? 'police' : 'zeroni';
+    const night = t >= DAYMS, half = fm ? 'bride' : t < NIGHT_SPLIT ? 'police' : 'bride';
     if (!night) M.appeased = false;   // sung away: gone until the next night
     const outs = players.filter(p => !inCamp(p.x, p.z));
     if (night && !fm) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
@@ -221,10 +221,10 @@
     for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
     M.trucks = M.trucks.filter(c => !c.gone);
     // the Drowned Bride: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
-    if (!(night && half === 'zeroni' && outs.length) || M.appeased) M.zer = null;
+    if (!(night && half === 'bride' && outs.length) || M.appeased) M.bride = null;
     else {
-      if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
-      stepZeroni(M.zer, outs, t, dt, ev);
+      if (!M.bride) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.bride = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.bride, p, 45, false); ev.push({ k: 'bridespawn' }); }
+      stepBride(M.bride, outs, t, dt, ev);
     }
   }
   function nearest(list, x, z) { let b = null, bd = 1e9; for (const p of list) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b; }
@@ -276,7 +276,7 @@
     }
     return false;
   }
-  function stepZeroni(z, outs, t, dt, ev) {
+  function stepBride(z, outs, t, dt, ev) {
     // dragging someone off toward the edge of the lake; a friend reviving them makes her let go
     if (z.drag != null) {
       const v = outs.find(p => p.id === z.drag);
@@ -301,7 +301,7 @@
     const nx = z.x + dx / d * 5.4 * dt, nz = z.z + dz / d * 5.4 * dt;
     if (!inCamp(nx, nz)) { z.x = nx; z.z = nz; }
     z.talk -= dt; if (z.talk <= 0) { z.talk = 6.5 + Math.random() * 2.5; ev.push({ k: 'talk' }); }
-    if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
+    if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'bride' }); z.drag = tgt.id; }
   }
 
   /* ---- javelina herd: a swarm event out on the lake. Self-contained (doesn't touch MON/stepMonsters above) so it

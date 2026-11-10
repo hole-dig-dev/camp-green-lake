@@ -37,7 +37,7 @@ function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.e
    is the server's: it starts the new run at 0, so it isn't wiped here.) */
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();brideSting(0.8);
   Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
@@ -102,11 +102,11 @@ function downed(dt){
   if(othersOnline()&&stepMyBody(dt)){fine.textContent=S.inCart!=null?'You\'re in the wheelbarrow. Hang on.':'Your crew has hold of you. Get carried inside the fence and you\'re back up.';me.g.position.set(P.x,P.y,P.z);return}
   if(othersOnline()){fine.textContent=`Downed. ${Math.ceil(S.ko)}s left for a friend to pick you up (they hold F next to you). You can crawl.`;
     let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0),iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
-    const dragged=MONV.zer&&MONV.zer.drag===myId();
+    const dragged=MONV.bride&&MONV.bride.drag===myId();
     if((ix||iz)&&!dragged&&!uiOpen()){const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz)||1,sp=myLevel()>=12?1.4:0.8;
       P.x=clamp(P.x+mx/ml*sp*dt,-HALF+3,HALF-3);P.z=clamp(P.z+mz/ml*sp*dt,-HALF+3,HALF-3);P.fa=Math.atan2(mx,mz)}
     P.y=groundAt(P.x,P.z);me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=P.fa;
-  }else{fine.textContent='Waking up in the nurse\'s office…';if(MONV.zer&&MONV.zer.drag===myId())me.g.position.set(P.x,P.y,P.z)}
+  }else{fine.textContent='Waking up in the nurse\'s office…';if(MONV.bride&&MONV.bride.drag===myId())me.g.position.set(P.x,P.y,P.z)}
 }
 
 /* ---- pings (G) and proximity chat (Enter) ---- */

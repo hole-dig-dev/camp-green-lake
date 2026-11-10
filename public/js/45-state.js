@@ -106,7 +106,7 @@ function scoop(){
     if(now-lastWarn>3000){lastWarn=now;if(!S.up.shovel)toast('That\'s as deep as you can dig with your hands. A camp shovel from the Company Store (25 gold) goes to 5 feet.');else if(maxD<EIGHT_FT)toast('That\'s 5 feet, as deep as your shovel reaches. A long-handled shovel from the Company Store goes to 8 feet.');else toast('8 feet. Your shovel won\'t go any deeper.')}
     sfx.thud();return;
   }
-  const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
+  const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zachT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
   const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0,SIM.payMult(h.x,h.z,h.d));payDug(h);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
   if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)*fleckMult(h.x,h.z)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
