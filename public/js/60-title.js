@@ -5,7 +5,7 @@ const NICKS=['Caveman','Sploosh','Big Thumb','Onion Boy','Lizard Bait','Seeds','
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['bucket','hopper','pipe','dynamite','scarecrow','soda','water','sack','onions','tonic','medkit','up','hasKB','reported','holesDone','name','color','detOn','batt'];   /* no 'seeds': gold is the crew wallet's (84-wallet.js) */
+const SAVE_KEYS=['bucketRich','hopperRich','samples','bucket','hopper','pipe','dynamite','scarecrow','soda','water','sack','onions','tonic','medkit','up','hasKB','reported','holesDone','name','color','detOn','batt'];   /* no 'seeds': gold is the crew wallet's (84-wallet.js) */
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch,room:S.tent}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasKB=false;o.S.reported=false}
@@ -18,6 +18,7 @@ function startGame(resume){
   if(S.started)return;
   if(resume&&resume.S){
     const r=resume.S;S.resumed=true;
+    S.bucketRich=num(r.bucketRich,0.1,9,1);S.hopperRich=num(r.hopperRich,0.1,9,1);S.samples=Array.isArray(r.samples)?r.samples.filter(q=>Array.isArray(q)&&q.length===3&&q.every(Number.isFinite)).slice(-PAY_SAMPLES):[];   /* pay dirt (48-paydirt.js) */
     S.bucket=num(r.bucket,0,20,0);S.hopper=num(r.hopper,0,120,0);S.pipe=num(r.pipe,0,999,0)|0;S.dynamite=num(r.dynamite,0,99,0)|0;S.scarecrow=num(r.scarecrow,0,99,0)|0;S.soda=num(r.soda,0,99,0)|0;S.water=num(r.water,0,180,100);S.onions=num(r.onions,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
     S.up={pan:true};if(r.up&&typeof r.up==='object')for(const k of ['shovel','pan','bucket','spade','long','detector','canteen','canteen3','bucket2','bucket3','hopper','hopper2','hopper3','disarm','dog','grav','grapple','goldShovel','hover','hoverShoes','bigsack','rope','walkie'])if(r.up[k])S.up[k]=true;if(S.up.long||S.up.spade||S.up.goldShovel)S.up.shovel=true;   /* an upgrade without the shovel it upgrades (old god mode): dig with it */
@@ -41,7 +42,7 @@ function startGame(resume){
   lockMouse();
   if(S.resumed){toast('Welcome back to camp. Your progress was saved.','good',3500)}
   else{setTimeout(()=>say(clerkL,'There\'s gold in that lake bed. Fill your bucket and bring it to the sifter.',6000),800);
-  setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig. Every scoop fills your bucket with sand; sift it at camp for gold.','',6500),1500)}
+  setTimeout(()=>toast('Walk out onto the lake bed and hold click to dig. Every scoop fills your bucket with sand; sift it at camp for gold. An old creek bed runs across the lake just past the gate: the gold settled along creeks like it.','',6500),1500)}
   sendJoin();
 }
 const campIn=$('#campPass'),campWrap=$('#campWrap'),campErr=$('#campErr'),startBtn=$('#startBtn');

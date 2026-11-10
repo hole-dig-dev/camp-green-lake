@@ -122,13 +122,14 @@ function pipeDump(leaf){
   if(S.bucket<0.05){toast(`Your ${backsackOn()?'backsack':'bucket'}'s empty. Dig, then dump it here: it goes down the pipe to the sifter.`,'',3200);return}
   const cracked=pipeChain(leaf).filter(c=>PIPE.broken[c]);
   if(cracked.length){toast(`The pipe's cracked ${Math.round(pipeOut(leaf)-pipeOut(cracked[0])+2.5)} m back toward camp. Fix it first: hold F on the crack.`,'bad',4000);return}
-  const holes=S.bucket;S.bucket=0;sfx.scoop();pipeSlug(true,holes,leaf);if(online())wsSend({t:'pipeFlow',leaf});
+  const holes=S.bucket;PIPE_PAY=sandRich('bucket');payAssay(PIPE_PAY,true);sandReset('bucket');S.bucket=0;sfx.scoop();pipeSlug(true,holes,leaf);if(online())wsSend({t:'pipeFlow',leaf});
   toast(`Down the pipe it goes: ${Math.round(holes*10)/10} holes of sand to the sifter.`,'good',3000);logEv('pipeDump',{holes:+holes.toFixed(2),leaf});
 }
+let PIPE_PAY=1;   // how rich the sand last sent down the pipe was (48-paydirt.js)
 function pipeArrive(holes){
   let rest=holes;const cap=hopperCap();
-  if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));S.hopper+=put;rest-=put}
-  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
+  if(cap){const put=Math.min(rest,Math.max(0,cap-S.hopper));sandMix('hopper',put,PIPE_PAY);S.hopper+=put;rest-=put}
+  if(rest>0.01){const r=SIM.siftGold(rest,Math.random,tune('gold.perHole')*goldScale()*PIPE_PAY,RUN.mood==='digday'?2:1);S.seeds+=r.gold;foundGold(r.gold);addXP(3+r.gold/3);r.nugget?sfx.gold():sfx.coin();
     toast(`Your sand came through the pipeline: the sifter shakes ${r.gold} gold out of it.`+(holes-rest>0.01?` (${Math.round((holes-rest)*10)/10} holes went in your hopper.)`:''),r.nugget?'gold':'good',3800)}
   else toast(`Your sand came through the pipeline into your hopper (${Math.floor(S.hopper)}/${cap}).`,'good',3000);
   logEv('pipeArrive',{holes:+holes.toFixed(2)});

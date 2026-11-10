@@ -277,6 +277,7 @@ function drawMap(){
   mx.fillStyle='#5a4632';for(const j of JAVV)if(j[3]!==2){mx.beginPath();mx.arc(wx(j[0]),wz(j[1]),2.4,0,6.3);mx.fill()}   // javelina herd (server-run, see 83-javelinas.js)
   if(S.started){mx.save();mx.translate(wx(P.x),wz(P.z));mx.rotate(-P.fa+Math.PI);mx.fillStyle='#e8742a';mx.strokeStyle='#2b1d12';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-10);mx.lineTo(7,8);mx.lineTo(-7,8);mx.closePath();mx.fill();mx.stroke();mx.restore()}
   veinMap(mx,wx,wz,ws);   /* a rich vein (88-vein.js) */
+  payMap(mx,wx,wz);       /* your assay samples (48-paydirt.js) */
   drawMapEdgeIndicators(W,night);
 }
 

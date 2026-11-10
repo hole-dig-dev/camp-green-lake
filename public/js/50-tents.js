@@ -68,6 +68,9 @@ const SHOP=[
   {id:'goldShovel',name:'Gold-plated shovel',desc:'Pure flex. Your shovel\'s steel goes polished gold, and everyone can see it.',cost:500,cat:'dig',icon:'shovel',needs:'shovel'},
   {id:'soda',name:'Soda',desc:'For the crew: talk to a crew member (F) and hand him one. +45 morale, drunk on the spot. Buy a few.',cost:15,stack:'soda',cat:'supplies',icon:'onion'},
   {id:'sodaMachine',name:'Soda vending machine',desc:'For the whole camp, by the water drums: a fed-up crew member takes himself off for a soda break and comes back at full morale. Stock it: F at the machine loads your sodas, or 5 at a time from the crew wallet (15 each). Each break takes one.',cost:300,cat:'camp',camp:true,icon:'bucket'},
+  {id:'washRocker',name:'Rocker box',desc:'For the whole camp: a cradle that rocks the sand over riffles. The bare sifter and the pan lose a quarter of the gold in your sand; the rocker keeps 88% of it. Every sift pays about 17% more.',cost:600,cat:'camp',camp:true,icon:'bucket'},
+  {id:'washSluice',name:'Long tom & sluice',desc:'For the whole camp: twelve feet of riffled trough behind the sifter. Keeps all the gold a rocker can see: every sift pays about 14% more than the rocker.',cost:2200,cat:'camp',camp:true,campNeeds:'washRocker',icon:'bucket'},
+  {id:'washPlant',name:'Trommel wash plant',desc:'For the whole camp: a rattling drum that gets the fine gold too. Every sift pays 18% more than the sluice. The Warden will want to know where you got the money.',cost:6500,cat:'camp',camp:true,campNeeds:'washSluice',icon:'bucket'},
   {id:'goldScale',name:'Gold scale',desc:'For the whole camp: a proper brass scale by the sifter. +10% gold from every sift (yours, the crew\'s, the pan, the hopper, the pipeline). Pendanski was shorting you.',cost:150,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipeTee',name:'Pipe tee fittings',desc:'For the whole camp: branch the sand pipeline. F at any joint (or the sifter) starts a new line with its own intake.',cost:120,cat:'camp',camp:true,icon:'bucket'},
   {id:'pipePump',name:'Booster pump',desc:'For the whole camp: a pump on the pipeline. Sand rides it 2.5 times faster.',cost:200,cat:'camp',camp:true,icon:'bucket'},
@@ -120,6 +123,7 @@ function shopStatus(it){
   if(it.id==='battery'&&S.batt>=100)return{kind:'full'};
   if(it.camp&&campHas(it.id))return{kind:'owned'};   /* a camp upgrade (84-camp.js): the crew's */
   if(!it.stack&&(S.up[it.id]||SHOP.some(o=>o.needs===it.id&&S.up[o.id])))return{kind:'owned'};   // a tier 2 you've traded up from counts as owned
+  if(it.campNeeds&&!campHas(it.campNeeds))return{kind:'locked',need:SHOP.find(o=>o.id===it.campNeeds).name};   /* a camp upgrade that needs the one before it (the washers) */
   if(it.needs&&!S.up[it.needs])return{kind:'locked',need:SHOP.find(o=>o.id===it.needs).name};
   if(S.seeds<it.cost)return{kind:'short',need:it.cost-S.seeds};
   return{kind:'available'};

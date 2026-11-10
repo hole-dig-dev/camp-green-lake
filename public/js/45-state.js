@@ -45,9 +45,10 @@ function bucketMax(){if(S.up.bucket&&backsackOn())return BACKSACK_HOLES[myBackTi
 const carrier=()=>S.up.bucket||S.up.bucket2||S.up.bucket3?'bucket':S.up.pan?'pan':null;
 let noCarrierT=0;
 let bucketWarnT=0;
-function fillBucket(dd){   // dd: metres you just dug; a 5 ft hole is one hole of sand
+function fillBucket(dd,mult){   // dd: metres you just dug; a 5 ft hole is one hole of sand. mult: how rich this sand is (sim.js payMult; 48-paydirt.js mixes it in)
   if(!(dd>0))return;const was=S.bucket,max=bucketMax(),c=carrier();
   if(!c){const now=performance.now();if(now-noCarrierT>25000){noCarrierT=now;toast('That sand\'s just going on the pile. A gold pan from the Supply Depot (10 gold) lets you take it to the water drums and wash it for gold.','',5500)}return}
+  if(c)sandMix('bucket',Math.min(max-S.bucket,dd/FIVE_FT),mult);   /* what fits goes in at its own richness (48-paydirt.js) */
   S.bucket=Math.min(max,S.bucket+dd/FIVE_FT);
   if(S.bucket>=max-1e-6&&was<max-1e-6){sfx.coin();toast(c==='pan'?'Your pan\'s full. Wash it at the water drums (F).':`Your bucket's full (${max} holes of sand). Take it back to the sifter in camp.`,'gold',5000)}
   else if(S.bucket>=max-1e-6){const now=performance.now();if(now-bucketWarnT>9000){bucketWarnT=now;toast(c==='pan'?'Your pan\'s full. Wash it at the water drums.':'Your bucket\'s full. The sand\'s just going on the pile. Sift it at camp.','',3000)}}
@@ -106,8 +107,8 @@ function scoop(){
     sfx.thud();return;
   }
   const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zeroT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
-  const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
-  if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
+  const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0,SIM.payMult(h.x,h.z,h.d));payDug(h);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
+  if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)*fleckMult(h.x,h.z)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
   const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,FP?2:6);sfx.scoop();throwClods(h,2);   // clods arc onto the spoil pile (46-holes.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'caveman');toast(`Hole #${S.holesDone} finished. Bucket: ${Math.floor(S.bucket*10)/10} of ${bucketMax()} holes of sand.`,'good');sfx.thud()}
@@ -147,9 +148,9 @@ function foundItem(it,h){
 let panBusy=false;
 function washPan(){   // the gold pan (no bucket yet): wash your sand at the drums
   if(panBusy||gfxBusy())return;const holes=S.bucket;panBusy=true;
-  const r=SIM.siftGold(holes,Math.random,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);   // what's in it is decided now; the pan shows it (89-goldfx.js)
+  const pm=sandRich('bucket'),r=SIM.siftGold(holes,Math.random,tune('gold.perHole')*goldScale()*pm,RUN.mood==='digday'?2:1);   // what's in it is decided now; the pan shows it (89-goldfx.js)
   const pay=()=>{panBusy=false;S.bucket=0;S.seeds+=r.gold;foundGold(r.gold);addXP(4+r.gold/2);
-    if(r.nugget||r.luck>1.4)sfx.gold();else sfx.coin();toast(`${r.nugget?'A NUGGET in the pan! ':''}You wash ${r.gold} gold out of your pan.`,r.nugget?'gold':'good',3800);logEv('pan',{holes:+holes.toFixed(2),gold:r.gold})};
+    if(r.nugget||r.luck>1.4)sfx.gold();else sfx.coin();toast(`${r.nugget?'A NUGGET in the pan! ':''}You wash ${r.gold} gold out of your pan. ${payAssay(pm)}`,r.nugget||pm>=SIM.PAY.cuts[2]?'gold':'good',4600);logEv('pan',{holes:+holes.toFixed(2),gold:r.gold,pay:+pm.toFixed(2)});sandReset('bucket')};
   if(!gfxStart('pan',{gold:r.gold},pay))pay();
 }
 function fillCanteen(){
@@ -164,13 +165,13 @@ function siftBucket(){
   if(carrier()!=='bucket'){toast(carrier()==='pan'?'The sifter takes a bucket of sand. Wash your pan at the water drums instead.':'You need a bucket to bring sand to the sifter. Start with a gold pan from the Supply Depot.','',4000);return}
   if(S.bucket<0.05){toast('Your bucket\'s empty. Go dig: every scoop of a hole fills it with sand.','',3200);return}
   if(gfxBusy())return;const holes=S.bucket;siftBusy=true;sfx.scoop();
-  const r=SIM.siftGold(holes,Math.random,tune('gold.perHole')*goldScale(),RUN.mood==='digday'?2:1);
+  const pm=sandRich('bucket'),r=SIM.siftGold(holes,Math.random,tune('gold.perHole')*goldScale()*pm,RUN.mood==='digday'?2:1);
   const go=()=>{   // after the bucket's gone through (89-goldfx.js)
     siftBusy=false;S.bucket=0;
     S.seeds+=r.gold;foundGold(r.gold);addXP(5+r.gold/2);
     const how=r.nugget?'A NUGGET! ':r.luck>1.4?'A rich batch! ':r.luck<0.7?'Thin sand. ':'';
     if(r.nugget||r.luck>1.4){sfx.gold()}else sfx.coin();
-    toast(`${how}The sifter shakes ${r.gold} gold out of ${Math.round(holes*10)/10} holes of sand.`,r.nugget||r.luck>1.4?'gold':'good',4200);
+    toast(`${how}The sifter shakes ${r.gold} gold out of ${Math.round(holes*10)/10} holes of sand. ${payAssay(pm)}`,r.nugget||r.luck>1.4||pm>=SIM.PAY.cuts[2]?'gold':'good',4800);sandReset('bucket');
     logEv('sift',{holes:+holes.toFixed(2),gold:r.gold,luck:+r.luck.toFixed(2),nugget:r.nugget});
   };
   if(!gfxStart('sift',{holes,gold:r.gold},go))go();
