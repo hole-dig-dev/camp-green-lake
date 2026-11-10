@@ -48,7 +48,7 @@ async function freePort() {
       scene.add(board); board.updateMatrixWorld(true);
       const bounds = new T.Box3().setFromObject(board), size = bounds.getSize(new T.Vector3());
       const title = ['MOST GOLD FOUND', 'MOST TIMES THROWN', 'LEAST VALUABLE PERSON', 'BIG SPENDER'];
-      const people = [me, bots[1].p, bots[2].p, sir];
+      const people = [me, bots[1].p, bots[2].p, dutch];
       const names = ['Gold Digger', bots[1].d.n, bots[2].d.n, 'Dutch'];
       const colors = ['#e73535', '#26d447', '#2764e8', '#f4dc26'];
       // Portraits capture the actual game avatars and their current visible outfit.

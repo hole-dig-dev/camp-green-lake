@@ -7,7 +7,7 @@ function compass(dx,dz){const a=Math.atan2(dx,-dz);const i=((Math.round(a/(Math.
 function stepsTo(d){return Math.max(2,Math.round(d/0.8))}
 function hintNear(kinds,maxD){let best=null,bd=maxD;for(const it of items){if(it.found||!kinds.includes(it.type))continue;const d=Math.hypot(it.x-P.x,it.z-P.z);if(d<bd){bd=d;best=it}}return best}
 function uiOpen(){return (typeof WARD!=='undefined'&&WARD.open)||shopOpen||invOpen||DLG.open||BJ.open||chatOpen()||consoleOpen()||tuneOpen()||!$('#fired').hidden||PAUSE.open||fieldMapOpen}
-function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='warden'?wardenNode(true):botNode(bot,true))}
+function openDialog(who,bot){DLG.open=true;DLG.who=who;DLG.bot=bot||null;digHeld=false;releaseLock();$('#dlg').hidden=false;showNode(who==='supt'?suptNode(true):botNode(bot,true))}
 function closeDialog(){DLG.open=false;DLG.bot=null;$('#dlg').hidden=true;relockSoon()}
 function showNode(node){
   $('#dlgName').textContent=node.name;$('#dlgText').textContent=node.text;
@@ -23,8 +23,8 @@ function reportKB(){
   toast('+100 gold. The Superintendent planted red flags around the search area. Check your map.','gold',7000);
   if(!S.up.long)setTimeout(()=>toast('Lil sank it deep. You\'ll need the long-handled shovel to dig past 5 feet.','',6000),2500);
 }
-function wardenNode(first){
-  const back=()=>wardenNode(false),opts=[];
+function suptNode(first){
+  const back=()=>suptNode(false),opts=[];
   opts.push({label:'How much is in the crew wallet?',go:()=>reply('The Superintendent',`${RUN.bank} gold. Everyone's gold: whatever any of you finds goes in, whatever any of you buys comes out, and the Company takes its cut at lights-out. Not for candy.`,back)});   // one crew wallet (84-wallet.js): nothing to deposit
   if(S.hasKB&&!S.reported)opts.push({label:'I found a gold card case engraved LM.',go:()=>{reportKB();return reply('The Superintendent','Well, well. Lil Marlow\'s. Where did you... never mind. Dig inside my red flags. Nobody clocks out until you find it.',back)}});
   opts.push({label:'Where should I dig?',go:()=>reply('The Superintendent',S.revealed?(S.up.long?'Inside my flags. Did I stutter?':'Inside my flags. And it\'s deep, sugar. Buy a longer shovel.'):'Anywhere past the white line. Anything engraved comes straight to me. It\'s in your contract.',back)});
@@ -148,7 +148,7 @@ for(const c of document.querySelectorAll('.chip'))c.onclick=()=>{BJ.bet=c.datase
 $('#bjDeal').onclick=bjDeal;$('#bjHit').onclick=bjHit;$('#bjStand').onclick=bjStand;$('#bjDouble').onclick=bjDouble;$('#bjLeave').onclick=closeCards;
 
 /* ---------- easter egg: type D-I-S-C-O and the whole camp throws you a dance party ---------- */
-const PARTY={on:false,until:0,t:0,targetId:null,name:'',talkT:0,homeSir:sir.g.position.clone(),homeWarden:warden.g.position.clone(),homeSirR:sir.g.rotation.y,homeWardenR:warden.g.rotation.y};
+const PARTY={on:false,until:0,t:0,targetId:null,name:'',talkT:0,homeDutch:dutch.g.position.clone(),homeSupt:supt.g.position.clone(),homeDutchR:dutch.g.rotation.y,homeSuptR:supt.g.rotation.y};
 const BPM=124;
 const WHITE=new T.Color(1,1,1),DUSK=new T.Color(0.2,0.16,0.3),DISCO_FOG=new T.Color(0x241433);
 const discoRig=new T.Group();scene.add(discoRig);
@@ -205,8 +205,8 @@ function startParty(id,name,dur){
   const tp=partyTarget();if(tp)discoRig.position.set(tp.x,tp.y,tp.z);
   const ban=$('#partyBanner');ban.textContent='Dance party for '+name;ban.hidden=false;
   startMusic();
-  say(sirL,"Shovels down. Tonight this is a DISCO.",5000);
-  say(wardenL,'Nobody digs until this song is over. Dance for '+name+'.',5000);
+  say(dutchL,"Shovels down. Tonight this is a DISCO.",5000);
+  say(suptL,'Nobody digs until this song is over. Dance for '+name+'.',5000);
   if(id===net.id)toast("The whole camp is throwing you a dance party. Run if you want. They'll follow you.",'gold',6000);
   else toast('Surprise dance party for '+name+'!','gold',4000);
 }
@@ -234,7 +234,7 @@ function updateParty(dt,now){
     sun.intensity=lerp(sun.intensity,tS,k);hemi.intensity=lerp(hemi.intensity,tH,k);
     SKY_T.copy(WHITE).lerp(NIGHT_SKY,nf);sky.material.color.lerp(SKY_T,k);if(!S.won){FOG_T.copy(FOG_DAY).lerp(NIGHT_FOG,nf);scene.fog.color.lerp(FOG_T,k)}
     sunDisc.visible=nf<0.6;stars.material.opacity=nf*0.9;
-    for(const[p,home,ry]of[[sir,PARTY.homeSir,PARTY.homeSirR],[warden,PARTY.homeWarden,PARTY.homeWardenR]]){
+    for(const[p,home,ry]of[[dutch,PARTY.homeDutch,PARTY.homeDutchR],[supt,PARTY.homeSupt,PARTY.homeSuptR]]){
       const d=stepTo(p.g,home.x,home.z,dt,3.5);p.g.position.y=d<0.3?home.y:groundAt(p.g.position.x,p.g.position.z);
       if(d>0.05){p.g.rotation.y=Math.atan2(home.x-p.g.position.x,home.z-p.g.position.z);animPerson(p,1,dt)}else{p.g.rotation.y=ry;animPerson(p,0,dt)}
     }
@@ -252,7 +252,7 @@ function updateParty(dt,now){
   /* the Bunk D crew, Foreman Dutch, the Superintendent and every other camper dance in a ring around the target and follow them */
   const dancers=[];
   for(const b of bots)if(b.state!=='away')dancers.push(b.p);
-  dancers.push(sir,warden);
+  dancers.push(dutch,supt);
   for(const[id,R]of remotes)if(id!==PARTY.targetId)dancers.push(R.p);
   const n=dancers.length;
   dancers.forEach((p,i)=>{

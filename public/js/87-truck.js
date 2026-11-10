@@ -11,7 +11,7 @@
    to win Act 1 (88-north.js). With the flag off it's parked by Foreman Dutch as always.
    The driver's page runs the physics and sends where it is ~12 times a second; everyone else eases toward that. Solo,
    the page does all of it. The pickup parks back by the main gate when the flag goes off or the crew changes map.
-   Sizes are the Blender model's (art/blender/heavy.py MrSirTruck): cab at the front (local +z), bed behind it. */
+   Sizes are the Blender model's (art/blender/heavy.py DutchJeep): cab at the front (local +z), bed behind it. */
 const TRUCK_PARK={x:6.1,z:31.2,h:Math.PI/2};                  // by Foreman Dutch, tailgate toward him (flag off)
 const TRUCK_GATE_PARK={x:25.4,z:39,h:-Math.PI/2};             // just inside the service gate, nose into camp (flag on)
 const truckPark=()=>truckOn()?TRUCK_GATE_PARK:TRUCK_PARK;
@@ -38,7 +38,7 @@ function truckAt(lx,lz,T=TRUCK){const c=Math.cos(T.h),s=Math.sin(T.h);return{x:T
 
 /* ---- the model and its collider (it moves, so it's one live box in colliders, not a solid() from 23-models.js) ---- */
 TRUCK.root=new T.Group();scene.add(TRUCK.root);
-instanceModel('MrSirTruck',[{x:0,y:0,z:0,ry:0}],TRUCK.root).catch(()=>{});
+instanceModel('DutchJeep',[{x:0,y:0,z:0,ry:0}],TRUCK.root).catch(()=>{});
 TRUCK.col={x0:0,x1:0,z0:0,z1:0};colliders.push(TRUCK.col);
 /* settle it on the ground where it stands (parking, or before its physics has run), then draw it there */
 function truckPose(){

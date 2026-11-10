@@ -20,7 +20,7 @@ def heavy_finish(n,elev=18,azim=-32):
     render(n,res=(512,512),samples=48);print(n,tris())
 
 # ======================= Foreman Dutch's pickup (cab at -Y, tailgate at +Y) =======================
-scene('MrSirTruck');r=root('MrSirTruck')
+scene('DutchJeep');r=root('DutchJeep')
 PAINT=(0x5f,0x8a,0x7a);RUSTY=[(0,PAINT),(0.68,PAINT),(0.74,(0x8a,0x4b,0x2a)),(0.86,(0x5a,0x30,0x1a))]   # mostly paint, rust at the edges of patches
 def painted(o,seed):vpaint(o,RUSTY,freq=5,seed=seed)
 box('chassis',(1.5,4.6,0.2),(0,0,0.55),M_('h_chassis',(0x26,0x26,0x24),0.8,0.3),bevel=0.02,parent=r)
@@ -58,7 +58,7 @@ box('shovelb',(0.26,0.34,0.03),(0.3,2.2,0.9),M_('h_blade',(0x70,0x74,0x72),0.6,0
 box('jerry',(0.18,0.34,0.44),(0.5,0.45,1.04),M_('h_red',(0x9a,0x2e,0x22),0.6,0.2),bevel=0.03,parent=r)
 bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=0.3,location=(-0.35,1.4,1.0));o=bpy.context.active_object;o.name='seedsack';o.scale=(1,0.85,1.1);_finish(o,M_('h_burlap',(0xb8,0x94,0x62),0.95),0,r)
 text('seeds','SEEDS',(-0.35,1.14,1.02),0.1,INK,rot=(math.pi/2,0,0),extrude=0.003,parent=r)
-heavy_finish('MrSirTruck',elev=20,azim=-140)
+heavy_finish('DutchJeep',elev=20,azim=-140)
 
 # ======================= Old iron safe x5 (1.1 wide, 1.0 deep, 1.1 tall; door faces -Y) =======================
 def safe_body(parent,paint,W=1.1,D=1.0,H=1.05,seed=0,rust=None):

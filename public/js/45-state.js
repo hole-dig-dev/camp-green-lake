@@ -223,10 +223,10 @@ function use(){
   if(s.id==='water'){fillCanteen();return}
   if(s.id==='sift'){siftBucket();return}
   if(s.id==='disarm'||s.id==='grapple')return;   // hold F: 88-disarm.js
-  else if(s.id==='warden')openDialog('warden');
+  else if(s.id==='supt')openDialog('supt');
   else if(s.id==='store')openShop();
   else if(s.id==='cards')openCards();
-  else if(s.id==='office')readWardenNote();   // her ledgers, and a note on the old town (89-town.js)
+  else if(s.id==='office')readSuptNote();   // her ledgers, and a note on the old town (89-town.js)
   else if(s.id==='bot')openDialog('bot',s.bot);
   else if(s.id==='tentdoor')enterTent(s.ti);
   else if(s.id==='exit')exitTent();

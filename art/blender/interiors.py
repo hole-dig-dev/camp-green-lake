@@ -113,7 +113,7 @@ tent_room('TentRoomSmall',7,8)
 tent_room('TentRoomCrew',9,8.5,crew=True)
 
 # ======================= the Superintendent's office =======================
-scene('WardenRoom');r=root('WardenRoom');W,D,H=8,8,3.4
+scene('SuptRoom');r=root('SuptRoom');W,D,H=8,8,3.4
 WAIN=('wainscot',(0x5a,0x3a,0x24),0.7);PLASTER=('plaster',(0x9b,0xa5,0x86),0.95);TRIM=('trim_dark',(0x3a,0x26,0x18),0.7)
 planks(W,D,(0x5e,0x40,0x2a),board=0.22,parent=r,tag='hard')
 # rug under the desk (desk at game (+2,+1) -> Blender (2,-1))
@@ -200,8 +200,8 @@ for s in (-1,1):box(f'stleg{s}',(0.05,0.4,0.68),(W-0.4+s*0.25,4.5,0.34),TRIM,bev
 for k in range(4):cyl(f'inkbottle{k}',0.03,0.09,(W-0.55+k*0.1,4.5,0.77),('redink',(0x9a,0x1c,0x2c),0.2),verts=8,bevel=0,parent=r);cyl(f'inkcap{k}',0.015,0.06,(W-0.55+k*0.1,4.5,0.84),('ink','ink',0.5),verts=6,bevel=0,parent=r)
 studio(floor=False);cam=bpy.context.window.scene.camera;cam.data.lens=22
 cam.location=(W*0.45,D*0.9,2.6);cam.rotation_euler=(Vector((-W*0.2,-D*0.35,1.1))-cam.location).to_track_quat('-Z','Y').to_euler()
-L=bpy.data.objects.new('WardenRoom.lamp',bpy.data.lights.new('WardenRoom.lamp','POINT'));_link(L,'Studio');L.location=(0,0,2.65);L.data.energy=3000;L.data.color=(1,0.9,0.75)
+L=bpy.data.objects.new('SuptRoom.lamp',bpy.data.lights.new('SuptRoom.lamp','POINT'));_link(L,'Studio');L.location=(0,0,2.65);L.data.energy=3000;L.data.color=(1,0.9,0.75)
 for o in coll('Studio').objects:
     if o.type=='LIGHT' and o.data.type=='SUN':o.data.energy=0
-print('warden room',tris());render()
+print('supt room',tris());render()
 bpy.ops.wm.save_mainfile()

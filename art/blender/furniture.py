@@ -71,8 +71,8 @@ for k in range(3):
     b=a+math.pi/3;tube(f'brace{k}',(math.cos(a)*0.215,math.sin(a)*0.215,0.16),(math.cos(a+2*math.pi/3)*0.215,math.sin(a+2*math.pi/3)*0.215,0.16),0.012,m=('wood_dark','wood_dark',0.85),parent=r)
 studio(elev=22,azim=-35,lens=50);frame(margin=1.3);print('stool',tris());render()
 
-# ---------- WardenDesk: heavy desk (3.1 x 1.7, top 0.83) with lamp, papers, ashtray and a chair ----------
-scene('WardenDesk');r=root('WardenDesk')
+# ---------- SuptDesk: heavy desk (3.1 x 1.7, top 0.83) with lamp, papers, ashtray and a chair ----------
+scene('SuptDesk');r=root('SuptDesk')
 box('top',(3.1,1.7,0.08),(0,0,0.8),('wood_dark','wood_dark',0.6),bevel=0.02,parent=r)
 for x in (-1.1,1.1):box(f'pedestal{x}',(0.8,1.5,0.76),(x,0,0.38),('wood_dark','wood_dark',0.7),bevel=0.015,parent=r)
 for x in (-1.1,1.1):

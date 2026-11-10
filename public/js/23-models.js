@@ -109,7 +109,7 @@ function towerLampMount(parts){
   for(const t of TENTS)if(!t.house)
     placeModel(TENT_MODEL(t),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:Math.PI}).then(()=>hideProc(t.ext)).catch(()=>{});   // door faces the yard (-z)
   placeModel('WreckRoom',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(wreckCabin)).catch(()=>{});
-  placeModel('WardenHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(wardenCabin);hideProc(porch)}).catch(()=>{});
+  placeModel('SuptHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
   // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
   // model and mounted on each tower's swivelling head (22-security.js), so it points where its beam goes
@@ -133,7 +133,7 @@ function towerLampMount(parts){
   instanceModel('OakTree',OAKS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:o.x*0.7,s:o.s}))).then(()=>OAKS.forEach(o=>hideProc(o.g))).catch(()=>{});
   Promise.all([instanceModel('SupplyCrate',YARD_CRATES),instanceModel('MessTable',MESS_TABLES)]).then(()=>hideProc(YARD_PROC)).catch(()=>{});
   // room shells: floor, walls, roof/ceiling, windows, door and wall dressing, one per room type
-  TENTS.forEach((t,ti)=>placeModel(t.house?'WardenRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
+  TENTS.forEach((t,ti)=>placeModel(t.house?'SuptRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
     .then(()=>hideProc(ROOM_SHELL[ti])).catch(()=>{}));
   // furniture: models become children of each room mesh, so they show/hide with the room like the boxes did
   ROOM_FURN_SPOTS.forEach((spots,ti)=>{

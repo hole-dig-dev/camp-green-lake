@@ -1,7 +1,7 @@
 """art/blender/jeep.py : Foreman Dutch's ride, from a free model instead of our scratch-built pickup.
 
 Source: "Jeep" by Zsky on Poly Pizza (https://poly.pizza/m/AcSdGGrgYP), CC-BY 3.0. Kept as downloaded in
-art/blender/sources/jeep-zsky.glb; this script turns it into public/models/MrSirTruck.glb (the game still loads the
+art/blender/sources/jeep-zsky.glb; this script turns it into public/models/DutchJeep.glb (the game still loads the
 truck by that name). Credit is in CREDITS.md at the top of the repo.
 
 What it does:
@@ -19,7 +19,7 @@ import bpy, os
 from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'sources', 'jeep-zsky.glb')
-OUT = os.path.join(HERE, '..', '..', 'public', 'models', 'MrSirTruck.glb')
+OUT = os.path.join(HERE, '..', '..', 'public', 'models', 'DutchJeep.glb')
 SCALE = 0.88
 PALETTE = {                      # source material -> (sRGB hex, roughness)
     'DarkGreen_Jeep':  (0x6f7a4c, 0.85),   # body: sun-faded army olive
@@ -53,7 +53,7 @@ for m in me.materials:
     b.inputs['Base Color'].default_value = hex_lin(col); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = 0.0
     m.name = 'cgl_jeep_' + m.name.replace('_Jeep', '').lower()
 for p in me.polygons: p.use_smooth = False
-ob.name = 'MrSirTruck'; me.name = 'MrSirTruck'
+ob.name = 'DutchJeep'; me.name = 'DutchJeep'
 bpy.ops.export_scene.gltf(filepath=os.path.abspath(OUT), export_format='GLB', use_selection=True, export_apply=True, export_yup=True, export_animations=False)
 
 # ---- the numbers 87-truck.js needs, in the game's truck coordinates (x: its left, z: forward, y: up) ----

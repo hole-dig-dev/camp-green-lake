@@ -8,7 +8,7 @@ globals()['__file__']=os.path.join(HERE,'buildings.py')   # so cgl_blender.py's 
 b=open(os.path.join(HERE,'buildings.py')).read()
 b=re.sub(r"open\('[^']*/([\w.]+)'\)\.read\(\)",lambda m:f"open(os.path.join(HERE,'{m.group(1)}')).read()",b)
 head=b.split('# ================= canvas tent')[0]
-cab=b.split('# ---- the Company Store')[1].split("cabin('WardenHouse'")[0]
+cab=b.split('# ---- the Company Store')[1].split("cabin('SuptHouse'")[0]
 exec(head);exec('# ---- the Company Store'+cab)   # defines shop_front + cabin, then builds WreckRoom (and renders its preview)
 print(export_glb(os.path.join(ART,'glb','WreckRoom.glb')))
 bpy.ops.wm.save_mainfile()

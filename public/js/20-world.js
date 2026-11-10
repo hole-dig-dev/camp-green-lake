@@ -107,8 +107,8 @@ TENTS.forEach((t,ti)=>{
     for(const sx of[-1.3,1.3])for(const sz of[-0.65,0.65])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
     addF(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
     addF(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
-    spots.push({m:'WardenDesk',x:dx,y:Y,z:dz,ry:Math.PI});   // chair on the +z side, facing the visitor spot at t.desk
-    spots.push({m:'WardenNote',x:dx+0.3,y:Y+0.845,z:dz-0.45,ry:Math.PI});   // her note on the old town (89-town.js), the right way up for whoever's at the desk
+    spots.push({m:'SuptDesk',x:dx,y:Y,z:dz,ry:Math.PI});   // chair on the +z side, facing the visitor spot at t.desk
+    spots.push({m:'SuptNote',x:dx+0.3,y:Y+0.845,z:dz-0.45,ry:Math.PI});   // her note on the old town (89-town.js), the right way up for whoever's at the desk
     tentSolid(list,dx,dz,3.2,1.8);t.desk={x:dx,z:dz-1.8};
     add(3.2,1.6,0.12,0x322b25,t.x-3.2,Y+1.6,t.z+4);
     add(3.0,1.1,0.12,0xbca16c,t.x-3.2,Y+1.6,t.z+3.9);
@@ -150,10 +150,10 @@ function cabin(x,z,w,d,h,wall,roof){
 const wreckCabin=cabin(16,45,7,5,3.2,0x9b7b58,0x6d5a44);
 solid(16,42.3,2.5,0.45);   // the serving-window counter sticks out past the front wall (WreckRoom.glb)
 const wreckSign=sign('COMPANY\nSTORE',20.2,41.4,Math.PI,2.6,1.1);
-const wardenCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
+const suptCabin=cabin(-30,45,8,6,3.4,0xb07650,0x5a3a2a);
 const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.9);scene.add(porch);
 {
-  const g=wardenCabin;
+  const g=suptCabin;
   for(const x of[-3.45,3.45]){
     const pillar=box(0.23,2.8,0.23,0x4a3325);pillar.position.set(x,1.4,-4.05);g.add(pillar);
     const lantern=box(0.32,0.44,0.28,0xffd48a);lantern.position.set(x*0.58,2.25,-3.12);g.add(lantern);

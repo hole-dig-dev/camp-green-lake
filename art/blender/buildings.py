@@ -135,7 +135,7 @@ def shop_front(r,walls,W,D,H,WALL,TRIM,ROOF):
     tube('cardstring',(wx-0.2,fy-0.08,wz+0.07),(wx,fy-0.08,wz+0.3),0.004,('cord',(0x20,0x1c,0x18),0.8),r);tube('cardstring2',(wx+0.2,fy-0.08,wz+0.07),(wx,fy-0.08,wz+0.3),0.004,('cord',(0x20,0x1c,0x18),0.8),r)
 
 # ================= cabins: board-and-batten walls, gable roof with overhang, framed windows, porch =================
-def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
+def cabin(name,W,D,H,wall,roof,supt=False,shop=False):
     scene(name);r=root(name)
     WALL=('wall_'+name,wall,0.9);TRIM=('trim',(0x4a,0x35,0x25),0.85);ROOF=('roof_'+name,roof,0.9)
     box('foundation',(W+0.2,D+0.2,0.3),(0,0,0.15),('concrete','concrete',0.95),bevel=0.02,parent=r)
@@ -185,7 +185,7 @@ def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
     # side windows
     for x in (-W/2-0.02,W/2+0.02):
         box(f'swin{x}',(0.08,0.95,0.8),(x,0.4,0.3+1.6),TRIM,bevel=0.01,parent=r);box(f'sglass{x}',(0.1,0.78,0.62),(x,0.4,0.3+1.6),('glass',(0x2f,0x3a,0x44),0.15,0.2),bevel=0,parent=r)
-    if warden:
+    if supt:
         # porch across the front: deck, steps, posts, rail, awning roof, lanterns, plaque, chimney
         box('porch',(W,2.2,0.2),(0,-D/2-1.1,0.2),('porch',(0x7a,0x5a,0x3a),0.9),bevel=0.015,parent=r)
         for k in range(int(W/0.25)):box(f'deckboard{k}',(0.02,2.2,0.005),(-W/2+0.25*(k+1),-D/2-1.1,0.303),TRIM,bevel=0,parent=r)
@@ -212,7 +212,7 @@ def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
         if not shop:box('stoop',(2.2,1.0,0.18),(0,-D/2-0.5,0.09),('step',(0x87,0x72,0x57),0.9),bevel=0.015,parent=r)
     studio(elev=18,azim=-33,lens=40);frame(margin=1.08);print(name,tris());render()
 cabin('WreckRoom',7,5,3.2,(0x9b,0x7b,0x58),(0x6d,0x5a,0x44),shop=True)
-cabin('WardenHouse',8,6,3.4,(0xb0,0x76,0x50),(0x5a,0x3a,0x2a),warden=True)
+cabin('SuptHouse',8,6,3.4,(0xb0,0x76,0x50),(0x5a,0x3a,0x2a),supt=True)
 
 # ================= watchtower (2.1 m leg square, deck at 7.25, cab rail 8.08, roof 8.94, lamp 8.55) =================
 scene('Watchtower');r=root('Watchtower');M2=('tower_steel',(0x3f,0x46,0x45),0.6,0.6)

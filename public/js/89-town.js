@@ -125,10 +125,10 @@ function shaftMark(k,b){
   if(b.ladder){const l=box(0.5,TW.H,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2,p.z);townGroup.add(l)}
 }
 
-/* ---- the Superintendent's note (on her desk: 20-world.js, art/blender/wardennote.py): where to dig. The coordinates are the
+/* ---- the Superintendent's note (on her desk: 20-world.js, art/blender/suptnote.py): where to dig. The coordinates are the
    ones the map shows (78-hud.js coordXY); that's the only spot that breaks through, and you land on Main Street by the
    stairwell (sim.js townBreaks, townBreachSpot). ---- */
-function readWardenNote(){
+function readSuptNote(){
   const[X,Y]=coordXY(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z);
   toast(`The Superintendent's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 5 ft. Floor gives. Don't tell Dutch." (Your coordinates are above the Field map button.)`,'gold',9000);
   logEv('note',{});

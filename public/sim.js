@@ -98,7 +98,7 @@
     return { x: clamp(x, cx - w, cx + w), z };
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
-  const RO_LAKE_ONLY = ['sir', 'warden'];
+  const RO_LAKE_ONLY = ['dutch', 'supt'];
   /* the Superintendent's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
      of the crew bank at curfew. Short of it, the whole crew's fired and the run starts over from nothing.
      15, 37, 63, 93, 127 ... 357 on day 10; more campers, more gold (x1.6 for each extra). */
@@ -546,15 +546,15 @@
      Which kinds show up is picked each day (same pick on every client: seeded by the day), and it grows as the days go by:
        small  (from day 1)  hatch: lizard hatchlings in swarms, snake: rattlesnakes that rattle then strike,
                             scorp: scorpions that come up where you dig
-       medium (from day 2)  sir: Foreman Dutch walks the lake and takes your sack if you stand around,
+       medium (from day 2)  dutch: Foreman Dutch walks the lake and takes your sack if you stand around,
                             sheriff: the Marshal's ghost, near curfew, hunts whoever carries Lil Marlow's loot
-       big    (from day 3)  warden: the Superintendent knocks out whoever she catches idle, kate: Lil Marlow's ghost at night,
+       big    (from day 3)  supt: the Superintendent knocks out whoever she catches idle, kate: Lil Marlow's ghost at night,
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
      players: simPlayers() on the server / meSim() solo, plus kt (holding Lil's loot), on (onion active), vy (camera yaw). */
   const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
-  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
-  const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
+  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'sheriff'], RO_BIG = ['supt', 'kate'];
+  const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'sheriff', 'supt', 'kate'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   function rosterFor(day, curse) {
     const c = clamp(curse || 0, 0, 100);
@@ -580,7 +580,7 @@
     o = o || {}; R.mobs = R.mobs || []; R.pm = R.pm || {}; R.nid = R.nid || 1; R.sp = R.sp || {}; R.force = R.force || [];
     const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.curse || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
-    const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
+    const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'supt' : null;   // the day's mood can force a kind in
     const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k) && !(ZONE_NOW !== 'lake' && RO_LAKE_ONLY.includes(k));
     const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the bad luck (and the tester's rate slider): everything spawns faster
     if (o.rate === 0) { R.mobs = R.mobs.filter(m => !roSmall(m.k)); }
@@ -594,8 +594,8 @@
       if (has('hatch') && !RO_OFF.has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
       if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22 / cmul)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
       if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * cmul * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
-      if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
-      if (has('warden') && !night && !count('warden')) roSpawn(R, 'warden', pickP(), 50, 70, {});
+      if (has('dutch') && !night && !count('dutch')) roSpawn(R, 'dutch', pickP(), 40, 60, {});
+      if (has('supt') && !night && !count('supt')) roSpawn(R, 'supt', pickP(), 50, 70, {});
       const kt = live.filter(p => p.kt);
       if (has('sheriff') && (t > cur - DAYMS * (o.sheriffWin == null ? 0.15 : o.sheriffWin) || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
       if (has('kate') && (night || R.force.includes('kate')) && !count('kate')) { if (roSpawn(R, 'kate', pickP(), 35, 45, {})) ev.push({ k: 'kate' }); }
@@ -618,18 +618,18 @@
         case 'scorp':
           if (tg && d < 7) { roChase(m, tg, 2.6, dt); if (d < 0.7 && !m.cd) { m.cd = 3; ev.push({ k: 'sting', id: tg.id }); } }
           break;
-        case 'sir': case 'warden': {
+        case 'dutch': case 'supt': {
           if ((night && !R.force.includes(m.k)) || !live.length) { m.dead = true; break; }
           // they go after whoever is standing around; otherwise they wander between campers
           let lazy = null, li = 0; for (const p of live) { const im = R.pm[p.id]; if (im && im.idle > li && Math.hypot(p.x - m.x, p.z - m.z) < 70) { li = im.idle; lazy = p; } }
-          const warnAt = m.k === 'sir' ? 6 : 5, near = m.k === 'sir' ? 18 : 25;
+          const warnAt = m.k === 'dutch' ? 6 : 5, near = m.k === 'dutch' ? 18 : 25;
           m.st = 0;
           if (lazy && li > warnAt) {
             m.st = 1;
-            const dd = roChase(m, lazy, m.k === 'sir' ? 3.4 : 2.8, dt, m.k === 'sir' ? 2 : 1.1), im = R.pm[lazy.id];
-            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'sir' ? 'sirWarn' : 'wardenWarn', id: lazy.id }); }
-            if (m.k === 'sir' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
-            if (m.k === 'warden' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'warden' }); im.idle = 0; im.warned = 0; }
+            const dd = roChase(m, lazy, m.k === 'dutch' ? 3.4 : 2.8, dt, m.k === 'dutch' ? 2 : 1.1), im = R.pm[lazy.id];
+            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'dutch' ? 'dutchWarn' : 'suptWarn', id: lazy.id }); }
+            if (m.k === 'dutch' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
+            if (m.k === 'supt' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'supt' }); im.idle = 0; im.warned = 0; }
           } else { if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 3) { const p = pickP(); m.goal = { x: p.x + (Math.random() - 0.5) * 30, z: p.z + (Math.random() - 0.5) * 30 }; } roChase(m, m.goal, 2.4, dt); }
           break;
         }
@@ -666,7 +666,7 @@
   // console/testing: put one of kind k near camper p right now (the natural spawn distances, a bit closer)
   function rosterSpawnNow(R, k, p) {
     R.mobs = R.mobs || []; R.nid = R.nid || 1;
-    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], sir: [20, 30, {}], sheriff: [25, 30, {}], warden: [20, 30, {}], kate: [25, 30, {}] }[k];
+    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], dutch: [20, 30, {}], sheriff: [25, 30, {}], supt: [20, 30, {}], kate: [25, 30, {}] }[k];
     if (!D) return null;
     const m = roSpawn(R, k, p, D[0], D[1], Object.assign({}, D[2]));
     if (m && k === 'hatch') for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: m.x + (Math.random() - 0.5) * 2, z: m.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 });
