@@ -250,6 +250,7 @@ function drawMap(){
   let sx=ccx(mcx-MV),sy=ccz(mcz-MV),sw=ccs(MV*2),sh=ccs(MV*2);
   sx=clamp(sx,0,MAP_CACHE_RES-sw);sy=clamp(sy,0,MAP_CACHE_RES-sh);
   mx.imageSmoothingEnabled=false;mx.drawImage(mapCache,sx,sy,sw,sh,0,0,W,W);
+  dressMap(mx,wx,wz,W,night,fieldMapOpen);   /* landmarks (24-dressing.js) */
   for(const h of holes){if(h.d<0.3||h.noMound)continue;const X=wx(h.x),Z=wz(h.z);if(X<-4||Z<-4||X>W+4||Z>W+4)continue;mx.fillStyle=h.mine?'#7a2f10':h.remote?'#3a4f7a':'rgba(110,60,32,.55)';mx.beginPath();mx.arc(X,Z,Math.min(9,Math.max(1.6,ws(h.r))),0,6.3);mx.fill()}
   if(S.revealed){mx.strokeStyle=night?'#ff6a5a':'#d12a2a';mx.lineWidth=night?3.5:3;mx.setLineDash([6,5]);mx.beginPath();mx.arc(wx(SEARCH.x),wz(SEARCH.z),Math.max(4,ws(SEARCH.r)),0,6.3);mx.stroke();mx.setLineDash([])}
   /* NPCs: smaller cream diamonds (shape, not just color, so it reads without relying on color) */
