@@ -35,7 +35,7 @@ await A.evaluate(()=>{for(const k of Object.keys(PIPE.broken)){delete PIPE.broke
 await A.evaluate(()=>{buyShopItem('pipeSteel')});await A.waitForTimeout(1000);
 check('reinforced pipe: a blast doesn\'t crack it',await A.evaluate(()=>{const b=PIPE.nodes[3];pipeBlast(b.x,b.z,1);return Object.keys(PIPE.broken).length===0}));
 await A.evaluate(()=>{buyShopItem('goldScale')});await A.waitForTimeout(1500);
-check('the gold scale: +10% on every sift, for everyone',await A.evaluate(()=>goldScale()===1.1)&&await B.evaluate(()=>goldScale()===1.1));
+check('the gold scale: +10% on every sift, for everyone',await A.evaluate(()=>Math.abs(goldScale()/washRecovery()-1.1)<1e-9)&&await B.evaluate(()=>Math.abs(goldScale()/washRecovery()-1.1)<1e-9)   /* goldScale() also carries the washers' recovery now (84-camp.js): the scale's own share is the ratio */);
 const G=await A.evaluate(()=>SIM.GOLD.SIFTER);await A.evaluate(G=>{P.x=G.x+3;P.z=G.z-4;P.y=groundAt(P.x,P.z);if(FP)toggleView()},G);await A.waitForTimeout(400);await lookAt(A,G.x+1.2,1,G.z);await A.waitForTimeout(800);await A.screenshot({path:SP+'/camp_sifter.png'});
 check('buying one the camp already has: refused, the wallet keeps its gold',await A.evaluate(async()=>{const b0=RUN.bank;const st=shopStatus(SHOP.find(i=>i.id==='goldScale'));return st.kind==='owned'}));
 await A.evaluate(()=>tuneSet('haz.all',1));
