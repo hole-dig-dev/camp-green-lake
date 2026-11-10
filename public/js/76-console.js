@@ -41,7 +41,7 @@ function conPrint(text,cls){const d=document.createElement('div');if(cls)d.class
 function openConsole(){
   if(!canConsole()){toast('The console is only for the host.','bad',2000);return}
   conEl.hidden=false;releaseLock();digHeld=false;for(const k in KEYS)KEYS[k]=false;
-  if(!conLog.children.length)conPrint('Camp Green Lake console. Type help for commands.');
+  if(!conLog.children.length)conPrint('Camp Drywater console. Type help for commands.');
   conIn.value='';conIn.focus();   // focus right away, so fast typing never leaks keys into the game
 }
 function closeConsole(){conEl.hidden=true;conIn.blur();relockSoon()}
@@ -80,7 +80,7 @@ command('audio',{usage:'audio [status|call|old|new|<cat> old|new]',help:'A/B old
   }});
 command('twister',{usage:'twister [distance]',help:'Spawn a twister [45] m in front of you, heading your way. Everyone sees it.',
   run([d]){const dist=numArg(d,45,10,200);spawnAhead('twister',dist);return`Twister spawned ${dist} m ahead.${campDist(P.x,P.z)<50?' (Twisters fall apart near camp; walk out onto the lake to see it at full strength.)':''}`}});
-command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off Big Thumb, [50] m out from you. Everyone sees it.',
+command('landslide',{usage:'landslide [distance]',help:'Trigger a rockslide off Chimney Rock, [50] m out from you. Everyone sees it.',
   run([d]){const dist=numArg(d,50,15,200);spawnAhead('landslide',dist);return`Landslide triggered ${dist} m out.`}});
 command('tumbleweed',{usage:'tumbleweed [distance]',help:'Blow in 1-3 giant tumbleweeds, [55] m out, heading your way. Everyone sees them.',
   run([d]){const dist=numArg(d,55,15,200);spawnAhead('tumbleweed',dist);return`Tumbleweed(s) rolling in ${dist} m out. Get in their way and see what happens (mash Space to wriggle free if one grabs you).`}});
@@ -103,7 +103,7 @@ command('tp',{usage:'tp <x> <y> | tp camp',help:'Teleport to the X and Y shown a
 command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
   run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
 command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
-command('tent',{usage:'tent <A|B|D|C|W|out>',help:'Teleport into a tent or the Warden house, for testing.',
+command('tent',{usage:'tent <A|B|D|C|W|out>',help:'Teleport into a bunk tent or the Super\'s house, for testing.',
   run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|W|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a room.';exitTent();return'Stepped outside.'}
     const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such room. Try A, B, D, C or W.');
     if(inTent())exitTent();if(S.inTown)exitTown(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z,'');enterTent(ti);return`Inside ${TENTS[ti].name}.`}});

@@ -23,7 +23,7 @@
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
     { id: 'soda', name: 'Soda', desc: 'Cheers him right up (+45 morale). Drunk on the spot.', cost: 15, use: true },
     { id: 'disarm', name: 'Mine disarm kit', desc: 'He spots landmines in his way and stops to disarm them, instead of walking into them.', cost: 50 },
-    { id: 'onions', name: 'Sack of onions', desc: 'He eats them all day. Lizards leave him alone.', cost: 45 },
+    { id: 'onions', name: 'Sack of bitterroot', desc: 'He chews it all day. Gilas leave him alone.', cost: 45 },
   ];
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
      a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
@@ -696,9 +696,9 @@
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
     ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
-    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['sheriff', "Sheriff's office", 'M'], ['jail', 'Jail', 'M'],
-    ['post', 'Post office', 'M'], ['boatshed', "Sam's boat shed", 'M'], ['doctor', "Doctor's office", 'M'], ['barber', 'Barbershop', 'S'],
-    ['kate', "Kate's house", 'S'], ['cellar', 'Onion cellar', 'S'], ['vault', "Kate's vault", 'S'], ['well', 'Old well', 'S']];
+    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['sheriff', "Marshal's office", 'M'], ['jail', 'Jail', 'M'],
+    ['post', 'Post office', 'M'], ['boatshed', 'Boat shed', 'M'], ['doctor', "Doctor's office", 'M'], ['barber', 'Barbershop', 'S'],
+    ['kate', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
   const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
   const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
   const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
@@ -795,11 +795,11 @@
     normal: { name: 'A regular day', desc: 'Nothing special. Dig.' },
     heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
     sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
-    breeding: { name: 'Lizard breeding season', desc: 'Lizard hatchlings everywhere, twice as many.' }, // never rolled while hatchlings are off (RO_OFF)
-    stingy: { name: 'Mr. Sir is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
-    fullmoon: { name: 'Full moon', desc: 'Madame Zeroni is out all night. No police.' },
+    breeding: { name: 'Gila breeding season', desc: 'Gila hatchlings everywhere, twice as many.' }, // never rolled while hatchlings are off (RO_OFF)
+    stingy: { name: 'Dutch is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
+    fullmoon: { name: 'Full moon', desc: 'The Drowned Bride is out all night. No police.' },
     digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
-    inspection: { name: 'Inspection day', desc: 'The Warden walks the lake all day. Look busy.' },
+    inspection: { name: 'Inspection day', desc: 'The Superintendent walks the lake all day. Look busy.' },
   };
   function rollMood(day, curse) {
     if (day <= 1) return 'normal';

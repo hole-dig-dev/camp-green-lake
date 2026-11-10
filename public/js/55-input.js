@@ -48,7 +48,7 @@ document.addEventListener('pointerlockchange',()=>{
     else if(S.started&&!overlayBlocking())openPause();   // browser dropped the lock on its own -- almost always Escape, which many browsers swallow instead of sending us a keydown
   }
 });
-const SHOUTS=['Hey, Caveman!','LIZARD! RUN!','I found something!','Dig over here!','Water truck!'];
+const SHOUTS=['Hey, rookie!','GILA! RUN!','I found something!','Dig over here!','Water break!'];
 addEventListener('keydown',e=>{
   const pk=e.key.toLowerCase();   // pause menu: the raw physical key, before any rebinding is applied
   if(e.target===conIn){conKey(e);return}
@@ -109,7 +109,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false;if(k==='p'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i});if(me)me.waveT=1.4}   // the camper waves while shouting
-function eatOnion(){if(S.onions<=0){toast('No onions. The Supply Depot sells them for 8 gold.','bad',2200);return}S.onions--;S.onionT=45;countUp('onions',10,'onion');AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You ate a raw onion. Lizards hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
+function eatOnion(){if(S.onions<=0){toast('No bitterroot. The Company Store sells it for 8 gold.','bad',2200);return}S.onions--;S.onionT=45;countUp('onions',10,'onion');AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You chew a bitterroot. Gilas hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
 /* touch */
 const touch={id:null,ox:0,oy:0,ix:0,iz:0,lookId:null,lx:0,ly:0};

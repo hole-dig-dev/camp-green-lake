@@ -70,7 +70,7 @@ function showTruck(tk,st,dt){
 }
 
 /* ---------- Madame Zeroni: she hunts anyone still out on the lake after 01:00 ---------- */
-const ZER_LINE='yo carry me up dat mountain bruh, I gave you dat piggy bruh';
+const ZER_LINE='yo you seen my ring bruh, I left it right here bruh';
 const ZER=(()=>{
   const g=new T.Group(),up=new T.Group();
   const robeM=new T.MeshStandardMaterial({color:0x26301f,flatShading:true,roughness:1,emissive:0x0b1408});
@@ -97,7 +97,7 @@ const ZER=(()=>{
   add(pig,new T.BoxGeometry(0.1,0.07,0.05),M(0xd97a8e),0,0.03,0.39);for(const x of[-0.07,0.07])add(pig,new T.BoxGeometry(0.06,0.08,0.02),pigM,x,0.18,0.25);
   const light=new T.PointLight(0x7dff6a,0,16);light.position.set(0,1.8,0.4);g.add(light);
   g.scale.setScalar(1.45);g.visible=false;scene.add(g);
-  return{g,arms,eyeM,light,L:makeLabel(g,'Madame Zeroni','',3.5),x:0,z:0,active:false,talk:0,blink:10,hb:0};
+  return{g,arms,eyeM,light,L:makeLabel(g,'The Drowned Bride','',3.5),x:0,z:0,active:false,talk:0,blink:10,hb:0};
 })();
 function setZeroni(on,st){ZER.active=on;ZER.g.visible=on;ZER.light.intensity=on?1.6:0;if(on){ZER.x=st.x;ZER.z=st.z;ZER.hb=0}else{ZER.L.b.textContent='';ZER.L.sayUntil=0;try{speechSynthesis.cancel()}catch(e){}}}
 function zeroniSting(v){v=v||1;tone(70,2.5,'sawtooth',0.1*v,35);noise(1.5,600,0.5,0.2*v,'lowpass');tone(1760,1.6,'sine',0.03*v,1700)}
@@ -144,8 +144,8 @@ function updateNightSound(){
 }
 
 function hunterToast(h,was){
-  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police patrol is still out there.':'Curfew. Officers with flashlights are walking the lake. Stay out of their lights and the tower beams, or get back through the gate.','bad',6000)}
-  else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. Madame Zeroni is coming. RUN FOR CAMP.':'Madame Zeroni is out on the lake, and she wants a ride up the mountain. RUN FOR CAMP.','bad',6500)}
+  if(h==='police'){tone(200,1.2,'sawtooth',0.08,120);toast(was?'The police patrol is still out there.':'Lights-out. Officers with flashlights are walking the lake. Stay out of their lights and the tower beams, or get back through the gate.','bad',6000)}
+  else if(h==='zeroni'){zeroniSting();toast(was?'The police head back to town. Then the wind stops. The Drowned Bride is coming. RUN FOR CAMP.':'The Drowned Bride is out on the lake, and she is looking for her ring. RUN FOR CAMP.','bad',6500)}
 }
 function updateCurfew(dt){
   $('#hud').classList.toggle('zone-away',!!ZONE_H);   // curfew rows hide outside the lake (game.css)
@@ -153,16 +153,16 @@ function updateCurfew(dt){
   stepSoloMonsters(dt);stepSoloDirector(dt);while(trucks.length<MONV.trucks.length)trucks.push(makeTruck(trucks.length));
   trucks.forEach((tk,i)=>showTruck(tk,MONV.trucks[i],dt));showZeroni(MONV.zer,dt);updateNightSound();
   if(!night){
-    if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. Madame Zeroni fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
+    if(CUR.phase==='night'){CUR.phase='day';if(CUR.hunter)toast(CUR.hunter==='zeroni'?'Dawn. The Drowned Bride fades away with the sunrise.':'Dawn. The police head back to town.','good',4000);CUR.hunter=null}
     if(t<DAYMS-60000)CUR.warned=false;
-    else if(!CUR.warned){CUR.warned=true;siren();toast('SIREN: curfew in one minute. Get back inside the camp fence!','bad',6000)}
+    else if(!CUR.warned){CUR.warned=true;siren();toast('SIREN: lights-out in one minute. Get back inside the camp fence!','bad',6000)}
     return;
   }
   const half=t<NIGHT_SPLIT?'police':'zeroni';
-  if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out)toast('Curfew. Lights out, campers.','',3500)}
-  else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast('01:00. The police go home. Out on the lake, someone is asking for a ride up the mountain…','',5000)}}
+  if(CUR.phase==='day'){CUR.phase='night';CUR.half=half;soloEndOfDay();if(!out)toast('Lights-out. Bunks, diggers.','',3500)}
+  else if(CUR.half!==half){CUR.half=half;if(half==='zeroni'&&!out){zeroniSting(0.5);toast('01:00. The police go home. Out on the lake, someone is asking about a ring…','',5000)}}
   const h=MONV.zer?'zeroni':MONV.trucks.length?'police':null,want=out?h:null;   // Zeroni first: the officers are out all night
-  if(want!==CUR.hunter){const was=CUR.hunter;CUR.hunter=want;if(want)hunterToast(want,was);else if(was&&!out&&performance.now()-S.respawnAt>1500)toast(was==='zeroni'?'You made it inside the fence. Madame Zeroni can\'t cross it. She waits out there…':'You made it back inside the fence. The police won\'t follow you into camp.','good',4000)}
+  if(want!==CUR.hunter){const was=CUR.hunter;CUR.hunter=want;if(want)hunterToast(want,was);else if(was&&!out&&performance.now()-S.respawnAt>1500)toast(was==='zeroni'?'You made it inside the fence. The Drowned Bride can\'t cross it. She waits out there…':'You made it back inside the fence. The police won\'t follow you into camp.','good',4000)}
 }
 
 /* shared monsters: the server sends where they are; solo play runs the same rules here */
@@ -195,18 +195,18 @@ function monFromServer(m){
   MONV.zer=Array.isArray(m.zer)?{x:num(m.zer[0],-700,700,0),z:num(m.zer[1],-700,700,0),tgt:m.zer[2],drag:m.zer[3]}:null;
   if(Array.isArray(m.ev))for(const e of m.ev.slice(0,20))if(e&&typeof e==='object')monEvent(e);
 }
-const COP_LINES=['Freeze!','Stop right there, camper!','Hands where I can see them!','Get back to camp, now!'];
+const COP_LINES=['Freeze!','Stop right there, digger!','Hands where I can see them!','Get back to camp, now!'];
 function monEvent(e){
   const mine=e.id===myId();
   switch(e.k){
-    case 'appeased':toast(`${e.by?cleanName(e.by)+' sang':'The crew sang'} Madame Zeroni the lullaby. She smiles, and fades away for the night. The curse eases.`,'gold',6500);sfx.gold();badge('lullaby');break;
+    case 'appeased':toast(`${e.by?cleanName(e.by)+' sang':'The crew sang'} the Drowned Bride the lullaby. She smiles, and fades away for the night. Lil's luck eases.`,'gold',6500);sfx.gold();badge('lullaby');break;
     case 'spot':if(mine){toast('SPOTTED! Run for camp, or crouch (C) down in a deep hole.','bad',3000);tone(900,0.4,'square',0.06,1400);setTimeout(()=>tone(900,0.4,'square',0.06,1400),450);speak(pick(COP_LINES),{pitch:0.6,rate:1.15,vol:0.9,male:true})}break;
     case 'lost':if(mine&&performance.now()-CUR.msgT>8000){CUR.msgT=performance.now();toast('They lost you. For now.','',2500)}break;
-    case 'down':if(mine&&!S.ko){if(e.by==='zeroni'){zeroniTalk(0);knockOut('Cursed','Madame Zeroni grabbed you and is dragging you away.')}else knockOut('Busted','The police caught you out on the lake after curfew.')}break;
+    case 'down':if(mine&&!S.ko){if(e.by==='zeroni'){zeroniTalk(0);knockOut('Taken','The Drowned Bride grabbed you and is dragging you away.')}else knockOut('Busted','The police caught you out on the lake after lights-out.')}break;
     case 'talk':if(MONV.zer)zeroniTalk(Math.hypot(MONV.zer.x-P.x,MONV.zer.z-P.z));break;
     case 'blink':if(mine){zeroniSting(e.front?1.4:0.6);if(e.front)jumpScare()}break;
-    case 'drop':if(mine&&S.ko)toast('Madame Zeroni let go of you.','good',2500);break;
-    case 'gone':if(mine&&S.ko){S.ko=0.01;toast('Madame Zeroni dragged you off the edge of the lake. You wake up in the nurse\'s office.','bad',5000)}break;
+    case 'drop':if(mine&&S.ko)toast('The Drowned Bride let go of you.','good',2500);break;
+    case 'gone':if(mine&&S.ko){S.ko=0.01;toast('The Drowned Bride dragged you off the edge of the lake. You wake up in the nurse\'s office.','bad',5000)}break;
     default:lionEvent(e);   // anything this switch doesn't know about is one of the mountain lion's events (see 85-lion.js)
   }
 }

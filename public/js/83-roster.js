@@ -15,7 +15,7 @@ let roHissT=0;
 const RO_LOCAL={mobs:[]};                 // solo play's roster state (online, the server owns it)
 const ROV=new Map();                      // id -> drawn monster {k, g, x,z,h, tx,tz,th, st, L, rig, p}
 let RO_TODAY=[],roTodayKey='';
-const RO_NAMES={hatch:'lizard hatchlings',snake:'rattlesnakes',scorp:'scorpions',sir:'Mr. Sir on patrol',sheriff:'the Sheriff\'s ghost',warden:'the Warden',kate:'Kate Barlow\'s ghost'};
+const RO_NAMES={hatch:'gila hatchlings',snake:'rattlesnakes',scorp:'scorpions',sir:'Foreman Dutch on patrol',sheriff:'the Marshal\'s ghost',warden:'the Superintendent',kate:'Lil Marlow\'s ghost'};
 
 /* ---- looks ---- */
 function roSnakeMesh(){
@@ -44,10 +44,10 @@ function roScorpMesh(){
   return g;
 }
 const RO_PEOPLE={
-  sir:{look:{suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e},name:'Mr. Sir'},
-  warden:{look:{suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c},name:'The Warden'},
-  sheriff:{look:{suit:0x6f7f95,shirt:0x6f7f95,skin:0xb8c8d8,hat:'cowboy',shovel:false,body:'tall',band:0x2a3242},name:'The Sheriff\'s ghost',ghost:0x9fc4ff},
-  kate:{look:{suit:0x7a5a6a,shirt:0x7a5a6a,skin:0xd8c0c8,hat:'cowboy',shovel:false,body:'slim',band:0x9a2030},name:'Kissin\' Kate Barlow',ghost:0xffb8c8},
+  sir:{look:{suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e},name:'Foreman Dutch'},
+  warden:{look:{suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c},name:'The Superintendent'},
+  sheriff:{look:{suit:0x6f7f95,shirt:0x6f7f95,skin:0xb8c8d8,hat:'cowboy',shovel:false,body:'tall',band:0x2a3242},name:'The Marshal\'s ghost',ghost:0x9fc4ff},
+  kate:{look:{suit:0x7a5a6a,shirt:0x7a5a6a,skin:0xd8c0c8,hat:'cowboy',shovel:false,body:'slim',band:0x9a2030},name:'"Lucky" Lil Marlow',ghost:0xffb8c8},
 };
 function roGhostify(p,tint){
   p.g.traverse(o=>{if(!o.isMesh||!o.material||o.userData.ghost)return;o.userData.ghost=true;
@@ -87,17 +87,17 @@ function rosterEvent(e){
   if(!e||typeof e!=='object')return;
   const mine=e.id===myId(),dist=e.x!=null?Math.hypot(e.x-P.x,e.z-P.z):0;
   switch(e.k){
-    case 'rbite':if(mine){hurt(tune('mon.hatchBite'),'Lizard hatchling','Lizard hatchlings bit you. Swing your shovel (E) at them, or run.','poison');{const n=performance.now();if(n-(roHissT||0)>600){roHissT=n;sfx.hiss()}}}break;   /* a swarm's bites: one hiss at a time, not one each */
+    case 'rbite':if(mine){hurt(tune('mon.hatchBite'),'Gila hatchling','Gila hatchlings bit you. Swing your shovel (E) at them, or run.','poison');{const n=performance.now();if(n-(roHissT||0)>600){roHissT=n;sfx.hiss()}}}break;   /* a swarm's bites: one hiss at a time, not one each */
     case 'rattle':if(dist<22){noise(0.5,5200,6,0.2*clamp(1-dist/22,0.1,1));if(dist<8&&!roRattleTold){roRattleTold=true;toast('You hear a rattle nearby. Rattlesnake.','',2500)}}break;
     case 'strike':if(mine){hurt(20,'Rattlesnake','A rattlesnake got you. The poison eats your stamina until it wears off.','poison');sfx.bite()}break;
     case 'sting':if(mine){hurt(12,'Scorpion','Scorpion sting! Swing your shovel (E) at it.','poison');tone(1400,0.2,'square',0.06,600)}break;
     case 'squash':if(dist<25)sfx.thud();if(mine){addXP(3);countUp('squash',15,'squasher')}break;
-    case 'sirWarn':if(mine){const sv=[...ROV.values()].find(v=>v.k==='sir');if(sv&&sv.L)say(sv.L,'You taking a nap out here?',3000);toast('Mr. Sir: "You taking a nap out here, camper?" Get digging, or he takes your sack.','bad',4500);tone(300,0.2,'square',0.05)}break;
-    case 'confiscate':if(mine&&S.sack.length){toast(`Mr. Sir took your whole sack (${S.sack.length} finds) for slacking off.`,'bad',5000);logEv('confiscated',{n:S.sack.length});S.sack=[];sfx.clank()}break;
-    case 'wardenWarn':if(mine){toast('The Warden is watching you stand around. Get digging, or keep moving!','bad',5000)}break;
-    case 'down':if(mine&&!S.ko){const T2={warden:['The Warden','She caught you standing around out on the lake.'],sheriff:['The Sheriff\'s ghost','He came for Kate Barlow\'s loot, and you were holding it.'],kate:['Kissin\' Kate Barlow','You looked away.']}[e.by];if(T2)knockOut(T2[0],T2[1])}break;
-    case 'sheriff':toast('Spurs jingle in the distance. The Sheriff\'s ghost is looking for whoever has Kate\'s loot.','bad',5000);break;
-    case 'kate':toast('Kate Barlow\'s ghost is out on the lake. She only moves when nobody is looking at her.','bad',6000);break;
+    case 'sirWarn':if(mine){const sv=[...ROV.values()].find(v=>v.k==='sir');if(sv&&sv.L)say(sv.L,'You taking a nap out here?',3000);toast('Foreman Dutch: "You taking a nap out here, digger?" Get digging, or he takes your sack.','bad',4500);tone(300,0.2,'square',0.05)}break;
+    case 'confiscate':if(mine&&S.sack.length){toast(`Foreman Dutch took your whole sack (${S.sack.length} finds) for slacking off.`,'bad',5000);logEv('confiscated',{n:S.sack.length});S.sack=[];sfx.clank()}break;
+    case 'wardenWarn':if(mine){toast('The Superintendent is watching you stand around. Get digging, or keep moving!','bad',5000)}break;
+    case 'down':if(mine&&!S.ko){const T2={warden:['The Superintendent','She caught you standing around out on the lake.'],sheriff:['The Marshal\'s ghost','He came for Lil Marlow\'s loot, and you were holding it.'],kate:['"Lucky" Lil Marlow','You looked away.']}[e.by];if(T2)knockOut(T2[0],T2[1])}break;
+    case 'sheriff':toast('Spurs jingle in the distance. The Marshal\'s ghost is looking for whoever has Lil\'s loot.','bad',5000);break;
+    case 'kate':toast('Lil Marlow\'s ghost is out on the lake. She only moves when nobody is looking at her.','bad',6000);break;
   }
 }
 let roRattleTold=false;

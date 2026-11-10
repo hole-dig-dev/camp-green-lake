@@ -167,10 +167,10 @@ for slot, x in enumerate((-1.11, -.37, .37, 1.11), 1):
         pin('plaque_screw', x + dx, -.125, 1.205, metal, .009)
 
 # A petty official approval stamp along the lower board, and a bird's review.
-lettering('approval_stamp', 'MR. SIR APPROVED', (.82, -.053, .995), .06, RED, 1.02)
+lettering('approval_stamp', 'DUTCH APPROVED', (.82, -.053, .995), .06, RED, 1.02)
 for z in (.95, 1.04):
     B('stamp_rule', (1.10, .002, .003), (.82, -.052, z), RED, 0)
-lettering('camp_footer', 'CAMP GREEN LAKE  /  NO RAISES', (-.69, -.053, .995), .047, INK, 1.35)
+lettering('camp_footer', 'CAMP DRYWATER  /  NO RAISES', (-.69, -.053, .995), .047, INK, 1.35)
 for x, z, radius in ((1.27, 2.573, .024), (1.30, 2.535, .016), (1.295, 2.509, .010)):
     drop = pin('bird_review', x, -.091, z, CREAM, radius)
     drop.scale.z = 1.3

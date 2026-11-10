@@ -13,7 +13,7 @@ const step=async(p,ms)=>{await p.keyboard.down('d');await p.waitForTimeout(ms);a
 (async()=>{const b=await browser(),errs=[];
 const ctx=await b.newContext({viewport:{width:W,height:H}});const p=await ctx.newPage();p.on('pageerror',e=>errs.push(e.message));
 await p.goto(`http://127.0.0.1:${PORT}/?r=1`);await p.waitForFunction(()=>!document.querySelector('#startBtn').disabled,null,{timeout:30000});
-await p.evaluate(()=>{document.querySelector('#nick').value='Caveman';document.querySelector('#startBtn').click()});
+await p.evaluate(()=>{document.querySelector('#nick').value='Dusty';document.querySelector('#startBtn').click()});
 await p.waitForFunction(()=>!document.querySelector('#hud').hidden&&MODEL.ready,null,{timeout:60000});
 await p.evaluate(()=>{runCommand('time 9:30');runCommand('roster off');GOD=true;window.lsPlan=()=>null;window.twPlan&&(window.twPlan=()=>null);tbWeeds.length=0;crewPanelOn=false;S.water=200});
 // a clean start: a stretch of open lake just outside the gate, no tutorial toasts

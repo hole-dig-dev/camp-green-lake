@@ -7,7 +7,7 @@
    The pose is layered on top of the camper's animation after the mixer runs (emotePose, called from 25-people.js),
    so it works on the Blender camper; the box people (before the model loads) get Greg's original box pose. */
 const TWERK_SECS=2.4,SING_EVERY=0.9;
-const LULLABY=['If only, if only,','the woodpecker sighs,','the bark on the tree','was as soft as the skies.'];
+const LULLABY=['Sleep now, sleep now,','the water is deep,','the lake kept its promise,','and so you may sleep.'];
 const SONG_NOTES=[392,440,494,440,392,330,392,440];
 
 /* ---- starting an emote (mine or a friend's) ---- */

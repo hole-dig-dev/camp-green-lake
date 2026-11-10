@@ -69,7 +69,7 @@ panel = B('lit_panel', (.576, .008, 1.066), (-.09, -.371, 1.275), LIT, .019)
 bsdf = panel.data.materials[0].node_tree.nodes['Principled BSDF']
 bsdf.inputs['Emission Color'].default_value = srgb((245, 227, 179))
 bsdf.inputs['Emission Strength'].default_value = .65
-label('brand_green_lake', 'GREEN LAKE', -.09, -.376, 1.699, .113, .505, TEAL)
+label('brand_green_lake', 'DRYWATER', -.09, -.376, 1.699, .113, .505, TEAL)
 label('brand_fizz', 'FIZZ', -.09, -.376, 1.484, .305, .48, RED)
 
 # Flat cartoon bottle silhouette: broad shoulders, skinny neck, crown cap,

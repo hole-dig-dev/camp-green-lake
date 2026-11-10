@@ -75,9 +75,9 @@ const ICE_SERVERS = (() => {
 const PUBLIC = process.env.PUBLIC === '1';
 const ALLOW_OPEN = process.env.ALLOW_OPEN === '1';
 const CAMP_PASSWORD = process.env.CAMP_PASSWORD || '';
-if (PUBLIC && DEV_MODE) { console.error('Refusing to start: DEV_MODE=1 gives every camper host powers and cannot be combined with PUBLIC=1.'); process.exit(1); }
+if (PUBLIC && DEV_MODE) { console.error('Refusing to start: DEV_MODE=1 gives every digger host powers and cannot be combined with PUBLIC=1.'); process.exit(1); }
 if (PUBLIC && !CAMP_PASSWORD && !ALLOW_OPEN) { console.error('Refusing to start: PUBLIC=1 needs CAMP_PASSWORD=<something> set (or ALLOW_OPEN=1 to run it without one on purpose).'); process.exit(1); }
-if (DEV_MODE) console.warn('\n*** DEV_MODE=1: every camper gets host powers (console, clock, hazard spawns). Never run this on a server friends connect to. ***\n');
+if (DEV_MODE) console.warn('\n*** DEV_MODE=1: every digger gets host powers (console, clock, hazard spawns). Never run this on a server friends connect to. ***\n');
 
 // Behind Tailscale Funnel every socket/request arrives from 127.0.0.1; Funnel sets X-Forwarded-For to the real
 // caller's address. Trust its first hop when present, else fall back to the raw connection (local/tailnet-direct use).
@@ -133,7 +133,7 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const num = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? clamp(v, a, b) : d; };
 const r1 = v => Math.round(v * 10) / 10;
 const r2 = v => Math.round(v * 100) / 100;
-const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Camper';
+const cleanName = s => String(s || '').replace(/[^\p{L}\p{N} _'.-]/gu, '').trim().slice(0, 16) || 'Digger';
 const cleanChat = s => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 80);
 const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'lipstick', 'sploosh', 'locket', 'pistol', 'goldbar', 'sneakers'];
 
@@ -579,7 +579,7 @@ wss.on('connection', (ws, req) => {
   if (!ipWithinRate(ipConnWindow, ip, MAX_CONNS_PER_IP_PER_MIN, 60000)) { LOG.log('joinRejected', { ip, reason: 'slow down' }); ws.close(1013, 'slow down'); return; }
   const c = {
     id: nextId++, ws, ip, joined: false, authed: !CAMP_PASSWORD, badJoins: 0,
-    n: 'Camper', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, room: null, cy: -1, nz: 0, lv: 1, sc: 0, hp: 100, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
+    n: 'Digger', c: 0, x: 0, y: 0, z: 40, r: 0, a: 0, f: 0, room: null, cy: -1, nz: 0, lv: 1, sc: 0, hp: 100, dnAt: 0, tokens: 80, last: Date.now(), alive: true, sleeping: false,
     digTimes: [], pingTimes: [], chatTimes: [], envTimes: [], sellTimes: [], bonkTimes: [], whackTimes: [], swatTimes: [], lionTimes: [], // per-type spam limiters
     lastPosLogT: 0, logTokens: LOG_BURST, lastLog: Date.now(), // play-test logging (see logger.js)
   };
@@ -1309,7 +1309,7 @@ wss.on('connection', (ws, req) => {
           if (MON.zer.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
             const zx = MON.zer.x, zz = MON.zer.z; MON.appeased = true; MON.zer = null;
             LOG.log('appeased', { by: c.n }); broadcast({ t: 'mon', ...monSnapshot(), ev: [{ k: 'appeased', x: r1(zx), z: r1(zz), by: c.n }] });
-            addCurse(-tuneS('curse.lullaby', 20), `${c.n} sang Madame Zeroni away`);
+            addCurse(-tuneS('curse.lullaby', 20), `${c.n} sang the Drowned Bride away`);
           }
         }
         broadcast({ t: 'emote', id: c.id, k }, c.id);
@@ -1501,7 +1501,7 @@ setInterval(() => {
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the curse worse (the lake only; see 88-zones.js)
     const out = (world.zone || 'lake') === 'lake' ? joined().filter(c => !c.town && !SIM.inCamp(c.x, c.z)).length : 0;
-    if (out) addCurse(tuneS('curse.curfew', 5) * out, `${out} camper${out > 1 ? 's' : ''} outside the fence at curfew`);
+    if (out) addCurse(tuneS('curse.curfew', 5) * out, `${out} digger${out > 1 ? 's' : ''} outside the fence at lights-out`);
     endOfDay();
   }
   if (lastT > t + SIM.CYCLE / 2 && (world.run.curse || 0) > 0) addCurse(-tuneS('curse.dawn', 3), 'dawn');   // the clock wrapped: a new morning
@@ -1572,4 +1572,4 @@ setInterval(() => {
 process.on('SIGINT', () => { dirty = true; save(); LOG.flushSync(); setTimeout(() => process.exit(0), 300); });
 process.on('SIGTERM', () => { dirty = true; save(); LOG.flushSync(); setTimeout(() => process.exit(0), 300); });
 
-server.listen(PORT, '127.0.0.1', () => console.log(`Camp Green Lake listening on 127.0.0.1:${PORT}`));
+server.listen(PORT, '127.0.0.1', () => console.log(`Camp Drywater listening on 127.0.0.1:${PORT}`));

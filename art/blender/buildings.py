@@ -123,8 +123,8 @@ def shop_front(r,walls,W,D,H,WALL,TRIM,ROOF):
     CHALK=('chalk',(0xe8,0xe4,0xd8),0.9);BOARD=('chalkboard',(0x2a,0x3a,0x30),0.95)
     box('menuframe',(1.45,0.06,1.15),(-2.25,fy-0.03,1.85),TRIM,bevel=0.01,parent=r);box('menu',(1.3,0.05,1.0),(-2.25,fy-0.06,1.85),BOARD,bevel=0,parent=r)
     text('menu_t','SUPPLIES',(-2.25,fy-0.09,2.18),0.2,CHALK,parent=r)
-    for k,t in enumerate(('WATER  ONIONS','BATTERIES  TONIC','SHOVELS  WALKIES')):text(f'menu{k}',t,(-2.25,fy-0.09,1.95-k*0.19),0.13,CHALK,parent=r)
-    text('menu_s','SEEDS ONLY',(-2.25,fy-0.09,1.44),0.12,('chalk_red',(0xd8,0x6a,0x50),0.9),parent=r)
+    for k,t in enumerate(('WATER  BITTERROOT','BATTERIES  TONIC','SHOVELS  WALKIES')):text(f'menu{k}',t,(-2.25,fy-0.09,1.95-k*0.19),0.13,CHALK,parent=r)
+    text('menu_s','GOLD ONLY',(-2.25,fy-0.09,1.44),0.12,('chalk_red',(0xd8,0x6a,0x50),0.9),parent=r)
     # right: the old window, with an OPEN card hung in it
     wx,wz=2.25,1.9
     box('winframeR',(1.15,0.08,0.95),(wx,fy-0.02,wz),TRIM,bevel=0.01,parent=r)
@@ -202,7 +202,7 @@ def cabin(name,W,D,H,wall,roof,warden=False,shop=False):
             box(f'lantern{s}',(0.24,0.24,0.34),(s*1.25,-D/2-0.12,0.3+2.25),('lantern',(0xff,0xd4,0x8a),0.4),bevel=0.02,parent=r)
             box(f'lanterncap{s}',(0.3,0.3,0.06),(s*1.25,-D/2-0.12,0.3+2.45),TRIM,bevel=0.01,parent=r)
         box('plaque',(2.6,0.06,0.45),(0,-D/2-0.06,0.3+2.45),('plaque',(0xd9,0xc3,0x96),0.85),bevel=0.015,parent=r)
-        text('plaquetxt','THE WARDEN',(0,-D/2-0.1,0.3+2.45),0.28,('ink','ink',0.8),parent=r)
+        text('plaquetxt','SUPERINTENDENT',(0,-D/2-0.1,0.3+2.45),0.28,('ink','ink',0.8),parent=r)
         box('chimney',(0.9,0.9,H*0.9+1.4),(W*0.3,D*0.15,0.3+H*0.45+0.7+rise*0.4),('stone',(0x6d,0x59,0x48),0.95),bevel=0.03,parent=r)
         box('chimneycap',(1.05,1.05,0.12),(W*0.3,D*0.15,0.3+H*0.9+1.4+rise*0.4),TRIM,bevel=0.02,parent=r)
     else:
@@ -262,7 +262,7 @@ for k in range(24):   # vertical staves
     a=k*2*math.pi/24;box(f'stave{k}',(0.03,0.05,3.2),(math.cos(a)*2.11,math.sin(a)*2.11,7.1),('tank_dark',(0xa5,0xa0,0x92),0.8),rot=(0,0,a),bevel=0,parent=r)
 for z in (5.8,6.6,7.4,8.2):cyl(f'hoop{z}',2.14,0.06,(0,0,z),MET,verts=24,bevel=0,parent=r)
 cyl('roof',2.35,1.4,(0,0,8.7+0.7),('roof_tank',(0x6d,0x5a,0x44),0.9),verts=24,r2=0.06,bevel=0.01,parent=r)
-text('tanktxt','CGL',(0,-2.14,7.3),0.8,('ink','ink',0.85),fontname='BigShouldersStencilDisplay',extrude=0.01,parent=r)
+text('tanktxt','DRC',(0,-2.14,7.3),0.8,('ink','ink',0.85),fontname='BigShouldersStencilDisplay',extrude=0.01,parent=r)
 for k in range(11):box(f'lrung{k}',(0.6,0.05,0.05),(0,-1.55,0.5+k*0.47),MET,bevel=0,parent=r)
 for s in (-0.28,0.28):box(f'lrail{s}',(0.06,0.06,5.2),(s,-1.55,2.8),MET,bevel=0,parent=r)
 studio(elev=14,azim=-30,lens=40);frame(margin=1.06);print('watertower',tris());render()

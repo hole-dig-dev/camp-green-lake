@@ -3,19 +3,19 @@
 /* ---------- NPCs ---------- */
 const sir=makePerson({suit:0xb9a47a,shirt:0xb9a47a,skin:0xe0b08a,hat:'cowboy',shades:true,shovel:false,body:'stocky',band:0x3a2a1e});
 sir.g.position.set(1.2,baseH(1.2,34),34);sir.g.rotation.y=Math.PI;scene.add(sir.g);
-const sirL=makeLabel(sir.g,'Mr. Sir','npc');
+const sirL=makeLabel(sir.g,'Foreman Dutch','npc');
 /* the gold rush (2026-09-30): Mr. Sir is gone from camp. Water's free at the water drums and Mr. Pendanski
    buys your finds. (He's kept, hidden, for the disco and his lake walks in 83-roster.js.) */
 sir.g.visible=false;sirL.el.remove();labeled.splice(labeled.indexOf(sirL),1);
 const warden=makePerson({suit:0x2c2c2c,shirt:0xd9d9d9,skin:0xe8c29c,hat:'cowboy',shovel:false,body:'tall',band:0x8a3a1c});
 warden.g.position.set(-34,baseH(-34,41)+0.2,41.2);warden.g.rotation.y=Math.PI;scene.add(warden.g);
-const wardenL=makeLabel(warden.g,'The Warden','npc');
+const wardenL=makeLabel(warden.g,'The Superintendent','npc');
 /* Mr. Pendanski works the Supply Depot's serving window (the WreckRoom model) (the booth behind the counter, art/blender/buildings.py
    shop_front). He turns to whoever's in front of the window and waves when you open the store. */
 const CLERK_AT={x:16,z:43.15,ry:Math.PI};
 const clerk=makePerson({suit:0x7d8a5c,shirt:0xe8e0cc,skin:0xd6a077,hat:'none',hair:0x3b2618,shovel:false,body:'average',band:0x5a4a32});
 clerk.g.position.set(CLERK_AT.x,baseH(CLERK_AT.x,45)+0.3,CLERK_AT.z);clerk.g.rotation.y=CLERK_AT.ry;scene.add(clerk.g);
-const clerkL=makeLabel(clerk.g,'Mr. Pendanski','npc');
+const clerkL=makeLabel(clerk.g,'Mr. Abel','npc');
 clerk.waveT=0;
 function updateClerk(dt){
   if(!clerk.g.parent)return;   // parked off the lake (88-zones.js)
@@ -43,12 +43,12 @@ BUNKS.forEach((b,bi)=>SPOTS.push({id:'bunk',bi,x:b.x,z:b.z,r:1.2}));
 
 /* the D Tent crew (they're here even when your friends aren't) */
 const BOTDEF=[
-  {n:'Jim Bob',skin:0x6b4a35,band:0x3a3a3a,hat:'desert',body:'slim',x:-14,z:20,rate:0.07,lines:['Anything shiny, you bring it to me first.','You dig like a lawn chair.','I can\'t see a thing without my glasses.']},
-  {n:'Randy',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','It\'s Randy. Randall if you\'re the Warden.']},
-  {n:'Stan',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for a hundred years.','Keep your eyes on the ground, new kid.','I\'m not crying. It\'s the sun.']},
-  {n:'Pete',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Warden has cameras in the tents.']},
-  {n:'Larry',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my sunflower seeds?','Things just stick to my hands.','The Warden\'s watching. Look busy.']},
-  {n:'Zach',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['I like digging holes.','I\'m already done with mine.','Want me to dig part of yours?']},
+  {n:'Jim Bob',skin:0x6b4a35,band:0x3a3a3a,hat:'desert',body:'slim',x:-14,z:20,rate:0.07,lines:['I called this patch. Dig somewhere else.','You dig like a lawn chair.','These glasses are for reading contracts. Too late now.']},
+  {n:'Randy',skin:0x5a3b28,band:0x8a2020,hat:'bucket',body:'stocky',x:-8,z:22,rate:0.06,lines:['My back is killing me.','Is it lunch yet?','It\'s Randy. Randall on the contract.']},
+  {n:'Stan',skin:0xe0b48f,band:0x2f5f8a,hat:'desert',body:'average',x:-2.5,z:19.5,rate:0.065,lines:['This lake has been dry for forty years.','Keep your eyes on the ground, rookie.','I\'m not crying. It\'s the sun.']},
+  {n:'Pete',skin:0xf0c9a2,band:0x6b2f8a,hat:'none',hair:0xb88a4a,body:'tall',x:4,z:21.5,rate:0.07,lines:['I can hear the dirt talking.','What if the whole lake is one big hole?','The Company counts the spoons. I\'ve seen the ledger.']},
+  {n:'Larry',skin:0xb07a52,band:0xc78a1a,hat:'bucket',body:'short',x:10,z:19,rate:0.06,lines:['Who took my chewing gum?','I found it. Finding isn\'t stealing.','The Super\'s watching. Look busy.']},
+  {n:'Zach',skin:0x4a3021,band:0xd9d2c0,hat:'none',hair:0x1f1511,body:'slim',x:16,z:22,rate:0.15,lines:['Digging is fine. It\'s quiet.','I\'m already done with mine.','Want me to dig part of yours?']},
 ];
 const botRng=mulberry32((Date.now()/1000)|0);
 /* ---- the crew's gold run (the gold rush, JT 2026-09-30): each digs CREW_HOLES holes, one after another in fresh ground
@@ -86,8 +86,8 @@ function crewActivity(b){
   if(s==='dig')return b.water<=0?'Digging, parched':b.stam<15?'Digging, worn out':'Digging';
   if(s==='rest')return b.stam<45?'Catching his breath':'Taking a breather';
   if(s==='walk'||s==='return')return'Walking to a new spot';
-  if(s==='gateout'||s==='gatein')return b.errand==='sift'?(crewPack(b)?'Hauling his pack in':'Taking his bucket in'):b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):b.errand==='lunch'?'Going in for lunch':curfewSoon()?'Heading in for the night':'Going to D Tent';
-  if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to D Tent';
+  if(s==='gateout'||s==='gatein')return b.errand==='sift'?(crewPack(b)?'Hauling his pack in':'Taking his bucket in'):b.errand==='pan'?'Taking his pan in to wash':b.errand==='water'?(b.soda?'Off for a soda break':'Going in for water'):b.errand==='lunch'?'Going in for lunch':curfewSoon()?'Heading in for the night':'Going to Bunk D';
+  if(s==='gotent')return curfewSoon()?'Heading in for the night':'Going to Bunk D';
   if(s==='siftq')return SIFTQ.indexOf(b)===0?'Next at the sifter':`In line at the sifter (${SIFTQ.indexOf(b)} ahead)`;
   if(b.ufoLure)return'Wandering out onto the lake, staring at the sky';
   if(isAbducted(b))return'Abducted by a UFO?!';
@@ -98,10 +98,10 @@ function crewActivity(b){
   if(s==='drink')return b.wash?'Washing his pan':'Filling his canteen';
   if(s==='away')return'Not hired';
   if(s==='gatebackin'||s==='gatebackout')return'Heading back out';
-  if(s==='indoor'||s==='inside')return curfewSoon()||clockT()>=DAYMS?(b.d.n==='Jim Bob'&&!b.xraySleeps?'Dealing cards in D Tent':'Asleep'):'On a break in D Tent';
+  if(s==='indoor'||s==='inside')return curfewSoon()||clockT()>=DAYMS?(b.d.n==='Jim Bob'&&!b.xraySleeps?'Dealing cards in Bunk D':'Asleep'):'On a break in Bunk D';
   if(s==='tossed')return b.tossWhy==='dy'?'Blown up by dynamite!':b.tossWhy==='mn'?'Blown sky-high by a landmine!':b.tossWhy==='tw'?'Caught in a twister!':b.tossWhy==='tb'?'Bowled over by a tumbleweed!':'Hit by a boulder!';
   if(s==='down')return'Getting back up';
-  if(s==='ko')return`Knocked out (${{liz:'lizard',jav:'javelina',lion:'mountain lion',bite:'bitten'}[b.koWhy]||'hurt'})`;
+  if(s==='ko')return`Knocked out (${{liz:'gila',jav:'javelina',lion:'mountain lion',bite:'bitten'}[b.koWhy]||'hurt'})`;
   if(s==='held'||s==='flung')return'Being carried about';
   return s;
 }
@@ -237,7 +237,7 @@ function crewHeldStep(b,dt){
   b.v.y-=16*dt;g.x+=b.v.x*dt;g.y+=b.v.y*dt;g.z+=b.v.z*dt;b.v.x*=1-0.4*dt;b.v.z*=1-0.4*dt;
   const gy=groundAt(g.x,g.z);animPerson(b.p,7,dt);
   if(g.y<=gy){g.y=gy;if(Math.abs(b.v.y)>7)sfx.thud();b.v={x:0,y:0,z:0};
-    say(b.L,pick(['Ow.','Thanks a lot.','I\'m telling the Warden.','My back...']),2200);
+    say(b.L,pick(['Ow.','Thanks a lot.','I\'m telling the Super.','My back...']),2200);
     b.state='return';b.tx=b.hole.x;b.tz=b.hole.z}
 }
 /* ---- the crew out in the weather (JT 2026-10-01): twisters, tumbleweeds and boulders throw them about (a ragdoll,
@@ -251,7 +251,7 @@ function crewToss(b,vx,vy,vz,why){
   if(!OUTDOOR.has(b.state))return;moraleHit(b,why);   /* 88-morale.js */
   eotdCrewThrown(b);   /* Employee of the Day: most thrown around (88-eotd.js) */
   leaveSiftQ(b);b.preToss=b.state;b.tossWhy=why;b.state='tossed';b.v={x:vx,y:vy,z:vz};b.t=0;b.handAt=null;
-  if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],dy:['WHO LIT THAT?!','My ears are ringing!','Fire in the hole... me!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Warden\'s house from here!']}[why]||['WHOA!']),2200);
+  if(nearCam(b.p.g.position.x,b.p.g.position.z,40))say(b.L,pick({tw:['AAAAH!','Not again!','Put me DOWN!'],tb:['Get it off me!','WHOA!','Stupid weed!'],ls:['ROCK!','Ow, my everything!','Look out!'],dy:['WHO LIT THAT?!','My ears are ringing!','Fire in the hole... me!'],mn:['AAAAAAAAAH!','WHO BURIES A MINE IN A LAKE?!','My eyebrows!','I can see the Super\'s house from here!']}[why]||['WHOA!']),2200);
   logEv('crewToss',{n:b.d.n,why});
 }
 function crewKO(b,why){

@@ -16,7 +16,7 @@ function dynPileLook(q){if(q.obj){q.obj.scale.y=Math.max(0.2,q.sand/DYN_SAND);q.
 /* Y: light one and toss it */
 function throwDynamite(){
   if(!S.started||S.ko||twSt||inTent()||S.inTown||uiOpen())return;
-  if(!(S.dynamite>0)){toast('No dynamite. The Supply Depot sells it.','',2500);return}
+  if(!(S.dynamite>0)){toast('No dynamite. The Company Store sells it.','',2500);return}
   const fx=Math.sin(P.fa),fz=Math.cos(P.fa),x=P.x+fx*4,z=P.z+fz*4;
   if(inCamp(x,z)||nearCampNoDig(x,z)||inCamp(P.x,P.z)){toast('Not in camp! Out on the lake bed, past the white line.','bad',2600);return}
   S.dynamite--;sfx.hiss();showSupply('dynamite');   /* in your hand for a moment (86-walkie.js) */logEv('dynThrow',{x:+x.toFixed(1),z:+z.toFixed(1)});

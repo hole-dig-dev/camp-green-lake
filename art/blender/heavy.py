@@ -77,7 +77,7 @@ def handle(parent,y,z,x=0.3):
     cyl('hbar',0.022,0.3,(x,y-0.08,z),GOLDT,verts=8,bevel=0,parent=parent)
 n='Safe_1';scene(n);r=root(n);safe_body(r,GRN);y=-0.5
 box('door',(0.86,0.03,0.82),(0,y-0.015,0.65),GRN,bevel=0.01,parent=r);box('trim',(0.9,0.02,0.86),(0,y-0.005,0.65),GOLDT,bevel=0,parent=r)
-dial(r,y-0.03,0.78);handle(r,y-0.03,0.5);text('co','CAMP GREEN LAKE',(0,y-0.035,1.0),0.06,GOLDT,extrude=0.003,parent=r);heavy_finish(n)
+dial(r,y-0.03,0.78);handle(r,y-0.03,0.5);text('co','MARLOW BANK',(0,y-0.035,1.0),0.06,GOLDT,extrude=0.003,parent=r);heavy_finish(n)
 n='Safe_2';scene(n);r=root(n);safe_body(r,('h_iron',(0x4a,0x4c,0x4e),0.6,0.4),seed=2,rust=0.18);y=-0.5
 box('door',(0.86,0.03,0.82),(0,y-0.015,0.65),IRONd,bevel=0.01,parent=r);dial(r,y-0.03,0.78);handle(r,y-0.03,0.5)
 clump(r,14,0.04,0.09,rad=(0.6,0.9),seed=2);heavy_finish(n)
@@ -125,7 +125,7 @@ for x in (-0.45,0,0.45):
     for v in o.data.vertices:
         v.co.z=max(v.co.z,-0.02)*0.6
     _finish(o,IRONd,0,r)
-text('kb','K.B.',(0,-0.405,0.26),0.14,GOLDT,extrude=0.006,parent=r);cyl('lock',0.06,0.04,(0,-0.42,0.42),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r);heavy_finish(n)
+text('kb','BANK',(0,-0.405,0.26),0.14,GOLDT,extrude=0.006,parent=r);cyl('lock',0.06,0.04,(0,-0.42,0.42),BRASS,verts=12,rot=(math.pi/2,0,0),bevel=0.01,parent=r);heavy_finish(n)
 n='Box_4';scene(n);r=root(n);b=dense_box('box',(1.2,0.8,0.62),(0,0,0.31),r,cuts=6);rust_over([b],0.12,4)
 pts=[(x,-0.405,z) for x in (-0.55,-0.3,-0.05,0.2,0.45) for z in (0.08,0.54)]+[(x,-0.405,z) for x in (-0.55,0.55) for z in (0.23,0.38)]
 rivets('rv',r,pts,m=IRONd,r=0.022);box('lidseam',(1.22,0.82,0.03),(0,0,0.48),IRONd,bevel=0,parent=r);heavy_finish(n)
@@ -145,7 +145,7 @@ def case(parent,m,W=0.7,D=0.22,H=0.48,seed=0,paint=None):
     return b
 def nametag(parent,x,z,D=0.22):
     box('tag',(0.14,0.006,0.08),(x,-D/2-0.012,z),TAG,rot=(0,0,0),bevel=0.002,parent=parent)
-    text('tag1','STANLEY',(x,-D/2-0.016,z+0.015),0.022,INK,extrude=0.0008,parent=parent);text('tag2','YELNATS',(x,-D/2-0.016,z-0.015),0.022,INK,extrude=0.0008,parent=parent)
+    text('tag1','LIL',(x,-D/2-0.016,z+0.015),0.022,INK,extrude=0.0008,parent=parent);text('tag2','MARLOW',(x,-D/2-0.016,z-0.015),0.022,INK,extrude=0.0008,parent=parent)
 n='Case_1';scene(n);r=root(n);case(r,LEATH)
 for x in (-0.2,0.2):box(f'strap{x}',(0.05,0.235,0.49),(x,0,0.245),LEATH2,bevel=0.004,parent=r);box(f'buck{x}',(0.06,0.02,0.05),(x,-0.12,0.33),BRASS,bevel=0.003,parent=r)
 nametag(r,0.0,0.18);heavy_finish(n,elev=15)
