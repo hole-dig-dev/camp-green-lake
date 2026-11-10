@@ -43,7 +43,7 @@ const LOOT={
   arrow:{name:'Arrowhead',val:16,color:0x4a4038},
   jar:{name:'Jar of brandied peaches',val:22,color:0xd98a3a},
   fossil:{name:'Fossil fish',val:30,color:0xd8ccb0},
-  lipstick:{name:'Silver lipstick tube',val:40,color:0xe0e0e8},
+  lipstick:{name:'Silver match safe',val:40,color:0xe0e0e8},
   sploosh:{name:'Old jar of peach shine',val:48,color:0xe8a040},
   locket:{name:'Gold locket',val:60,color:0xd4af37},
   pistol:{name:'Lil\'s old pistol',val:75,color:0x2a2a2a},
