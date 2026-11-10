@@ -115,7 +115,7 @@ function groundDetail(mat,wVar){
          #ifndef GD_LOW
          {vec2 q2=q*2.83+7.3;vec2 c2=gdCell(q2);float w2=max(fwidth(q2.x),fwidth(q2.y))*0.9+0.03;line=max(line,(1.-smoothstep(w2*0.5,w2*1.1,c2.x))*0.38*(1.-smoothstep(18.,45.,gd)));}   /* hairline cracks inside each plate, close up only */
          #endif
-         float camp=1.-0.55*smoothstep(46.,30.,max(abs(${W}.x),abs(${W}.z-39.)));           /* softer where the camp is */
+         float camp=1.-0.78*smoothstep(46.,30.,max(abs(${W}.x),abs(${W}.z-39.)));           /* softer where the camp is */
          diffuseColor.rgb*=1.+(c.y-0.5)*uGD.z*2.*fade*camp;
          diffuseColor.rgb*=1.-line*uGD.y*fade*camp*(0.6+0.4*smoothstep(0.,40.,gd)*0.+0.4);
          diffuseColor.rgb*=1.-0.05*fade*smoothstep(0.10,0.,c.x);}}                        /* plates dip slightly toward their edges */`);

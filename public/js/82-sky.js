@@ -22,7 +22,7 @@ const SKY_KEYS=[
   {h:16.5,zen:0x4c86d2,hor:0xf2d2a2,sun:[1.00,0.88,0.68,1.04],hs:0xd4dcea,hg:0xc48a50,fog:0xecd0a6,ex:1.00,sat:1.12,warm:[1.05,1.0,0.92],hk:1.05},
   {h:18.6,zen:0x5a6cb6,hor:0xffa25c,sun:[1.00,0.60,0.30,0.98],hs:0xd8bfd0,hg:0xc47a48,fog:0xf2ac78,ex:1.02,sat:1.16,warm:[1.09,1.0,0.86],hk:1.3},
   {h:19.6,zen:0x33376e,hor:0xe2664a,sun:[1.00,0.40,0.24,0.55],hs:0xa58fc0,hg:0x8a5a4a,fog:0xc67a62,ex:1.02,sat:1.14,warm:[1.08,0.98,0.90],hk:1.6},
-  {h:20.0,zen:0x1c2050,hor:0x8a4460,sun:[0.55,0.66,1.00,4.20],hs:0x6f88dc,hg:0x34466e,fog:0x5a4a70,ex:1.04,sat:1.06,warm:[1.0,1.0,1.04],hk:2.6},
+  {h:20.0,zen:0x1c2050,hor:0x8a4460,sun:[0.55,0.66,1.00,6.00],hs:0x6f88dc,hg:0x34466e,fog:0x5a4a70,ex:1.04,sat:1.06,warm:[1.0,1.0,1.04],hk:3.2},
 ];
 const SKY={zen:new T.Color(),hor:new T.Color(),sun:new T.Color(),hs:new T.Color(),hg:new T.Color(),fog:new T.Color(),a:new T.Color(),b:new T.Color(),
   lastH:-1,cloud:0.5,cloudT:Math.random()*100};
@@ -59,9 +59,33 @@ sky.material=(()=>{
 })();
 sunDisc.material.color.setRGB(3.2,2.9,2.3);   // brighter than white on purpose: the bloom turns it into a glowing sun
 
+/* Dust in the air: a few hundred soft motes drifting on the wind in a box around the camera. They catch the sun's
+   colour, so they glow gold at dusk and vanish at night. Purely for depth: one draw call, no gameplay meaning. */
+const DUST={n:LOW_POWER?140:380,box:26,pts:null,vel:null};
+{
+  const g=new T.BufferGeometry(),p=new Float32Array(DUST.n*3);DUST.vel=new Float32Array(DUST.n*3);
+  for(let i=0;i<DUST.n;i++){p[i*3]=(Math.random()-0.5)*DUST.box;p[i*3+1]=Math.random()*7;p[i*3+2]=(Math.random()-0.5)*DUST.box;
+    DUST.vel[i*3]=0.5+Math.random()*0.9;DUST.vel[i*3+1]=(Math.random()-0.5)*0.12;DUST.vel[i*3+2]=(Math.random()-0.5)*0.4}
+  g.setAttribute('position',new T.BufferAttribute(p,3));
+  const cv=document.createElement('canvas');cv.width=cv.height=32;const c2=cv.getContext('2d'),gr=c2.createRadialGradient(16,16,0,16,16,16);
+  gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.4,'rgba(255,255,255,0.35)');gr.addColorStop(1,'rgba(255,255,255,0)');c2.fillStyle=gr;c2.fillRect(0,0,32,32);
+  DUST.pts=new T.Points(g,new T.PointsMaterial({map:new T.CanvasTexture(cv),size:0.09,sizeAttenuation:true,transparent:true,opacity:0.5,depthWrite:false,fog:true,blending:T.AdditiveBlending}));
+  DUST.pts.frustumCulled=false;scene.add(DUST.pts);
+}
+function updateDust(dt){
+  const P3=DUST.pts.geometry.attributes.position,a=P3.array,h=DUST.box/2,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z;
+  DUST.pts.visible=cy>-2;if(!DUST.pts.visible)return;                       // not inside a tent (those are rooms under the ground)
+  for(let i=0;i<DUST.n;i++){const k=i*3;
+    a[k]+=DUST.vel[k]*dt;a[k+1]+=(DUST.vel[k+1]+Math.sin(SKY.cloudT*0.7+i)*0.05)*dt;a[k+2]+=DUST.vel[k+2]*dt;
+    if(a[k]-cx>h)a[k]-=DUST.box;else if(a[k]-cx<-h)a[k]+=DUST.box;          // wrap around the camera so the box follows you
+    if(a[k+2]-cz>h)a[k+2]-=DUST.box;else if(a[k+2]-cz<-h)a[k+2]+=DUST.box;
+    if(a[k+1]-cy>4.5)a[k+1]-=7;else if(a[k+1]-cy<-2.5)a[k+1]+=7}
+  P3.needsUpdate=true;
+  DUST.pts.material.color.copy(SKY.sun).multiplyScalar(1.5);DUST.pts.material.opacity=0.55*(1-nightF());
+}
 const SUN_UP=62*Math.PI/180,SUN_MIN=15*Math.PI/180;   // how high the noon sun gets, and how low it's allowed to go (long shadows, but not endless ones)
 function updateSky(dt){
-  SKY.cloudT+=dt;sky.material.uniforms.uT.value=SKY.cloudT;
+  SKY.cloudT+=dt;sky.material.uniforms.uT.value=SKY.cloudT;updateDust(dt);
   const t=clockT(),h=hourOf(t),day=t<DAYMS,hd=day?h:20;
   if(Math.abs(h-SKY.lastH)<0.004)return;SKY.lastH=h;   // colours only need re-mixing when the clock has visibly moved
   let i=0;while(i<SKY_KEYS.length-2&&hd>=SKY_KEYS[i+1].h)i++;
