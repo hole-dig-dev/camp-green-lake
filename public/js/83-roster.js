@@ -117,7 +117,7 @@ function lilLoot(){return S.sack.some(t=>t==='lipstick'||t==='pistol'||t==='lock
 let roLocalT=0;
 function updateRoster(dt){
   if(!online()&&S.started){
-    const ev=[];SIM.stepRoster(RO_LOCAL,[meSim()],clockT(),dt,ev,{day:RUN.day||1,curse:RUN.curse||0,mood:RUN.mood,rate:tune('mon.roster')*chaos(),marshalWin:tune('ro.marshalWin')});
+    const ev=[];SIM.stepRoster(RO_LOCAL,[meSim()],clockT(),dt,ev,{day:RUN.day||1,badluck:RUN.badluck||0,mood:RUN.mood,rate:tune('mon.roster')*chaos(),marshalWin:tune('ro.marshalWin')});
     if((roLocalT-=dt)<=0||ev.length){roLocalT=0.1;rosterSnapshot(SIM.packRoster(RO_LOCAL),RO_LOCAL.roster)}
     for(const e of ev)rosterEvent(e);
   }

@@ -131,7 +131,7 @@ function onMsg(m){
     case 'party':startParty(m.id,cleanName(m.n)||'Digger',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
     case 'run':{const d0=RUN.day;setRun(m);if(RUN.day!==d0)S.refills=0;break}
-    case 'curse':curseNote(num(m.d,-100,100,0),num(m.curse,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
+    case 'badluck':badluckNote(num(m.d,-100,100,0),num(m.badluck,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
     case 'newday':setRun(m);newDay(m);break;
     case 'fired':RUN.lastFound=m.found&&typeof m.found==='object'?m.found:{};fired(num(m.bank,0,1e9,0)|0,num(m.quota,0,1e9,0)|0);break;
     case 'deposit':deposited(m);break;

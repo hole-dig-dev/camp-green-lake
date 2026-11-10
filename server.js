@@ -219,7 +219,7 @@ function checkSummit() {
   const next = ZONE_ORDER[ZONE_ORDER.indexOf('lake') + 1];
   if (js.length && at === js.length && next) { LOG.log('summit', { n: js.length }); for (const c of js) c.summit = false; zoneSwitch(next, 'the crew climbed the north wall'); }
 }
-function freshRun() { return { day: 1, bank: 0, peak: 1, curse: 0, mood: 'normal' }; }
+function freshRun() { return { day: 1, bank: 0, peak: 1, badluck: 0, mood: 'normal' }; }
 function freshWorld(day) { return { day, holes: {}, got: [], kb: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
@@ -563,12 +563,12 @@ function maybeSkipNight() {
 function wardS(w) { const o = {}; for (const k of ['hat', 'face', 'glasses', 'torso', 'arms', 'legs', 'shoes']) o[k] = num(w && w[k], k === 'hat' ? -2 : -1, 19, -1) | 0; return o; } // the Wardrobe (public/js/81-wardrobe.js)
 function peerInfo(c) { return { id: c.id, n: c.n, c: c.c, u: c.u || 0, w: c.w, x: c.x, y: c.y, z: c.z, r: c.r, a: c.a, f: c.f, lv: c.lv, hp: c.hp, room: c.room }; }
 function quotaNow() { return SIM.quotaFor(world.run.day, Math.max(world.run.peak || 1, joined().length, 1)); }
-function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, quota: quotaNow(), mood: world.run.mood || 'normal', curse: Math.round(world.run.curse || 0) }; }
-// the bad luck (sim.js CURSE): the crew's, 0-100. why: shown to everyone
-function addCurse(d, why) {
-  const was = world.run.curse || 0; world.run.curse = Math.max(0, Math.min(100, was + d)); dirty = true;
-  if (Math.round(world.run.curse) === Math.round(was)) return;
-  LOG.log('curse', { d, curse: Math.round(world.run.curse), why }); broadcast({ t: 'curse', d, curse: Math.round(world.run.curse), why }); broadcast(runInfo());
+function runInfo() { return { t: 'run', day: world.run.day, bank: world.run.bank, quota: quotaNow(), mood: world.run.mood || 'normal', badluck: Math.round(world.run.badluck || 0) }; }
+// the bad luck (sim.js BADLUCK): the crew's, 0-100. why: shown to everyone
+function addBadLuck(d, why) {
+  const was = world.run.badluck || 0; world.run.badluck = Math.max(0, Math.min(100, was + d)); dirty = true;
+  if (Math.round(world.run.badluck) === Math.round(was)) return;
+  LOG.log('badluck', { d, badluck: Math.round(world.run.badluck), why }); broadcast({ t: 'badluck', d, badluck: Math.round(world.run.badluck), why }); broadcast(runInfo());
 }
 function near(a, b, r) { return Math.hypot(a.x - b.x, a.z - b.z) < r; }
 
@@ -611,7 +611,7 @@ wss.on('connection', (ws, req) => {
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
       truck: truckMsg(true).st, // Foreman Dutch's pickup (87-truck.js)
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
-      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.curse || 0), // and the day's roster
+      rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.badluck || 0), // and the day's roster
     });
   }
   // No password set: keep the old behaviour of sending the whole world right away. With one set, a socket gets
@@ -1288,16 +1288,16 @@ wss.on('connection', (ws, req) => {
         for (const id of who) { const o = clients.get(id); if (o) send(o, { t: 'carried', who }); }
         break;
       }
-      case 'koCurse': { // a camper got knocked out (any cause): the bad luck grows a little. At most once a minute each.
-        const now = Date.now(); if (now - (c.koCurseAt || 0) < 60000) return; c.koCurseAt = now;
-        addCurse(tuneS('curse.ko', 4), `${c.n} knocked out`);
+      case 'koBadLuck': { // a camper got knocked out (any cause): the bad luck grows a little. At most once a minute each.
+        const now = Date.now(); if (now - (c.koBadLuckAt || 0) < 60000) return; c.koBadLuckAt = now;
+        addBadLuck(tuneS('badluck.ko', 4), `${c.n} knocked out`);
         break;
       }
-      case 'runset': { // host/play-test console: curse <n> | mood <name>
+      case 'runset': { // host/play-test console: badluck <n> | mood <name>
         if (!c.host) return;
-        if (m.curse != null) { world.run.curse = Math.max(0, Math.min(100, num(m.curse, 0, 100, 0))); }
+        if (m.badluck != null) { world.run.badluck = Math.max(0, Math.min(100, num(m.badluck, 0, 100, 0))); }
         if (typeof m.mood === 'string' && SIM.MOODS[m.mood]) world.run.mood = m.mood;
-        dirty = true; LOG.log('runset', { by: c.n, curse: world.run.curse, mood: world.run.mood }); broadcast(runInfo());
+        dirty = true; LOG.log('runset', { by: c.n, badluck: world.run.badluck, mood: world.run.mood }); broadcast(runInfo());
         break;
       }
       case 'emote': { // twerk / sing (public/js/73-emotes.js), tonic / medkit in hand (86-walkie.js): relay to everyone else, at most one every 0.8 s
@@ -1307,10 +1307,10 @@ wss.on('connection', (ws, req) => {
         c.nz = 1; // noisy: draws the Drowned Bride like a shout
         if (k === 'sing' && MON.bride && Math.hypot(MON.bride.x - c.x, MON.bride.z - c.z) < 14) { // the lullaby, close to her: she fades away for the night
           MON.bride.song = (MON.bride.song || 0) + 1;
-          if (MON.bride.song >= SIM.CURSE.SONG + 2 * Math.max(0, joined().length - 1)) {
+          if (MON.bride.song >= SIM.BADLUCK.SONG + 2 * Math.max(0, joined().length - 1)) {
             const zx = MON.bride.x, zz = MON.bride.z; MON.appeased = true; MON.bride = null;
             LOG.log('appeased', { by: c.n }); broadcast({ t: 'mon', ...monSnapshot(), ev: [{ k: 'appeased', x: r1(zx), z: r1(zz), by: c.n }] });
-            addCurse(-tuneS('curse.lullaby', 20), `${c.n} sang the Drowned Bride away`);
+            addBadLuck(-tuneS('badluck.lullaby', 20), `${c.n} sang the Drowned Bride away`);
           }
         }
         broadcast({ t: 'emote', id: c.id, k }, c.id);
@@ -1435,7 +1435,7 @@ ensureCart();
 const ROSTER = { mobs: [] };
 let rostOn = false;
 function tickRoster(t, dt, players) {
-  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, curse: world.run.curse || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1) * chaosS(), marshalWin: tuneS('ro.marshalWin', 0.15) });
+  const rev = []; SIM.stepRoster(ROSTER, players, t, dt, rev, { day: world.run.day, badluck: world.run.badluck || 0, mood: world.run.mood, rate: tuneS('mon.roster', 1) * chaosS(), marshalWin: tuneS('ro.marshalWin', 0.15) });
   const now = Date.now();
   for (const e of rev) {
     if (e.k === 'down') { const c = clients.get(e.id); if (c) c.dnAt = now; }
@@ -1479,7 +1479,7 @@ function endOfDay() {
     LOG.log('quota', { met: true, bank: world.run.bank, quota, day: world.run.day });
     world.run.bank -= quota; world.run.day++; world.run.peak = joined().length; dirty = true;
     if (TRUCK.wreck) truckPark(); // the pickup that came down in the trench is hauled back overnight
-    world.run.mood = SIM.rollMood(world.run.day, world.run.curse);
+    world.run.mood = SIM.rollMood(world.run.day, world.run.badluck);
     broadcast({ ...runInfo(), t: 'newday', paid: quota, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); setTimeout(() => ufoReturnAll(world.run.day), 8000);
   } else if (played < 180) { LOG.log('grace', { bank: world.run.bank, quota }); world.run.day++; dirty = true; broadcast({ ...runInfo(), t: 'newday', grace: true, found: world.run.found || {}, eotd: eotdStandings() }); eotdReset(); setTimeout(() => ufoReturnAll(world.run.day), 8000); }
   else {
@@ -1502,10 +1502,10 @@ setInterval(() => {
   if (lastT < SIM.DAYMS && t >= SIM.DAYMS) {
     // roll call at curfew: anyone still outside the fence makes the bad luck worse (the lake only; see 88-zones.js)
     const out = (world.zone || 'lake') === 'lake' ? joined().filter(c => !c.town && !SIM.inCamp(c.x, c.z)).length : 0;
-    if (out) addCurse(tuneS('curse.curfew', 5) * out, `${out} digger${out > 1 ? 's' : ''} outside the fence at lights-out`);
+    if (out) addBadLuck(tuneS('badluck.curfew', 5) * out, `${out} digger${out > 1 ? 's' : ''} outside the fence at lights-out`);
     endOfDay();
   }
-  if (lastT > t + SIM.CYCLE / 2 && (world.run.curse || 0) > 0) addCurse(-tuneS('curse.dawn', 3), 'dawn');   // the clock wrapped: a new morning
+  if (lastT > t + SIM.CYCLE / 2 && (world.run.badluck || 0) > 0) addBadLuck(-tuneS('badluck.dawn', 3), 'dawn');   // the clock wrapped: a new morning
   lastT = t;
   if (t < SIM.DAYMS && joined().length) world.run.played = (world.run.played || 0) + dt;
   const players = simPlayers(now);
@@ -1544,7 +1544,7 @@ setInterval(() => {
   // same 'env' relay every console-spawned hazard already uses, so every camper's spawnEnv() sees one message.
   const dirPlayers = players.map(p => ({ id: p.id, x: p.x, z: p.z, inCamp: SIM.inCamp(p.x, p.z), down: p.dn }));
   const hz = hazardNow(now);
-  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', curse: world.run.curse || 0, rate: tuneS('mon.events', 1) * chaosS(), chaos: chaosS() })) {
+  for (const d of DIRECTOR.step(dirState, { now, day: world.run.day, clockT: t, players: dirPlayers, hazardNow: hz, zone: world.zone || 'lake', badluck: world.run.badluck || 0, rate: tuneS('mon.events', 1) * chaosS(), chaos: chaosS() })) {
     if (!hazOnS(d.kind)) continue; // switched off in F2 Hazards (public/js/88-hazards.js)
     LOG.log('director', { kind: d.kind, x: d.x, z: d.z, target: d.targetId, major: d.major, why: 'natural roll' });
     if (d.mode === 'env') broadcast({ t: 'env', id: 0, n: '', k: d.kind, x: d.x, z: d.z, a: d.a, t0: hz, dir: true });

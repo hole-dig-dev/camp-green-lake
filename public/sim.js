@@ -556,8 +556,8 @@
   const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'marshal'], RO_BIG = ['supt', 'lil'];
   const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'marshal', 'supt', 'lil'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  function rosterFor(day, curse) {
-    const c = clamp(curse || 0, 0, 100);
+  function rosterFor(day, badluck) {
+    const c = clamp(badluck || 0, 0, 100);
     const r = roRnd(day * 131 + 7), take = (list, n) => { const a = list.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
     const ns = Math.min(3, 1 + Math.floor(day / 2) + Math.floor(c / 40)), nm = day >= 2 || c >= 40 ? (day >= 4 || c >= 70 ? 2 : 1) : 0, nb = day >= 3 || c >= 60 ? (day >= 5 || c >= 80 ? 2 : 1) : 0;
     return [...take(RO_SMALL, ns), ...take(RO_MEDIUM, nm), ...take(RO_BIG, nb)];
@@ -578,7 +578,7 @@
   }
   function stepRoster(R, players, t, dt, ev, o) {
     o = o || {}; R.mobs = R.mobs || []; R.pm = R.pm || {}; R.nid = R.nid || 1; R.sp = R.sp || {}; R.force = R.force || [];
-    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.curse || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
+    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.badluck || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
     const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'supt' : null;   // the day's mood can force a kind in
     const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k) && !(ZONE_NOW !== 'lake' && RO_LAKE_ONLY.includes(k));
@@ -801,18 +801,18 @@
     digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
     inspection: { name: 'Inspection day', desc: 'The Superintendent walks the lake all day. Look busy.' },
   };
-  function rollMood(day, curse) {
+  function rollMood(day, badluck) {
     if (day <= 1) return 'normal';
-    const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
+    const r = roRnd(day * 977 + 31), c = clamp(badluck || 0, 0, 100) / 100;
     const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 0, stingy: 0, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
     let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return 'normal';
   }
-  const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
+  const BADLUCK = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
   const SIM = { PAY, richAt, payMult, gradeOf, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
-    MOODS, rollMood, CURSE,
+    MOODS, rollMood, BADLUCK,
     TOWN, OLD_TOWN, TOWN_BREAK_DEPTH, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;

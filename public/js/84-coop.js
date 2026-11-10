@@ -24,12 +24,12 @@ function setHat(p,l){
 
 /* ---- the crew bank (the gold rush, 2026-09-30): since 2026-10-01 the crew wallet (84-wallet.js): all the gold anyone has, shared by
    the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Superintendent's, out of the bank at curfew   // curse/mood: 81-mood.js
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
-function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
+const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),badluck:0,mood:'normal'};   // quota: the Superintendent's, out of the bank at curfew   // badluck/mood: 81-mood.js
+function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.badluck=num(o.badluck,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
+function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,badluck:RUN.badluck,mood:RUN.mood}))}catch(e){}}
 function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A digger')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A digger'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
-  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
+  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.badluck!=null)RUN.badluck=num(m.badluck,0,100,0);moodHud();
 }
 function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
   {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Company let its cut slide. Today it wants ${RUN.quota} gold in the crew bank by lights-out.`:`Day ${RUN.day}. The Company took its ${m.paid||''} gold. Today it wants ${RUN.quota} in the crew bank by lights-out.`,'gold',7000);addXP(50)}
@@ -46,7 +46,7 @@ function soloEndOfDay(){
   const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
   if(RUN.bank<q&&played>=180){RUN.lastFound=RUN.found||{};RUN.found={};const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
   const found=RUN.found||{};RUN.found={};RUN.lastFound=found;
-  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
+  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.badluck);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
 }
 
 /* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Company Store window (sim.js SELL); the safe takes two to lift ---- */

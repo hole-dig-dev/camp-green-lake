@@ -149,7 +149,7 @@
     const day = ctx.day || 1, players = ctx.players || [], crew = Math.max(1, players.length);
     const rate = ctx.rate == null ? 1 : ctx.rate; if (rate <= 0) return [];   // the tester's events slider (times CHAOS)
     const ch = Math.max(0.2, ctx.chaos == null ? 1 : ctx.chaos);   // CHAOS: the gaps and cooldowns shrink (or stretch) with it
-    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.curse || 0)) / 200) * rate;   // the bad luck: up to 1.5x
+    const intensity = computeIntensity(day, crew) * (1 + Math.max(0, Math.min(100, ctx.badluck || 0)) / 200) * rate;   // the bad luck: up to 1.5x
     state.nextRollAt = now + Math.max(4000 / Math.max(1, ch), DIR_ROLL_MS / intensity + (rand() * 2 - 1) * DIR_ROLL_JITTER);
     if (now - state.lastGlobalAt < DIR_MIN_GAP_MS / ch) return []; // global cooldown: never two natural events too close together
     if (rand() > Math.min(0.9, DIR_BASE_CHANCE * intensity)) return []; // the roll itself

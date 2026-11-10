@@ -1,6 +1,6 @@
 'use strict';
 /* public/js/81-badges.js -- badges and jumpsuits, after Greg's branch (claude/intense-change-1-test-2026-09-27-1829),
-   adapted to what this game tracks (no sentences or curse here yet), plus a few for the rope, the wheelbarrow and
+   adapted to what this game tracks (no sentences or bad luck here yet), plus a few for the rope, the wheelbarrow and
    carrying friends home. Both live in this browser (localStorage 'cgl-meta'), across runs.
    Pause menu > Badges shows them and lets you pick a jumpsuit; friends see your jumpsuit colour.
    Also here: the shop's supplies that need their own logic (bitterroot tonic, first-aid kit) and Q's "use the right thing". */
