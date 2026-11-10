@@ -232,6 +232,27 @@ if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
 if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew's upgrades: { name: { id: true } } (sim.js CREW_SHOP)
+// 2026-11 identifier rename (docs/STORY.md): a world.json saved before it still has the old setting's keys and item ids.
+// Rename them once, here; this and the crew map below are the only places in the server that spell the old names.
+// One-way, and a no-op on a file that is already in the new names. (The browser's side is public/js/09-migrate.js.)
+function migrateOldNames(w) {
+  const ITEM = { sploosh: 'shine', lipstick: 'matchsafe', sneakers: 'oldboots', kb: 'lmcase', suitcase: 'lilstrongbox' };
+  const move = (o, from, to) => { if (o && typeof o === 'object' && from in o) { if (!(to in o)) o[to] = o[from]; delete o[from]; } };
+  const bags = b => { if (b && typeof b === 'object') for (const k of Object.keys(b)) if (b[k] && Array.isArray(b[k].items)) b[k].items = b[k].items.map(t => ITEM[t] || t); };
+  const props = p => { if (p && typeof p === 'object') for (const k of Object.keys(p)) if (p[k] && ITEM[p[k].type]) p[k].type = ITEM[p[k].type]; };
+  move(w, 'kb', 'lm');                                   // who handed in the LM card case
+  move(w.run, 'curse', 'badluck');                       // the bad-luck meter
+  if (w.crew && typeof w.crew === 'object') for (const n of Object.keys(w.crew)) move(w.crew[n], 'onions', 'bitterroots');   // crew kit
+  bags(w.bags); props(w.props);
+  if (w.zones && typeof w.zones === 'object') for (const z of Object.keys(w.zones)) if (w.zones[z]) { bags(w.zones[z].bags); props(w.zones[z].props); }
+  return w;
+}
+function migrateOldTune(t) { // data/tune.json: slider keys that were renamed
+  if (!t || typeof t !== 'object') return {};
+  for (const k of Object.keys(t)) { const n = k === 'ro.sheriffWin' ? 'ro.marshalWin' : k.replace(/^curse\./, 'badluck.'); if (n !== k) { if (!(n in t)) t[n] = t[k]; delete t[k]; } }
+  return t;
+}
+migrateOldNames(world);
 { const was = { 'X-Ray': 'Jim Bob', Armpit: 'Randy', Squid: 'Stan', Zigzag: 'Pete', Magnet: 'Larry', Zero: 'Zach' }; // JT 2026-10-01 renamed the crew: their kit goes with them
   for (const [o, n] of Object.entries(was)) if (world.crew[o]) { world.crew[n] = Object.assign(world.crew[n] || {}, world.crew[o]); delete world.crew[o]; }
   for (const n of Object.keys(world.crew)) if (Object.keys(world.crew[n]).length && world.crew[n].hired === undefined) world.crew[n].hired = true; } // kit bought before hiring existed: he's on the crew
@@ -340,7 +361,11 @@ function sendStatic(res, subdir, rawName) {
 const TUNE_FILE = path.join(DATA_DIR, 'tune.json'), TUNE_MAX_BYTES = 16384, TUNE_KEY_RE = /^[A-Za-z0-9_. ]{1,40}$/;
 // the server's copy of the tester's sliders (the few rules the server runs: roster, events, the bad luck)
 let TUNE_S = {};
-try { TUNE_S = JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')) || {}; } catch (e) { /* none saved yet */ }
+try {
+  const saved = JSON.parse(fs.readFileSync(TUNE_FILE, 'utf8')) || {}, before = JSON.stringify(saved);
+  TUNE_S = migrateOldTune(saved);
+  if (JSON.stringify(TUNE_S) !== before) fs.writeFileSync(TUNE_FILE, JSON.stringify(TUNE_S, null, 1)); // the page reads this file as it is (sendTune)
+} catch (e) { /* none saved yet */ }
 truckWasOn = truckOn(); if (truckWasOn) Object.assign(TRUCK, TRUCK_GATE_PARK); // the pickup's flag was on at startup: it waits by the service gate
 /* Landmines (JT 2026-10-01; public/js/88-mines.js): every ~haz.mineEvery seconds one goes down on the lakebed outside
    the fence, 8-45 m from a camper who's out there (so they turn up where people dig), up to haz.mineMax at once. Not

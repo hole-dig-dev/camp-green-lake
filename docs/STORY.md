@@ -68,10 +68,9 @@ the same treatment: replace with something in the Company's deadpan voice, or de
 
 1. **Visible and audible text only**: strings shown in the HUD, toasts, dialogue, store, signs, title, pause menu,
    console help, README player-facing parts, HTML title/meta, alt text, and text baked into models/signs (see 4).
-   **Do not rename identifiers**: variable and function names, object keys used as ids (`sploosh`, `onions`, `zeroT`,
-   `S.hasKB`, `warden`, `sir`), network message fields, save keys, file names, model file names, CSS ids, tune keys,
-   log event names. Renaming those breaks saves, the server and Greg's branches. A comment may mention the old name
-   once where an id no longer matches its label (e.g. `// 'onions' is the id; players see "bitterroot"`).
+   **Identifiers follow the same names** (since 2026-11-10; see "Identifiers" below): variables, object keys used
+   as ids, network message types and fields, save keys, file and model names, CSS ids, tune keys, console commands
+   and log event names. Do not reintroduce an old name anywhere, including in a comment.
 2. Keep each line's meaning, length and humour. Do not add lore dumps. Where the old line was a *Holes* quote or
    in-joke, write a new line in the Company's voice.
 3. Grammar: "a onion" style leftovers are bugs. Check plurals, articles and capitalisation ("the Superintendent",
@@ -99,12 +98,34 @@ the same treatment: replace with something in the Company's deadpan voice, or de
   boots that fall from the sky are a "Pair of old boots"; the town's buildings are the Marshal's office, the Boat
   shed, Lil's house, the Root cellar and Lil's vault; the lullaby is four new lines (`73-emotes.js`); the Drowned
   Bride is looking for her ring.
-- **Ids that no longer match their label** (never rename them): `kb`/`S.hasKB` = the LM card case, `suitcase` = Lil's
-  strongbox, `strongbox` = the cashbox, `sploosh` = peach shine, `onion`/`S.onions` = bitterroot, `warden` = the
-  Superintendent, `sir` = Foreman Dutch, `sheriff` = the Marshal's ghost, `kate` = Lil Marlow's ghost, `zeroni`/`zer` =
-  the Drowned Bride, `curse` = bad luck ("Lil's luck"), `quota` = the Company's cut, `fired` = let go, `curfew` =
-  lights-out, `lizard`/`liz` = gila, `clerk` = Mr. Abel, `D_TENT` = Bunk D, `SignBigThumb` = the Chimney Rock sign,
-  the `tune` keys (`curse.*`, `curfew.*`, `dmg.Lizard hatchling`), the console commands `curse`, `tent` and `roster
-  sir|sheriff|warden|kate`, model file names (`WardenHouse.glb`, `MrSirTruck.glb`, `KBTube.glb`...).
+- **Identifiers (renamed 2026-11-10).** The ids now say what the player sees:
+
+  | Was | Is |
+  |---|---|
+  | `warden`, `Warden*.glb`, `wardennote.py` | `supt`, `Supt*.glb`, `suptnote.py` |
+  | `sir`, `MrSirTruck.glb` | `dutch`, `DutchJeep.glb` |
+  | `kate`, `sheriff`, `kt`, `TownBldg_kate/_sheriff`, `ro.sheriffWin` | `lil`, `marshal`, `ml`, `TownBldg_lil/_marshal`, `ro.marshalWin` |
+  | `zeroni`, `ZER`, `.zer`, `zspawn` | `bride`, `BRIDE`, `.bride`, `bridespawn` |
+  | `zeroT` | `zachT` (Zach digging alongside you) |
+  | `curse` (state, messages, `curse.*` sliders, console command) | `badluck` |
+  | `D_TENT`, `TH_*` / `thumb`, `SignBigThumb`, `WreckRoom`, `SignWreckRoom` | `BUNK_D`, `CHIM_*` / `chimney`, `SignChimney`, `CompanyStore`, `SignCompanyStore` |
+  | `kb`, `S.hasKB`, `world.kb`, `KBTube.glb` | `lmcase` (item id, message type), `S.hasLM`, `world.lm`, `LMCase.glb` |
+  | `suitcase`, `FindSuitcase.glb` | `lilstrongbox`, `FindLilStrongbox.glb` (`strongbox` is still the ordinary bank cashbox) |
+  | `lipstick`, `FindLipstick.glb` | `matchsafe`, `FindMatchSafe.glb` (the find is a "Silver match safe" now) |
+  | `sploosh`, `FindSploosh.glb`, the typed admin word | `shine`, `FindShine.glb`, `peachshine` |
+  | `onion`, `onions`, `S.onions`, `eatOnion` | `bitterroot`, `bitterroots`, `S.bitterroots`, `eatBitterroot` |
+  | `sneakers`, badge `clyde` | `oldboots`, badge `bootfall` |
+  | badges `caveman`, `magnet`, `squid`, `barfbag`, `stanley` | `shovelhead`, `stickyfingers`, `punchingbag`, `loosehips`, `lucky` |
+
+  Old saves are carried over once, one way: the browser's by `public/js/09-migrate.js` (session save, solo run,
+  badges, solo crew kits, moved sliders, key bindings), the server's `data/world.json` and `data/tune.json` by
+  `migrateOldNames()` / `migrateOldTune()` in `server.js`. Those two places, and the 2026-10-01 crew rename map
+  beside them, are the only code that still spells an old id.
+
+  **Left as they are, on purpose:** `quota`, `fired`, `curfew`, `camper`, `lizard` / `liz`, `tent`, `seeds` (plain
+  English, hundreds of uses, and the bible above allows the premise); the `cgl` / `CGL` prefix (an opaque
+  initialism in storage keys, `window.__cgl`, and the node and material names inside every shipped model);
+  directory and repository names on disk and on GitHub (`camp-green-lake*`), which the older build scripts open by
+  path; and the "Barlow Condensed" typeface, which is the font's real name.
 - **Lettering baked into models** is swapped by `art/blender/story_retext.py` (it lists what it changed and what it
   could not).
