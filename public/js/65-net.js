@@ -43,11 +43,11 @@ function addRemote(m){
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
 function removeRemote(id){const R=remotes.get(id);if(!R)return null;scene.remove(R.p.g);R.L.el.remove();labeled.splice(labeled.indexOf(R.L),1);remotes.delete(id);dropVoicePeer(id);renderOnline();return R}
-function applyDig(x,z,d,rebuild){
+function applyDig(x,z,d,rebuild,hp){   // hp: the heap's direction (15-terrain.js HEAP_DIRS), when the server knows it
   x=r1(num(x,-EDGE,EDGE,0));z=r1(num(z,-EDGE,EDGE,0));d=num(d,0,EIGHT_FT,0);
   if(nearCampNoDig(x,z))return;   // old saves (and old clients) can still have holes against the fence: don't draw them
   let h=holeNear(x,z,0.06),v0=0;
-  if(h){if(d<=h.d+0.001)return;v0=holeVD(h);h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true});
+  if(h){if(d<=h.d+0.001)return;v0=holeVD(h);h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true,hp:Number.isInteger(hp)&&hp>=0&&hp<=HEAP_NONE?hp:undefined});
   if(rebuild){touchHole(h);digRemote(h,v0)}   // the ground gives under their shovel (or the excavator's bucket) instead of popping (47-digfeel.js)
 }
 function renderOnline(){
@@ -68,7 +68,7 @@ function onMsg(m){
       if(Array.isArray(m.iceServers)&&m.iceServers.length)window.CGL_ICE=m.iceServers;   // read by 86-voice.js (which may not have loaded yet when hello arrives)
       for(const id of [...remotes.keys()])removeRemote(id);
       if(typeof zoneEnter==='function')zoneEnter(typeof m.zone==='string'?m.zone:'lake',m.zflags);   // which map the crew is in (88-zones.js); before the holes below, which are that map's
-      if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
+      if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false,e[3]);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
       if(m.lm)reveal(cleanName(m.lm)||'A digger');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
@@ -111,7 +111,7 @@ function onMsg(m){
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
     case 'pos':{const R=remotes.get(m.id);if(!R)break;if(m.ly!=null&&R.p)R.p.look={yaw:num(m.ly,-7,7,0),pitch:num(m.lp,-1.6,1.6,0)};R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;R.dog=m.dg===true;R.gv=m.gv===true;R.gs=m.gs===true;R.hv=m.hv===true;R.hs=m.hs===true;   /* on a hoverboard (88-hover.js) */   /* gravity boots, gold shovel (88-gear.js) */   /* their mine-sniffing dog (88-dog.js) */   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
-    case 'dig':applyDig(m.x,m.z,m.d,true);break;
+    case 'dig':applyDig(m.x,m.z,m.d,true,m.hp);break;
     case 'truck':truckMsg(m);break;
     case 'mach':machMsg(m);break;case 'mpos':machPos(m);break;case 'excScoop':excScooped(m);break;case 'mfx':machFx(m);break;   // the Company's machines (87-excavator.js)
     case 'machPay':machPay(num(m.holes,0,200,0),num(m.rich,0.05,20,1),m.src==='dump'?'dump':'exc');break;
