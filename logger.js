@@ -1,4 +1,4 @@
-// Play-test event logging for Camp Green Lake. Written FOR AN LLM TO READ: one JSON object per line
+// Play-test event logging for Camp Drywater. Written FOR AN LLM TO READ: one JSON object per line
 // (JSON Lines) under data/logs/<YYYY-MM-DD>.jsonl, so "a lizard bit me around 3pm" can be answered with
 // `node scripts/logq.js --type lizBite --since 15:00`. See scripts/logq.js and the README's Play-test logging
 // section for how to query these files.
@@ -17,16 +17,16 @@
 //                                                        f = raw client flag bits, down/camp = booleans)
 //   chat            {id,n,s}                            proximity chat
 //   shout           {id,n,i}                             shout (0-4; see SHOUTS in index.html)
-//   sell            {id,n,v}                             sold sack contents to Mr. Sir (counts toward quota)
+//   sell            {id,n,v}                             sold sack contents to Foreman Dutch (counts toward quota)
 //   propSpawn       {id,n,item,type,x,z}                 dug up something too heavy for the sack (safe/strongbox)
 //   propGrab        {id,n,item,type,x,z}                 started hauling heavy loot
-//   propSold        {item,type,v,who}                    heavy loot reached Mr. Sir's truck (who = carrier names)
+//   propSold        {item,type,v,who}                    heavy loot reached Foreman Dutch's truck (who = carrier names)
 //   bagDrop         {id,n,x,z,items}                     a downed camper's sack fell
 //   bagGrab         {id,n,bagId}                         someone grabbed a dropped sack
 //   revive          {id,n,by,x,z}                        by picked up downed camper n
 //   pull            {id,n,by,x,z}                        by pulled camper n out of a deep hole
-//   kb              {id,n}                               gave the gold KB tube to the Warden
-//   win             {id,n}                               dug up the suitcase
+//   lm              {id,n}                               gave the gold LM card case to the Superintendent
+//   win             {id,n}                               dug up Lil's strongbox
 //   clock           {id,n,off,paused,pt,prevOff,prevPaused,prevPt}   host changed the camp clock
 //   env             {id,n,k,x,z,a}                       hazard spawned from the console (e.g. a twister)
 //   admin           {id,n,a}                             admin panel button (fill/empty the team bank)
@@ -38,13 +38,13 @@
 //                                                          a bunk
 //   daybreak        {asleep}                              every joined camper was asleep in a bunk; the night was
 //                                                          skipped straight to dawn (asleep = how many campers)
-//   mobsOn/mobsOff  {kind}                               police trucks / Madame Zeroni / the mountain lion appear
-//                                                          or leave (kind: 'police'/'zeroni'/'lion')
+//   mobsOn/mobsOff  {kind}                               police trucks / the Drowned Bride / the mountain lion appear
+//                                                          or leave (kind: 'police'/'bride'/'lion')
 //   spot / lost     {id,n,x,z}                            a police truck spotted / lost a camper
-//   down            {id,n,x,z,by}                         knocked down by police or Zeroni ("by")
-//   blink/drop/gone {id,n,x,z,front?}                     Zeroni teleports near / lets go of / drags off a camper
-//   zspawn          {x,z}                                 Madame Zeroni appears for the night
-//   mon             {trucks,zer,lion}                     periodic (~2s) position/mode snapshot while mobs are out
+//   down            {id,n,x,z,by}                         knocked down by police or the Bride ("by")
+//   blink/drop/gone {id,n,x,z,front?}                     the Bride teleports near / lets go of / drags off a camper
+//   bridespawn        {x,z}                                 the Drowned Bride appears for the night
+//   mon             {trucks,bride,lion}                     periodic (~2s) position/mode snapshot while mobs are out
 //   lionSpawn       {id,x,z}                               the mountain lion appears (natural window, or the
 //                                                          'lion' console command); id = its first target, if any
 //   lionSpawnCmd    {id,n,x,z}                             host used the 'lion' console command
@@ -69,10 +69,10 @@
 //   sinkFellIn      {id,n,x,z}                               a camper fell into an open sinkhole
 //   sinkpull        {id,n,by,x,z}                            by finished pulling camper n out of a sinkhole (server-relayed, like 'pull')
 //   sinkRescuer     {id,n,by}                                camper n was credited XP for helping pull someone up
-//   sinkSolo        {id,n,x,z}                                nobody else online: Zero set out with a line
-//   sinkSoloRescued {id,n,x,z}                                Zero finished pulling a solo camper out
+//   sinkSolo        {id,n,x,z}                                nobody else online: Zach set out with a line
+//   sinkSoloRescued {id,n,x,z}                                Zach finished pulling a solo camper out
 //   sinkFilled      {id,n,x,z}                                a sinkhole finished filling back in (client-local)
-//   found           {id,n,item,type,value,x,z,heavy,kb}     dug up an item
+//   found           {id,n,item,type,value,x,z,heavy,lm}     dug up an item
 //   tentEnter       {id,n,tent,name,x,z}                    ducked inside a tent (tent = index into TENTS)
 //   tentExit        {id,n,tent,name,x,z}                    stepped back outside a tent
 //   pause           {id,n,action}                           used the pause menu (action: 'restart' or 'quit')

@@ -37,7 +37,7 @@ try{
   const q=p.model.getObjectByName('shinL').quaternion,rest=MODEL.scene.getObjectByName('shinL').quaternion;
   checks.push({ragPoints:points,ragFinite:finite,recovered:!p.rag&&p.ragBlend===0,kneeRestAngle:q.angleTo(rest)});sc.remove(p.g);
   // Every staff character uses the same skinned asset and keeps their clothing tint and hat selection.
-  for(const npc of [sir,warden,clerk]){let skins=0;npc.model.traverse(n=>{if(n.isSkinnedMesh)skins++});checks.push({staffSkins:skins})}
+  for(const npc of [dutch,supt,clerk]){let skins=0;npc.model.traverse(n=>{if(n.isSkinnedMesh)skins++});checks.push({staffSkins:skins})}
   r.dispose();r.forceContextLoss();return{cards,checks};
  });
  assert.equal(errors.length,0,errors.join('\n'));

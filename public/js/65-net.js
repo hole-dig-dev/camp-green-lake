@@ -20,7 +20,7 @@ function sendPresence(now){
   const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0)|(S.up&&S.up.walkie?4096:0);   // 2048: talking on the walkie, 4096: owns one (86-walkie.js, 86-voice.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent,myBackFill()];
   const key=pos.join(',');if(key===net.lastPos&&now-net.lastPosT<1000)return;
-  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,sp:!!S.up.spade,lg:!!S.up.long,sh:!!S.up.shovel,tn:!!S.inTown,bk:pos[10],bt:myBackTier(),dg:!!S.up.dog,gv:!!S.up.grav,gs:!!S.up.goldShovel,hv:hoverOn(),hs:!!S.up.hoverShoes,kt:kateLoot(),on:S.onionT>0,vy:+P.yaw.toFixed(2)});   // kt/on/vy: for the roster (83-roster.js)
+  net.lastPos=key;net.lastPosT=now;wsSend({t:'pos',x:pos[0],y:pos[1],z:pos[2],r:pos[3],a:pos[4],f:pos[5],cy:pos[6],nz:pos[7],lv:pos[8],room:pos[9],sc:S.seeds,hp:Math.round(S.hp),wt:Math.round(S.water),wk:!!S.up.walkie,sp:!!S.up.spade,lg:!!S.up.long,sh:!!S.up.shovel,tn:!!S.inTown,bk:pos[10],bt:myBackTier(),dg:!!S.up.dog,gv:!!S.up.grav,gs:!!S.up.goldShovel,hv:hoverOn(),hs:!!S.up.hoverShoes,ml:lilLoot(),on:S.bitterrootT>0,vy:+P.yaw.toFixed(2)});   // ml/on/vy: for the roster (83-roster.js)
 }
 
 /* ---------- play-test logging: queue events and send them to the server in one small batch every ~1.5s
@@ -69,7 +69,7 @@ function onMsg(m){
       if(typeof zoneEnter==='function')zoneEnter(typeof m.zone==='string'?m.zone:'lake',m.zflags);   // which map the crew is in (88-zones.js); before the holes below, which are that map's
       if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
-      if(m.kb)reveal(cleanName(m.kb)||'A digger');
+      if(m.lm)reveal(cleanName(m.lm)||'A digger');
       if(Array.isArray(m.peers))for(const p of m.peers)addRemote(p);
       for(const id of [...PROPS.keys()])removeProp(id);for(const id of [...BAGS.keys()])removeBag(id);
       if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p){const id=num(p.id,0,1e5,-1)|0;addProp(id,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);const pr=PROPS.get(id);if(pr){if(p.y!=null)pr.y=num(p.y,-10,60,0);if(p.val!=null)pr.val=num(p.val,0,1e4,0)|0;pr.owner=p.owner;pr.grab=Array.isArray(p.grab)?p.grab:[];pr.ropes=Array.isArray(p.ropes)?p.ropes:[];pr.load=Array.isArray(p.load)?p.load:[];pr.tip=!!p.tip;pr.cartId=p.cartId!=null?p.cartId:null;if(Array.isArray(p.q))propQ(pr,p.q)}}
@@ -78,18 +78,18 @@ function onMsg(m){
       // Ground truth for the monsters, straight from the server: a first connect starts clean anyway, but a
       // reconnect could otherwise be left rendering whatever it saw right before the socket dropped (it might
       // have missed the one broadcast that told everyone else the monster was gone).
-      monFromServer(m.mon||{trucks:[],zer:null});
+      monFromServer(m.mon||{trucks:[],bride:null});
       // event director state: whether it's running, and any of its events already in progress (twister can't be
       // replayed mid-flight -- see supportsLateJoin in public/director.js -- so only kinds like landslide show up here).
       if(typeof m.dirOn==='boolean')DIRECTOR_ON=m.dirOn;
       if(Array.isArray(m.dirEvents))for(const e of m.dirEvents.slice(0,8))if(e&&typeof e.k==='string'&&hazOn(e.k))spawnEnv(e.k,{x:num(e.x,-600,600,0),z:num(e.z,-600,600,0),a:0,t0:e.t0});
       javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
       rosterSnapshot(m.rost||[],m.rostToday); // and the day's roster (83-roster.js)
-      truckHello(m.truck); // Mr. Sir's pickup (87-truck.js)
+      truckHello(m.truck); // Foreman Dutch's pickup (87-truck.js)
       townHello(m); // breaches into the buried town, and what's been taken down there today (89-town.js)
       lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
-      renderOnline();if(SPECON()&&!S.started)specJoin();if(S.started){sendJoin();if(S.hasKB){const kb=items.find(i=>i.type==='kb');wsSend({t:'got',item:kb.id,kb:true})}}
+      renderOnline();if(SPECON()&&!S.started)specJoin();if(S.started){sendJoin();if(S.hasLM){const lm=items.find(i=>i.type==='lmcase');wsSend({t:'got',item:lm.id,lm:true})}}
       maybeResume();break;
     }
     // A reconnect (including the join-timeout closing an idle title screen) re-sends 'needpass'; only prefill
@@ -111,7 +111,7 @@ function onMsg(m){
     case 'pos':{const R=remotes.get(m.id);if(!R)break;R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;R.dog=m.dg===true;R.gv=m.gv===true;R.gs=m.gs===true;R.hv=m.hv===true;R.hs=m.hs===true;   /* on a hoverboard (88-hover.js) */   /* gravity boots, gold shovel (88-gear.js) */   /* their mine-sniffing dog (88-dog.js) */   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'truck':truckMsg(m);break;
-    case 'sumstat':northMsg(m);break;   // the crew on top of the north wall (88-north.js)   // Mr. Sir's pickup (87-truck.js)
+    case 'sumstat':northMsg(m);break;   // the crew on top of the north wall (88-north.js)   // Foreman Dutch's pickup (87-truck.js)
     case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
@@ -124,14 +124,14 @@ function onMsg(m){
     case 'rost':{rosterSnapshot(m.list,m.today);if(Array.isArray(m.ev))for(const e of m.ev.slice(0,30))rosterEvent(e);break}   // the day's monster roster (83-roster.js)
     case 'emote':{const R=remotes.get(m.id);if(R&&(m.k==='twerk'||m.k==='sing'))startEmote(R.p,m.k,R.L);else if(R&&HOLD_SECS[m.k])holdProp(R.p,m.k,HOLD_SECS[m.k]);break}
     case 'say':{const R=remotes.get(m.id);if(R){say(R.L,SHOUTS[num(m.i,0,SHOUTS.length-1,0)|0]);sfx.shout();R.p.waveT=1.4}break}
-    case 'kb':reveal(cleanName(m.n)||'A digger');break;
+    case 'lmcase':reveal(cleanName(m.n)||'A digger');break;
     case 'win':triggerWin(cleanName(m.n)||'A digger',false);break;
     case 'restore':if(S.started&&!S.resumed&&!S.restored){S.restored=true;/* no personal gold to restore: the crew wallet is the server's (84-wallet.js) */P.x=num(m.x,-HALF+3,HALF-3,P.x);P.z=num(m.z,-HALF+3,HALF-3,P.z);P.y=groundAt(P.x,P.z)}break;
     case 'update':saveSession();setTimeout(()=>location.reload(),300);break;
     case 'party':startParty(m.id,cleanName(m.n)||'Digger',num(m.dur,5,300,60));break;
     case 'nodisco':toast(m.busy?'A dance party is already going. Get over there.':'The camp is still tired from your last party. Try again in a few minutes.','',3500);break;
     case 'run':{const d0=RUN.day;setRun(m);if(RUN.day!==d0)S.refills=0;break}
-    case 'curse':curseNote(num(m.d,-100,100,0),num(m.curse,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
+    case 'badluck':badluckNote(num(m.d,-100,100,0),num(m.badluck,0,100,0)|0,typeof m.why==='string'?m.why.slice(0,80):'');break;   // 81-mood.js
     case 'newday':setRun(m);newDay(m);break;
     case 'fired':RUN.lastFound=m.found&&typeof m.found==='object'?m.found:{};fired(num(m.bank,0,1e9,0)|0,num(m.quota,0,1e9,0)|0);break;
     case 'deposit':deposited(m);break;
@@ -221,7 +221,7 @@ function updateRemotes(dt){
     if(dx*dx+dz*dz>100){g.position.set(R.tx,R.ty,R.tz)}else{g.position.x+=dx*k;g.position.z+=dz*k;g.position.y+=(R.ty-g.position.y)*k}
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
     R.dph=(R.dph+dt/0.42)%1;
-    if(truckRemoteSeat(id,R,dt))continue;   // sitting in Mr. Sir's pickup (87-truck.js)
+    if(truckRemoteSeat(id,R,dt))continue;   // sitting in Foreman Dutch's pickup (87-truck.js)
     if(R.anim===3&&R.room!=null){   // lying down inside a tent = asleep in a bunk: snap onto the nearest one in that room
       let bk=null,bd=9;for(const u of BUNKS)if(u.tent===R.room){const d=(u.x-R.tx)**2+(u.z-R.tz)**2;if(d<bd){bd=d;bk=u}}
       if(bk){animPerson(R.p,0,dt);sleepPose(R.p,bk);continue}

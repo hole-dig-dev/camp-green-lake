@@ -1,7 +1,7 @@
 'use strict';
 /* public/js/86-sit.js -- sitting down (JT, 2026-09-30): F at a free seat to sit, F again (or just walk) to get up.
    The seats: the mess tables' benches (four a table, facing it), the two yard benches (two each, facing the yard) and
-   the four stools round D Tent's card table (facing it; Jim Bob deals from one of them). Mr. Sir's pickup has its own
+   the four stools round Bunk D's card table (facing it; Jim Bob deals from one of them). Foreman Dutch's pickup has its own
    seats (87-truck.js) but sits you the same way.
    Sitting is the camper's Sit clip (animPerson mode 10, blender/cgl_rig.py anim_sit). It goes out as your animation,
    so friends see you sit; a seat with someone on it (a friend or a bot) isn't offered. */
@@ -15,7 +15,7 @@ for(const t of MESS_TABLES)for(const s of[-1,1])for(const dx of[-0.7,0.7])   // 
 for(const[bx,bz]of[[-12,42.3],[-26.5,39.2]])for(const dx of[-0.45,0.45])   // the yard benches (23-models.js CAMP_PROPS), facing the yard
   SEATS.push({x:bx+dx,z:bz,y:0.47,h:Math.PI,out:[0,-0.8],tent:null,what:'the bench'});
 {
-  const ti=TENTS.indexOf(D_TENT),cx=D_TENT.table.x,cz=D_TENT.table.z+1.75;   // the card table's centre (20-world.js)
+  const ti=TENTS.indexOf(BUNK_D),cx=BUNK_D.table.x,cz=BUNK_D.table.z+1.75;   // the card table's centre (20-world.js)
   for(const[sx,sz]of[[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]])
     SEATS.push({x:cx+sx,z:cz+sz,y:0.46,h:Math.atan2(-sx,-sz),out:[sx*0.45,sz*0.45],tent:ti,what:'the stool'});
 }
@@ -38,7 +38,7 @@ function sitSpot(){
 }
 /* sitting, F does what the seat's for: at the card table that's a hand of blackjack; anywhere else it's getting up */
 function seatedSpot(){
-  const s=SEATS[S.sit];if(s&&s.tent===TENTS.indexOf(D_TENT))return SPOTS.find(q=>q.id==='cards')||{id:'sit',label:'Stand up',use:standUp};
+  const s=SEATS[S.sit];if(s&&s.tent===TENTS.indexOf(BUNK_D))return SPOTS.find(q=>q.id==='cards')||{id:'sit',label:'Stand up',use:standUp};
   return{id:'sit',label:'Stand up',use:standUp};
 }
 function sitDown(i){S.sit=i;P.moving=false;digHeld=false;sfx.thud()}

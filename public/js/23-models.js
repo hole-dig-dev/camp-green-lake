@@ -108,8 +108,8 @@ function towerLampMount(parts){
   const TENT_MODEL=t=>t.crew?'TentCrew':'TentSmall';
   for(const t of TENTS)if(!t.house)
     placeModel(TENT_MODEL(t),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:Math.PI}).then(()=>hideProc(t.ext)).catch(()=>{});   // door faces the yard (-z)
-  placeModel('WreckRoom',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(wreckCabin)).catch(()=>{});
-  placeModel('WardenHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(wardenCabin);hideProc(porch)}).catch(()=>{});
+  placeModel('CompanyStore',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(storeCabin)).catch(()=>{});
+  placeModel('SuptHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
   // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
   // model and mounted on each tower's swivelling head (22-security.js), so it points where its beam goes
@@ -119,13 +119,13 @@ function towerLampMount(parts){
   // fence: posts where 20-world.js put them; spans stretched to each gap (the model is 2.5 m long)
   Promise.all([instanceModel('FencePost',FENCE_POSTS),instanceModel('FenceSpan',FENCE_SPANS.map(s=>Object.assign({sx:s.len/2.5},s)))])
     .then(()=>hideProc(FENCE_PROC)).catch(()=>{});
-  // signs: the painted camp sign and the Supply Depot's blade sign (SignWreckRoom) on its front corner
+  // signs: the painted camp sign and the Company Store's blade sign (SignCompanyStore) on its front corner
   placeModel('SignCampEntrance',{x:-11,y:baseH(-11,30.5),z:30.5,ry:Math.PI}).then(()=>hideProc(campSign)).catch(()=>{});
-  placeModel('SignWreckRoom',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(wreckSign)).catch(()=>{});
+  placeModel('SignCompanyStore',{x:19.2,y:baseH(19.2,42.4),z:42.4,ry:Math.PI}).then(()=>hideProc(storeSign)).catch(()=>{});
   // gates: the arch gate at the lake side and the sliding service gate on the east fence (outside faces away from camp)
   placeModel('MainGate',{x:0,y:baseH(0,FENCE_Z0),z:FENCE_Z0,ry:0}).then(()=>{hideProc(GATE_PROC);hideProc(mainGateSign)}).catch(()=>{});
   placeModel('ServiceGate',{x:FENCE_X1,y:baseH(FENCE_X1,39),z:39,ry:-Math.PI/2}).then(()=>hideProc(serviceGateSign)).catch(()=>{});
-  // yard: the water truck (cab toward the gate, tap on the tents' side as before), flagpole, path lamps, the Warden's oaks,
+  // yard: the water truck (cab toward the gate, tap on the tents' side as before), flagpole, path lamps, the Superintendent's oaks,
   // and the crate stacks + mess tables from 22-security.js
   if(WATER_TRUCK_ON)placeModel('WaterTruck',{x:5,y:baseH(5,36),z:36,ry:-Math.PI/2}).then(()=>hideProc(WATER_TRUCK_PROC)).catch(()=>{});
   placeModel('FlagPole',{x:-4,y:baseH(-4,38),z:38,ry:0}).then(()=>FLAG_PROC.forEach(hideProc)).catch(()=>{});
@@ -133,7 +133,7 @@ function towerLampMount(parts){
   instanceModel('OakTree',OAKS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:o.x*0.7,s:o.s}))).then(()=>OAKS.forEach(o=>hideProc(o.g))).catch(()=>{});
   Promise.all([instanceModel('SupplyCrate',YARD_CRATES),instanceModel('MessTable',MESS_TABLES)]).then(()=>hideProc(YARD_PROC)).catch(()=>{});
   // room shells: floor, walls, roof/ceiling, windows, door and wall dressing, one per room type
-  TENTS.forEach((t,ti)=>placeModel(t.house?'WardenRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
+  TENTS.forEach((t,ti)=>placeModel(t.house?'SuptRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
     .then(()=>hideProc(ROOM_SHELL[ti])).catch(()=>{}));
   // furniture: models become children of each room mesh, so they show/hide with the room like the boxes did
   ROOM_FURN_SPOTS.forEach((spots,ti)=>{
@@ -152,15 +152,15 @@ const CAMP_PROPS=[
   {m:'WaterDrum',x:9.3,z:34.2,ry:1.1,w:0.65,d:0.65},
   {m:'WaterDrum',x:8.5,z:34.9,ry:2.3,w:0.65,d:0.65},
   {m:'Bench',x:-12,z:42.3,ry:0,w:1.9,d:0.45},                  // between A and B Tents
-  {m:'Bench',x:-26.5,z:39.2,ry:0,w:1.9,d:0.45},                // in front of the Warden's porch
-  {m:'SupplyCrate',x:20.6,z:43.2,ry:0.2,w:0.95,d:0.95},        // by the Supply Depot window
+  {m:'Bench',x:-26.5,z:39.2,ry:0,w:1.9,d:0.45},                // in front of the Superintendent's porch
+  {m:'SupplyCrate',x:20.6,z:43.2,ry:0.2,w:0.95,d:0.95},        // by the Company Store window
   {m:'SupplyCrate',x:21.6,z:43.4,ry:-0.3,w:0.95,d:0.95},
   {m:'SupplyCrate',x:21.1,z:43.3,ry:0.9,w:0.1,d:0.1,y:0.9},    // stacked on the other two
-  {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Warden's hammock, in the strip between her house and the fence
-  {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Supply Depot, doors facing the yard
+  {m:'Hammock',x:-37.3,z:44,ry:Math.PI/2,w:1.4,d:3.9},          // the Superintendent's hammock, in the strip between her house and the fence
+  {m:'ShowerBlock',x:15.5,z:52.6,ry:Math.PI,w:5.6,d:2.8},       // behind the Company Store, doors facing the yard
   {m:'Outhouse',x:-22.5,z:52.8,ry:Math.PI,w:1.5,d:1.5},         // behind A Tent
   {m:'Sifter',x:SIM.GOLD.SIFTER.x,z:SIM.GOLD.SIFTER.z,ry:SIM.GOLD.SIFTER.ry,w:2.6,d:1.5},   // the gold rush: sand in, gold out (art/blender/sifter.py, 45-state.js siftBucket)
-  // Mr. Sir's pickup is placed by 87-truck.js: it can be driven
+  // Foreman Dutch's pickup is placed by 87-truck.js: it can be driven
 ];
 {
   const byModel={};
@@ -199,9 +199,9 @@ TENTS.forEach((t,ti)=>{
 }
 
 /* ---- dug-up finds: Blender models for the item that pops out of your hole (40-fx.js itemMesh). Real size is tiny
-   (the KB tube is 8.5 cm), so each is scaled up to read at game distance, like the old stand-ins. ---- */
+   (the LM card case is 9 cm), so each is scaled up to read at game distance, like the old stand-ins. ---- */
 const ITEM_MODELS={};                 // LOOT type -> a ready Group to clone
-const ITEM_MODEL_LIST={crate:['LootCrate',1.4],tools:['LootTools',1.4],jug:['LootJug',1.5],kb:['KBTube',5],safe:['FindSafe',1],strongbox:['FindStrongbox',1],suitcase:['FindSuitcase',1.15],lipstick:['FindLipstick',3],sploosh:['FindSploosh',2.2],locket:['FindLocket',4],pistol:['FindPistol',1.4],cap:['FindBottleCap',6],can:['FindCan',2],spoon:['FindSpoon',2,-Math.PI/2],shoe:['FindHorseshoe',2.6,Math.PI/2],arrow:['FindArrowhead',4.5],jar:['FindPeaches',2.2],fossil:['FindFossil',2.2]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the KB reads
+const ITEM_MODEL_LIST={crate:['LootCrate',1.4],tools:['LootTools',1.4],jug:['LootJug',1.5],lmcase:['LMCase',5],safe:['FindSafe',1],strongbox:['FindStrongbox',1],lilstrongbox:['FindLilStrongbox',1.15],matchsafe:['FindMatchSafe',3],shine:['FindShine',2.2],locket:['FindLocket',4],pistol:['FindPistol',1.4],cap:['FindBottleCap',6],can:['FindCan',2],spoon:['FindSpoon',2,-Math.PI/2],shoe:['FindHorseshoe',2.6,Math.PI/2],arrow:['FindArrowhead',4.5],jar:['FindPeaches',2.2],fossil:['FindFossil',2.2]};   // [model, scale]: ~43 cm, a touch bigger than the old stand-in so the LM reads
 for(const type in ITEM_MODEL_LIST){
   const[name,scale,stand]=ITEM_MODEL_LIST[type];   // stand: tip a flat-lying find upright (radians about x) so it shows its face while it spins
   loadModel(name).then(({meshes})=>{

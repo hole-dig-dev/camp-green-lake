@@ -1,7 +1,7 @@
 # blend: props.blend
 # Rebuild the signs (signs.py) and export the ones listed in EXPORT to glb/.
 # Run with art/blender/props.blend open (bx.py opens it for you):  python3 bx.py signs_export.py   then copy the GLBs to public/models/
-EXPORT=['SignWreckRoom','SignDirections']
+EXPORT=['SignCompanyStore','SignDirections']
 import bpy,os,re
 HERE=os.path.dirname(bpy.data.filepath)
 globals()['__file__']=os.path.join(HERE,'signs.py')   # so cgl_blender.py's ART/RENDERS point at this checkout

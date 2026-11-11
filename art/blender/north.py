@@ -7,7 +7,7 @@
 #   NorthCliff5    a 10 m stretch of rock face, 5.2 m tall, for the trench sides: origin at the top of the face, the face
 #                  toward Blender -Y (= game +z)
 #   NorthCliff2    the same, 2.2 m tall, for the wall's ledges
-#   SignTrench     a warning sign by the ramp;  SignBigThumb  the old boundary marker on top of the wall
+#   SignTrench     a warning sign by the ramp;  SignChimney  the old boundary marker on top of the wall
 # Run with the live Blender:  python3 bx.py north.py   (bx.py opens props.blend)
 import bpy,os,math,random
 HERE=os.path.dirname(bpy.data.filepath)
@@ -70,7 +70,7 @@ text('warn','DANGER',(0,-0.1,2.08),0.17,M_('paint_white',(0xd8,0xd0,0xb8),0.8),p
 text('l1','TRENCH AHEAD',(0,-0.1,1.8),0.15,('ink','ink',0.8),parent=r)
 text('l2','NO VEHICLES',(0,-0.1,1.58),0.12,('ink','ink',0.8),parent=r)
 export('SignTrench')
-scene('SignBigThumb');r=root('SignBigThumb')
+scene('SignChimney');r=root('SignChimney')
 cyl('pole',0.08,4.2,(0,0,2.1),IRON,verts=8,bevel=0,parent=r)
 B('flag',(1.2,0.02,0.7),(0.62,0,3.75),M_('flag_orange',(0xd0,0x6a,0x2a),0.9),rot=(0,0,0.08),p=r)
 B('rip',(0.3,0.03,0.25),(1.1,0,3.55),M_('void',(0x10,0x0c,0x08),1.0),p=r)
@@ -78,5 +78,5 @@ B('plaque',(1.4,0.08,0.6),(0,-0.1,1.5),RUST,p=r)
 text('p1','CAMP DRYWATER',(0,-0.15,1.62),0.12,M_('paint_white',(0xd8,0xd0,0xb8),0.8),parent=r)
 text('p2','PROPERTY LINE',(0,-0.15,1.42),0.12,M_('paint_white',(0xd8,0xd0,0xb8),0.8),parent=r)
 for k in range(5):rock(f'cairn{k}',(J(0.4),J(0.4),0.2+k*0.12),(0.35-k*0.04,0.3-k*0.03,0.2),r)
-export('SignBigThumb',elev=15,azim=-30)
+export('SignChimney',elev=15,azim=-30)
 bpy.ops.wm.save_mainfile()

@@ -47,7 +47,7 @@ neck, body, rig and animations. Attach at scale one in **model metres**; the cam
 existing outer model scale (normally 0.68) applies to the alien too. Load the head
 through the Wardrobe material path to retain its glossy eyes. Load the saucer through
 the prop path; the current `gameMat` adapter preserves all four emissive materials.
-The game screenshots are locally staged asset reviews on the real D Tent camper
+The game screenshots are locally staged asset reviews on the real Bunk D camper
 Randy. Runtime abduction/next-day replacement/dialogue integration remains for the
 game feature; this delivery follows the brief's asset scope and restriction on runtime JS.
 

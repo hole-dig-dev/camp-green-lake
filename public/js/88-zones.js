@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-zones.js -- Peak-style maps ("zones"): the escape across the lake to Big Thumb, one map at a time.
+/* public/js/88-zones.js -- Peak-style maps ("zones"): the escape across the lake to Chimney Rock, one map at a time.
 
    How it fits the rest of the game:
    - The whole crew is always in ONE map (the server decides: world.zone in server.js), so monsters, hazards, voice and
@@ -96,7 +96,7 @@ function parkSweep(){for(const o of [...scene.children])if(!keepInScene(o)&&near
 function parkLake(on){
   if(on){
     park(FAR_TERRAIN);
-    for(const b of bots)park(b.p.g);park(sir.g);park(warden.g);park(clerk.g);
+    for(const b of bots)park(b.p.g);park(dutch.g);park(supt.g);park(clerk.g);
     for(const r of TERRAIN_ROCKS)park(r.m);
     parkSweep();
     const set=new Set(PARKED);

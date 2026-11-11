@@ -112,7 +112,7 @@ if os.environ.get('SIFTER_ONLY')=='1':
     bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath,compress=True)
     raise SystemExit(0)
 
-# ---- the crew's bucket (public/js/30-npcs.js): each D Tent camper fills one digging, carries it by the bail to the
+# ---- the crew's bucket (public/js/30-npcs.js): each Bunk D camper fills one digging, carries it by the bail to the
 #   sifter (86-walkie.js holds it like the first-aid kit). Origin at the bottom; the bail's top (the grip) at 0.40 m.
 scene('CampBucket');r=root('CampBucket')
 cyl('pail',0.15,0.28,(0,0,0.14),TIN,verts=16,r2=0.12,bevel=0.004,parent=r)

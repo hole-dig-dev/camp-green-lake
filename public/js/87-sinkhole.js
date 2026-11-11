@@ -14,7 +14,7 @@
    away from it (which would otherwise re-run its opening animation from scratch when you came back). */
 const SINK_CELL=260, SINK_WIN=300000, SINK_CHANCE=0.045;   // ~1 new one somewhere on the lake every ~5 real minutes
 const SINK_CAMP_KEEPOUT=130;                 // stay this far (m, via campDist) from the camp fence
-const SINK_THUMB_KEEPOUT=400;                // stay this far from Big Thumb's base (it's already off the playable map, but keep this honest)
+const SINK_CHIMNEY_KEEPOUT=400;                // stay this far from Chimney Rock's base (it's already off the playable map, but keep this honest)
 const SINK_R_MIN=10, SINK_R_MAX=14;          // crater radius (m) -- "make it pretty big" per JT's spec; × tune env.sinkSize (0.5 since 2026-10-01: half the diameter)
 const SINK_DEPTH=4.4;                        // crater bottom depth (m) below the undug ground. baseH() noise is
                                               // small (well under half a metre) so the bottom lands close to -4.5 --
@@ -63,7 +63,7 @@ function sinkPlan(ci,cj,k){
   const r=mulberry32((((ci+777)*93481+(cj+777))*2654435761^(k*2246822519))>>>0);r();
   if(r()>SINK_CHANCE)return null;
   const x=(ci+r())*SINK_CELL,z=(cj+r())*SINK_CELL;
-  if(Math.max(Math.abs(x),Math.abs(z))>EDGE-20||nearCampZone(x,z)||campDist(x,z)<SINK_CAMP_KEEPOUT||Math.hypot(x-TH_X,z-TH_Z)<SINK_THUMB_KEEPOUT)return null;
+  if(Math.max(Math.abs(x),Math.abs(z))>EDGE-20||nearCampZone(x,z)||campDist(x,z)<SINK_CAMP_KEEPOUT||Math.hypot(x-CHIM_X,z-CHIM_Z)<SINK_CHIMNEY_KEEPOUT)return null;
   const rad=(SINK_R_MIN+r()*(SINK_R_MAX-SINK_R_MIN))*tune('env.sinkSize');   /* F2 slider: JT 2026-10-01 halved them */
   return{id:'n'+ci+','+cj+','+k,x,z,r:rad,t0:k*SINK_WIN+r()*(SINK_WIN-20000)};
 }
@@ -145,18 +145,18 @@ function popOutOfSinkhole(sh,by){
   logEv('sinkPulled',{by:by||'',x:+P.x.toFixed(1),z:+P.z.toFixed(1)});
 }
 
-/* ---- solo fallback: with nobody else online, Zach (D Tent's fastest digger) comes with a line instead ---- *
+/* ---- solo fallback: with nobody else online, Zach (Bunk D's fastest digger) comes with a line instead ---- *
    He "arrives" from SINK_SOLO_APPROACH_R out (not literally from his own hole clear across the map) so the whole
    fallback resolves in a bounded, predictable time -- worse than a friend, never a softlock. b.sinkOverride, set
    here, tells updateBots() (30-npcs.js) to leave this bot alone while it's set; updateSoloRescues() below drives it. */
 function startSoloRescue(sh){
-  const hired=bots.filter(b=>crewHired(b)),zero=hired.find(b=>b.d.n==='Zach')||hired[0]||bots.find(b=>b.d.n==='Zach');if(!zero||zero.sinkOverride)return;   // Zach comes even if he's not on the crew yet: never a softlock
-  zero.p.g.visible=true;zero.L.el.style.display='';
+  const hired=bots.filter(b=>crewHired(b)),zach=hired.find(b=>b.d.n==='Zach')||hired[0]||bots.find(b=>b.d.n==='Zach');if(!zach||zach.sinkOverride)return;   // Zach comes even if he's not on the crew yet: never a softlock
+  zach.p.g.visible=true;zach.L.el.style.display='';
   const a=Math.atan2(sh.x,sh.z-39)||0.001;   // roughly "away from camp", so he visibly walks in from outside
   const sx=sh.x+Math.sin(a)*(sh.r+SINK_SOLO_APPROACH_R),sz=sh.z+Math.cos(a)*(sh.r+SINK_SOLO_APPROACH_R);
-  zero.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};
-  zero.p.g.position.set(sx,groundAt(sx,sz),sz);
-  sh.soloBot=zero;
+  zach.sinkOverride={stage:'walk',tx:sh.x+Math.sin(a)*(sh.r*0.7),tz:sh.z+Math.cos(a)*(sh.r*0.7),t:0};
+  zach.p.g.position.set(sx,groundAt(sx,sz),sz);
+  sh.soloBot=zach;
   toast('Nobody else is around to pull you out... but Zach heard you and is coming with a line.','good',5000);
   logEv('sinkSolo',{x:+sh.x.toFixed(1),z:+sh.z.toFixed(1)});
 }

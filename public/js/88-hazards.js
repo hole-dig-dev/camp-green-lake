@@ -27,7 +27,7 @@ function hazClear(k){
   else if(k==='vultures'){if(vSt>0&&vSt<3)vCancelToIdle()}
   else if(k==='javelinas')JAV_LOCAL.list.length=0;
   else if(k==='lion')LIONL.active=false;
-  else if(k==='night'){MONL.trucks=[];MONL.zer=null}
+  else if(k==='night'){MONL.trucks=[];MONL.bride=null}
 }
 function updateHazardSwitch(){
   for(const k of HAZ_KINDS){const on=hazOn(k);if(HAZ_WAS[k]===true&&!on){hazClear(k);logEv('hazOff',{k})}HAZ_WAS[k]=on}

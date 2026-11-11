@@ -21,7 +21,7 @@ const bucketHolesOf=u=>u.bucket3?SIM.GOLD.buckets[2]:u.bucket2?SIM.GOLD.buckets[
 const wearsPack=u=>!!u&&packTier(u)>0&&packHoles(u)>=bucketHolesOf(u);
 const backsackOn=()=>wearsPack(S.up);
 const myBackTier=()=>packTier(S.up)||1;
-/* the D Tent crew the same (30-npcs.js crewBucketMax, crewHands) */
+/* the Bunk D crew the same (30-npcs.js crewBucketMax, crewHands) */
 const crewPack=b=>wearsPack(CREW_UP[b.d.n]);
 const crewPackTier=b=>packTier(CREW_UP[b.d.n])||1;
 function myBackFill(){return backsackOn()&&carrier()==='bucket'?+clamp(S.bucket/Math.max(1e-6,bucketMax()),0,1).toFixed(3):-1}

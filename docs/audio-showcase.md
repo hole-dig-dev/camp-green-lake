@@ -1,4 +1,4 @@
-# Camp Green Lake audio A/B reel
+# Camp Drywater audio A/B reel
 
 [Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.
 
@@ -44,12 +44,12 @@
 | 01:18.8 | Night and patrol | Curfew siren |
 | 01:24.3 | Night and patrol | Patrol arrival |
 | 01:26.2 | Night and patrol | Police spotting beeps |
-| 01:28.0 | Night and patrol | Zeroni drone and whisper |
-| 01:31.6 | Night and patrol | Zeroni sting |
+| 01:28.0 | Night and patrol | Bride drone and whisper |
+| 01:31.6 | Night and patrol | Bride sting |
 | 01:34.7 | Night and patrol | Jumpscare |
 | 01:36.4 | Game cues | Ordinary find |
 | 01:37.9 | Game cues | Important find or level up |
-| 01:39.8 | Game cues | Seeds or coin |
+| 01:39.8 | Game cues | Gold or coin |
 | 01:41.2 | Game cues | Detector beep |
 | 01:42.6 | Game cues | Shout |
 | 01:44.0 | Game cues | Canteen splash |
@@ -57,7 +57,7 @@
 | 01:46.8 | Game cues | Card click |
 | 01:48.2 | Game cues | Flashlight on |
 | 01:49.6 | Game cues | Flashlight off |
-| 01:51.0 | Game cues | Onion use |
+| 01:51.0 | Game cues | Bitterroot use |
 | 01:52.4 | Game cues | Chat notification |
 | 01:53.8 | Music | Disco party loop |
 

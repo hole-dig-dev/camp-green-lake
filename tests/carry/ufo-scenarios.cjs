@@ -1,5 +1,5 @@
 // "ufo <name>" wherever he is (88-ufo.js ufoLureStep): out digging, in camp at the sifter, held up by a camper and
-// thrown, asleep in D Tent at night, "ufo back" before he's even up there. He always walks out onto the lake bed first;
+// thrown, asleep in Bunk D at night, "ufo back" before he's even up there. He always walks out onto the lake bed first;
 // the saucer never comes down over the camp. bash tests/carry/run.sh PORT OUT ufo-scenarios.cjs
 const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(!!ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
@@ -35,12 +35,12 @@ await cmd('ufo back');
 await A.waitForFunction(n=>[n,'Stan','Randy'].every(n=>{const b=bots.find(b=>b.d.n===n);return isAlien(b)&&b.p.g.visible&&!b.ufo}),dg,{timeout:40000}).catch(()=>{});
 const dr=await A.evaluate(()=>__ev.filter(e=>e[0]==='ufoDrop').map(e=>e[1]));
 check('"ufo back": all three dropped off as aliens, out on the lake bed',dr.length===3&&dr.every(d=>!d.inCamp)&&await A.evaluate(n=>[n,'Stan','Randy'].every(n=>{const b=bots.find(b=>b.d.n===n);return isAlien(b)&&b.p.g.visible}),dg),JSON.stringify(dr));
-// 4. night: Zach asleep in D Tent
+// 4. night: Zach asleep in Bunk D
 await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zach');runCommand('time 23:30');z.state='inside';z.p.g.position.set(z.p.g.position.x,TENT_FLOOR_Y,z.p.g.position.z);z.p.g.visible=false});
 await A.waitForTimeout(1500);const z0=await who('Zach');
-check('setup: Zach asleep in D Tent',/Asleep|Bunk D/.test(z0.act)&&!z0.vis,JSON.stringify(z0));
+check('setup: Zach asleep in Bunk D',/Asleep|Bunk D/.test(z0.act)&&!z0.vis,JSON.stringify(z0));
 await cmd('ufo zach');await A.waitForTimeout(2500);
-const z1=await who('Zach');check('he gets up and comes out of D Tent, walking out to the lake bed',z1.vis&&z1.lure&&z1.y>-1&&/lake/.test(z1.act),JSON.stringify(z1));
+const z1=await who('Zach');check('he gets up and comes out of Bunk D, walking out to the lake bed',z1.vis&&z1.lure&&z1.y>-1&&/lake/.test(z1.act),JSON.stringify(z1));
 await waitEv('ufoTake','Zach',90000);const tz=(await ev('ufoTake','Zach'))[0];check('Zach: beamed up outside the camp, at night',tz&&!tz.inCamp,JSON.stringify(tz));
 // 5. Larry: "ufo back" before he's even up there
 await A.evaluate(()=>{const l=bots.find(b=>b.d.n==='Larry'),F=SIM.GOLD.SIFTER;l.p.g.position.set(F.x+3,groundAt(F.x+3,F.z),F.z+4);l.state='drink';l.t=30});
@@ -50,6 +50,6 @@ await waitEv('ufoDrop','Larry',40000);await A.waitForFunction(()=>{const l=bots.
 const l2=await who('Larry'),dl=(await ev('ufoDrop','Larry'))[0];check('...and dropped straight back off as an alien, on the lake bed',l2.alien&&l2.vis&&!l2.ab&&dl&&!dl.inCamp,JSON.stringify({l2,dl}));
 await A.waitForTimeout(25000);
 const night=await A.evaluate(()=>bots.filter(b=>isAlien(b)).map(b=>b.d.n+':'+b.state));
-check('it\'s night: the aliens head for D Tent like the rest',night.length>=5&&night.every(s=>/gotent|indoor|inside|gatein|gatebackin|return/.test(s)),night.join(' '));
+check('it\'s night: the aliens head for Bunk D like the rest',night.length>=5&&night.every(s=>/gotent|indoor|inside|gatein|gatebackin|return/.test(s)),night.join(' '));
 check('Zach (still up there) stays gone',await A.evaluate(()=>{const z=bots.find(b=>b.d.n==='Zach');return isAbducted(z)?!z.p.g.visible:isAlien(z)}));
 console.log(R.filter(Boolean).length+'/'+R.length+' passed | errors:',errs.join(' | ')||'none');await b.close();process.exit(R.every(Boolean)?0:1)})();

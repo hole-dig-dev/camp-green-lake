@@ -11,7 +11,7 @@
        2. the assay: every pan you wash or bucket you sift tells you its grade (Barren .. Rich);
        3. the map: each assay leaves a coloured dot where that sand was dug (S.samples, drawn by payMap on the
           minimap and the field map), so a few pans show you which way the streak runs.
-   - the D Tent crew's buckets pay by where they dug too (crewPay).
+   - the Bunk D crew's buckets pay by where they dug too (crewPay).
    Loads after 46-holes.js; everything here is called at run time from 45-state.js, 86-hopper.js, 88-pipeline.js,
    30-npcs.js and 78-hud.js. Saved with the rest of S (60-title.js SAVE_KEYS). */
 const PAY_SAMPLES=40;                                              // assay dots kept on your map

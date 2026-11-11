@@ -79,7 +79,7 @@ try{
         case 'haboob':hbSound(1);hbWind.gain.value=0.5;reset=()=>hbWind.gain.value=0;break;
         case 'landslide':lsSound(1);lsRumbleNode.gain.value=0.55;reset=()=>lsRumbleNode.gain.value=0;break;
         case 'sinkhole':sinkSound(1);sinkRumbleNode.gain.value=0.6;reset=()=>sinkRumbleNode.gain.value=0;break;
-        case 'zeroni-drone':loops();LOOP.drone.gain.value=0.16;LOOP.whisper.gain.value=0.05;reset=()=>{LOOP.drone.gain.value=0;LOOP.whisper.gain.value=0};break;
+        case 'bride-drone':loops();LOOP.drone.gain.value=0.16;LOOP.whisper.gain.value=0.05;reset=()=>{LOOP.drone.gain.value=0;LOOP.whisper.gain.value=0};break;
         case 'disco':startMusic();reset=()=>stopMusic();break;
         case 'find':sfx.find();break;
         case 'gold':sfx.gold();break;
@@ -102,12 +102,12 @@ try{
         case 'curfew':siren();break;
         case 'patrol-arrival':tone(200,1.2,'sawtooth',0.08,120);break;
         case 'spot':tone(900,0.4,'square',0.06,1400);setTimeout(()=>tone(900,0.4,'square',0.06,1400),450);break;
-        case 'zeroni-sting':zeroniSting();break;
+        case 'bride-sting':brideSting();break;
         case 'jumpscare':jumpScare();break;
         case 'cards':cardSnd();break;
         case 'flashlight':tone(1800,0.05,'square',0.05);break;
         case 'flashlight-off':tone(1200,0.05,'square',0.05);break;
-        case 'onion':tone(220,0.3,'triangle',0.1,160);break;
+        case 'bitterroot':tone(220,0.3,'triangle',0.1,160);break;
         case 'chat':tone(700,0.06,'triangle',0.05);break;
         case 'landslide-warning':tone(1500,1.3,'sine',0.16,260);noise(0.7,2400,0.6,0.13,'highpass');break;
         default:throw Error(`unknown cue: ${kind}`);
@@ -153,18 +153,18 @@ try{
     ['Lizard hiss','hiss',1.2],['Lizard bite','bite',1.2],
   ])await capture('Hazards and wildlife',label,kind,seconds);
   for(const [label,kind,seconds] of [
-    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Zeroni drone and whisper','zeroni-drone',3.3],
-    ['Zeroni sting','zeroni-sting',2.8],['Jumpscare','jumpscare',1.4],
+    ['Curfew siren','curfew',5.2],['Patrol arrival','patrol-arrival',1.6],['Police spotting beeps','spot',1.5],['Bride drone and whisper','bride-drone',3.3],
+    ['Bride sting','bride-sting',2.8],['Jumpscare','jumpscare',1.4],
   ])await capture('Night and patrol',label,kind,seconds);
   for(const [label,kind,seconds] of [
-    ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Seeds or coin','coin',1.1],
+    ['Ordinary find','find',1.2],['Important find or level up','gold',1.6],['Gold or coin','coin',1.1],
     ['Detector beep','beep',1.1],['Shout','shout',1.1],['Canteen splash','splash',1.1],['Impact or damage','thud',1.1],
     ['Card click','cards',1.1],['Flashlight on','flashlight',1.1],['Flashlight off','flashlight-off',1.1],
-    ['Onion use','onion',1.1],['Chat notification','chat',1.1],
+    ['Bitterroot use','bitterroot',1.1],['Chat notification','chat',1.1],
   ])await capture('Game cues',label,kind,seconds);
   await capture('Music','Disco party loop','disco',8);
 
-  let at=0;const lines=['# Camp Green Lake audio A/B reel','','[Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.','','| Time | Section | Sound |','| --- | --- | --- |'];
+  let at=0;const lines=['# Camp Drywater audio A/B reel','','[Download the single MP3](audio-showcase.mp3). It includes every fixed sound family in the game. A/B means previous game audio followed by the new option. Recordings are CC0; synthesized cues were captured from the running game. Cue times are approximate and include a short pause between sounds.','','| Time | Section | Sound |','| --- | --- | --- |'];
   const concat=[];
   for(let i=0;i<items.length;i++){
     const x=items[i],d=Math.min(x.seconds,duration(x.file)-x.offset),total=x.seconds+0.3;

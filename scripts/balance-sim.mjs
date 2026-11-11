@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/balance-sim.mjs -- a rough day-by-day model of a SOLO camper's gold against the Warden's quota.
+// scripts/balance-sim.mjs -- a rough day-by-day model of a SOLO camper's gold against the Superintendent's quota.
 // Not the game: a spreadsheet in code, using the real numbers from public/sim.js (payMult, siftGold, quotaFor) and
 // the shop prices, to see whether progression has an arc: can a new player make day 1, when do upgrades land,
 // when does the quota start to bite. Run: node scripts/balance-sim.mjs [ground]   ground = creek | streak | poor

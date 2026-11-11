@@ -1,25 +1,25 @@
 'use strict';
 /* public/js/81-badges.js -- badges and jumpsuits, after Greg's branch (claude/intense-change-1-test-2026-09-27-1829),
-   adapted to what this game tracks (no sentences or curse here yet), plus a few for the rope, the wheelbarrow and
+   adapted to what this game tracks (no sentences or bad luck here yet), plus a few for the rope, the wheelbarrow and
    carrying friends home. Both live in this browser (localStorage 'cgl-meta'), across runs.
    Pause menu > Badges shows them and lets you pick a jumpsuit; friends see your jumpsuit colour.
-   Also here: the shop's supplies that need their own logic (onion tonic, first-aid kit) and Q's "use the right thing". */
+   Also here: the shop's supplies that need their own logic (bitterroot tonic, first-aid kit) and Q's "use the right thing". */
 const BADGES={
-  caveman:['Shovelhead','Finish 25 holes'],
+  shovelhead:['Shovelhead','Finish 25 holes'],
   ladder:['Human ladder','Help a friend up 10 times (pull them out, pick them up, carry them home)'],
   pallbearer:['Pallbearer','Carry a downed friend back inside the fence'],
-  sploosh:['Sweet Tooth','Finish 5 jars of peach shine or peaches'],
-  onion:['Root breath','Chew 10 bitterroots'],
-  magnet:['Sticky Fingers','Pick up 3 dropped sacks'],
-  squid:['Punching Bag','Get knocked out 5 times'],
-  barfbag:['Loose Hips','Twerk 20 times'],
+  shine:['Sweet Tooth','Finish 5 jars of peach shine or peaches'],
+  bitterroot:['Root breath','Chew 10 bitterroots'],
+  stickyfingers:['Sticky Fingers','Pick up 3 dropped sacks'],
+  punchingbag:['Punching Bag','Get knocked out 5 times'],
+  loosehips:['Loose Hips','Twerk 20 times'],
   lullaby:['Sleep now, sleep now','Sing 40 lines of the lullaby'],
   squasher:['Snake charmer','Squash 15 hatchlings, rattlesnakes or scorpions'],
   hauler:['Hauler','Sell 3 pieces of heavy loot'],
   knots:['Knots','Tie your rope to something 10 times'],
   butter:['Butterfingers','Knock 50 gold off heavy loot by dropping it'],
-  stanley:['Lucky','Dig up Lil\'s strongbox'],
-  clyde:['Boot to the Head','Get hit by falling boots'],
+  lucky:['Lucky','Dig up Lil\'s strongbox'],
+  bootfall:['Boot to the Head','Get hit by falling boots'],
 };
 const JUMPSUITS=[
   {n:'Orange (standard issue)',c:0xe8742a,ok:()=>true},
@@ -27,7 +27,7 @@ const JUMPSUITS=[
   {n:'Midnight black (the crew reaches day 5)',c:0x2a2a2a,ok:()=>(META.bestDay||1)>=5},
   {n:'Bitterroot green (earn 6 badges)',c:0x6f9a3a,ok:()=>Object.keys(META.badges||{}).length>=6},
   {n:'Peach shine (earn 10 badges)',c:0xf0a070,ok:()=>Object.keys(META.badges||{}).length>=10},
-  {n:'Gold (dig up Lil\'s strongbox)',c:0xd4af37,ok:()=>!!(META.badges||{}).stanley},
+  {n:'Gold (dig up Lil\'s strongbox)',c:0xd4af37,ok:()=>!!(META.badges||{}).lucky},
 ];
 let META={};
 try{META=JSON.parse(localStorage.getItem('cgl-meta')||'{}')||{}}catch(e){META={}}
@@ -64,11 +64,11 @@ function renderBadges(){
     bt.append(sw,t);bt.onclick=()=>setSuit(i);sb.appendChild(bt)});
 }
 
-/* ---- supplies: onion tonic and the first-aid kit (Supply Depot), and Q ---- */
+/* ---- supplies: bitterroot tonic and the first-aid kit (Company Store), and Q ---- */
 function useSupply(){
   if(S.ko)return;
   if(S.medkit>0&&AFF.injury>10){S.medkit--;AFF.injury=0;syncHp();sfx.find();showSupply('medkit');toast('You patch yourself up with the first-aid kit.','good',2500);logEv('medkit',{self:true});return}
-  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.onionT=Math.max(S.onionT,30);
+  if(S.tonic>0&&(AFF.poison>3||AFF.burn>5||AFF.heat>5)){S.tonic--;showSupply('tonic');AFF.poison=0;AFF.burn=Math.max(0,AFF.burn-25);AFF.heat=Math.max(0,AFF.heat-20);syncHp();S.bitterrootT=Math.max(S.bitterrootT,30);
     tone(330,0.3,'triangle',0.1,220);toast('You drink some bitterroot tonic. The sting fades, and gilas won\'t like your smell for 30 seconds.','good',4000);logEv('tonic',{});return}
-  eatOnion();
+  eatBitterroot();
 }

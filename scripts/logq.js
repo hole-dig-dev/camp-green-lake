@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// logq.js — query Camp Green Lake's play-test logs (data/logs/*.jsonl). Built for an LLM (or a human) with shell
+// logq.js — query Camp Drywater's play-test logs (data/logs/*.jsonl). Built for an LLM (or a human) with shell
 // access to answer things like "did a lizard bite anyone around 3pm?" without reading raw JSON by hand.
 // See logger.js's header comment for the full event list, and the README's "Play-test logging" section for more
 // examples. Run with no arguments (or --help) to print this usage text.
@@ -8,7 +8,7 @@ const path = require('path'), fsm = require('fs');
 const DIR = path.join(__dirname, '..', 'data', 'logs');
 
 function help() {
-  console.log(`logq.js — query Camp Green Lake's play-test logs (data/logs/*.jsonl)
+  console.log(`logq.js — query Camp Drywater's play-test logs (data/logs/*.jsonl)
 
   --player <name[,name2]>   only events for these camper names (case-insensitive, exact match on "n")
   --type <t1,t2,...>        only these event types, e.g. hurt,ko,lizBite (see logger.js's header for the list)
@@ -100,7 +100,7 @@ function oneLine(r) {
     case 'pos': return `${head}${r.n} @ (${r.x},${r.z}) hp${r.hp} wt${r.wt}${r.down ? ' DOWN' : ''}${r.camp ? ' in-camp' : ''}`;
     case 'chat': return `${head}${r.n}: ${r.s}`;
     case 'shout': return `${head}${r.n} shouted #${r.i}`;
-    case 'sell': return `${head}${r.n} sold ${r.v} seeds to Mr. Sir`;
+    case 'sell': return `${head}${r.n} sold ${r.v} seeds to Foreman Dutch`;
     case 'hurt': return `${head}${r.n} hurt -${r.amt} (hp ${r.hp}) ${r.title || ''}: ${r.text || ''} @ (${r.x},${r.z})`;
     case 'ko': return `${head}${r.n} knocked out — ${r.title}: ${r.text} @ (${r.x},${r.z})`;
     case 'revive': return `${head}${r.by} revived ${r.n} @ (${r.x},${r.z})`;
@@ -110,7 +110,7 @@ function oneLine(r) {
     case 'twWarn': return `${head}${r.n} warned of a twister ${r.dist} m to the ${r.dir} @ (${r.x},${r.z})`;
     case 'twSuckUp': return `${head}a twister's core caught ${r.n} @ (${r.x},${r.z})`;
     case 'twThrow': return `${head}a twister threw ${r.n} for ${r.dmg} dmg @ (${r.x},${r.z})`;
-    case 'found': return `${head}${r.n} found ${r.type} (${r.value} seeds)${r.heavy ? ' [heavy]' : ''}${r.kb ? ' [KB tube]' : ''} @ (${r.x},${r.z})`;
+    case 'found': return `${head}${r.n} found ${r.type} (${r.value} seeds)${r.heavy ? ' [heavy]' : ''}${r.lm ? ' [LM card case]' : ''} @ (${r.x},${r.z})`;
     case 'tentEnter': return `${head}${r.n} went into ${r.name} @ (${r.x},${r.z})`;
     case 'tentExit': return `${head}${r.n} left ${r.name} @ (${r.x},${r.z})`;
     case 'sleep': return `${head}${r.n} ${r.on ? 'lay down in a bunk' : 'got up'}`;
@@ -121,8 +121,8 @@ function oneLine(r) {
     case 'propSold': return `${head}sold a ${r.type} for ${r.v} seeds (carried by ${(r.who || []).join(', ') || '?'})`;
     case 'bagDrop': return `${head}${r.n}'s sack fell @ (${r.x},${r.z}): ${(r.items || []).join(', ')}`;
     case 'bagGrab': return `${head}${r.n} grabbed sack #${r.bagId}`;
-    case 'kb': return `${head}${r.n} gave the KB tube to the Warden`;
-    case 'win': return `${head}${r.n} dug up the suitcase — GAME WON`;
+    case 'lmcase': return `${head}${r.n} gave the LM card case to the Superintendent`;
+    case 'win': return `${head}${r.n} dug up Lil's strongbox — GAME WON`;
     case 'cmd': return `${head}${r.n} ran "${r.line}"${r.error ? ' -> ERROR: ' + r.error : r.reply ? ' -> ' + r.reply : ''}`;
     case 'env': return `${head}${r.n} spawned a ${r.k} @ (${r.x},${r.z})`;
     case 'clock': return `${head}${r.n} set the clock (paused=${r.paused}, pt=${r.pt}, was paused=${r.prevPaused}, pt=${r.prevPt})`;
@@ -136,11 +136,11 @@ function oneLine(r) {
     case 'spot': return `${head}police spotted ${r.n} @ (${r.x},${r.z})`;
     case 'lost': return `${head}police lost ${r.n}`;
     case 'down': return `${head}${r.n} knocked down by ${r.by} @ (${r.x},${r.z})`;
-    case 'blink': return `${head}Zeroni blinked near ${r.n}${r.front ? ' (right in front!)' : ''}`;
-    case 'drop': return `${head}Zeroni let go of ${r.n}`;
-    case 'gone': return `${head}Zeroni dragged ${r.n} off the edge of the lake`;
-    case 'zspawn': return `${head}Madame Zeroni appeared @ (${r.x},${r.z})`;
-    case 'mon': return `${head}trucks=${JSON.stringify(r.trucks)} zer=${JSON.stringify(r.zer)}`;
+    case 'blink': return `${head}the Bride blinked near ${r.n}${r.front ? ' (right in front!)' : ''}`;
+    case 'drop': return `${head}the Bride let go of ${r.n}`;
+    case 'gone': return `${head}the Bride dragged ${r.n} off the edge of the lake`;
+    case 'bridespawn': return `${head}the Drowned Bride appeared @ (${r.x},${r.z})`;
+    case 'mon': return `${head}trucks=${JSON.stringify(r.trucks)} bride=${JSON.stringify(r.bride)}`;
     case 'err': return `${head}${r.n} CLIENT ERROR: ${r.msg}${r.src ? ' (' + r.src + ':' + r.line + ')' : ''}`;
     case 'perf': return `${head}${r.n} ${r.fps} fps @ ${r.pr}x — ${r.gpu}${r.sw ? ' [software renderer!]' : ''}`;
     case 'report': return `${head}${r.n} sees: lizards=${(r.liz || []).length} bots=${(r.bots || []).length} players=${(r.rp || []).length} twisters=${(r.tw || []).length}`;

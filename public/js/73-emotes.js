@@ -1,9 +1,9 @@
 'use strict';
 /* public/js/73-emotes.js -- emotes, ported from Greg's branch (claude/intense-change-1-test-2026-09-27-1829):
      B        twerk: bend over and shake it for a couple of seconds, then an audible fart and a little green cloud
-     hold H   sing Madame Zeroni's lullaby: a line over your head and the tune, every ~0.9 s while held
+     hold H   sing the Drowned Bride's lullaby: a line over your head and the tune, every ~0.9 s while held
    Friends nearby see and hear both (server relays 'emote', rate-limited). Both are noisy (S.noise), so at night they
-   draw Madame Zeroni like a shout does.
+   draw the Drowned Bride like a shout does.
    The pose is layered on top of the camper's animation after the mixer runs (emotePose, called from 25-people.js),
    so it works on the Blender camper; the box people (before the model loads) get Greg's original box pose. */
 const TWERK_SECS=2.4,SING_EVERY=0.9;
@@ -19,7 +19,7 @@ function startEmote(p,k,L){
 function emoteVol(p){const d=Math.hypot(p.g.position.x-P.x,p.g.position.z-P.z);return clamp(1-d/45,0,1)}
 function twerk(){
   if(!S.started||S.ko||uiOpen()||S.carry!=null||(me&&me.emote&&me.emote.k==='twerk'))return;
-  digHeld=false;S.noise=1;countUp('twerks',20,'barfbag');startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
+  digHeld=false;S.noise=1;countUp('twerks',20,'loosehips');startEmote(me,'twerk');wsSend({t:'emote',k:'twerk'});logEv('emote',{k:'twerk'});
 }
 let singT=0;
 function updateSinging(dt){

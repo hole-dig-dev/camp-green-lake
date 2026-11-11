@@ -1,6 +1,6 @@
 'use strict';
 /* public/js/86-hopper.js -- sifter hopper upgrades (JT 2026-10-01: "add upgrades to sifter, sifts over time, holds
-   volumes of sand to dump so player can keep digging"). With a hopper bought at the Supply Depot, F at the sifter
+   volumes of sand to dump so player can keep digging"). With a hopper bought at the Company Store, F at the sifter
    dumps your whole bucket (or backsack) into it in a second instead of standing through a sift; the sifter then works
    through the sand on its own and the gold comes straight to you, a hole at a time, wherever you are. Go dig.
      hopper   20 holes, a hole every 8 s     (the sifter's own hopper, sand piling up to the bars)

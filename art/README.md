@@ -1,8 +1,8 @@
-# Camp Green Lake art sources
+# Camp Drywater art sources
 
 - `blender/` -- the camp's 3D assets, built in Blender, one scene per asset, in five group files (buildings, props,
   finds, creatures, characters; see `blender/README.md`): buildings,
-  gates, room interiors, fence, signs, furniture, yard props, rocks, boulders, tumbleweed, all 15 finds, Mr. Sir's
+  gates, room interiors, fence, signs, furniture, yard props, rocks, boulders, tumbleweed, all 15 finds, Foreman Dutch's
   pickup and the rigged creatures (lizard, javelina, mountain lion, vulture). `glb/` holds the exports the game loads
   from `public/models/`, `renders/` the preview images.
 - `characters/archived/` -- ARCHIVED: the minipc Blockbench camper experiment and its rigged Blender copy, superseded

@@ -42,13 +42,13 @@ async function freePort() {
       const gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
       const loaded = await new Promise((resolve, reject) => new T.GLTFLoader().load('models/EmployeeBoard.glb', resolve, undefined, reject));
       const board = loaded.scene;
-      // Between the tents and the Warden's yard; front remains game +Z.
+      // Between the tents and the Superintendent's yard; front remains game +Z.
       board.position.set(-19.5, baseH(-19.5, 38.5), 38.5);
       board.traverse(n => { if (n.isMesh) { n.material = gameMat(n.material).clone(); n.castShadow = true; n.receiveShadow = true; } });
       scene.add(board); board.updateMatrixWorld(true);
       const bounds = new T.Box3().setFromObject(board), size = bounds.getSize(new T.Vector3());
       const title = ['MOST GOLD FOUND', 'MOST TIMES THROWN', 'LEAST VALUABLE PERSON', 'BIG SPENDER'];
-      const people = [me, bots[1].p, bots[2].p, sir];
+      const people = [me, bots[1].p, bots[2].p, dutch];
       const names = ['Gold Digger', bots[1].d.n, bots[2].d.n, 'Dutch'];
       const colors = ['#e73535', '#26d447', '#2764e8', '#f4dc26'];
       // Portraits capture the actual game avatars and their current visible outfit.

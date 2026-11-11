@@ -32,7 +32,7 @@ function perfTick(now,gap){
   if(S.started&&++PERF.logN>=5){PERF.logN=0;logEv('perf',{fps:Math.round(PERF.fps),pr:+PERF.pr.toFixed(2),gpu:GPU_NAME,sw:SOFTWARE_GPU})}   // ~10s (perfTick fires every ~2s)
 }
 /* periodic "what does this client see nearby" snapshot for the play-test log: only lizards actively chasing/fleeing
-   (not all 48 wandering ones — that would be pure noise), nearby D Tent bots, nearby remote players, and any
+   (not all 48 wandering ones — that would be pure noise), nearby Bunk D bots, nearby remote players, and any
    twisters currently visible. Skipped entirely if there's nothing nearby worth a line. */
 let logReportT=0;
 function updateLogReport(dt){
@@ -48,7 +48,7 @@ function frame(now){
   perfTick(now,now-last);
   const dt=Math.min(0.05,(now-last)/1000);last=now;tAcc+=dt;
   if(S.started){updatePlayer(dt);updateCamera(dt);updateCurfew(dt);updateCoop(dt);updateHealth(dt)}else if(SPECON())updateSpectator(dt);else titleCamera(dt);   /* spectator mode (96-spectate.js) */
-  updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateThumbHaze();updateWatchtowers();
+  updateTwisters(dt);updateLandslides(dt);updateTumbleweeds(dt);updateVultures(dt);updateLion(dt);updateChimneyHaze();updateWatchtowers();
   updateEmotes(dt);updateWalkie(dt);updateHopper(dt);updateMines(dt);updatePipeline(dt);updateDynamite(dt);updateDisarm(dt);updateDogs(dt);updateGear(dt);updateMorale(dt);updateVein(dt);updateSparks(dt);updateEotd(dt);updateHover(dt);updateUfo(dt);updateHabits(dt);updateHazardSwitch();updateGrab(dt);updateRoster(dt);updateBots(dt,now);updateClerk(dt);updateLizards(dt,tAcc);updateJavelinas(dt);updateParty(dt,now);updateRemotes(dt);updateTruck(dt);updateNorth(dt);updateCoords();updateCrewPanel(dt);updateRagdolls(dt);updateParts(dt);updatePops(dt);updateHoles(dt);updateRain(dt);updateDetector(dt);updateLogReport(dt);updateVoice(now);updateSinkholes(dt);updateZones(dt);
   if(S.won&&!PARTY.on){scene.fog.color.lerp(FOG_RAIN,dt*0.4)}
   updateJeepHaul();updateSky(dt);   // 82-sky.js: sun path, sky and light colours for the time of day (before the storm/mood blends below)

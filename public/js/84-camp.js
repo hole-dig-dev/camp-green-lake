@@ -1,6 +1,6 @@
 'use strict';
 /* public/js/84-camp.js -- camp upgrades (JT 2026-10-01): things the whole crew owns, bought from the one crew wallet at
-   the Supply Depot (the store's Camp category) and kept on the server (world.camp; gone when the crew's fired):
+   the Company Store (the store's Camp category) and kept on the server (world.camp; gone when the crew's fired):
      goldScale   +10% gold from every sift (yours, the crew's, the pan, the hopper, the pipeline): a brass scale by the
                  sifter's catch pan (GoldScale.glb, in the sifter's frame)
      pipeTee     branch the sand pipeline: F at any joint, or another line out of the sifter (88-pipeline.js)

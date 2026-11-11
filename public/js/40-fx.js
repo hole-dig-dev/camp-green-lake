@@ -13,16 +13,16 @@ const pops=[];
 function itemMesh(type){
   if(ITEM_MODELS[type]){const g=ITEM_MODELS[type].clone();g.scale.copy(ITEM_MODELS[type].scale);return g}   // Blender model (23-models.js), once loaded
   const c=LOOT[type].color;
-  if(type==='suitcase'){const g=new T.Group();const b=box(0.8,0.55,0.25,c);const h=box(0.3,0.08,0.06,0x2a1a0e);h.position.y=0.32;g.add(b,h);return g}
-  if(type==='kb')return cyl(0.06,0.06,0.3,8,c);
+  if(type==='lilstrongbox'){const g=new T.Group();const b=box(0.8,0.5,0.46,c);const h=box(0.84,0.06,0.5,0x2a2a2e);h.position.y=0.12;g.add(b,h);return g}   // Lil's strongbox: a chest with an iron rail
+  if(type==='lmcase')return box(0.3,0.45,0.09,c);   // the LM card case
   if(type==='shoe'){return new T.Mesh(new T.TorusGeometry(0.16,0.045,5,10,Math.PI*1.5),M(c))}
   if(type==='fossil')return box(0.4,0.08,0.25,c);
   if(type==='jar')return cyl(0.12,0.12,0.24,8,c);
   if(type==='arrow')return new T.Mesh(new T.ConeGeometry(0.1,0.28,3),M(c));
   if(type==='can')return cyl(0.09,0.09,0.2,8,c);
   if(type==='spoon')return box(0.05,0.03,0.3,c);
-  if(type==='lipstick')return cyl(0.04,0.04,0.2,8,c);
-  if(type==='sploosh')return cyl(0.13,0.11,0.26,8,c);
+  if(type==='matchsafe')return box(0.13,0.22,0.04,c);   // the silver match safe
+  if(type==='shine')return cyl(0.13,0.11,0.26,8,c);
   if(type==='locket')return new T.Mesh(new T.TorusGeometry(0.1,0.035,6,12),M(c));
   if(type==='pistol'){const g=new T.Group();const b=box(0.32,0.07,0.06,c),h=box(0.07,0.16,0.06,0x5a3a1e);h.position.set(-0.12,-0.08,0);g.add(b,h);return g}
   return cyl(0.07,0.07,0.03,8,c);
@@ -35,7 +35,7 @@ function updatePops(dt){for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=d
   const up=Math.sin(Math.min(p.t/tune('finds.riseTime'),1)*Math.PI*0.5);p.m.position.y=p.y0+tune('finds.start')+up*tune('finds.rise');p.m.rotation.y+=dt*tune('finds.spin');
   if(p.t>tune('finds.hold')){p.m.scale.multiplyScalar(0.85);if(p.m.scale.x<0.05*p.s0){scene.remove(p.m);pops.splice(i,1)}}}}
 
-/* Warden's flags around the search area */
+/* Superintendent's flags around the search area */
 const flags=new T.Group();flags.visible=false;scene.add(flags);
 for(let i=0;i<14;i++){const a=i/14*Math.PI*2;const x=SEARCH.x+Math.cos(a)*SEARCH.r,z=SEARCH.z+Math.sin(a)*SEARCH.r;const g=new T.Group();const p=cyl(0.04,0.04,1.8,5,0xdcdcdc);p.position.y=0.9;const f=box(0.5,0.3,0.02,0xd12a2a);f.position.set(0.25,1.6,0);g.add(p,f);g.position.set(x,baseH(x,z),z);flags.add(g)}
 

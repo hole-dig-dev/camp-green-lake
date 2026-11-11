@@ -16,10 +16,10 @@ def eye(name,loc,r,parent,iris=(0x1a,0x14,0x10),white=None):
     if white:blob(name+'w',loc,(r*1.3,)*3,M_('c_eyewhite',white,0.3),parent,seg=8,rings=5)
     blob(name,loc,(r,)*3,M_('c_eye_'+name,iris,0.15),parent,seg=8,rings=5)
 def shot(n,elev=22,azim=-38,margin=1.25):
-    studio(elev=elev,azim=azim,lens=60);frame(margin=margin);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('kb_sand',(0xe3,0xbf,0x86),0.95))
+    studio(elev=elev,azim=azim,lens=60);frame(margin=margin);f=ob(n+'.floor');f.data.materials.clear();f.data.materials.append(mat('find_sand',(0xe3,0xbf,0x86),0.95))
     render(n,res=(512,512),samples=40);print(n,tris())
 
-# ================== yellow-spotted lizard (~0.7 m nose to tail; faces -Y) ==================
+# ================== gold-eyed gila (~0.7 m nose to tail; faces -Y) ==================
 def lizard(n,body,spot,belly,spots='round',frill=False,chunky=1.0,tail=1.0,eyes=(0xd9,0x9a,0x1a),crest=False):
     scene(n);r=root(n);B=M_('c_lz_'+n,body,0.7);S=M_('c_lzs_'+n,spot,0.5);Bl=M_('c_lzb_'+n,belly,0.8)
     blob('body',(0,0,0.07),(0.075*chunky,0.19,0.05*chunky),B,r,seg=12,rings=8)

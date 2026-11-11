@@ -24,12 +24,12 @@ function setHat(p,l){
 
 /* ---- the crew bank (the gold rush, 2026-09-30): since 2026-10-01 the crew wallet (84-wallet.js): all the gold anyone has, shared by
    the whole crew for the big purchases. There's no quota any more and nobody gets fired: curfew just ends the day. ---- */
-const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),curse:0,mood:'normal'};   // quota: the Warden's, out of the bank at curfew   // curse/mood: 81-mood.js
-function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.curse=num(o.curse,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
-function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,curse:RUN.curse,mood:RUN.mood}))}catch(e){}}
+const RUN={day:1,bank:0,quota:SIM.quotaFor(1,1),badluck:0,mood:'normal'};   // quota: the Superintendent's, out of the bank at curfew   // badluck/mood: 81-mood.js
+function loadRun(){try{const o=JSON.parse(sessionStorage.getItem('cgl-run')||'null');if(o){RUN.day=num(o.day,1,999,1)|0;RUN.bank=num(o.bank,0,1e9,0)|0;RUN.badluck=num(o.badluck,0,100,0);RUN.mood=SIM.MOODS[o.mood]?o.mood:'normal'}}catch(e){}RUN.quota=SIM.quotaFor(RUN.day,1);$('#dayTag').textContent='Day '+RUN.day}
+function saveRun(){if(!online())try{sessionStorage.setItem('cgl-run',JSON.stringify({day:RUN.day,bank:RUN.bank,badluck:RUN.badluck,mood:RUN.mood}))}catch(e){}}
 function deposited(m){const v=num(m.v,0,1e6,0)|0;if(m.pipe){toast(`${m.id===myId()?'Your':(m.n||'A digger')+'\'s'} sand came through the pipeline: the sifter puts ${v} gold in the crew bank.`,'gold',3600);return}if(m.bot)toast(`${String(m.bot).slice(0,16)} sifted ${v} gold into the crew bank.`,'',3200);else if(m.id!==myId())toast(`${m.n||'A digger'} put ${v} gold in the crew bank.`,'gold',3200)}
 function setRun(m){
-  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.curse!=null)RUN.curse=num(m.curse,0,100,0);moodHud();
+  RUN.day=num(m.day,1,999,1)|0;noteDay(RUN.day);RUN.bank=num(m.bank,0,1e9,0)|0;RUN.quota=num(m.quota,1,1e9,SIM.quotaFor(RUN.day,1))|0;if(m.mood!=null&&SIM.MOODS[m.mood])RUN.mood=m.mood;if(m.badluck!=null)RUN.badluck=num(m.badluck,0,100,0);moodHud();
 }
 function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.eotd);   /* the crew slept it off (88-morale.js) */
   {const fl=foundLine(m.found);if(fl)setTimeout(()=>toast(fl,'gold',6000),600)}FOUND.mine=0;toast(m.grace?`Day ${RUN.day}. You only just got here, so the Company let its cut slide. Today it wants ${RUN.quota} gold in the crew bank by lights-out.`:`Day ${RUN.day}. The Company took its ${m.paid||''} gold. Today it wants ${RUN.quota} in the crew bank by lights-out.`,'gold',7000);addXP(50)}
@@ -37,8 +37,8 @@ function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.e
    is the server's: it starts the new run at 0, so it isn't wiped here.) */
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
-  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();zeroniSting(0.8);
-  Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},onions:1,batt:100,hasKB:false,reported:false,holesDone:0,carry:null});saveSession();
+  $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();brideSting(0.8);
+  Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},bitterroots:1,batt:100,hasLM:false,reported:false,holesDone:0,carry:null});saveSession();
 }
 $('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
@@ -46,10 +46,10 @@ function soloEndOfDay(){
   const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
   if(RUN.bank<q&&played>=180){RUN.lastFound=RUN.found||{};RUN.found={};const b=RUN.bank;RUN.day=1;RUN.bank=0;RUN.quota=SIM.quotaFor(1,1);saveRun();fired(b,q);return}
   const found=RUN.found||{};RUN.found={};RUN.lastFound=found;
-  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.curse);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
+  const paid=RUN.bank>=q;if(paid)RUN.bank-=q;RUN.day++;noteDay(RUN.day);RUN.quota=SIM.quotaFor(RUN.day,1);RUN.mood=SIM.rollMood(RUN.day,RUN.badluck);S.refills=0;saveRun();$('#dayTag').textContent='Day '+RUN.day;newDay(paid?{paid:q,found}:{grace:true,found});
 }
 
-/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Supply Depot window (sim.js SELL); the safe takes two to lift ---- */
+/* ---- heavy loot: too big for the sack. Grab it (hold R, 84-grab.js) and get it to the Company Store window (sim.js SELL); the safe takes two to lift ---- */
 const PROPS=new Map();
 function propMesh(type){
   const g=new T.Group();
@@ -84,7 +84,7 @@ function addBag(id,x,z,items,n){
 function removeBag(id){const b=BAGS.get(id);if(!b)return;scene.remove(b.g);dropLabel(b.L);BAGS.delete(id)}
 function bagNear(r){let best=null,bd=r*r;for(const b of BAGS.values()){const d2=(b.x-P.x)**2+(b.z-P.z)**2;if(d2<bd){bd=d2;best=b}}return best}
 function dropBag(){if(!S.sack.length)return;const items=S.sack.slice(0,12);S.sack=[];if(online())wsSend({t:'bag',x:P.x,z:P.z,items});else addBag(bagSeq++,P.x,P.z,items,S.name)}
-function takeBag(items,n){countUp('bags',3,'magnet');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a digger')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
+function takeBag(items,n){countUp('bags',3,'stickyfingers');const ok=items.filter(t=>LOOT[t]&&!LOOT[t].key&&!LOOT[t].heavy);S.sack.push(...ok);sfx.find();toast(`Picked up ${n===S.name?'your':(n||'a digger')+'\'s'} sack: ${ok.length} item${ok.length===1?'':'s'}.`,'good')}
 
 /* ---- helping each other: pick up downed friends, pull friends out of deep holes ---- */
 function remoteNear(test,r){let best=null,bd=r*r;for(const[rid,R]of remotes){if(R.room!==S.tent||!test(R))continue;const g=R.p.g.position,d2=(g.x-P.x)**2+(g.z-P.z)**2;if(d2<bd){bd=d2;best={rid,R}}}return best}
@@ -102,11 +102,11 @@ function downed(dt){
   if(othersOnline()&&stepMyBody(dt)){fine.textContent=S.inCart!=null?'You\'re in the wheelbarrow. Hang on.':'Your crew has hold of you. Get carried inside the fence and you\'re back up.';me.g.position.set(P.x,P.y,P.z);return}
   if(othersOnline()){fine.textContent=`Downed. ${Math.ceil(S.ko)}s left for a friend to pick you up (they hold F next to you). You can crawl.`;
     let ix=(KEYS['d']||KEYS['arrowright']?1:0)-(KEYS['a']||KEYS['arrowleft']?1:0),iz=(KEYS['w']||KEYS['arrowup']?1:0)-(KEYS['s']||KEYS['arrowdown']?1:0);
-    const dragged=MONV.zer&&MONV.zer.drag===myId();
+    const dragged=MONV.bride&&MONV.bride.drag===myId();
     if((ix||iz)&&!dragged&&!uiOpen()){const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz)||1,sp=myLevel()>=12?1.4:0.8;
       P.x=clamp(P.x+mx/ml*sp*dt,-HALF+3,HALF-3);P.z=clamp(P.z+mz/ml*sp*dt,-HALF+3,HALF-3);P.fa=Math.atan2(mx,mz)}
     P.y=groundAt(P.x,P.z);me.g.position.set(P.x,P.y,P.z);me.g.rotation.y=P.fa;
-  }else{fine.textContent='Waking up in the nurse\'s office…';if(MONV.zer&&MONV.zer.drag===myId())me.g.position.set(P.x,P.y,P.z)}
+  }else{fine.textContent='Waking up in the nurse\'s office…';if(MONV.bride&&MONV.bride.drag===myId())me.g.position.set(P.x,P.y,P.z)}
 }
 
 /* ---- pings (G) and proximity chat (Enter) ---- */
