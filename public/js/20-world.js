@@ -16,14 +16,16 @@ function sign(text,x,z,ry,w,h){
   for(const s of[-1,1]){const p=cyl(0.06,0.06,1.8+h,5,0x6b4f33);p.position.set(s*(w/2-0.1),(1.8+h)/2,-0.06);g.add(p)}
   g.position.set(x,baseH(x,z),z);g.rotation.y=ry;scene.add(g);return g;
 }
-/* Canvas dorms keep their small outdoor footprint, while the rooms below are broad, instanced spaces.
-   Only the occupied room is drawn, so neighboring rooms may overlap underground without showing through. */
+/* Each bunkhouse (and the Super's house) has a room that lives underground at y = TENT_FLOOR_Y under the building:
+   E at the door moves you down into it (50-tents.js). The rooms are about the size of the building you walked into
+   (roomW / roomD: half the inside width / depth), so the inside matches the outside. Only the occupied room is drawn.
+   room: its Blender shell (art/blender/camp.py); camY: how high the camera may go in it (under the eaves). */
 const TENTS=[
-  {x:-16,z:47,name:'Bunk A',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:-8,z:47,name:'Bunk B',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:0,z:47,name:'Bunk D',hw:3.6,hd:5.2,roomW:9,roomD:8.5,crew:true},
-  {x:8,z:47,name:'Bunk C',hw:3.0,hd:3.6,roomW:7,roomD:8},
-  {x:-30,z:45,name:"the Super's House",hw:4,hd:3,roomW:8,roomD:8,house:true},
+  {x:-16,z:47,name:'Bunk A',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomA',camY:2.3},
+  {x:-8,z:47,name:'Bunk B',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomB',camY:2.3},
+  {x:0,z:47,name:'Bunk D',hw:3.6,hd:5.2,roomW:3.6,roomD:5.1,room:'BunkRoomD',camY:2.3,crew:true},
+  {x:8,z:47,name:'Bunk C',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomC',camY:2.3},
+  {x:-30,z:45,name:"the Super's House",hw:4,hd:3,roomW:4.0,roomD:3.0,room:'SuptRoom2',camY:2.75,house:true},
 ];
 const BUNK_D=TENTS.find(t=>t.crew);
 function tent(t){
@@ -45,55 +47,50 @@ function tent(t){
 }
 TENTS.forEach(tent);
 
-/* ---------- broad walkable interiors ---------- */
+/* ---------- the rooms: the shell is a Blender model (23-models.js); here is everything the game needs to know ----------
+   where the bunks are (BUNKS, the "bunk" spots), the furniture models and where they stand (ROOM_FURN_SPOTS), what is
+   solid (TENT_COLLIDERS), the room's lights (t.lights, 47-camplight.js), the card table and the Super's desk.
+   The numbers match art/blender/camp.py (room-local: x east, z toward the back wall, the door wall at z = -roomD). */
 const TENT_FLOOR_Y=-4; // Network positions are clamped to -5..10.
-const ROOM_LAMP=1.0;   // brightness of the one warm lamp in each tent/office room
+const ROOM_LAMP=1.6;   // the one real light in a room (its main lamp); the rest of a room's light is 47-camplight.js
 const BUNKS=[];
 const TENT_COLLIDERS=TENTS.map(()=>[]);
 const ROOM_MESHES=[];
 const ROOM_LIGHTS=[];
 const ROOM_FURN=[],ROOM_FURN_SPOTS=[],ROOM_SHELL=[];   // per room: the procedural furniture mesh, and where each Blender furniture model goes
 function tentSolid(list,x,z,w,d){list.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2})}
+/* room-local layouts. cots/beds: [x, z] (head toward the door, footlocker at the foot); solids: [x, z, w, d];
+   lights: [x, y, z, reach, brightness, kind] (kind: lamp, stove, day, fire) */
+const ROOM_LAYOUT={
+  small:{cots:[[-2.25,-1.8],[-2.25,1.55],[2.25,-1.8],[2.25,1.55]],
+    solids:[[0,3.2,0.9,0.9],[0,0.55,0.8,0.8],[-2.0,-3.65,1.6,0.35]],          // the stove, the crate table, the shovel rack
+    lights:[[0,2.0,0,5.2,1.25,'lamp'],[0,0.45,3.0,2.6,1.0,'stove'],[-2.4,1.3,-1.8,2.4,0.7,'day'],[-2.4,1.3,1.55,2.4,0.7,'day'],[2.4,1.3,-1.8,2.4,0.7,'day'],[2.4,1.3,1.55,2.4,0.7,'day']]},
+  crew:{beds:[[-2.85,-3.1],[-2.85,-0.2],[-2.85,2.7]],table:[1.4,0.3],
+    solids:[[2.5,4.35,1.0,1.0],[3.05,-3.7,0.75,0.75],[-2.2,-4.9,2.6,0.35]],  // the stove, the water barrel, the rack
+    lights:[[1.4,1.85,0.3,4.6,1.2,'lamp'],[-1.0,2.0,-2.6,4.2,0.9,'lamp'],[2.5,0.45,3.9,2.8,1.0,'stove'],[-3.0,1.4,-1.65,2.2,0.6,'day'],[-3.0,1.4,1.25,2.2,0.6,'day'],
+      [3.0,1.3,-2.4,2.4,0.7,'day'],[3.0,1.3,0.4,2.4,0.7,'day'],[3.0,1.3,3.2,2.4,0.7,'day']]},
+  house:{desk:[1.8,1.0],
+    solids:[[-2.3,2.6,2.0,0.85],[-3.76,0.3,0.5,1.45],[-2.9,-1.55,1.0,0.95],[-3.55,-0.6,0.5,0.5],[-3.55,-2.45,0.45,0.45],[-1.2,-2.6,0.45,0.45],[3.7,2.35,0.62,1.0],[3.7,-1.8,0.45,0.45]],
+    // the fire, the cabinet, the armchair, its side table, the floor lamp, the coat rack, the filing cabinets, the cooler
+    lights:[[-3.55,1.5,-2.45,4.2,1.9,'lamp'],[2.7,1.1,1.2,2.6,1.5,'lamp'],[1.8,2.25,0.9,5.5,0.8,'lamp'],[-2.3,0.5,2.2,3.8,1.4,'fire'],
+      [-2.4,1.5,-2.4,2.6,0.75,'day'],[2.4,1.5,-2.4,2.6,0.75,'day'],[-3.4,1.5,0.4,2.6,0.7,'day'],[3.4,1.5,0.4,2.6,0.6,'day']]},
+};
 TENTS.forEach((t,ti)=>{
-  const parts=[],list=TENT_COLLIDERS[ti],Y=TENT_FLOOR_Y;
-  const wall=t.house?0x7b604a:0x88785b,floor=t.house?0x674b33:0x62563e,roof=t.house?0x604532:0x5d5948;
-  const frame=0x4b392b,pillow=0xe1d7b8,blanket=0x9f694f,H=t.house?3.4:3.2;
+  const parts=[],list=TENT_COLLIDERS[ti],Y=TENT_FLOOR_Y,W=t.roomW,D=t.roomD,L=ROOM_LAYOUT[t.house?'house':t.crew?'crew':'small'];
+  const wall=t.house?0x9bab88:0xbaa57a,floor=t.house?0x674b33:0x7d6446,H=t.house?3.0:2.45;
+  const frame=0x4b392b,pillow=0xe1d7b8,blanket=0x5b634a;
   const add=(w,h,d,c,x,y,z)=>parts.push([w,h,d,c,x,y,z]);
   // furniture: its own merged mesh + a list of Blender models to stand in for it (23-models.js hides this mesh once they load)
   const furn=[],addF=(w,h,d,c,x,y,z)=>furn.push([w,h,d,c,x,y,z]),spots=ROOM_FURN_SPOTS[ti]=[];
-  add(t.roomW*2,0.2,t.roomD*2,floor,t.x,Y-0.1,t.z);
-  add(t.roomW*2,0.18,t.roomD*2,roof,t.x,Y+H+0.1,t.z);
-  add(t.roomW*2,H,0.18,wall,t.x,Y+H/2,t.z+t.roomD);
-  add(0.18,H,t.roomD*2,wall,t.x-t.roomW,Y+H/2,t.z);
-  add(0.18,H,t.roomD*2,wall,t.x+t.roomW,Y+H/2,t.z);
-  const gap=1.3;
-  add(t.roomW-gap,H,0.18,wall,t.x-(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
-  add(t.roomW-gap,H,0.18,wall,t.x+(t.roomW+gap)/2,Y+H/2,t.z-t.roomD);
-  // A closed door in the doorway (it used to be an open gap you could see the outside world through). You still leave
-  // with E at the door (the 'exit' spot); this is just the look: a lintel above, two leaves, a seam and handles.
-  {const DH=2.3,zi=t.z-t.roomD,leaf=t.house?0x5a3b24:0x6d6448,trim=t.house?0x3a2618:0x4b4533;
-    add(gap*2,H-DH,0.18,wall,t.x,Y+DH+(H-DH)/2,zi);                               // lintel over the door
-    add(gap*2-0.08,DH,0.1,leaf,t.x,Y+DH/2,zi+0.02);                              // the two door leaves, closed
-    add(0.07,DH,0.14,trim,t.x,Y+DH/2,zi+0.05);                                   // seam between the leaves
-    for(const sx of[-1,1])add(0.1,DH+0.12,0.16,trim,t.x+sx*(gap-0.02),Y+(DH+0.12)/2,zi+0.04);   // jambs
-    for(const sx of[-1,1])add(0.1,0.1,0.09,0xc9a24a,t.x+sx*0.24,Y+1.1,zi+0.12);  // brass handles
-  }
-  // Timber beams, floor stripes and high canvas panels give long rooms a clear scale.
-  for(let z=t.z-t.roomD+2;z<t.z+t.roomD;z+=3){
-    add(t.roomW*2,0.1,0.14,frame,t.x,Y+H-0.18,z);
-    add(t.roomW*2-0.5,0.025,0.065,0x91744d,t.x,Y+0.02,z);
-  }
-  for(const side of[-1,1])for(let z=t.z-t.roomD+3;z<t.z+t.roomD-1;z+=4){
-    add(0.2,1.1,1.6,t.house?0x35424b:0xb3a681,t.x+side*(t.roomW-0.14),Y+1.9,z);
-    add(0.26,0.11,1.8,frame,t.x+side*(t.roomW-0.25),Y+1.3,z);
-  }
-  add(0.38,0.2,0.38,0xffd89b,t.x,Y+H-0.33,t.z);
+  // the box shell, drawn until the Blender room arrives: floor, ceiling, four walls
+  add(W*2,0.2,D*2,floor,t.x,Y-0.1,t.z);add(W*2,0.12,D*2,0x9c8b63,t.x,Y+H+0.06,t.z);
+  add(W*2,H,0.12,wall,t.x,Y+H/2,t.z+D);add(W*2,H,0.12,wall,t.x,Y+H/2,t.z-D);
+  add(0.12,H,D*2,wall,t.x-W,Y+H/2,t.z);add(0.12,H,D*2,wall,t.x+W,Y+H/2,t.z);
+  add(1.1,2.1,0.06,0x4b392b,t.x,Y+1.05,t.z-D+0.07);
   const bunk=(x,z,double)=>{
-    addF(1.3,0.32,2.35,frame,x,Y+0.28,z);
-    addF(1.18,0.16,2.08,blanket,x,Y+0.48,z+0.1);
-    addF(1.0,0.12,0.42,pillow,x,Y+0.62,z-0.8);
+    addF(1.3,0.32,2.35,frame,x,Y+0.28,z);addF(1.18,0.16,2.08,blanket,x,Y+0.48,z+0.1);addF(1.0,0.12,0.42,pillow,x,Y+0.62,z-0.8);
     spots.push({m:double?'BunkBed':'Cot',x,y:Y,z,ry:Math.PI},{m:'Footlocker',x,y:Y,z:z+1.45,ry:Math.PI});
-    tentSolid(list,x,z,1.4,2.45);BUNKS.push({tent:ti,x,z,high:false});
+    tentSolid(list,x,z+0.27,1.4,2.98);BUNKS.push({tent:ti,x,z,high:false});   // the bed and the footlocker at its foot
     if(double){
       for(const dx of[-0.56,0.56])for(const dz of[-1.03,1.03])addF(0.09,1.55,0.09,frame,x+dx,Y+1.03,z+dz);
       addF(1.3,0.16,2.35,frame,x,Y+1.47,z);addF(1.18,0.16,2.08,blanket,x,Y+1.64,z+0.1);
@@ -101,43 +98,35 @@ TENTS.forEach((t,ti)=>{
     }
   };
   if(t.house){
-    // The Superintendent's office has a usable desk interaction and room to circle it.
-    const dx=t.x+2,dz=t.z+1;
+    // the Superintendent's desk: room to stand at it (t.desk, the visitor's side) and her chair behind it
+    const dx=t.x+L.desk[0],dz=t.z+L.desk[1];
     addF(3.1,0.16,1.7,0x3e291e,dx,Y+0.83,dz);
     for(const sx of[-1.3,1.3])for(const sz of[-0.65,0.65])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
-    addF(0.85,0.08,0.6,0xd4bd87,dx-0.55,Y+0.95,dz);
-    addF(0.55,0.58,0.36,0x866d4a,dx+0.8,Y+1.19,dz-0.2);
     spots.push({m:'SuptDesk',x:dx,y:Y,z:dz,ry:Math.PI});   // chair on the +z side, facing the visitor spot at t.desk
     spots.push({m:'SuptNote',x:dx+0.3,y:Y+0.845,z:dz-0.45,ry:Math.PI});   // her note on the old town (89-town.js), the right way up for whoever's at the desk
     tentSolid(list,dx,dz,3.2,1.8);t.desk={x:dx,z:dz-1.8};
-    add(3.2,1.6,0.12,0x322b25,t.x-3.2,Y+1.6,t.z+4);
-    add(3.0,1.1,0.12,0xbca16c,t.x-3.2,Y+1.6,t.z+3.9);
-    add(1.6,1.6,0.45,0x483526,t.x-5.4,Y+0.8,t.z-2);
-    tentSolid(list,t.x-5.4,t.z-2,1.8,1.8);
-  }else{
-    if(t.crew){
-      for(let i=0;i<3;i++)bunk(t.x-t.roomW+1.5,t.z-t.roomD+3+i*3.0,true);
-      const dx=t.x+3.3,dz=t.z+0.5;
-      addF(2.3,0.12,2.3,0x65452d,dx,Y+0.8,dz);
-      for(const sx of[-0.95,0.95])for(const sz of[-0.95,0.95])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
-      for(const [sx,sz] of [[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]]){addF(0.65,0.46,0.65,0x765339,dx+sx,Y+0.23,dz+sz);spots.push({m:'Stool',x:dx+sx,y:Y,z:dz+sz,ry:0})}
-      addF(0.8,0.03,0.5,0xb99c70,dx,Y+0.88,dz);
-      spots.push({m:'CardTable',x:dx,y:Y,z:dz,ry:0});
-      tentSolid(list,dx,dz,2.4,2.4);
-      BUNK_D.table={x:dx,z:dz-1.75};BUNK_D.dealerSeat={x:dx,z:dz+1.75};
-    }else{
-      for(const side of[-1,1])for(let i=0;i<2;i++)bunk(t.x+side*(t.roomW-1.55),t.z-t.roomD+3+i*3.4,false);
-    }
-    // Supply chest and clear center aisle; both are visible from the door.
-    add(1.45,0.8,0.9,0x766243,t.x+t.roomW-1.25,Y+0.4,t.z+t.roomD-1.5);
-    tentSolid(list,t.x+t.roomW-1.25,t.z+t.roomD-1.5,1.5,1);
-  }
+  }else if(t.crew){
+    for(const[bx,bz]of L.beds)bunk(t.x+bx,t.z+bz,true);
+    const dx=t.x+L.table[0],dz=t.z+L.table[1];
+    addF(2.3,0.12,2.3,0x65452d,dx,Y+0.8,dz);
+    for(const sx of[-0.95,0.95])for(const sz of[-0.95,0.95])addF(0.12,0.8,0.12,frame,dx+sx,Y+0.4,dz+sz);
+    for(const [sx,sz] of [[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]]){addF(0.65,0.46,0.65,0x765339,dx+sx,Y+0.23,dz+sz);spots.push({m:'Stool',x:dx+sx,y:Y,z:dz+sz,ry:0})}
+    spots.push({m:'CardTable',x:dx,y:Y,z:dz,ry:0});
+    tentSolid(list,dx,dz,2.4,2.4);
+    BUNK_D.table={x:dx,z:dz-1.75};BUNK_D.dealerSeat={x:dx,z:dz+1.75};
+    /* Jim Bob's way between the door and his seat at the far side of the table: up the aisle past the west stool, round
+       behind the table (30-npcs.js walks it forward to deal, backward to go to bed or out) */
+    BUNK_D.dealerPath=[{x:t.x-0.95,z:t.z-2.0},{x:t.x-0.95,z:t.z+2.9},{x:dx,z:t.z+2.9},{x:dx,z:dz+1.75}];
+  }else for(const[bx,bz]of L.cots)bunk(t.x+bx,t.z+bz,false);
+  for(const[x,z,w,d]of L.solids)tentSolid(list,t.x+x,t.z+z,w,d);
+  t.lights=L.lights.map(([x,y,z,r,k,kind])=>({x:t.x+x,y:Y+y,z:t.z+z,r,k,kind}));
   // the room is a group (shown only while you're inside): the box-built shell, its furniture, and later the Blender models
   const room=new T.Group();room.visible=false;scene.add(room);ROOM_MESHES.push(room);
   const m=new T.Mesh(mergeBoxes(parts),mergedMat);m.castShadow=true;m.receiveShadow=true;room.add(m);ROOM_SHELL[ti]=m;
   if(furn.length){const fm=new T.Mesh(mergeBoxes(furn),mergedMat);fm.castShadow=true;fm.receiveShadow=true;room.add(fm);ROOM_FURN[ti]=fm}
-  const light=new T.PointLight(t.house?0xffdfb0:0xffe8bf,ROOM_LAMP,t.crew?27:22,1);   // 2.8 blew out anyone standing near the door and facing the lamp
-  light.position.set(t.x,Y+2.65,t.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
+  const lamp=t.lights.find(l=>l.kind==='lamp');
+  const light=new T.PointLight(0xffd9a0,ROOM_LAMP,Math.max(W,D)*2.2,2);   // falls off properly, so the corners stay dark
+  light.position.set(lamp.x,lamp.y-0.1,lamp.z);light.visible=false;scene.add(light);ROOM_LIGHTS.push(light);
 });
 function cabin(x,z,w,d,h,wall,roof){
   const g=new T.Group();const b=box(w,h,d,wall);b.position.y=h/2;g.add(b);

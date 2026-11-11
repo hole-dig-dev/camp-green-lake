@@ -24,7 +24,9 @@ await page.evaluate(() => {
   window.__cgl.runCommand('god on');
   // the free camera: placed after the game has set its own, just before the frame is drawn
   const orig = window.lookRender; window.CAMOV = null;
-  window.lookRender = function (s, c) { const o = window.CAMOV; if (o) { c.position.set(...o.cam); c.lookAt(...o.look) } return orig(s, c) };
+  window.lookRender = function (s, c) { const o = window.CAMOV; if (!o) return orig(s, c);
+    c.position.set(...o.cam); c.lookAt(...o.look); const hid = [me.g, ...c.children].filter(x => x.visible); hid.forEach(x => x.visible = false);   // the shot is of the place: no player, no hand-held tool
+    try { return orig(s, c) } finally { hid.forEach(x => x.visible = true) } };
   for (const id of ['hud', 'toasts', 'toast']) { const el = document.getElementById(id); if (el) el.style.visibility = 'hidden' }
 });
 for (const s of spec) {

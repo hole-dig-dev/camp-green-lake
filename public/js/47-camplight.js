@@ -101,19 +101,17 @@ clGlow('MainGate',['cgl_lantern'],2.8,clDusk);
 clGlow('WatchtowerBody',['cgl_glass'],0.9,clDusk);   // a guard's lamp in each tower cab
 for(const m of['TentSmall','TentCrew'])clGlow(m,['cgl_c25251d'],1.0,pos=>{const t=clTentAt(pos);return t?clBunkOn(t):0},CL_WARM,true);   // the doorway glows while the bunk's lamp is lit
 
-/* ---- rooms: each room's fixtures. The lamp hangs in the middle; the windows (the 'cgl_daylight' panes in the room
-   models) shine by day. A room's own list is filled by whoever builds its furniture (CL_ROOM[ti].push(...)). ---- */
-const CL_ROOM=TENTS.map((t,ti)=>[]);
-const clRoomDay=()=>{const n=lookNightF();return 1-n};
-TENTS.forEach((t,ti)=>{
-  const Y=TENT_FLOOR_Y;
-  CL_ROOM[ti].push({x:t.x,y:Y+2.3,z:t.z,r:Math.max(t.roomW,t.roomD)*1.1,k:t.house?0.9:0.75,on:()=>1,col:CL_WARM,w:0});
-});
-/* the room's one real light: a shorter reach that falls off properly, so the corners go dark */
-for(const L of ROOM_LIGHTS){L.decay=2;L.distance=16;L.intensity=2.4}
-const CL_ROOM_GLASS=[];   // {mat}: room windows, bright by day, dark at night
-for(const n of['TentRoomSmall','TentRoomCrew','SuptRoom'])loadModel(n).then(({meshes})=>{for(const p of meshes)if((p.material.name||'').startsWith('cgl_daylight'))CL_ROOM_GLASS.push(p.material)}).catch(()=>{});
-
+/* ---- rooms: each room's fixtures come from its layout (20-world.js t.lights). A lamp is lit while the bunk's lamp is
+   (dim by day: the windows do the work then), the stove always glows (more at night), a window is daylight by day. ---- */
+const CL_STOVE=[1.0,0.42,0.14],CL_FIRE=[1.0,0.5,0.2];
+function clRoomLampOn(t){const n=lookNightF();if(t.house)return 0.4+0.6*n;return n<=0.001?0.3:0.3*(1-n)+clBunkOn(t)}
+const CL_ROOM=TENTS.map(t=>(t.lights||[]).map(l=>({x:l.x,y:l.y,z:l.z,r:l.r,k:l.k,w:0,
+  col:l.kind==='day'?CL_DAY:l.kind==='stove'?CL_STOVE:l.kind==='fire'?CL_FIRE:CL_WARM,
+  on:l.kind==='day'?()=>1-lookNightF():l.kind==='lamp'?()=>clRoomLampOn(t):()=>0.6+0.4*lookNightF()})));
+/* the room models' own glass: windows ('cgl_daylight'), lamp glass ('cgl_lampglow'), the fire in the stove ('cgl_stoveglow') */
+const CL_ROOM_MATS=TENTS.map(()=>({day:[],lamp:[],stove:[]}));
+TENTS.forEach((t,ti)=>loadModel(t.room).then(({meshes})=>{for(const p of meshes){const n=p.material.name||'',M=CL_ROOM_MATS[ti];
+  if(n.startsWith('cgl_daylight'))M.day.push(p.material);else if(n.startsWith('cgl_lampglow'))M.lamp.push(p.material);else if(n.startsWith('cgl_stoveglow'))M.stove.push(p.material)}}).catch(()=>{}));
 /* ---- every frame ---- */
 const CL_ROOM_HEMI=[0.34,0.1];   // the sky light in a room: by day (through the windows and the canvas), at night
 let clT=0;
@@ -121,7 +119,13 @@ function updateCampLight(dt){
   const room=typeof S!=='undefined'&&S.tent!=null?S.tent:null,night=lookNightF();
   // lit glass (cheap: only touched when the value moves)
   for(const g of CL_GLOW){const v=g.on()*g.k;if(Math.abs(v-g.w)>0.01){g.w=v;g.mat.emissive.setRGB(g.col[0]*v,g.col[1]*v,g.col[2]*v)}}
-  for(const m of CL_ROOM_GLASS){const d=1-night;m.emissive.setRGB(0.04+1.25*d,0.05+1.18*d,0.09+1.0*d);m.emissiveIntensity=1}
+  if(room!=null){   // the room you're in: its windows, lamp glass, stove fire and its one real light
+    const t=TENTS[room],M=CL_ROOM_MATS[room],d=1-night,lamp=clRoomLampOn(t);
+    for(const m of M.day)m.emissive.setRGB(0.03+1.3*d,0.04+1.22*d,0.08+1.02*d);
+    for(const m of M.lamp)m.emissive.setRGB(2.6*lamp,1.8*lamp,0.8*lamp);
+    for(const m of M.stove)m.emissive.setRGB(2.4,0.9,0.25);
+    ROOM_LIGHTS[room].intensity=ROOM_LAMP*lamp;
+  }
   if(room!=null&&!PARTY.on){hemi.intensity=lerp(CL_ROOM_HEMI[0],CL_ROOM_HEMI[1],night);sun.intensity=0}   // a room under the ground: no sun, little sky (the day-night code eases it back outside)
   // which fixtures feed the shader: the room's own, or the yard's nearest (refreshed a few times a second)
   clT-=dt;if(clT>0)return;clT=0.1;
