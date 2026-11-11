@@ -12,7 +12,8 @@ function dynLoad(){if(DYN.loading)return;DYN.loading=1;for(const n of['Dynamite'
 const DYN_SAND=8,DYN_PILE_R=1.9;
 function dynMesh(o,n){dynLoad();if(o.obj||!DYN.parts[n])return;const g=new T.Group();for(const pt of DYN.parts[n]){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;m.receiveShadow=true;g.add(m)}
   g.position.set(o.x,groundAt(o.x,o.z),o.z);g.rotation.y=(o.id*1.7)%6.28;scene.add(g);o.obj=g;if(n==='LooseSand')dynPileLook(o)}
-function dynPileLook(q){if(q.obj){const f=q.sand/DYN_SAND;q.obj.scale.set(clamp(0.55+0.45*Math.sqrt(f),0.55,1.5),clamp(f,0.2,1.6),clamp(0.55+0.45*Math.sqrt(f),0.55,1.5));q.obj.position.y=groundAt(q.x,q.z)}}   // a small dumped load is a small mound; merged loads grow past the dynamite's
+function dynPileLook(q){if(q.obj){const f=(q.show??q.sand)/DYN_SAND;   // show: what has poured out so far (it grows over dig.pour s)
+  q.obj.scale.set(clamp(0.5+0.5*Math.sqrt(f),0.3,1.5),clamp(0.25+0.85*Math.sqrt(f),0.12,1.6),clamp(0.5+0.5*Math.sqrt(f),0.3,1.5));q.obj.position.y=groundAt(q.x,q.z)}}   // a small dumped load is a small mound; merged loads grow past the dynamite's
 /* Y: light one and toss it */
 function throwDynamite(){
   if(!S.started||S.ko||twSt||inTent()||S.inTown||uiOpen())return;
@@ -36,14 +37,16 @@ function dynBoom(m){
   logEv('dynBoom',{x:+x.toFixed(1),z:+z.toFixed(1)});
 }
 /* the loose sand */
-function pileSet(d){if(!d)return;let q=DYN.piles.get(d.id);if(!(d.sand>0.01)){if(q){if(q.obj)scene.remove(q.obj);DYN.piles.delete(d.id)}return}
-  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null,rich:d.rich===true,pay:num(d.pay,0,20,0)};DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{q.sand=+d.sand;if(d.pay>0)q.pay=num(d.pay,0,20,0);dynPileLook(q)}}   /* pay: how rich its sand is (a load the excavator dumped keeps the richness of where it was dug; 87-excavator.js); 0: plain (x1) */
-function pilesSet(list){for(const q of DYN.piles.values())if(q.obj)scene.remove(q.obj);DYN.piles.clear();for(const d of list||[])pileSet(d)}
+const PILE_FLOOR=0.15;   // a pouring pile starts this big (of its load) so it doesn't start as a speck
+function pileSet(d,now){if(!d)return;let q=DYN.piles.get(d.id);if(!(d.sand>0.01)){if(q){if(q.obj)scene.remove(q.obj);DYN.piles.delete(d.id)}return}
+  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null,rich:d.rich===true,pay:num(d.pay,0,20,0)};if(!now)q.show=q.sand*PILE_FLOOR;DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{if(+d.sand>q.sand&&q.show==null)q.show=q.sand;q.sand=+d.sand;if(q.show!=null&&q.show>q.sand)q.show=q.sand;if(d.pay>0)q.pay=num(d.pay,0,20,0);dynPileLook(q)}}   /* pay: how rich its sand is (a load the excavator dumped keeps the richness of where it was dug; 87-excavator.js); 0: plain (x1) */
+function pilesSet(list){for(const q of DYN.piles.values())if(q.obj)scene.remove(q.obj);DYN.piles.clear();for(const d of list||[])pileSet(d,true)}   // (already there: no pour)
 function pileTake(q,v,who){
-  q.sand=Math.max(0,q.sand-v);dynPileLook(q);DYN.take.set(q.id,(DYN.take.get(q.id)||0)+v);
+  q.sand=Math.max(0,q.sand-v);if(q.show!=null&&q.show>q.sand)q.show=q.sand;dynPileLook(q);DYN.take.set(q.id,(DYN.take.get(q.id)||0)+v);
   if(q.sand<=0.01&&!online()){if(q.obj)scene.remove(q.obj);DYN.piles.delete(q.id)}
 }
 function updateDynamite(dt){
+  for(const q of DYN.piles.values())if(q.show!=null){q.show=Math.min(q.sand,q.show+Math.max(1,q.sand)*dt/tune('dig.pour'));if(q.show>=q.sand)q.show=undefined;dynPileLook(q)}   // a fresh load pours out over dig.pour s (47-digfeel.js)
   for(const f of DYN.fuses.values()){f.t+=dt;if(f.obj&&nearCam(f.x,f.z,60)&&Math.random()<dt*14)puff(f.x,groundAt(f.x,f.z)+0.3,f.z,f.x,f.z,1)}   // the fuse fizzing
   if(!S.started)return;
   const rate=tune('dyn.scoop')*dt;
