@@ -388,7 +388,7 @@ function machSoloScoop(x,z){
   if(machNoDig(x,z))return excScooped({ok:false,why:'camp'});if(room<0.05)return excScooped({ok:false,why:'full'});
   const plan=SIM.excScoopPlan(x,z,(hx,hz)=>{const h=holeNear(hx,hz,0.06);return h?h.d:0},(hx,hz)=>!machNoDig(hx,hz));
   if(!plan.holes.length)return excScooped({ok:false,why:'deep'});
-  for(const[hx,hz,hd]of plan.holes)applyDig(hx,hz,hd,true);
+  for(const[hx,hz,hd]of plan.holes)applyDig(hx,hz,hd,true,HEAP_NONE);   // the sand's in the bucket: no heap
   const v=Math.min(plan.vol,room);SIM.loadMix(machLoadOf(M),v,plan.rich);machSoloSave();excScooped({ok:true,v,rich:plan.rich});
 }
 function machSoloDrop(x,z,power){

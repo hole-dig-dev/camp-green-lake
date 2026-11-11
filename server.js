@@ -143,10 +143,19 @@ const LOOT_KEYS = ['cap', 'can', 'spoon', 'shoe', 'arrow', 'jar', 'fossil', 'mat
    must match the client's. */
 const ZONE_ORDER = ['lake', 'canyon'];
 const ZONE_MAX_Y = 200; // the canyon floor climbs; public/js/10-core.js has the same number
+/* every hole as [x, z, depth] plus its spoil heap's direction when it has one (public/js/15-terrain.js HEAP_DIRS:
+   0-15 a compass direction, 16 none; holes from older saves have none and every client hashes it from the position) */
+const HEAP_NONE = 16;
+function holesOut() {
+  const hp = world.heaps || {};
+  return Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return k in hp ? [x, z, d, hp[k]] : [x, z, d]; });
+}
+/* a new hole's heap: the first digger's say, or none (the excavator, dynamite) */
+function heapSet(k, hp) { if (!Number.isInteger(hp) || hp < 0 || hp > HEAP_NONE) return; if (!world.heaps) world.heaps = {}; if (!(k in world.heaps)) world.heaps[k] = hp; }
 function zoneMsg() {
   return {
     t: 'zone', zone: world.zone || 'lake', zflags: world.zflags || {},
-    holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
+    holes: holesOut(),
     got: [...gotSet],
     bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
     props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, val: p.val, v0: p.v0 })),
@@ -156,10 +165,10 @@ function zoneSwitch(id, why) {
   const cur = world.zone || 'lake';
   if (id === cur || !ZONE_ORDER.includes(id)) return;
   if (!world.zones || typeof world.zones !== 'object') world.zones = {};
-  world.zones[cur] = { holes: world.holes, got: [...gotSet], props: world.props, bags: world.bags, zflags: world.zflags || {} };
+  world.zones[cur] = { holes: world.holes, heaps: world.heaps || {}, got: [...gotSet], props: world.props, bags: world.bags, zflags: world.zflags || {} };
   const z = world.zones[id] || {};
   delete world.zones[id];
-  world.zone = id; SIM.setZone(id); ROSTER.mobs = []; JAV.list = []; world.holes = z.holes || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
+  world.zone = id; SIM.setZone(id); ROSTER.mobs = []; JAV.list = []; world.holes = z.holes || {}; world.heaps = z.heaps || {}; gotSet = new Set(z.got || []); world.props = z.props || {}; world.bags = z.bags || {}; world.zflags = z.zflags || {};
   for (const c of clients.values()) { c.cp = false; c.summit = false; }
   dirty = true;
   LOG.log('zone', { from: cur, to: id, why });
@@ -324,7 +333,7 @@ function excScoopS(c, m) {
   const plan = SIM.excScoopPlan(x, z, (hx, hz) => world.holes[hx + '|' + hz] || 0, (hx, hz) => !noDigS(hx, hz) && ((hx + '|' + hz) in world.holes || Object.keys(world.holes).length < MAX_HOLES));
   if (!plan.holes.length) return no('deep');
   M.scoopAt = now;
-  for (const [hx, hz, hd] of plan.holes) { world.holes[hx + '|' + hz] = hd; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d: hd }); }
+  for (const [hx, hz, hd] of plan.holes) { const k = hx + '|' + hz; if (!(k in world.holes)) heapSet(k, HEAP_NONE); world.holes[k] = hd; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d: hd, hp: world.heaps[k] }); }   // the sand went in the bucket: no heap
   const v = Math.min(plan.vol, room); SIM.loadMix(M.load, v, plan.rich); dirty = true;
   send(c, { t: 'excScoop', ok: true, v: Math.round(v * 1000) / 1000, rich: Math.round(plan.rich * 1000) / 1000 });
   broadcast(machMsg());
@@ -340,7 +349,7 @@ function checkSummit() {
   if (js.length && at === js.length && next) { LOG.log('summit', { n: js.length }); for (const c of js) c.summit = false; zoneSwitch(next, 'the crew climbed the north wall'); }
 }
 function freshRun() { return { day: 1, bank: 0, peak: 1, badluck: 0, mood: 'normal' }; }
-function freshWorld(day) { return { day, holes: {}, got: [], lm: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
+function freshWorld(day) { return { day, holes: {}, heaps: {}, got: [], lm: null, won: null, wonAt: 0, recent: {}, hostNames: [], bags: {}, props: {} }; }
 let world = freshWorld(1);
 try { world = Object.assign(freshWorld(1), JSON.parse(fs.readFileSync(SAVE, 'utf8'))); } catch (e) { /* first run */ }
 if (!world.recent || typeof world.recent !== 'object') world.recent = {};
@@ -559,7 +568,8 @@ function dynBoomS(id, x, z) {
   for (const [ox, oz, d] of [[0, 0, 1.3], [0.9, 0, 0.9], [-0.9, 0, 0.9], [0, 0.9, 0.9], [0, -0.9, 0.9]]) { // the crater
     const hx = r1(x + ox), hz = r1(z + oz), k = hx + '|' + hz; if ((world.holes[k] || 0) >= d) continue;
     if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) continue;
-    world.holes[k] = d; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d });
+    if (!(k in world.holes)) heapSet(k, HEAP_NONE); // the blast's sand is the loose pile, not a heap
+    world.holes[k] = d; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d, hp: world.heaps[k] });
   }
   for (let i = MINES.length - 1; i >= 0; i--) { const k = MINES[i]; if (Math.hypot(k.x - x, k.z - z) < tuneS('dyn.blast', 4.5)) { MINES.splice(i, 1); broadcast({ t: 'mineBoom', id: k.id, x: k.x, z: k.z, by: 'Dynamite' }); } }
 }
@@ -739,7 +749,7 @@ wss.on('connection', (ws, req) => {
     send(c, {
       t: 'hello', id: c.id, day: world.day, iceServers: ICE_SERVERS,
       zone: world.zone || 'lake', zflags: world.zflags || {}, // which map the crew is in; the holes etc. below are that map's
-      holes: Object.entries(world.holes).map(([k, d]) => { const [x, z] = k.split('|').map(Number); return [x, z, d]; }),
+      holes: holesOut(),
       got: [...gotSet], lm: world.lm, won: world.won, clock: world.clock,
       bags: Object.entries(world.bags).map(([id, b]) => ({ id: +id, ...b })),
       props: Object.entries(world.props).map(([id, p]) => ({ id: +id, type: p.type, x: p.x, z: p.z, y: p.y, val: p.val, v0: p.v0, q: p.q, owner: p.owner, grab: p.grab || [], ropes: p.ropes || [], load: p.load, tip: p.tip, cartId: p.cartId })),
@@ -850,8 +860,9 @@ wss.on('connection', (ws, req) => {
         const k = x + '|' + z;
         if (!(k in world.holes) && Object.keys(world.holes).length >= MAX_HOLES) return;
         if ((world.holes[k] || 0) >= d) return;
+        if (!(k in world.holes)) heapSet(k, m.hp); // the first digger says where its heap goes (0-15); later diggers can't move it
         world.holes[k] = d; dirty = true;
-        broadcast({ t: 'dig', id: c.id, x, z, d }, c.id);
+        broadcast({ t: 'dig', id: c.id, x, z, d, hp: world.heaps && world.heaps[k] }, c.id);
         break;
       }
       case 'got': {
