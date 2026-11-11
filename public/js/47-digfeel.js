@@ -126,23 +126,44 @@ function digFrom(p,h,out){
   const dx=P.x-h.x,dz=P.z-h.z,dl=Math.hypot(dx,dz)||1,R=holeReff(h)*0.6;out.x=h.x+dx/dl*R;out.z=h.z+dz/dl*R;out.y=groundAt(out.x,out.z)+0.12;return out;
 }
 
-/* ---- where a new hole's spoil heap goes: where you throw the dirt ----
-   The two approved clips throw to opposite sides of the body: the third-person Scoop (and HandDig) toss to the camper's
-   left, the first-person ScoopFP (and HandsFP) to the right of your view. The heap goes where the digger sees the dirt
-   go: right in first person, left in third. Not in camp or its no-dig strip, not on another hole's opening, not in a
-   building: the nearest of the 16 directions round from the throw that's clear. Decided once, by the first digger,
-   and carried with the hole (15-terrain.js HEAP_DIRS, the 'dig' message, the server's world.heaps). */
+/* ---- which side the dirt goes, and where a new hole's spoil heap goes ----
+   Every digging clip exists both ways round (28-handed.js), so a digger throws to the side the heap is on, and the
+   digger in first person, the same digger seen by friends, the clods and the heap all agree:
+   - a hole (or the group of holes you're working in) that already has a heap: throw to whichever side of you the heap
+     is on. Roughly ahead or behind (within HAND_AXIS of the way you face): keep the side you were throwing to.
+   - a new hole: a right-hand throw, unless the right is blocked (camp or its no-dig strip, another hole's opening, a
+     building, the lake's edge); then left. The heap goes where that throw lands, decided once by the first digger and
+     carried with the hole (15-terrain.js HEAP_DIRS, the 'dig' message, the server's world.heaps).
+   - never more than one change of side every HAND_HOLD seconds; the two clips crossfade (HAND_FADE).
+   The side is decided at the start of each scoop (70-player.js), and friends see it in your presence flags (8192:
+   throwing left). The crew use the same rule (30-npcs.js: they face so their heap is on their right). */
 const HEAP_THROW=[1.5,0.6];   // the toss lands this far to the side of the digger and this far ahead of them (m)
+const HAND_AXIS=35*Math.PI/180,HAND_HOLD=2;   // a heap this close to straight ahead / behind keeps your side; s between side changes
+DIGF.side='R';DIGF.sideT=-99;
 function heapClear(x,z,h){
   if(inCamp(x,z)||nearCampNoDig(x,z))return false;
   let ok=true;forNearHoles(x,z,o=>{if(o!==h&&o.d>0.03&&!o.sink&&Math.hypot(o.x-x,o.z-z)<o.r+MR*0.5)ok=false});if(!ok)return false;
   for(const c of colliders)if(x>c.x0-MR*0.6&&x<c.x1+MR*0.6&&z>c.z0-MR*0.6&&z<c.z1+MR*0.6)return false;
   return true;
 }
+const heapSpot=(hx,hz,fx,fz,side)=>{const k=side==='L'?-1:1,tx=P.x-fz*k*HEAP_THROW[0]+fx*HEAP_THROW[1],tz=P.z+fx*k*HEAP_THROW[0]+fz*HEAP_THROW[1];return Math.atan2(tz-hz,tx-hx)};   // (-fz, fx) is the digger's right
+function sideClear(hx,hz,fx,fz,side){const a=heapSpot(hx,hz,fx,fz,side),R=HOLE_R+1,x=hx+Math.cos(a)*R,z=hz+Math.sin(a)*R;return Math.max(Math.abs(x),Math.abs(z))<EDGE-3&&heapClear(x,z,null)}
+/* the hole you're digging (or about to start), and the heap you'd be throwing onto */
+function digTarget(){const fx=Math.sin(P.fa),fz=Math.cos(P.fa),tx=P.x+fx*1.1,tz=P.z+fz*1.1;return{fx,fz,tx,tz,h:holeNear(P.x,P.z,HOLE_R*0.8)||holeNear(tx,tz,1.4)}}
+function heapOf(h){
+  if(!h)return null;if(!h.noMound&&h.d>0.02)return h;
+  let best=null,bd=1e9;forNearHoles(h.x,h.z,o=>{if(o.noMound||o.d<0.1||o===h)return;const d=Math.hypot(o.x-h.x,o.z-h.z);if(d<h.r+o.r&&d<bd){bd=d;best=o}});return best;   // the group's heap
+}
+/* at the start of each scoop (70-player.js): which way to throw */
+function digPickSide(){
+  const{fx,fz,tx,tz,h}=digTarget(),o=heapOf(h)||heapOf(holeNear(tx,tz,2.4));let side=null;
+  if(o){const vx=o.mx-P.x,vz=o.mz-P.z,r=-vx*fz+vz*fx,f=vx*fx+vz*fz,ang=Math.atan2(Math.abs(r),f);if(ang>HAND_AXIS&&ang<Math.PI-HAND_AXIS)side=r>0?'R':'L'}
+  else{const hx=h?h.x:r1(tx),hz=h?h.z:r1(tz);side=sideClear(hx,hz,fx,fz,'R')?'R':sideClear(hx,hz,fx,fz,'L')?'L':'R'}
+  const now=performance.now()/1000;if(side&&side!==DIGF.side&&now-DIGF.sideT>HAND_HOLD){DIGF.side=side;DIGF.sideT=now}
+}
+/* a new hole's heap: where this scoop's throw lands, or the nearest clear direction round from it */
 function digHeapDir(hx,hz,fx,fz){
-  const side=FP?1:-1,sx=-fz*side,sz=fx*side;   // (-fz, fx) is the digger's right
-  const tx=P.x+sx*HEAP_THROW[0]+fx*HEAP_THROW[1],tz=P.z+sz*HEAP_THROW[0]+fz*HEAP_THROW[1];
-  const a0=Math.atan2(tz-hz,tx-hx),k0=((Math.round(a0/(Math.PI*2/HEAP_DIRS))%HEAP_DIRS)+HEAP_DIRS)%HEAP_DIRS,R=HOLE_R+1;
+  const a0=heapSpot(hx,hz,fx,fz,DIGF.side),k0=((Math.round(a0/(Math.PI*2/HEAP_DIRS))%HEAP_DIRS)+HEAP_DIRS)%HEAP_DIRS,R=HOLE_R+1;
   for(const d of[0,1,-1,2,-2,3,-3,4,-4]){const k=(k0+d+HEAP_DIRS)%HEAP_DIRS,a=k*Math.PI*2/HEAP_DIRS;if(heapClear(hx+Math.cos(a)*R,hz+Math.sin(a)*R,null))return k}
   return k0;
 }
@@ -180,11 +201,15 @@ function digDip(){const t=DIGF.dipT;if(t>0.5)return 0;const a=tune('dig.dip');re
 const digEffort=()=>DIGF.effort;
 
 /* ---- someone else's dig, the crew's, and the excavator's (from applyDig, 65-net.js) ---- */
-function digRemote(h,v0){
+function digRemote(h,v0,id){   // id: the friend who dug it (their clods leave their own blade)
   const E=typeof MACHS!=='undefined'?MACHS.exc:null;
   if(E&&E.on&&machLake()){const T=excTeeth(E,_dfV);if(Math.hypot(h.x-T.x,h.z-T.z)<2.8){excCarve(h,v0,E,T);return}}
   digEase(h,'vd',v0,DIG_REMOTE_EASE,0);digEase(h,'vm',Math.min(holeVM(h),v0),0.35,CLOD_DELAY+CLOD_T*0.9);
-  if(nearCam(h.x,h.z,40)){throwClods(h,1);const y=groundAt(h.x,h.z)+0.3;digDust(h.x,y,h.z,h.mx-h.x,h.mz-h.z,2,0.3,0.3)}
+  if(!nearCam(h.x,h.z,40))return;
+  const R=id!=null&&typeof remotes!=='undefined'?remotes.get(id):null;let f=null;
+  if(R){f=digFrom(R.p,h,DIGF.nfrom);if(!(R.p.dclump&&R.p.dclump.m&&R.p.dclump.m.visible)){const g=R.p.g.position,k=R.p.handR===false?1:-1,c=Math.cos(R.p.g.rotation.y),s2=Math.sin(R.p.g.rotation.y);f.x=g.x+c*0.4*k;f.z=g.z-s2*0.4*k;f.y=g.y+1.0}}   // their blade, on their throwing side
+  throwClods(h,1,f||undefined,f?0.85:undefined,f?0.1:undefined);if(!f){f=DIGF.nfrom;f.x=h.x;f.y=groundAt(h.x,h.z)+0.3;f.z=h.z}
+  digDust(f.x,f.y,f.z,h.mx-f.x,h.mz-f.z,2,0.3,0.3);
 }
 /* the crew's scoop: the ground gives under the blade, then the toss (30-npcs.js) */
 function digCrewBite(h,v0){digEase(h,'vd',v0,0.2,0);digEase(h,'vm',Math.min(holeVM(h),v0),0.35,0.75)}
@@ -246,7 +271,7 @@ function updateDigFeel(dt){
     if(P.anim!==2||b.t>b.toss+0.35||(b.t>0.05&&P.digPh>=DIG_TOSS&&P.digPh<DIG_BITE))digToss(b)}
   // the clump on your own blade or hand: only while a scoop's dirt is on it
   const mine=!!(b&&!b.tossed&&P.anim===2);
-  if(me&&me.model)digClumpPose(me,P.anim===2?P.digPh:-1,mine,!!me.noShovel);
+  if(me){me.handR=DIGF.side==='R';if(me.model)digClumpPose(me,P.anim===2?P.digPh:-1,mine,!!me.noShovel)}   // your body throws the same way your arms do
   DIGF.dipT+=dt;DIGF.effort=Math.max(0,DIGF.effort-dt*(P.anim===2?0.02:0.08));
   updateDust(dt);updatePours(dt);updateMachFill(dt);
 }
