@@ -349,7 +349,7 @@ function updateGrab(dt){
   if(!S.ko&&S.inCart!=null)S.inCart=null;   // back on my feet
   stepMeHeld(dt);
   // input: hold R / right mouse to grab what you're aiming at; let go to drop
-  const want=(KEYS['r']||grabMouse)&&!S.ko&&!uiOpen()&&!inTent();
+  const want=(KEYS['r']||grabMouse)&&!S.ko&&!uiOpen()&&!inTent()&&!S.inMach;   // at a machine's controls R and the right button work the machine (87-excavator.js)
   if(want&&GRAB_ST.id==null&&!grabHeldBefore){const t=pickGrab();if(t)grabTarget(t);else toast('Nothing to grab here. Aim at loot, the wheelbarrow or a knocked-out friend and hold R.','',2200)}
   grabHeldBefore=want;
   if(!want&&GRAB_ST.id!=null&&!grabByUse)releaseGrab(false);
@@ -407,7 +407,7 @@ function updateGrab(dt){
 /* what R would grab right now, for the prompt (78-hud.js): the crosshair first, else the nearest thing in front of you */
 function grabHint(){
   if(GRAB_ST.id!=null&&GRAB_ST.id<0&&!S.ko){const t=targetOf(GRAB_ST.id);return t?`Holding ${tName(t)}: let go to put them down · click: throw`:null}
-  if(GRAB_ST.id!=null||S.ko||S.inTruck||inTent())return null;
+  if(GRAB_ST.id!=null||S.ko||S.inTruck||S.inMach||inTent())return null;
   const t=pickGrab();if(!t)return null;
   if(t.isCrew)return`Grab ${t.b.d.n} (carry or throw them)`;
   if(t.isBody)return t.standing?`Grab ${tName(t)} (drag them; two of you can lift them)`:`Grab ${tName(t)} (knocked out): carry them inside the fence to wake them up`;

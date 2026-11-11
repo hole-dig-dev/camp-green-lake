@@ -37,6 +37,7 @@ function updatePlayerTent(dt){
 }
 function updatePlayer(dt){
   if(S.inTruck&&(S.ko||twSt||tbSt||vSt>=3||lionPinT>0))truckEject(0,2,0);   // something's got you: out of the pickup first (87-truck.js)
+  if(S.inMach&&(S.ko||twSt||tbSt||vSt>=3||lionPinT>0))machOut();   // ...or out of the machine (87-excavator.js)
   if(S.ko){if(!bodyHeld())S.ko-=dt;downed(dt);   // the timer waits while friends have hold of you (84-grab.js)
     animPerson(me,3,dt);if(S.ko<=0&&!S.justUp)respawn();S.justUp=false;return}   // justUp: carried home and revived this frame (84-grab.js)
   if(GFX.on){P.moving=false;P.anim=0;digHeld=false;me.g.position.set(P.x,P.y,P.z);animPerson(me,0,dt);return}   // panning or sifting (89-goldfx.js): hands busy, feet still
@@ -48,6 +49,7 @@ function updatePlayer(dt){
   if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(S.sit!=null){sitStep(dt);return}   // sitting on a bench or stool (86-sit.js)
   if(S.inTruck){truckPlayer(dt);return}   // driving or riding Foreman Dutch's pickup (87-truck.js)
+  if(S.inMach){machPlayer(dt);return}   // at the controls of the excavator or the dump truck (87-excavator.js)
   if(S.inTown)return updatePlayerTown(dt);   // down in the buried town (89-town.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
@@ -126,6 +128,7 @@ function fpEye(v){
   return v.set(v.x-Math.sin(P.yaw)*FP_EYE_FWD,v.y,v.z-Math.cos(P.yaw)*FP_EYE_FWD);
 }
 function updateCamera(dt){
+  if(S.inMach&&machCamera(dt))return;   // the excavator's cab view or orbit, the dump truck's (87-excavator.js)
   if(S.inTruck&&!FP){if(me&&me.fpOn)fpBody(false);truckCamera(dt);return}   // in the pickup: the camera orbits it with the mouse (87-truck.js)
   if(FP){
     if(me&&me.model){fpBody(true);P.fa=P.yaw+Math.PI;   // the body faces where you look
@@ -222,6 +225,7 @@ function hurt(n,title,text,kind){
   if(GOD)return;
   if(me&&n>2)aliveFlinch(me,n/35);   /* a wince you and your friends can see (27-alive.js) */
   if(S.inTruck&&TRUCK_SEATS[S.inTruck].cab)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
+  if(S.inMach)return;   // nor in a machine's cab (87-excavator.js)
   n*=tune('dmg.all')*tuneOr(title==='Gila hatchling'?'dmg.Lizard hatchling':'dmg.'+title,1);   // the slider's saved key keeps the hatchling's old name   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
   afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.hurt(n);   // poison hold: a swarm stacks up, one bite still fades

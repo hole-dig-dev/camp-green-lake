@@ -67,6 +67,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/82-patrol.js` | shared clock/curfew, police patrols, the Drowned Bride |
 | `public/js/84-coop.js` | levels, team quota, heavy loot, dropped sacks, helping friends, pings/chat, flashlight, co-op tick |
 | `public/js/86-voice.js` | WebRTC proximity voice chat and positional audio |
+| `public/js/87-excavator.js` | the Company's machines: the excavator (tracks, slewing arm on springs, the scoop gesture, dumping) and the dump truck (bed load, tipping at the sifter); server side `machOp`/`excScoopS` in server.js, shared numbers `SIM.MACH` |
 | `public/js/90-loop.js` | the requestAnimationFrame main loop |
 | `public/js/95-pause.js` | pause menu, settings, key rebinding; then the final session resume and debug exports (must stay last) |
 

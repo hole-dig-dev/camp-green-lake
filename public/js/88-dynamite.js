@@ -12,7 +12,7 @@ function dynLoad(){if(DYN.loading)return;DYN.loading=1;for(const n of['Dynamite'
 const DYN_SAND=8,DYN_PILE_R=1.9;
 function dynMesh(o,n){dynLoad();if(o.obj||!DYN.parts[n])return;const g=new T.Group();for(const pt of DYN.parts[n]){const m=new T.Mesh(pt.geometry,pt.material);m.castShadow=true;m.receiveShadow=true;g.add(m)}
   g.position.set(o.x,groundAt(o.x,o.z),o.z);g.rotation.y=(o.id*1.7)%6.28;scene.add(g);o.obj=g;if(n==='LooseSand')dynPileLook(o)}
-function dynPileLook(q){if(q.obj){q.obj.scale.y=Math.max(0.2,q.sand/DYN_SAND);q.obj.position.y=groundAt(q.x,q.z)}}
+function dynPileLook(q){if(q.obj){const f=q.sand/DYN_SAND;q.obj.scale.set(clamp(0.55+0.45*Math.sqrt(f),0.55,1.5),clamp(f,0.2,1.6),clamp(0.55+0.45*Math.sqrt(f),0.55,1.5));q.obj.position.y=groundAt(q.x,q.z)}}   // a small dumped load is a small mound; merged loads grow past the dynamite's
 /* Y: light one and toss it */
 function throwDynamite(){
   if(!S.started||S.ko||twSt||inTent()||S.inTown||uiOpen())return;
@@ -37,7 +37,7 @@ function dynBoom(m){
 }
 /* the loose sand */
 function pileSet(d){if(!d)return;let q=DYN.piles.get(d.id);if(!(d.sand>0.01)){if(q){if(q.obj)scene.remove(q.obj);DYN.piles.delete(d.id)}return}
-  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null,rich:d.rich===true};DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{q.sand=+d.sand;dynPileLook(q)}}
+  if(!q){q={id:d.id,x:+d.x,z:+d.z,sand:+d.sand,obj:null,rich:d.rich===true,pay:num(d.pay,0,20,0)};DYN.piles.set(q.id,q);dynMesh(q,'LooseSand')}else{q.sand=+d.sand;if(d.pay>0)q.pay=num(d.pay,0,20,0);dynPileLook(q)}}   /* pay: how rich its sand is (a load the excavator dumped keeps the richness of where it was dug; 87-excavator.js); 0: plain (x1) */
 function pilesSet(list){for(const q of DYN.piles.values())if(q.obj)scene.remove(q.obj);DYN.piles.clear();for(const d of list||[])pileSet(d)}
 function pileTake(q,v,who){
   q.sand=Math.max(0,q.sand-v);dynPileLook(q);DYN.take.set(q.id,(DYN.take.get(q.id)||0)+v);
@@ -52,7 +52,7 @@ function updateDynamite(dt){
     /* you: walk into it with room in your bucket / pack / pan */
     if(!S.ko&&!twSt&&carrier()&&Math.hypot(P.x-q.x,P.z-q.z)<DYN_PILE_R&&S.bucket<bucketMax()-1e-3){
       const v=Math.min(rate,q.sand,bucketMax()-S.bucket);if(!q.told){q.told=true;toast('Loose sand! It pours straight into your '+(carrier()==='pan'?'pan':backsackOn()?'backsack':'bucket')+'.','good',2200)}
-      fillBucket(v*FIVE_FT);pileTake(q,v);if(q.rich)veinPay(v);if(Math.random()<dt*6)sfx.scoop()}
+      fillBucket(v*FIVE_FT,q.pay>0?q.pay:undefined);pileTake(q,v);if(q.rich)veinPay(v);if(Math.random()<dt*6)sfx.scoop()}
     /* the crew (one client runs them) */
     if(crewPaysHere())for(const b of bots){if(!b.p.g.visible||!OUTDOOR.has(b.state)||!crewHired(b))continue;const g=b.p.g.position;if(Math.hypot(g.x-q.x,g.z-q.z)>DYN_PILE_R)continue;
       const mx=crewBucketMax(b),v=Math.min(rate,q.sand,mx-(b.bucket||0));if(v>1e-4){b.bucket=(b.bucket||0)+v;pileTake(q,v)}}
