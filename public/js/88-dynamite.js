@@ -32,7 +32,7 @@ function dynBoom(m){
   if(nearCam(x,z,120)){mineBoomSfx(clamp(1.2-near/120,0.2,1));if(near<30)hurtFx=Math.max(hurtFx,0.7*(1-near/30))}
   const R=tune('dyn.blast');pipeBlast(x,z,R*0.7,'dynamite');
   blastLaunch(x,z,R,tune('haz.mineLaunch')*0.85,'dy',near<R?'BOOM! Dynamite.':null);
-  if(!online()){applyDig(x,z,1.3,true);for(const[ox,oz]of[[1,0],[-1,0],[0,1],[0,-1]])applyDig(x+ox*0.9,z+oz*0.9,0.9,true)}
+  if(!online()){applyDig(x,z,1.3,true,HEAP_NONE);for(const[ox,oz]of[[1,0],[-1,0],[0,1],[0,-1]])applyDig(x+ox*0.9,z+oz*0.9,0.9,true,HEAP_NONE)}   // the blast's sand is the loose pile, not a heap
   if(m.pile)pileSet(m.pile);
   logEv('dynBoom',{x:+x.toFixed(1),z:+z.toFixed(1)});
 }

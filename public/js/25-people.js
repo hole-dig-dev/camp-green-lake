@@ -207,9 +207,10 @@ function animModel(p,mode,dt,digPhase,speed){
   if(p.waveT>0){p.waveT-=dt;if(mode===0)mode=9}
   let name=MODE_CLIP[mode]||'Idle';
   if(name==='Dig'&&p.acts.Scoop)name='Scoop';   // falls back to the old one-handed Dig if a camper.glb without Scoop loads
+  if(name==='Scoop'&&p.noShovel&&p.acts.HandDig)name='HandDig';   // no shovel yet: crouch and dig with both hands, same timing
   setClip(p,name);
   const a=p.acts[name];
-  if(a&&name==='Scoop'){a.timeScale=0;a.time=scoopTime(digPhase)}
+  if(a&&(name==='Scoop'||name==='HandDig')){a.timeScale=0;a.time=scoopTime(digPhase)}
   else if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
@@ -228,9 +229,9 @@ function loadCamperModel(){
     const seen=new Set();
     g.scene.traverse(n=>{if(n.isMesh&&n.material&&!seen.has(n.material)){seen.add(n.material);n.material.color.convertLinearToSRGB()}});
     MODEL.clips=g.animations.map(c=>{c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));return c});
-    MODEL.ready=true;
-    for(const p of MODEL.people)upgradePerson(p);
-    MODEL.people.length=0;
+    const ready=()=>{MODEL.ready=true;for(const p of MODEL.people)upgradePerson(p);MODEL.people.length=0};
+    /* bare-hand digging (art/blender/hands_dig_export.py): an animation-only GLB on the same bones, so camper.glb stays as approved */
+    new T.GLTFLoader().load('models/anim-handdig.glb?v=1',a=>{for(const c of a.animations){c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));MODEL.clips.push(c)}ready()},undefined,()=>ready());
   },undefined,e=>console.warn('Camper model failed to load, keeping the box people.',e));
 }
 loadCamperModel();

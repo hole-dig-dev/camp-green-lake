@@ -197,7 +197,7 @@ function zoneMsg(m){
     if(typeof m.zone!=='string')return;
     zoneFade(()=>{
       if(!zoneEnter(m.zone,m.zflags))setZoneFlags(m.zflags);
-      if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false);rebuildRegion(-HALF,-HALF,HALF,HALF)}
+      if(Array.isArray(m.holes)){for(const e of m.holes.slice(0,40000))if(Array.isArray(e))applyDig(e[0],e[1],e[2],false,e[3]);rebuildRegion(-HALF,-HALF,HALF,HALF)}
       if(Array.isArray(m.got))for(const i of m.got){const it=items[i|0];if(it)it.found=true}
       for(const k of [...PROPS.keys()])removeProp(k);for(const k of [...BAGS.keys()])removeBag(k);
       if(Array.isArray(m.props))for(const p of m.props.slice(0,60))if(p)addProp(num(p.id,0,1e5,-1)|0,String(p.type),num(p.x,-600,600,0),num(p.z,-600,600,0),p.val!=null?num(p.val,0,1e4,0)|0:null,p.v0!=null?num(p.v0,0,1e4,0)|0:null);

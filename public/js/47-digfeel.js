@@ -90,31 +90,61 @@ const clumpGeo=(()=>{const g=new T.SphereGeometry(1,9,5,0,Math.PI*2,0,Math.PI/2)
   for(let i=0;i<p.count;i++){const key=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!bump.has(key))bump.set(key,0.8+rnd()*0.35);const k=p.getY(i)>0.01?bump.get(key):1;p.setXYZ(i,p.getX(i)*k,p.getY(i)*k*0.55,p.getZ(i)*k)}
   g.computeVertexNormals();return g})();
 const clumpMat=new T.MeshStandardMaterial({color:CLUMP_COL,flatShading:true,roughness:1,metalness:0});
-const CLUMP_SIZE=0.07,CLUMP_HAND=0.045;   // m across: on a shovel blade, in a bare hand
+const CLUMP_SIZE=0.07,CLUMP_HAND=0.075;   // m across: on a shovel blade, in a bare hand
 /* p: a person (p.model) or the first-person arms (FPS: p.g). ph: its dig phase, or -1 when not digging. on: show it
    at all (you: only when that scoop actually took dirt) */
 function digClumpPose(p,ph,on,hands){
   const root=p.model||p.g;if(!root)return;
   let C=p.dclump;
   if(!C||C.hands!==!!hands){
-    if(C&&C.m.parent)C.m.parent.remove(C.m);
-    const host=root.getObjectByName(hands?'CGLCamper_R_Hand':'CGLCamper_R_ShovelBlade');if(!host||!host.geometry){p.dclump={hands:!!hands,m:null};return}
-    host.geometry.computeBoundingBox();const bb=host.geometry.boundingBox,sz=bb.getSize(_dfV),c=bb.getCenter(_dfV2).clone();
-    const ax=sz.x<=sz.y&&sz.x<=sz.z?0:sz.y<=sz.z?1:2,n=new T.Vector3();n.setComponent(ax,1);   // the blade's thin axis: the clump sits on its face
-    const m=new T.Mesh(clumpGeo,clumpMat);m.castShadow=p!==FPS;   // (the first-person arms cast none)
-   m.frustumCulled=false;m.visible=false;
-    m.position.copy(c).addScaledVector(n,sz.getComponent(ax)*0.5);m.quaternion.setFromUnitVectors(_dfY,n);
-    host.add(m);host.updateWorldMatrix(true,false);host.getWorldScale(_dfV);C=p.dclump={hands:!!hands,m,host,ws:(_dfV.x+_dfV.y+_dfV.z)/3||1};
+    if(C&&C.m&&C.m.parent)C.m.parent.remove(C.m);
+    const m=new T.Mesh(clumpGeo,clumpMat);m.castShadow=p!==FPS;m.frustumCulled=false;m.visible=false;   // (the first-person arms cast no shadow)
+    if(hands){   // bare hands: the sand sits cupped between the two hands, wherever they are
+      const hl=root.getObjectByName('CGLCamper_L_Hand'),hr=root.getObjectByName('CGLCamper_R_Hand');if(!hl||!hr||!hl.geometry||!hr.geometry){p.dclump={hands:true,m:null};return}
+      for(const o of[hl,hr])o.geometry.computeBoundingBox();
+      root.add(m);root.updateWorldMatrix(true,false);root.getWorldScale(_dfV);
+      C=p.dclump={hands:true,m,host:hr,hl,hr,cl:hl.geometry.boundingBox.getCenter(new T.Vector3()),cr:hr.geometry.boundingBox.getCenter(new T.Vector3()),ws:Math.abs(_dfV.y)||1};
+    }else{
+      const host=root.getObjectByName('CGLCamper_R_ShovelBlade');if(!host||!host.geometry){p.dclump={hands:false,m:null};return}
+      host.geometry.computeBoundingBox();const bb=host.geometry.boundingBox,sz=bb.getSize(_dfV),c=bb.getCenter(_dfV2).clone();
+      const ax=sz.x<=sz.y&&sz.x<=sz.z?0:sz.y<=sz.z?1:2,n=new T.Vector3();n.setComponent(ax,1);   // the blade's thin axis: the clump sits on its face
+      m.position.copy(c).addScaledVector(n,sz.getComponent(ax)*0.5);m.quaternion.setFromUnitVectors(_dfY,n);
+      host.add(m);host.updateWorldMatrix(true,false);host.getWorldScale(_dfV);C=p.dclump={hands:false,m,host,ws:(_dfV.x+_dfV.y+_dfV.z)/3||1};
+    }
   }
   if(!C.m)return;
   let k=0;if(on&&ph>=0){if(ph>=DIG_BITE)k=sm((ph-DIG_BITE)/(DIG_LIFT-DIG_BITE));else if(ph<DIG_TOSS)k=1-sm((ph-DIG_TOSS*0.6)/(DIG_TOSS*0.4))}
   C.m.visible=k>0.02;if(!C.m.visible)return;
   const s=(C.hands?CLUMP_HAND:CLUMP_SIZE)*tune('dig.clump')*k/C.ws;C.m.scale.set(s,s*(0.7+0.3*k),s);C.m.layers.mask=C.host.layers.mask;
+  if(C.hands){   // between the palms, a little above them
+    root.updateMatrixWorld(true);C.hl.localToWorld(_dfV.copy(C.cl));C.hr.localToWorld(_dfV2.copy(C.cr));_dfV.add(_dfV2).multiplyScalar(0.5);_dfV.y+=CLUMP_HAND*0.3*k;
+    C.m.position.copy(root.worldToLocal(_dfV))}
 }
 /* where the dirt is (world): the clump if it's showing, else the near side of the hole */
 function digFrom(p,h,out){
   const C=p&&p.dclump;if(C&&C.m&&C.m.visible){C.m.getWorldPosition(_dfV);out.x=_dfV.x;out.y=_dfV.y;out.z=_dfV.z;return out}
   const dx=P.x-h.x,dz=P.z-h.z,dl=Math.hypot(dx,dz)||1,R=holeReff(h)*0.6;out.x=h.x+dx/dl*R;out.z=h.z+dz/dl*R;out.y=groundAt(out.x,out.z)+0.12;return out;
+}
+
+/* ---- where a new hole's spoil heap goes: where you throw the dirt ----
+   The two approved clips throw to opposite sides of the body: the third-person Scoop (and HandDig) toss to the camper's
+   left, the first-person ScoopFP (and HandsFP) to the right of your view. The heap goes where the digger sees the dirt
+   go: right in first person, left in third. Not in camp or its no-dig strip, not on another hole's opening, not in a
+   building: the nearest of the 16 directions round from the throw that's clear. Decided once, by the first digger,
+   and carried with the hole (15-terrain.js HEAP_DIRS, the 'dig' message, the server's world.heaps). */
+const HEAP_THROW=[1.5,0.6];   // the toss lands this far to the side of the digger and this far ahead of them (m)
+function heapClear(x,z,h){
+  if(inCamp(x,z)||nearCampNoDig(x,z))return false;
+  let ok=true;forNearHoles(x,z,o=>{if(o!==h&&o.d>0.03&&!o.sink&&Math.hypot(o.x-x,o.z-z)<o.r+MR*0.5)ok=false});if(!ok)return false;
+  for(const c of colliders)if(x>c.x0-MR*0.6&&x<c.x1+MR*0.6&&z>c.z0-MR*0.6&&z<c.z1+MR*0.6)return false;
+  return true;
+}
+function digHeapDir(hx,hz,fx,fz){
+  const side=FP?1:-1,sx=-fz*side,sz=fx*side;   // (-fz, fx) is the digger's right
+  const tx=P.x+sx*HEAP_THROW[0]+fx*HEAP_THROW[1],tz=P.z+sz*HEAP_THROW[0]+fz*HEAP_THROW[1];
+  const a0=Math.atan2(tz-hz,tx-hx),k0=((Math.round(a0/(Math.PI*2/HEAP_DIRS))%HEAP_DIRS)+HEAP_DIRS)%HEAP_DIRS,R=HOLE_R+1;
+  for(const d of[0,1,-1,2,-2,3,-3,4,-4]){const k=(k0+d+HEAP_DIRS)%HEAP_DIRS,a=k*Math.PI*2/HEAP_DIRS;if(heapClear(hx+Math.cos(a)*R,hz+Math.sin(a)*R,null))return k}
+  return k0;
 }
 
 /* ---- your scoop: from scoop() (45-state.js) the moment the blade bites ---- */
