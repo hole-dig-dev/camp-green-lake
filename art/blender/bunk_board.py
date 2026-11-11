@@ -31,7 +31,7 @@ def text(name, s, loc, size, m):
     cu = bpy.data.curves.new(name, 'FONT'); cu.body = s; cu.font = bpy.data.fonts.load(FONT, check_existing=True); cu.size = size
     cu.align_x = 'CENTER'; cu.align_y = 'CENTER'; cu.extrude = 0.006; cu.resolution_u = 2
     o = bpy.data.objects.new(name, cu); bpy.context.scene.collection.objects.link(o)
-    o.location = loc; o.rotation_euler = (math.pi / 2, 0, math.pi)       # standing on the door wall, facing into the room
+    o.location = loc; o.rotation_euler = (math.pi / 2, 0, 0)             # standing on the door wall, facing into the room (-y; a z turn of pi faced it into the wall and the room saw it mirrored)
     only(o); bpy.ops.object.convert(target='MESH'); o = bpy.context.active_object; o.data.materials.append(m)
     for p in o.data.polygons: p.use_smooth = False
     return o
