@@ -371,7 +371,7 @@ function updateBots(dt,now){
       if(b.dph>=1)b.dph-=1;
       if(prev<DIG_BITE&&b.dph>=DIG_BITE){const v0=holeVD(b.hole);b.hole.d=Math.min(crewDepth(b),b.hole.d+crewMoraleMul(b)*b.d.rate*1.25*(crewHas(b,'shovel')?1:0.35)*(crewHas(b,'spade')?1.6:1)*(b.water<=0||b.stam<15?0.5:1));/* parched or worn out: half speed */touchHole(b.hole);digCrewBite(b.hole,v0)}
       /* stand in the hole with the dirt pile on the throwing side, and sink as it gets deeper */
-      const ux=b.hole.mx-b.hole.x,uz=b.hole.mz-b.hole.z,ty=Math.atan2(-uz,ux);
+      const ux=b.hole.mx-b.hole.x,uz=b.hole.mz-b.hole.z,ty=Math.atan2(uz,-ux);b.p.handR=true;   // the heap on their right, and a right-hand throw onto it (47-digfeel.js digPickSide's rule)
       let dr=ty-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
       g.position.x+=(b.hole.x-g.position.x)*Math.min(1,dt*4);g.position.z+=(b.hole.z-g.position.z)*Math.min(1,dt*4);
       g.position.y=groundAt(g.position.x,g.position.z);

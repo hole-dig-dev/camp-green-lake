@@ -208,13 +208,16 @@ function animModel(p,mode,dt,digPhase,speed){
   let name=MODE_CLIP[mode]||'Idle';
   if(name==='Dig'&&p.acts.Scoop)name='Scoop';   // falls back to the old one-handed Dig if a camper.glb without Scoop loads
   if(name==='Scoop'&&p.noShovel&&p.acts.HandDig)name='HandDig';   // no shovel yet: crouch and dig with both hands, same timing
-  setClip(p,name);
+  const dig=name==='Scoop'||name==='HandDig';
+  if(dig&&p.handR&&p.acts[name+'M'])name+='M';   // a right-hand throw: the mirrored clip (the approved ones throw to the camper's left; 28-handed.js)
+  setClip(p,name,dig&&p.cur&&/^(Scoop|HandDig)/.test(p.cur)?HAND_FADE:undefined);
   const a=p.acts[name];
-  if(a&&(name==='Scoop'||name==='HandDig')){a.timeScale=0;a.time=scoopTime(digPhase)}
+  if(dig){const t=scoopTime(digPhase),b=name.replace(/M$/,'');for(const k of[b,b+'M'])if(p.acts[k]){p.acts[k].timeScale=0;p.acts[k].time=t}}   // both hands in step, so a crossfade between them is smooth
   else if(a&&name==='Dig'){a.timeScale=0;a.time=clamp(digPhase||0,0,0.999)*a.getClip().duration}   /* scoops stay in sync with the game's dig timer */
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
+  handedPose(p);   // the shovel in the hand that's using it (28-handed.js)
   if(p!==me)digClumpPose(p,mode===2?digPhase:-1,mode===2,!!p.noShovel);   // dirt on the blade from the lever to the toss (47-digfeel.js)
   if(p.held||p.heldW)heldPose(p,dt);   // walkie-talkie / tonic / first-aid kit in the left hand (86-walkie.js)
   backsackLook(p);   /* the clear backsack, if they wear one (86-backsack.js) */
@@ -229,7 +232,7 @@ function loadCamperModel(){
     const seen=new Set();
     g.scene.traverse(n=>{if(n.isMesh&&n.material&&!seen.has(n.material)){seen.add(n.material);n.material.color.convertLinearToSRGB()}});
     MODEL.clips=g.animations.map(c=>{c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));return c});
-    const ready=()=>{MODEL.ready=true;for(const p of MODEL.people)upgradePerson(p);MODEL.people.length=0};
+    const ready=()=>{try{handedClips()}catch(e){console.warn('mirrored clips failed',e)}MODEL.ready=true;   /* left- and right-handed digging (28-handed.js) */for(const p of MODEL.people)upgradePerson(p);MODEL.people.length=0};
     /* bare-hand digging (art/blender/hands_dig_export.py): an animation-only GLB on the same bones, so camper.glb stays as approved */
     new T.GLTFLoader().load('models/anim-handdig.glb?v=1',a=>{for(const c of a.animations){c.tracks=c.tracks.filter(t=>!t.name.endsWith('.scale'));MODEL.clips.push(c)}ready()},undefined,()=>ready());
   },undefined,e=>console.warn('Camper model failed to load, keeping the box people.',e));

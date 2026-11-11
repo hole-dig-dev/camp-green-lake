@@ -836,7 +836,7 @@ wss.on('connection', (ws, req) => {
         // flags: 1 hidden in a deep hole, 2 downed, 4 flashlight on, 8 crouching, 16 stuck in a hole,
         // 32 trapped in a sinkhole, 64 holding on to pull a sinkhole friend up (see 87-sinkhole.js),
         // 128 a vulture has you (83-vultures.js), ... 2048 talking on the walkie, 4096 owns a walkie (86-walkie.js)
-        c.f = num(m.f, 0, 8191, 0) | 0; c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
+        c.f = num(m.f, 0, 16383, 0) | 0; // presence bits (public/js/65-net.js sendPresence; 8192: throwing to the left) c.room = Number.isInteger(m.room) && m.room >= 0 && m.room < 5 && c.y < -2 ? m.room : null; // which tent/office room (rooms are underground)
         const gotUp = c.wasDown && !(c.f & 2); c.wasDown = !!(c.f & 2); // (only as they get up: a friend can grab you on your feet, 84-grab.js)
         if (gotUp && (c.body || c.cartId != null)) { // back on their feet: nobody's holding a body any more
           if (c.cartId != null && world.props[c.cartId]) { const k = world.props[c.cartId]; k.load = (k.load || []).filter(l => l !== -c.id); broadcast({ t: 'pcart', id: c.cartId, load: k.load }); }

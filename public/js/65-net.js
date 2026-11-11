@@ -17,7 +17,7 @@ if(PASS)campIn.value=PASS;
 function sendJoin(){wsSend({t:'join',n:S.name,c:S.color,u:mySuit(),w:MY_WARD,v:2,fresh:!S.resumed&&!S.restored,host:HOST||undefined,p:PASS||undefined})}
 function sendPresence(now){
   if(!S.started||now-net.last<100)return;net.last=now;
-  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0)|(S.up&&S.up.walkie?4096:0);   // 2048: talking on the walkie, 4096: owns one (86-walkie.js, 86-voice.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
+  const dep=holeDepthHere(),fl=(P.crouch&&dep>0.95?1:0)|(S.ko?2:0)|(S.light?4:0)|(P.crouch?8:0)|(isTrapped()?16:0)|(inSinkhole()?32:0)|(sinkPulling?64:0)|(vSt>=3&&vSt<=4?128:0)|(S.handDown?256:0)|(me&&me.ragOn?512:0)|((twSt===1||twSt===2||tbSt===2||vSt===3||vSt===4||vSt===5)?1024:0)|(walkieTalking()?2048:0)|(S.up&&S.up.walkie?4096:0)|(DIGF.side==='L'?8192:0);   // 8192: throwing to the left (47-digfeel.js)   // 2048: talking on the walkie, 4096: owns one (86-walkie.js, 86-voice.js)   // 512 ragdolled, 1024 airborne (26-ragdoll.js)   // 256: lowering a hand into a buried-town shaft (89-town.js)
   const pos=[+P.x.toFixed(2),+P.y.toFixed(2),+P.z.toFixed(2),+P.fa.toFixed(2),S.ko?3:P.anim,fl,S.carry==null?-1:S.carry,+S.noise.toFixed(1),myLevel(),S.tent,myBackFill()];
   const lookH=Math.atan2(-Math.sin(P.yaw),-Math.cos(P.yaw));   /* where the camera points, as a heading and a pitch: friends see your head turn (27-alive.js) */
   const key=pos.join(',')+','+lookH.toFixed(1)+','+P.pitch.toFixed(1);if(key===net.lastPos&&now-net.lastPosT<1000)return;
@@ -38,17 +38,17 @@ function addRemote(m){
   if(m.id===net.id)return null;if(remotes.has(m.id))return null;
   const ci=num(m.c,0,CAMPER_COLORS.length-1,0)|0;const name=cleanName(m.n)||'Digger';
   const su=num(m.u,0,JUMPSUITS.length-1,0)|0,p=makePerson(Object.assign(playerLook(name,ci),su?{suit:JUMPSUITS[su].c}:{}));scene.add(p.g);p.suitIdx=su;if(m.w)p.ward=wardClean(m.w);   /* their Wardrobe picks (81-wardrobe.js) */
-  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,8191,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,10,0)|0,dph:0,hp:num(m.hp,0,100,100)};
+  const R={p,L:makeLabel(p.g,name,''),name,ci,f:num(m.f,0,16383,0)|0,room:Number.isInteger(m.room)?m.room:null,lv:0,tx:num(m.x,-HALF-20,HALF+20,0),ty:num(m.y,-5,ZONE_MAX_Y,0),tz:num(m.z,-HALF-20,HALF+20,40),tr:num(m.r,-10,10,0),anim:num(m.a,0,10,0)|0,dph:0,hp:num(m.hp,0,100,100)};
   p.g.position.set(R.tx,R.ty,R.tz);remotes.set(m.id,R);setRemoteLv(R,m.lv);renderOnline();return R;
 }
 function setRemoteLv(R,lv){lv=num(lv,1,99,1)|0;if(R.lv===lv)return;R.lv=lv;R.L.n.textContent=`${R.name} · LV ${lv}`;setHat(R.p,lv)}
 function removeRemote(id){const R=remotes.get(id);if(!R)return null;scene.remove(R.p.g);R.L.el.remove();labeled.splice(labeled.indexOf(R.L),1);remotes.delete(id);dropVoicePeer(id);renderOnline();return R}
-function applyDig(x,z,d,rebuild,hp){   // hp: the heap's direction (15-terrain.js HEAP_DIRS), when the server knows it
+function applyDig(x,z,d,rebuild,hp,id){   // hp: the heap's direction (15-terrain.js HEAP_DIRS), when the server knows it
   x=r1(num(x,-EDGE,EDGE,0));z=r1(num(z,-EDGE,EDGE,0));d=num(d,0,EIGHT_FT,0);
   if(nearCampNoDig(x,z))return;   // old saves (and old clients) can still have holes against the fence: don't draw them
   let h=holeNear(x,z,0.06),v0=0;
   if(h){if(d<=h.d+0.001)return;v0=holeVD(h);h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true,hp:Number.isInteger(hp)&&hp>=0&&hp<=HEAP_NONE?hp:undefined});
-  if(rebuild){touchHole(h);digRemote(h,v0)}   // the ground gives under their shovel (or the excavator's bucket) instead of popping (47-digfeel.js)
+  if(rebuild){touchHole(h);digRemote(h,v0,id)}   // the ground gives under their shovel (or the excavator's bucket) instead of popping (47-digfeel.js)
 }
 function renderOnline(){
   const names=[...remotes.values()].map(R=>R.name);
@@ -110,8 +110,8 @@ function onMsg(m){
       break;
     case 'join':{const R=addRemote(m);if(R)toast(`${R.name} showed up at camp.`,'good',3000);break}
     case 'leave':{const R=removeRemote(m.id);if(R)toast(`${R.name} left camp.`,'',2500);break}
-    case 'pos':{const R=remotes.get(m.id);if(!R)break;if(m.ly!=null&&R.p)R.p.look={yaw:num(m.ly,-7,7,0),pitch:num(m.lp,-1.6,1.6,0)};R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;R.dog=m.dg===true;R.gv=m.gv===true;R.gs=m.gs===true;R.hv=m.hv===true;R.hs=m.hs===true;   /* on a hoverboard (88-hover.js) */   /* gravity boots, gold shovel (88-gear.js) */   /* their mine-sniffing dog (88-dog.js) */   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
-    case 'dig':applyDig(m.x,m.z,m.d,true,m.hp);break;
+    case 'pos':{const R=remotes.get(m.id);if(!R)break;if(m.ly!=null&&R.p)R.p.look={yaw:num(m.ly,-7,7,0),pitch:num(m.lp,-1.6,1.6,0)};R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,16383,0)|0;R.p.handR=!(R.f&8192);R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;R.dog=m.dg===true;R.gv=m.gv===true;R.gs=m.gs===true;R.hv=m.hv===true;R.hs=m.hs===true;   /* on a hoverboard (88-hover.js) */   /* gravity boots, gold shovel (88-gear.js) */   /* their mine-sniffing dog (88-dog.js) */   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
+    case 'dig':applyDig(m.x,m.z,m.d,true,m.hp,m.id);break;
     case 'truck':truckMsg(m);break;
     case 'mach':machMsg(m);break;case 'mpos':machPos(m);break;case 'excScoop':excScooped(m);break;case 'mfx':machFx(m);break;   // the Company's machines (87-excavator.js)
     case 'machPay':machPay(num(m.holes,0,200,0),num(m.rich,0.05,20,1),m.src==='dump'?'dump':'exc');break;
