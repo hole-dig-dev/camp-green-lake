@@ -119,7 +119,7 @@ function onMsg(m){
     case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
     case 'ungot':{const it=items[m.item|0];if(it)it.found=false;break}
-    case 'breach':case 'tgot':townMsg(m);break;   // the buried town (89-town.js)
+    case 'breach':case 'tgot':case 'town':case 'tlamp':case 'tsig':case 'tvault':case 'tbar':case 'tmap':case 'tcave':townMsg(m);break;   // the buried town (89-town.js)
     case 'pown':case 'pst':case 'phand':case 'pyeet':case 'pcart':case 'pslip':grabMsg(m);break;   // grab physics for heavy loot (84-grab.js)
     case 'ward':{const R=remotes.get(m.id);if(R){R.p.ward=wardClean(m.w);wardApply(R.p)}break}   /* a friend changed clothes (81-wardrobe.js) */
     case 'suit':{const R=remotes.get(m.id);if(R)paintSuit(R.p,num(m.u,0,JUMPSUITS.length-1,0)|0);break}

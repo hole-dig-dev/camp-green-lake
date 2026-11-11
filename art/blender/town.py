@@ -41,7 +41,9 @@ mTIM=M_('timber',TIMBER);mTIM2=M_('timber2',sh(TIMBER,-12));mGREY=M_('greywood',
 mSAND=M_('sand',SAND,0.97);mSAND2=M_('sand2',sh(SAND,-18),0.97);mDIRT=M_('dirt',DIRT,0.97);mROOT=M_('root',ROOT);mSTAIN=M_('stain',STAIN,0.97)
 mRUST=M_('rust',RUST,0.8,0.3);mIRON=M_('iron',IRON,0.6,0.5);mGLASS=M_('glass',GLASS,0.2);mCLOTH=M_('cloth',CLOTH,0.95)
 mPAPER=M_('paper',PAPER,0.95);mBONE=M_('bone',BONE,0.8);mDARK=M_('void',(0x12,0x0e,0x0a),1.0);mBRASS=M_('brass',(0x9a,0x7a,0x3a),0.5,0.6)
-mGOLD=M_('gold',(0xd4,0xaf,0x37),0.35,0.8);mSTONE=M_('stone',(0x7e,0x74,0x66),0.95);mSTONE2=M_('stone2',(0x6a,0x60,0x54),0.95)
+mGOLD=M_('gold',(0xd4,0xaf,0x37),0.35,0.8);mSILT=M_('silt',(0x5e,0x5a,0x48),0.97);mWLINE=M_('waterline',(0x2e,0x2c,0x24),0.97);mSILVER=M_('silver',(0xb8,0xb8,0xc0),0.3,0.85)
+mSTEEL=M_('vaultsteel',(0x4a,0x4e,0x52),0.45,0.7);mLEATHER=M_('leather',(0x5a,0x2a,0x1c));mINK=M_('ink',(0x2a,0x1e,0x16),0.95);mLGLASS=M_('lanternglass',(0xc8,0xb8,0x8a),0.15)
+mSTONE=M_('stone',(0x7e,0x74,0x66),0.95);mSTONE2=M_('stone2',(0x6a,0x60,0x54),0.95)
 WOODS=[mTIM,mTIM2,mGREY,mGREY2]
 
 # ---- helpers ----
@@ -74,7 +76,7 @@ COLS={}
 def col(room,x,y,w,d):COLS.setdefault(room,[]).append([round(x,2),round(-y,2),round(w,2),round(d,2)])
 def export(n,rend=False):
     finish_scene()
-    if rend:render(res=(960,640),samples=16)
+    if rend and os.environ.get('TOWN_RENDER'):render(res=(960,640),samples=16)
     p=export_glb(os.path.join(OUT,n+'.glb'));print(n,p[1],p[2]);return p
 PREV={}
 def finish_scene(elev=34,azim=-35,margin=1.08,target=None):
@@ -205,15 +207,21 @@ def wall_detail(n,L,p,h,inside_only=False):
                 for cc in range(int(w/0.27)):
                     if rnd.random()<0.15:continue
                     B(f'{n}bk{s}{k}{rr}{cc}',(0.24,0.05,0.12),(cx-w/2+0.14+0.13*(rr%2)+cc*0.27,y+s*0.012,cz-hh/2+0.08+rr*0.15),mBRICK if (rr+cc)%3 else mADOBE2,p=p)
-        B(f'{n}stain{s}',(L,0.02,0.3),(0,y,0.5),mSTAIN,p=p)
+        B(f'{n}stain{s}',(L,0.02,0.5),(0,y,0.25),mSILT,p=p)   # silt the lake left
+        B(f'{n}wline{s}',(L,0.024,0.07),(0,y+s*0.002,2.52+J(0.03)),mWLINE,p=p);B(f'{n}wline2{s}',(L,0.022,0.04),(0,y+s*0.001,2.3),mSTAIN,p=p)   # the water line, and a lower one where it sat a while
+        for k in range(max(1,int(L/1.6))):B(f'{n}drip{s}{k}',(rnd.uniform(0.04,0.1),0.022,rnd.uniform(0.3,1.1)),(rnd.uniform(-L/2+0.2,L/2-0.2),y+s*0.003,2.45-rnd.uniform(0.15,0.55)),mSTAIN,p=p)
         for k in range(max(1,int(L/4))):
             B(f'{n}cr{s}{k}',(0.03,0.02,rnd.uniform(0.4,0.9)),(rnd.uniform(-L/2+0.3,L/2-0.3),y+s*0.004,rnd.uniform(0.8,h-0.5)),mDARK,rot=(0,J(0.6),0),p=p)
         drift(f'{n}dr{s}',rnd.uniform(-L/3,L/3),s*(TH/2+0.3),rnd.uniform(0.8,1.4),0.5,rnd.uniform(0.25,0.45),p)
-def shell(W,D,r,style='adobe',h=H):
+def shell(W,D,r,style='adobe',h=H,name=None):
     """Four walls with a doorway in the middle of each, floor, ceiling. style: adobe | timber | stone | cave."""
     wm={'adobe':mADOBE,'timber':mGREY,'stone':mSTONE2,'cave':mDIRT}[style]
     for side,(cx,cy,rz,L) in {'f':(0,D/2,0,W),'b':(0,-D/2,math.pi,W),'l':(-W/2,0,math.pi/2,D),'r':(W/2,0,-math.pi/2,D)}.items():
         g=grp('wall_'+side,(cx,cy,0),(0,0,rz),r);seg=(L-DW)/2
+        if name:   # a name board nailed across the top of every doorway, outside, low enough to read under a 2.6 m tunnel roof
+            ng=grp(f'{side}nameb',(0,TH/2+0.32,DH-0.2),(0,0,math.pi),g);B(f'{side}nbd',(1.62,0.04,0.3),(0,0,0),mGREY,p=ng)
+            for s_ in (-1,1):B(f'{side}nnail{s_}',(0.03,0.03,0.03),(s_*0.74,-0.025,0),mIRON,p=ng)
+            text(f'{side}ntxt',name.upper(),(0,-0.03,0),min(0.17,1.4/(0.56*len(name))),M_('signink2',(0xe0,0xd4,0xb4)),parent=ng)
         for s in (-1,1):
             x=s*(DW/2+seg/2)
             if style=='cave':blob(f'{side}rock{s}',(x,0,h/2),(seg/2+0.2,0.6,h/2+0.3),mDIRT,g,seg=10,rings=6)
@@ -263,6 +271,10 @@ def shell(W,D,r,style='adobe',h=H):
                 for s in (-1,1):B(f'bm{k}{s}',(W/2+0.1,0.24,0.24),(s*W/4,y,h-0.14-0.2),mTIM,rot=(0,-s*0.07,0),p=r)
             else:B(f'bm{k}',(W,0.24,0.24),(0,y,h-0.12),mTIM,p=r)
     for k in range(int(W*D/30)+1):roots(f'rt{k}',rnd.uniform(-W/2+1,W/2-1),rnd.uniform(-D/2+1,D/2-1),h+0.1,r,k=rnd.randint(2,4),L=rnd.uniform(0.5,1.2))
+    if style!='cave':   # the lake bed above pushing the ceiling down: a belly of earth through the boards, and a split beam hanging
+        sx,sy=rnd.choice((-1,1))*W/4,rnd.choice((-1,1))*D/4
+        blob('sag',(sx,sy,h+0.05),(1.3,1.0,0.55),mDIRT,r,seg=10,rings=5);blob('sagsand',(sx+0.2,sy,h-0.3),(0.5,0.4,0.25),mSAND2,r,seg=8,rings=4)
+        B('splitbeam',(0.2,1.8,0.2),(-sx,-sy*0.5,h-0.75),mTIM,rot=(0.5,J(0.2),J(0.4)),p=r)
 def front(W,D,r,name,main=True,style='adobe'):
     """The street face: a false front rising above the roof line with the name painted on it (Main Street buildings),
     or a plain board over the door (buildings off Main, whose fronts face a tunnel)."""
@@ -277,10 +289,8 @@ def front(W,D,r,name,main=True,style='adobe'):
             wx=s*W/3.4
             B(f'win{s}',(1.4,0.06,1.2),(wx,y,1.7),mDARK,p=r);B(f'winframe{s}',(1.6,0.08,1.4),(wx,y-0.01,1.7),mTIM,p=r)
             for k in range(3 if s<0 else 2):B(f'board{s}{k}',(1.7,0.05,0.18),(wx,y+0.04,1.3+k*0.35),rnd.choice(WOODS),rot=(0,J(0.2),0),p=r)
-    else:
-        g=grp('doorsign',(0,y+0.05,DH+0.45),(0,0,math.pi),r);sw=min(W-1.0,0.2*len(name)+0.6)
-        B('dsbd',(sw,0.05,0.4),(0,0,0),mGREY,rot=(0,J(0.08),0),p=g)
-        text('dstxt',name.upper(),(0,-0.03,0),0.2,M_('signink',(0x3a,0x22,0x16)),parent=g,rot=(math.pi/2,0,0))
+            drift(f'wsand{s}',wx,D/2-0.9,0.9,0.75,0.55,r);blob(f'wpour{s}',(wx,D/2-0.35,0.9),(0.35,0.25,0.75),mSAND,r,seg=8,rings=5)   # sand that came in through the window
+    # off Main Street the name board over each doorway (shell) is the sign: the old one up at 2.85 m was in the tunnel's rock
 
 # ================= the buildings =================
 SIZE={'L':(14,12),'M':(11,10),'S':(9,8)}
@@ -384,8 +394,8 @@ def _(r,k,W,D):
         for s in (-1,1):B(f'dleg{i}{s}',(0.05,0.5,0.66),(s*0.42,0,0.33),mIRON,p=t)
         col(k,x,y,1.0,0.6)
     B('board',(4.0,0.06,1.3),(-qx+0.3,-hd+0.05,1.8),M_('chalkboard',(0x2a,0x34,0x2e),0.95),p=r);B('boardframe',(4.2,0.08,1.5),(-qx+0.3,-hd+0.02,1.8),mTIM,p=r)
-    text('chalk','A B C  1882',(-qx+0.3,-hd+0.1,2.1),0.26,M_('chalk',(0xb8,0xb4,0xa8)),parent=r,rot=(math.pi/2,0,math.pi))
-    text('chalk2','NO GAMBLING',(-qx+0.3,-hd+0.1,1.65),0.2,M_('chalk',(0xb8,0xb4,0xa8)),parent=r,rot=(math.pi/2,0,math.pi))
+    text('chalk','I WILL NOT BET MY LUNCH',(-qx+0.3,-hd+0.1,2.1),0.17,M_('chalk2',(0x86,0x84,0x7a)),parent=r,rot=(math.pi/2,0,math.pi))
+    text('chalk2','WITH LIL MARLOW',(-qx+0.3,-hd+0.1,1.7),0.17,M_('chalk2',(0x86,0x84,0x7a)),parent=r,rot=(math.pi/2,0,math.pi))
     table('teacher',qx,qy,0,r,w=1.8,d=0.9);col(k,qx,qy,1.8,0.9);chair('tchair',qx,qy-0.8,0,r)
     Cy('apple',0.05,0.08,(qx-0.4,qy,0.83),M_('apple_old',(0x6a,0x2a,0x1c)),p=r)
     shelf('bookshelf',-hw+0.3,qy,math.pi/2,r,w=1.6,rows=4,fill=books,lean=0.05);col(k,-hw+0.3,qy,0.5,1.6)
@@ -398,7 +408,11 @@ def _(r,k,W,D):
     B('ledger',(0.4,0.3,0.05),(qx-0.2,qy-0.3,0.83),M_('ledger',(0x4a,0x2a,0x1c)),rot=(0,0,0.3),p=r);B('star',(0.1,0.02,0.1),(qx+0.5,qy-0.2,0.83),mBRASS,rot=(0,0,0.785),p=r)
     g=grp('gunrack',(-hw+0.1,-qy,1.8),(0,0,math.pi/2),r);B('rackback',(1.6,0.05,1.0),(0,0,0),mTIM,p=g)
     for j in range(3):tube(f'rifle{j}',(-0.5+j*0.5,-0.08,-0.6),(-0.45+j*0.5,-0.08,0.6),0.025,mIRON,g,v=5)
-    for j in range(4):poster(f'wanted{j}',(-qx-0.6+j*0.8) if j<2 else (qx-0.8+(j-2)*0.8),-hd+0.02,1.7,math.pi,r)
+    for j in range(1,4):poster(f'wanted{j}',(-qx-0.6+j*0.8) if j<2 else (qx-0.8+(j-2)*0.8),-hd+0.02,1.7,math.pi,r)
+    B('lpplank',(0.78,0.05,1.02),(-qx-0.6,-hd+0.13,1.75),mGREY2,p=r)   # nailed to a plank, proud of the brick patches
+    g=grp('lilposter',(-qx-0.6,-hd+0.165,1.75),(0,0.04,math.pi),r);B('lpb',(0.62,0.012,0.84),(0,0,0),mPAPER,p=g)   # WANTED: Lil (her note: 89-town-story.js)
+    for t_,z_,sz_ in (('WANTED',0.3,0.1),('"LUCKY" LIL',0.15,0.07),('MARLOW',0.05,0.08),('$500',-0.3,0.09)):text('lp'+t_[:3],t_,(0,-0.01,z_),sz_,mINK,parent=g)
+    B('lpface',(0.22,0.01,0.16),(0,-0.008,-0.12),mSTAIN,p=g)
     B('cabinet',(0.8,0.6,1.3),(-qx,qy+0.2,0.65),mIRON,p=r);col(k,-qx,qy+0.2,0.8,0.6);B('drawerout',(0.7,0.55,0.3),(-qx,qy-0.4,0.8),mRUST,p=r)
     for j in range(10):B(f'file{j}',(0.22,0.3,0.004),(rnd.uniform(-hw+0.6,-1.5),rnd.uniform(1.5,hd-0.5),0.01),mPAPER,rot=(0,0,J(3)),p=r)
     Cy('spittoon',0.15,0.2,(qx+1,-qy,0.1),mBRASS,v=10,r2=0.1,p=r);skeleton('skel',qx,-qy,0.6,r)
@@ -487,7 +501,7 @@ def _(r,k,W,D):
     shelf('peaches',-hw+0.3,qy,math.pi/2,r,w=1.6,h=1.8,rows=4,fill=lambda n_,g_,w_,z_,d_:jars(n_,g_,w_,z_,d_,m=M_('peachjar',(0xc8,0x8a,0x3a),0.3)));col(k,-hw+0.3,qy,0.5,1.6)
     B('rug',(2.0,1.4,0.01),(qx,qy,0.005),M_('rug',(0x7a,0x3a,0x2a)),rot=(0,0,0.2),p=r)
     for j in range(5):Cy(f'fjar{j}',0.05,0.14,(rnd.uniform(-hw+0.8,-1.5),rnd.uniform(1.5,hd-0.6),0.05),M_('peachjar',(0xc8,0x8a,0x3a),0.3),v=8,rot=(math.pi/2,0,J(3)),p=r)
-    text('heart','L. M.',(-qx,-hd+0.04,2.3),0.2,M_('carved',(0x3a,0x2a,0x1e)),parent=r,rot=(math.pi/2,0,math.pi))
+    g=grp('heartb',(-qx,-hd+0.1,1.75),(0,0,math.pi),r);B('heartbd',(0.6,0.04,0.32),(0,0,0),mTIM,p=g);text('heart','L. M.',(0,-0.03,0),0.17,M_('carved',(0x1e,0x14,0x0e)),parent=g)   # on its own plank, clear of the brick patches
 @bldg('cellar','Root cellar','S','stone')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
@@ -498,21 +512,26 @@ def _(r,k,W,D):
         for j in range(8):blob(f'on{i}{j}',(J(bw/2-0.2),J(bd/2-0.2),0.72+J(0.08)),(0.08,0.08,0.07),M_('bitterroot',(0xb8,0x8a,0x4a)),g,seg=6,rings=4)
         col(k,x,y,bw+0.1,bd+0.1)
     for j in range(4):tube(f'hang{j}',(J(hw-1),J(hd-1),H),(J(hw-1),J(hd-1),H-0.6),0.01,mROOT,r,v=4)
+    g=grp('leverbase',(hw-0.05,1.15,0),(0,0,0),r)   # on the east wall by the doorway: the vault's counterweight (89-town-story.js)
+    B('lplate',(0.06,0.5,0.9),(-0.03,0,1.1),mIRON,p=g);Cy('lpivot',0.07,0.12,(-0.1,0,1.1),mRUST,v=10,rot=(0,math.pi/2,0),p=g)
+    tube('lchain',(-0.06,0.2,1.5),(-0.06,0.2,H),0.025,mRUST,g,v=5);tube('lchain2',(-0.06,0.2,H-0.05),(-0.06,-2.5,H-0.05),0.025,mRUST,g,v=5)
+    sign_board('lsign',-0.08,-0.05,2.36,-math.pi/2,1.1,0.3,'COUNTERWEIGHT',g,size=0.13)   # above the handle's reach
+    col(k,hw-0.15,1.15,0.3,0.5)
 @bldg('vault',"Lil's vault",'S','stone')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
-    g=grp('vaultdoor',(-hw+0.3,-1.0,0),(0,0,1.9),r)   # the round vault door, swung open against the wall
-    Cy('vdoor',1.1,0.3,(0,0,1.25),M_('vaultsteel',(0x4a,0x4e,0x52),0.45,0.7),v=20,rot=(math.pi/2,0,0),p=g);Cy('vwheel',0.3,0.08,(0,-0.2,1.25),mBRASS,v=12,rot=(math.pi/2,0,0),p=g)
-    for j in range(4):B(f'vspoke{j}',(0.6,0.04,0.04),(0,-0.23,1.25),mBRASS,rot=(0,j*0.785,0),p=g)
-    col(k,-hw+0.5,-1.0,0.6,2.2)
-    for i in range(3):
-        for j in range(3-i):
-            for m in range(2):B(f'gb{i}{j}{m}',(0.3,0.14,0.09),(qx-0.4+j*0.33+i*0.16,-qy+m*0.18,0.1+i*0.09),mGOLD,p=r)
-    col(k,qx,-qy,1.4,0.6)
+    for s_ in (-1,1):B(f'vframe{s_}',(0.35,0.5,DH+0.3),(s_*(DW/2+0.17),hd-0.2,(DH+0.3)/2),mSTEEL,p=r)   # the steel frame the door (TownVaultDoor) closes on
+    B('vframetop',(DW+0.7,0.5,0.35),(0,hd-0.2,DH+0.17),mSTEEL,p=r)
+    B('plinth',(1.7,0.9,0.55),(qx-0.3,-qy,0.27),mSTONE,p=r);B('plinthcap',(1.8,1.0,0.06),(qx-0.3,-qy,0.57),mSTONE2,p=r)   # Lil's bars (89-town-story.js)
+    col(k,qx-0.3,-qy,1.8,1.0)
+    for j in range(5):Cy(f'coins{j}',rnd.uniform(0.08,0.16),rnd.uniform(0.03,0.08),(rnd.uniform(-1.6,1.6),rnd.uniform(-hd+0.6,-1.4),0.02),mGOLD,v=10,p=r)
+    B('chart',(1.1,0.012,0.8),(-qx+0.3,-hd+0.03,1.6),mPAPER,rot=(0,J(0.05),0),p=r);B('chartlake',(0.7,0.016,0.5),(-qx+0.3,-hd+0.035,1.6),M_('chartink',(0x6a,0x7a,0x7a)),p=r)
+    tube('chartx1',(-qx+0.42,-hd+0.04,1.73),(-qx+0.52,-hd+0.04,1.63),0.012,M_('paintred',(0x8a,0x2a,0x1c)),r,v=4);tube('chartx2',(-qx+0.52,-hd+0.04,1.73),(-qx+0.42,-hd+0.04,1.63),0.012,M_('paintred',(0x8a,0x2a,0x1c)),r,v=4)
+    table('writing',-qx,-qy+0.6,0,r,w=1.1,d=0.6);chair('wchair',-qx,-qy+1.2,math.pi,r);col(k,-qx,-qy+0.6,1.1,0.6)
     for j in range(3):B(f'strongbox{j}',(0.5,0.35,0.3),(qx,qy-0.4+j*0.5,0.15),mRUST,rot=(0,0,J(0.3)),p=r)
     col(k,qx,qy,0.7,1.6)
     Cy('lamp',0.12,0.35,(-qx,qy,0.18),mGLASS,v=8,p=r);text('lmtxt','LM',(0,-hd+0.04,2.3),0.5,mGOLD,parent=r,rot=(math.pi/2,0,math.pi))
-    skeleton('digger',-qx,-qy,J(3),r)
+    skeleton('digger',-1.9,1.9,2.2,r)   # somebody dug in from the other side, once
     for j in range(4):B(f'pick{j}',(0.9,0.05,0.05),(rnd.uniform(-hw+0.6,hw-0.6),rnd.uniform(1.4,hd-0.4),0.03),mTIM,rot=(0,0,J(3)),p=r)
 @bldg('well','Old well','S','cave')
 def _(r,k,W,D):
@@ -527,10 +546,11 @@ def _(r,k,W,D):
         if i%2==0:barrel(f'wbarrel{i}',x,y,r);col(k,x,y,0.65,0.65)
         else:crate(f'wcrate{i}',x,y,J(0.5),r,s=0.7,broken=True)
     B('shaftrim',(2.4,2.4,0.3),(0,0,H+1.3),mDARK,p=r)   # the well shaft goes up through the roof of the cave
+    sign_board('wish',0,1.32,0.62,math.pi,0.9,0.26,'MAKE A WISH  1c',r,tilt=0.0,size=0.11)   # leaning on the rim, on the side you come in from
 
 for key,(name,size,style,f) in BLDGS.items():
     n='TownBldg_'+key;W,D=SIZE[size];scene(n);r=root(n)
-    shell(W,D,r,style=style);front(W,D,r,name,main=(size=='L'),style=style);f(r,key,W,D)
+    shell(W,D,r,style=style,name=name);front(W,D,r,name,main=(size=='L'),style=style);f(r,key,W,D)
     export(n,rend=True)
 
 # ================= door plugs, tunnel timber and debris =================
@@ -538,6 +558,7 @@ scene('TownDoorPlug');r=root('TownDoorPlug')   # centred on the doorway in the w
 for k in range(6):B(f'plank{k}',(DW+0.5,0.05,0.2),(J(0.05),0.22+J(0.02),0.3+k*0.4),rnd.choice(WOODS),rot=(0,J(0.12),0),p=r)
 B('fill',(DW,0.1,DH),(0,0.05,DH/2),mDIRT,p=r)
 blob('push',(0.2,0.5,0.4),(0.8,0.6,0.7),mDIRT,r,seg=8,rings=5);rubble('prub',0,-0.5,0.5,6,r,big=0.25)
+drift('spill',0.1,-0.9,1.1,0.9,0.5,r);blob('spill2',(-0.3,-0.3,0.6),(0.5,0.35,0.6),mSAND,r,seg=8,rings=5)   # sand through the gaps in the boards
 export('TownDoorPlug')
 scene('TownMouthPlug');r=root('TownMouthPlug')   # a caved-in tunnel mouth, 3.4 m wide, facing Blender -y
 blob('heap',(0,0,1.2),(1.9,1.4,1.6),mDIRT,r,seg=12,rings=6);blob('heap2',(0.3,-0.6,0.3),(1.6,1.0,0.6),mSAND2,r,seg=10,rings=5)
@@ -557,6 +578,111 @@ for key in 'ABC':
         for k in range(3):B(f'jb{k}',(rnd.uniform(0.8,1.4),0.14,0.04),(J(0.4),J(0.4),0.03+k*0.04),rnd.choice(WOODS),rot=(0,0,J(3)),p=r)
     if key=='C':skeleton('jc',0,0,J(3),r);drift('jcd',0.3,0.2,0.8,0.6,0.25,r)
     export('TownJunk'+key)
+
+# ================= the pieces the game moves or places one by one (public/js/89-town-light.js, 89-town-story.js) =================
+# TownVaultDoor: Lil's vault door, origin on its hinge (left edge, floor); closed it fills the 1.8 x 2.4 doorway, its face
+# (dial, wheel, keyhole, the lock plate) toward Blender -Y. TownLever: the cellar's counterweight handle, origin on its pivot.
+scene('TownVaultDoor');r=root('TownVaultDoor')
+B('vd',(2.0,0.32,2.55),(1.0,0,1.27),mSTEEL,p=r,bv=0.03);B('vdrim',(1.8,0.05,2.35),(1.0,-0.17,1.27),M_('vaultsteel2',(0x3a,0x3e,0x42),0.5,0.7),p=r)
+for z in (0.35,1.27,2.2):Cy(f'hinge{z}',0.09,0.3,(0.02,0.0,z),mIRON,v=10,p=r)
+for z in (0.5,1.27,2.05):Cy(f'bolt{z}',0.06,0.4,(1.98,0,z),M_('chrome',(0xa8,0xaa,0xae),0.25,0.9),v=10,rot=(0,math.pi/2,0),p=r)
+Cy('dial',0.24,0.08,(1.0,-0.2,1.55),mBRASS,v=24,rot=(math.pi/2,0,0),p=r);Cy('dialc',0.08,0.05,(1.0,-0.25,1.55),mIRON,v=12,rot=(math.pi/2,0,0),p=r)
+for j in range(12):a=j*math.pi/6;B(f'tick{j}',(0.015,0.01,0.05),(1.0+math.cos(a)*0.2,-0.245,1.55+math.sin(a)*0.2),mINK,rot=(0,-a,0),p=r)
+Cy('wheelhub',0.07,0.1,(1.0,-0.22,0.95),mBRASS,v=10,rot=(math.pi/2,0,0),p=r)
+for j in range(3):B(f'wspoke{j}',(0.55,0.04,0.04),(1.0,-0.24,0.95),mBRASS,rot=(0,j*math.pi/3,0),p=r)
+B('keyplate',(0.16,0.02,0.24),(1.55,-0.17,1.2),mBRASS,p=r);B('keyhole',(0.03,0.02,0.09),(1.55,-0.185,1.2),mDARK,p=r)
+B('plate',(0.9,0.02,0.22),(1.0,-0.17,2.1),mBRASS,p=r);text('platet','M & L SAFE CO.',(1.0,-0.185,2.1),0.09,mINK,parent=r)
+text('lm','L M',(1.0,-0.185,0.45),0.16,mBRASS,parent=r)
+export('TownVaultDoor')
+scene('TownLever');r=root('TownLever')   # pointing up (z) when set; the game swings it down about Blender x
+B('lbar',(0.07,0.07,0.95),(0,0,0.45),mIRON,p=r);Cy('lgrip',0.05,0.22,(0,0,0.95),mLEATHER,v=8,p=r);Cy('lhub',0.09,0.14,(0,0,0),mRUST,v=10,rot=(0,math.pi/2,0),p=r)
+export('TownLever')
+# TownSag: a creaky stretch of tunnel (89-town-danger.js): a timber set gone crooked, its cap split and bowed under a belly
+# of lake bed pushing through, sand dribbling from the crack. TownCaveIn: the same stretch once it's come down, a mound of
+# sand, dirt and broken timber filling the tunnel (2.8 m wide), the way through until somebody digs it clear.
+scene('TownSag');r=root('TownSag')   # across a tunnel running along Blender Y, like TownShoring
+for s in (-1,1):B(f'spost{s}',(0.2,0.2,2.2),(s*1.1,0.1*s,1.08),rnd.choice(WOODS),rot=(0.1*s,s*0.16,0),p=r)
+for s in (-1,1):B(f'scap{s}',(1.35,0.24,0.24),(s*0.62,0,2.05),mTIM,rot=(0,-s*0.22,0),p=r)   # split in the middle, both halves sagging
+B('sbrace',(0.16,0.16,1.4),(0.2,0.6,1.2),mTIM2,rot=(0.5,0.3,0),p=r)   # somebody propped it once
+blob('sbelly',(0,0,2.45),(1.0,1.2,0.5),mDIRT,r,seg=10,rings=5);blob('sbelly2',(0.1,0.2,2.15),(0.45,0.55,0.25),mSAND2,r,seg=8,rings=4)
+for k in range(5):tube(f'sdrib{k}',(J(0.15),J(0.2),2.1),(J(0.2),J(0.25),1.2+rnd.uniform(0,0.6)),0.012,mSAND,r,v=4)
+drift('ssand',0,0,0.8,0.7,0.25,r);roots('sroot',0.3,-0.3,2.5,r,k=4,L=0.9)
+for k in range(4):B(f'slag{k}',(0.12,1.2,0.05),(-0.9+k*0.6,J(0.1),2.3-abs(-0.9+k*0.6)*0.15),mGREY2,rot=(J(0.15),abs(-0.9+k*0.6)*0.2*(1 if k<2 else -1),0),p=r)
+export('TownSag')
+scene('TownCaveIn');r=root('TownCaveIn')
+blob('cmound',(0,0,0.7),(1.5,1.7,1.25),mDIRT,r,seg=12,rings=6);blob('csand',(0.2,-0.4,0.5),(1.4,1.3,0.8),mSAND,r,seg=10,rings=5);blob('csand2',(-0.3,0.6,0.35),(1.2,1.0,0.55),mSAND2,r,seg=10,rings=5)
+for k in range(4):B(f'cbeam{k}',(rnd.uniform(1.2,2.4),0.22,0.22),(J(0.6),J(0.8),rnd.uniform(0.6,1.7)),mTIM,rot=(J(0.6),J(0.6),J(1.5)),p=r)
+rubble('crub',0,0,1.4,14,r,big=0.35);roots('croot',0,0,2.4,r,k=5,L=1.2)
+export('TownCaveIn')
+# TownLantern: an old oil lantern, origin under its base (the game lights it: a glow and, near you, a real light).
+# TownLanternHook: the wall bracket it hangs from; origin on the wall at floor level, the arm out along Blender -Y at 1.95 m.
+scene('TownLantern');r=root('TownLantern')
+Cy('lbase',0.09,0.07,(0,0,0.035),mRUST,v=12,p=r);Cy('lfont',0.075,0.04,(0,0,0.09),mBRASS,v=12,p=r);Cy('lglass',0.065,0.16,(0,0,0.19),mLGLASS,v=12,p=r)
+for j in range(4):a=j*math.pi/2+0.4;tube(f'lwire{j}',(math.cos(a)*0.075,math.sin(a)*0.075,0.1),(math.cos(a)*0.075,math.sin(a)*0.075,0.28),0.006,mIRON,r,v=4)
+Cy('ltop',0.08,0.05,(0,0,0.3),mRUST,v=12,r2=0.03,p=r);tube('lbail1',(-0.07,0,0.3),(0,0,0.38),0.007,mIRON,r,v=4);tube('lbail2',(0.07,0,0.3),(0,0,0.38),0.007,mIRON,r,v=4)
+export('TownLantern')
+scene('TownLanternHook');r=root('TownLanternHook')
+B('hplate',(0.1,0.03,0.24),(0,-0.015,1.95),mIRON,p=r);tube('harm',(0,-0.02,2.02),(0,-0.4,2.0),0.014,mIRON,r,v=5);tube('hhook',(0,-0.38,2.0),(0,-0.38,1.93),0.008,mIRON,r,v=4)
+export('TownLanternHook')
+# TownNote: a scrap of paper someone left (89-town-story.js reads it to you)
+scene('TownNote');r=root('TownNote')
+B('np',(0.22,0.3,0.004),(0,0,0.003),mPAPER,rot=(0,0,0.15),p=r)
+for k in range(6):B(f'nl{k}',(0.15-0.02*(k%3),0.008,0.002),(J(0.01),0.1-k*0.04,0.006),mINK,rot=(0,0,0.15),p=r)
+B('nfold',(0.22,0.06,0.004),(0.01,-0.17,0.02),mPAPER,rot=(0.5,0,0.15),p=r)
+export('TownNote')
+# the one-off find in each building (sim.js TOWN_SIGS): small, real size, each with its own look
+FINDS={}
+def find(key):
+    def deco(f):FINDS[key]=f;return f
+    return deco
+@find('saloon')   # Lil's marked deck
+def _(r):
+    B('deck',(0.12,0.085,0.035),(0,0,0.018),M_('cardback',(0x8a,0x1c,0x1c)),p=r)
+    for j in range(4):B(f'card{j}',(0.085,0.12,0.002),(0.09+j*0.03,0.02,0.002+j*0.002),mPAPER,rot=(0,0,0.3+j*0.25),p=r)
+@find('church')   # the collection plate
+def _(r):Cy('plate',0.16,0.025,(0,0,0.013),mSILVER,v=20,p=r);Cy('felt',0.12,0.01,(0,0,0.026),M_('felt',(0x5a,0x1a,0x22)),v=16,p=r)
+@find('hotel')   # a gold pocket watch, stopped
+def _(r):
+    Cy('case',0.055,0.018,(0,0,0.009),mGOLD,v=16,p=r);Cy('face',0.045,0.004,(0,0,0.019),mPAPER,v=16,p=r);B('hand',(0.004,0.035,0.002),(0,0.012,0.022),mINK,rot=(0,0,0.6),p=r)
+    for j in range(6):Cy(f'ch{j}',0.008,0.004,(0.07+j*0.018,0.02+j*0.01,0.003),mGOLD,v=6,p=r)
+@find('store')   # a tin of coffee, never opened
+def _(r):Cy('tin',0.07,0.16,(0,0,0.08),M_('tinred',(0x8a,0x2a,0x1c),0.5,0.4),v=14,p=r);Cy('label',0.072,0.07,(0,0,0.08),M_('tinlabel',(0xc8,0xa8,0x5a)),v=14,p=r);Cy('lid',0.072,0.015,(0,0,0.165),mBRASS,v=14,p=r)
+@find('bank')   # the bank manager's key
+def _(r):
+    tube('shaft',(-0.1,0,0.012),(0.08,0,0.012),0.01,mBRASS,r,v=6)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.035,minor_radius=0.009,major_segments=14,minor_segments=5,location=(-0.135,0,0.012));o=bpy.context.active_object;o.name='bow';_finish(o,mBRASS,0,r)
+    B('bit',(0.03,0.04,0.012),(0.07,0.025,0.012),mBRASS,p=r);B('tag',(0.05,0.035,0.003),(-0.2,0.03,0.002),mPAPER,rot=(0,0,0.4),p=r)
+@find('stable')   # a silver-mounted bridle
+def _(r):
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.13,minor_radius=0.014,major_segments=18,minor_segments=4,location=(0,0,0.014));o=bpy.context.active_object;o.name='strap';_finish(o,mLEATHER,0,r)
+    for j in range(6):a=j*1.05;Cy(f'stud{j}',0.02,0.012,(math.cos(a)*0.13,math.sin(a)*0.13,0.028),mSILVER,v=8,p=r)
+    tube('bit',(-0.1,-0.05,0.01),(0.1,-0.05,0.01),0.008,mSILVER,r,v=5)
+@find('school')   # a spelling-bee medal
+def _(r):Cy('medal',0.04,0.006,(0,0,0.003),mGOLD,v=16,p=r);B('rib1',(0.03,0.08,0.003),(-0.012,0.065,0.002),M_('ribbonred',(0x8a,0x1c,0x1c)),rot=(0,0,0.2),p=r);B('rib2',(0.03,0.08,0.003),(0.012,0.065,0.004),M_('ribbonblue',(0x1c,0x2a,0x6a)),rot=(0,0,-0.2),p=r)
+@find('marshal')   # the Marshal's bullseye lantern
+def _(r):Cy('body',0.08,0.2,(0,0,0.1),mBRASS,v=14,p=r);Cy('lens',0.06,0.03,(0,-0.085,0.12),mLGLASS,v=14,rot=(math.pi/2,0,0),p=r);Cy('chim',0.03,0.08,(0,0,0.24),mBRASS,v=8,p=r);tube('handle',(0,0.08,0.05),(0,0.08,0.2),0.008,mIRON,r,v=4)
+@find('jail')   # a spoon, worn down to half a spoon
+def _(r):tube('handle',(-0.1,0,0.006),(0.05,0,0.006),0.007,mSILVER,r,v=5);blob('bowl',(0.075,0,0.008),(0.03,0.022,0.008),mSILVER,r,seg=8,rings=4)
+@find('post')   # a registered parcel, never collected
+def _(r):
+    B('box',(0.25,0.18,0.12),(0,0,0.06),M_('kraft',(0x9a,0x7a,0x4a)),p=r);B('s1',(0.26,0.012,0.125),(0,0,0.06),M_('string',(0xc8,0xb8,0x94)),p=r);B('s2',(0.012,0.19,0.125),(0,0,0.06),M_('string',(0xc8,0xb8,0x94)),p=r)
+    Cy('seal',0.025,0.01,(0,0,0.125),M_('wax',(0x8a,0x1a,0x1a)),v=10,p=r)
+@find('boatshed')   # Lil's spyglass
+def _(r):tube('tube1',(-0.2,0,0.035),(0.02,0,0.035),0.035,mBRASS,r,v=12,r2=0.032);tube('tube2',(0.02,0,0.035),(0.2,0,0.035),0.028,mBRASS,r,v=12,r2=0.024);Cy('eye',0.04,0.02,(-0.21,0,0.035),mLEATHER,v=12,rot=(0,math.pi/2,0),p=r)
+@find('doctor')   # Dr. Pell's Restorative
+def _(r):
+    for j in range(3):Cy(f'bottle{j}',0.035,0.15,(j*0.08-0.08,0,0.075),M_('brownglass',(0x5a,0x34,0x1a),0.2),v=10,p=r);Cy(f'neck{j}',0.012,0.05,(j*0.08-0.08,0,0.17),M_('brownglass',(0x5a,0x34,0x1a),0.2),v=8,p=r);B(f'lab{j}',(0.05,0.072,0.05),(j*0.08-0.08,0,0.07),mPAPER,p=r)
+@find('barber')   # a razor and its strop
+def _(r):B('strop',(0.06,0.4,0.006),(0,0,0.003),mLEATHER,rot=(0,0,0.2),p=r);B('blade',(0.022,0.12,0.004),(0.06,0.02,0.008),mSILVER,rot=(0,0,-0.3),p=r);B('rhandle',(0.026,0.13,0.012),(0.1,-0.09,0.008),mBONE,rot=(0,0,-0.3),p=r)
+@find('lil')   # Lil's lucky silver dollar, on its pad
+def _(r):B('pad',(0.12,0.1,0.015),(0,0,0.008),M_('velvet',(0x6a,0x1a,0x2a)),p=r);Cy('dollar',0.035,0.006,(0,0,0.019),mSILVER,v=18,p=r)
+@find('cellar')   # a crock of bitterroot pickles
+def _(r):Cy('crock',0.12,0.22,(0,0,0.11),M_('stoneware',(0xa8,0x9a,0x80)),v=14,r2=0.1,p=r);Cy('cloth',0.13,0.02,(0,0,0.23),mCLOTH,v=12,p=r);Cy('band',0.121,0.03,(0,0,0.16),M_('glaze',(0x4a,0x5a,0x7a),0.4),v=14,p=r)
+@find('well')   # pennies wished down the well
+def _(r):
+    for j in range(9):Cy(f'coin{j}',0.018,0.004,(J(0.06),J(0.06),0.002+j*0.003),M_('copper',(0x9a,0x5a,0x2a),0.4,0.7) if j%3 else mSILVER,v=10,rot=(J(0.2),J(0.2),0),p=r)
+for key,f in FINDS.items():
+    scene('TownFind_'+key);r=root('TownFind_'+key);f(r);export('TownFind_'+key)
 
 # ================= Main Street =================
 # game (x, z) -> Blender (x, -z); the street runs x -34..34, z -7.5..7.5; building fronts stand on z = +-7.5

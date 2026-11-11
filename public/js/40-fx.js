@@ -97,12 +97,12 @@ function updateFootsteps(dt){
   if(AUDIO_MODE.steps==='original'){footstepT=0;return}
   if(!P.moving||!P.grounded||S.ko||S.inBed!=null||digHeld){footstepT=0;return}
   footstepT-=dt;if(footstepT>0)return;
-  const running=P.anim===4,kind=inTent()?'stone':'sand';
+  const running=P.anim===4,town=S.inTown?townStepKind():null,kind=inTent()||town==='board'||town==='stone'?'stone':'sand';   // the buried town: boards knock (the stone clip, slowed and duller), sand hushes (89-town-light.js)
   footstepT=running?0.29:P.crouch?0.58:0.43;
   footstepN=(footstepN+1)%3;
   // 10% of the original levels and muffled below 800 Hz (JT: too loud and too crisp); were 0.4 running / 0.32 walking,
   // 0.05 for the loading fallback (already a low-pass rumble)
-  if(!playAudioClip(`step-${kind}-${footstepN+1}`,running?0.04:0.032,0.92+Math.random()*0.16,800))noise(0.07,280,0.6,0.005,'lowpass');
+  if(!playAudioClip(`step-${kind}-${footstepN+1}`,(running?0.04:0.032)*(town==='board'?1.4:1),(0.92+Math.random()*0.16)*(town==='board'?0.72:1),town==='board'?520:800))noise(0.07,280,0.6,0.005,'lowpass');
 }
 const BIRDS_LEVEL=0;   // the always-on day bird loop is off (JT: too much); it was 0.24. birds.mp3 stays for an occasional-call idea
 /* Desert calls: now and then (every 3-5 minutes, randomised) one far-off animal calls from a random side, picked

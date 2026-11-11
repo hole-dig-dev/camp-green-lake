@@ -38,9 +38,9 @@ function newDay(m){m=m||{};if(m.paid)sfx.quota();moraleNewDay();eotdAnnounce(m.e
 function fired(bank,quota){
   if(!$('#fired').hidden)return;
   $('#firedText').textContent=`The crew bank had ${bank} of the ${quota} gold the Company wanted.`+(foundLine(RUN.lastFound)?' '+foundLine(RUN.lastFound)+'.':'');$('#fired').hidden=false;releaseLock();brideSting(0.8);
-  Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},bitterroots:1,batt:100,hasLM:false,reported:false,holesDone:0,carry:null});saveSession();
+  Object.assign(S,{bucket:0,hopper:0,pipe:0,dynamite:0,scarecrow:0,soda:0,pan:0,sack:[],up:{pan:true},bitterroots:1,batt:100,hasLM:false,reported:false,holesDone:0,carry:null,townRead:[]});saveSession();
 }
-$('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
+$('#firedBtn').onclick=()=>{saveSession();try{sessionStorage.removeItem('cgl-run');sessionStorage.removeItem('cgl-town');localStorage.removeItem('cgl-crew')}catch(e){}location.reload()};
 function soloEndOfDay(){
   if(online()||!S.started)return;
   const played=S.dayPlay||0;S.dayPlay=0;const q=RUN.quota;
@@ -133,7 +133,7 @@ function sendChat(){const s=chatIn.value.replace(/[\u0000-\u001f<>]/g,'').trim()
 /* ---- flashlight (L): yours, plus the three nearest friends' ---- */
 const FL=[];for(let i=0;i<4;i++){const s=new T.SpotLight(0xfff1d0,0,42,0.42,0.45,1.2);scene.add(s,s.target);FL.push(s)}
 function toggleLight(){if(!S.light&&S.batt<=0){toast('Your flashlight battery is dead. The Company Store sells batteries.','bad',2500);return}S.light=!S.light;tone(S.light?1800:1200,0.05,'square',0.05)}
-function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?tune('light.power'):0;if(!on)return;s.distance=tune('light.reach');s.angle=Math.min(1.4,tune('light.width'));s.penumbra=tune('light.soft');s.decay=tune('light.falloff');   // F2 > Flashlight
+function aimLight(s,x,y,z,dx,dy,dz,on){s.intensity=on?tune('light.power'):0;if(!on)return;s.distance=tune('light.reach');s.angle=Math.min(1.4,tune('light.width')*(S.up.mlantern&&s===FL[0]?1.3:1));   /* the Marshal's lantern (89-town-story.js) */s.penumbra=tune('light.soft');s.decay=tune('light.falloff');   // F2 > Flashlight
   s.position.set(x,y,z);s.target.position.set(x+dx*10,y+dy*10,z+dz*10);s.target.updateMatrixWorld()}
 function updateLights(dt){
   if(S.light){S.batt=Math.max(0,S.batt-dt*tune('light.drain'));if(S.batt<=0){S.light=false;toast('Your flashlight died.','bad',2000)}}

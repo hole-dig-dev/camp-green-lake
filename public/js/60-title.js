@@ -5,7 +5,7 @@ const NICKS=['Dusty','Blisters','Two Scoops','Mudcat','Lizard Bait','Pockets','S
 const nickIn=$('#nick');
 try{nickIn.value=localStorage.getItem('cgl-nick')||NICKS[Math.floor(Math.random()*NICKS.length)]}catch(e){nickIn.value=NICKS[Math.floor(Math.random()*NICKS.length)]}
 function cleanName(s){return String(s||'').replace(/[^\p{L}\p{N} _'.-]/gu,'').trim().slice(0,16)}
-const SAVE_KEYS=['jeepSand','jeepSandRich','caches','bucketRich','hopperRich','samples','bucket','hopper','pipe','dynamite','scarecrow','soda','water','sack','bitterroots','tonic','medkit','up','hasLM','reported','holesDone','name','color','detOn','batt'];   /* no 'seeds': gold is the crew wallet's (84-wallet.js) */
+const SAVE_KEYS=['jeepSand','jeepSandRich','caches','bucketRich','hopperRich','samples','bucket','hopper','pipe','dynamite','scarecrow','soda','water','sack','bitterroots','tonic','medkit','up','hasLM','reported','holesDone','name','color','detOn','batt','townRead'];   /* no 'seeds': gold is the crew wallet's (84-wallet.js) */
 function saveSession(newDay){
   if(!S.started)return;
   try{const o={at:Date.now(),S:{},P:{x:P.x,z:P.z,yaw:P.yaw,pitch:P.pitch,room:S.tent}};for(const k of SAVE_KEYS)o.S[k]=S[k];if(newDay){o.S.hasLM=false;o.S.reported=false}
@@ -22,8 +22,8 @@ function startGame(resume){
     S.bucketRich=num(r.bucketRich,0.1,9,1);S.hopperRich=num(r.hopperRich,0.1,9,1);S.samples=Array.isArray(r.samples)?r.samples.filter(q=>Array.isArray(q)&&q.length===3&&q.every(Number.isFinite)).slice(-PAY_SAMPLES):[];   /* pay dirt (48-paydirt.js) */
     S.bucket=num(r.bucket,0,20,0);S.hopper=num(r.hopper,0,120,0);S.pipe=num(r.pipe,0,999,0)|0;S.dynamite=num(r.dynamite,0,99,0)|0;S.scarecrow=num(r.scarecrow,0,99,0)|0;S.soda=num(r.soda,0,99,0)|0;S.water=num(r.water,0,180,100);S.bitterroots=num(r.bitterroots,0,999,0)|0;S.tonic=num(r.tonic,0,99,0)|0;S.medkit=num(r.medkit,0,99,0)|0;S.holesDone=num(r.holesDone,0,1e5,0)|0;
     S.sack=Array.isArray(r.sack)?r.sack.filter(t=>LOOT[t]&&!LOOT[t].key).slice(0,200):[];
-    S.up={pan:true};if(r.up&&typeof r.up==='object')for(const k of ['shovel','pan','bucket','spade','long','detector','canteen','canteen3','bucket2','bucket3','hopper','hopper2','hopper3','disarm','dog','grav','grapple','goldShovel','hover','hoverShoes','bigsack','rope','walkie'])if(r.up[k])S.up[k]=true;if(S.up.long||S.up.spade||S.up.goldShovel)S.up.shovel=true;   /* an upgrade without the shovel it upgrades (old god mode): dig with it */
-    S.batt=num(r.batt,0,100,100);
+    S.up={pan:true};if(r.up&&typeof r.up==='object')for(const k of ['shovel','pan','bucket','spade','long','detector','canteen','canteen3','bucket2','bucket3','hopper','hopper2','hopper3','disarm','dog','grav','grapple','goldShovel','hover','hoverShoes','bigsack','rope','walkie','mlantern','razor','vaultkey'])if(r.up[k])S.up[k]=true;if(S.up.long||S.up.spade||S.up.goldShovel)S.up.shovel=true;   /* an upgrade without the shovel it upgrades (old god mode): dig with it */
+    S.batt=num(r.batt,0,100,100);S.townRead=Array.isArray(r.townRead)?r.townRead.filter(k=>typeof k==='string').slice(0,30):[];   /* notes read in the buried town (89-town-story.js) */
     S.hasLM=!!r.hasLM;S.reported=!!r.reported;S.detOn=r.detOn!==false;nickIn.value=r.name||nickIn.value;
     const p=resume.P||{};P.x=num(p.x,-HALF+3,HALF-3,0);P.z=num(p.z,-HALF+3,HALF-3,39);P.y=groundAt(P.x,P.z);P.yaw=num(p.yaw,-100,100,0);P.pitch=num(p.pitch,-0.15,1.25,0.32);
     if(Number.isInteger(p.room)&&TENTS[p.room]){

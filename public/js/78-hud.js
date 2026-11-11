@@ -244,6 +244,7 @@ $('#fieldMapClose').onclick=closeFieldMap;
 
 function drawMap(){
   const W=mm.width;if(S.started){mcx=P.x;mcz=P.z}
+  if(S.inTown&&S.started){townDrawMap(mx,W);return}   // underground: the town's own map, drawn as you explore (89-town-map.js)
   if(haboobMap(mx,W))return;   // caught in a haboob: the map scrambles to static instead of drawing normally (see 75-haboob.js)
   const night=clockT()>=DAYMS;
   if(!mapCache||mapCacheNight!==night)buildMapCache(night);

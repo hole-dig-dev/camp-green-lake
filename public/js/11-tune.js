@@ -20,7 +20,18 @@ const TUNE_DEFS=[
   {key:'light.soft',tab:'Flashlight',label:'Soft edge (0 hard, 1 all blur)',def:0.45,kind:'lin',span:0.45,min:0,max:1,unit:''},
   {key:'light.falloff',tab:'Flashlight',label:'Fades with distance (0 none, 2 real)',def:1.2,kind:'lin',span:1.2,min:0,max:3,unit:''},
   {key:'light.drain',tab:'Flashlight',label:'Battery drain (a full battery lasts 100/this seconds)',def:0.6,kind:'mul',range:4,zero:true,unit:'/s'},
-  {key:'light.townSee',tab:'Flashlight',label:'Underground: how far you see with it on (off: 12 m)',def:26,kind:'mul',range:3,unit:' m'},
+  {key:'light.townSee',tab:'Flashlight',label:'Underground: how far until the dark swallows everything (fog)',def:40,kind:'mul',range:3,unit:' m'},
+  // ---- the buried town (89-town-light.js, 89-town-story.js): its own flashlight beam, lanterns, daylight shafts, dust, sand
+  {key:'light.townPower',tab:'Town',label:'Flashlight brightness underground',def:2.7,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'light.townWidth',tab:'Town',label:'Flashlight cone underground',def:0.5,kind:'mul',range:2,fmt:v=>tuneDeg(Math.min(v,1.4)*2)+' wide'},
+  {key:'light.townSoft',tab:'Town',label:'Flashlight soft edge underground (0 hard, 1 all blur)',def:0.85,kind:'lin',span:0.4,min:0,max:1,unit:''},
+  {key:'town.ambient',tab:'Town',label:'The dark: cold bounce light (0 pitch black)',def:0.13,kind:'mul',range:4,zero:true,unit:''},
+  {key:'town.lampPower',tab:'Town',label:'A lit lantern: brightness',def:5,kind:'mul',range:4,zero:true,unit:'×'},
+  {key:'town.lampReach',tab:'Town',label:'A lit lantern: how far its light reaches',def:10,kind:'mul',range:2.5,unit:' m'},
+  {key:'town.shaft',tab:'Town',label:'Daylight down the shafts: brightness',def:1,kind:'mul',range:3,zero:true,unit:'×'},
+  {key:'town.dust',tab:'Town',label:'Dust in the air (in beams and shafts)',def:1,kind:'mul',range:3,zero:true,unit:'×'},
+  {key:'town.trickle',tab:'Town',label:'Sand trickling from the ceiling (per minute)',def:5,kind:'mul',range:4,zero:true,unit:'/min'},
+  {key:'town.barSpeed',tab:'Town',label:'Walking speed carrying one of Lil\'s gold bars',def:2.4,kind:'mul',range:2,unit:' m/s'},
   // ---- hazards and mobs: one switch for testing (88-hazards.js). Off: nothing spawns and what's out goes away; then
   //      switch single ones back on, or spawn one right now.
   /* CHAOS (JT 2026-10-02): one knob over everything that spawns, 0 (nothing) to 5; pinned at the top of F2 (77-tune-panel.js).
@@ -28,6 +39,7 @@ const TUNE_DEFS=[
      often, and the gaps and cooldowns between them), landmines (how often, how many out), roster monsters. */
   {key:'haz.chaos',tab:'Hazards',label:'CHAOS: how much of everything spawns (0 nothing, 1 normal, 5 bedlam)',def:1,kind:'mul',range:5,zero:true,unit:'×'},
   {key:'haz.all',tab:'Hazards',label:'ALL hazards and mobs (off for testing: nothing spawns, what\'s out there goes away)',def:1,kind:'flag'},
+  {key:'haz.on.cavein',tab:'Hazards',label:'Buried town cave-ins: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.on.twister',tab:'Hazards',label:'Twisters: on anyway (while ALL is off)',def:0,kind:'flag'},
   {key:'haz.now.twister',tab:'Hazards',label:'Twisters: spawn one now, near you',kind:'action',run:()=>hazNow('twister')},
   {key:'haz.on.landslide',tab:'Hazards',label:'Landslides: on anyway (while ALL is off)',def:0,kind:'flag'},

@@ -107,11 +107,11 @@
   const quotaFor = (day, n) => { const d = Math.max(0, day - 1); return Math.round((8 + 9 * d + 3.2 * d * d) * (1 + 0.6 * Math.max(0, n - 1))); };
   // seeds each heavy thing is worth. crate / tools / jug are carried finds (45-state.js: about 1 in 3 finds comes out as
   // one, worth more than it would in the sack): their value is set when dug up, and these are only the caps
-  const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400 };
+  const HEAVY = { safe: 120, strongbox: 80, crate: 250, tools: 150, jug: 400, ingot: 75 };   // ingot: one of Lil's gold bars, carried up out of her vault (public/js/89-town-story.js)
   // R.E.P.O.-style grabbing (public/js/84-grab.js, after Greg's phys.js): mass (kg) and how easily bumps chip value.
   // One camper pulls at most GRAB.FMAX newtons, so ~71 kg is the most one of you can lift: the safe takes two.
   const PHYS = { safe: { m: 120, frag: 0.15 }, strongbox: { m: 60, frag: 0.35 }, cart: { m: 25, frag: 0 }, body: { m: 70, frag: 0 },
-    crate: { m: 30, frag: 0.9 }, tools: { m: 28, frag: 0.2 }, jug: { m: 18, frag: 1.3 } };   // glass jars, iron, pottery
+    crate: { m: 30, frag: 0.9 }, tools: { m: 28, frag: 0.2 }, jug: { m: 18, frag: 1.3 }, ingot: { m: 45, frag: 0.05 } };   // glass jars, iron, pottery
   // the rope (84-grab.js, X): slack up to L m, then it pulls like a pair of hands from wherever you are, up to MAX m away
   const ROPE = { L: 4.5, MAX: 7.5, K: 900 };
   // the crew's wheelbarrow: holds CAP things (loot or a downed friend), parks by the main gate, tips if you hit a bump fast
@@ -701,25 +701,29 @@
     ['lil', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
   const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
   const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
-  const TOWN_LOOT = ['matchsafe', 'locket', 'pistol', 'shine', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
+  const TOWN_LOOT = ['matchsafe', 'locket', 'pistol', 'shine', 'jar', 'fossil', 'shoe', 'spoon', 'can', 'cap'];
   const PI = Math.PI;
   // where buildings stand: the six on Main Street (always the big ones, fronts on the street) and the seven off it
   const TOWN_SPOTS = {
     MW: [-22, 13.5, 0, 1], MM: [0, 13.5, 0, 1], ME: [22, 13.5, 0, 1], SW: [-22, -13.5, PI, 1], SM: [0, -13.5, PI, 1], SE: [22, -13.5, PI, 1],
-    N1: [-26, 40, 0], N2: [0, 43, 0], N3: [26, 40, 0], S1: [-26, -40, PI], S2: [0, -43, PI], S3: [26, -40, PI], E: [49, 0, PI / 2] };
-  // who stands where (JT: the town doesn't reshuffle). Stable, doctor, barbershop and post office are built (art/blender/town.py)
-  // but not placed; swap one in here.
+    N1: [-26, 40, 0], N2: [0, 43, 0], N3: [26, 40, 0], S1: [-26, -40, PI], S2: [0, -43, PI], S3: [26, -40, PI], E: [49, 0, PI / 2],
+    // west of Main Street, behind the stairwell (2026-11-11): fronts toward the tunnel you arrive by
+    W1: [-52, 22, -PI / 2], W2: [-52, -22, -PI / 2], W3: [-50, 48, PI / 2], W4: [-50, -48, PI / 2] };
+  // who stands where (JT: the town doesn't reshuffle). All 17 are placed since 2026-11-11 (the stable, doctor, barbershop and
+  // post office went in out west); the vault (E) has one way in, the tunnel from the street's east end, so its door is the climax
   const TOWN_PLAN = { MW: 'saloon', MM: 'store', ME: 'hotel', SW: 'church', SM: 'school', SE: 'bank',
-    N1: 'marshal', N2: 'jail', N3: 'boatshed', S1: 'lil', S2: 'well', S3: 'cellar', E: 'vault' };
+    N1: 'marshal', N2: 'jail', N3: 'boatshed', S1: 'lil', S2: 'well', S3: 'cellar', E: 'vault',
+    W1: 'stable', W2: 'doctor', W3: 'barber', W4: 'post' };
   // the tunnels that can be dug: [from spot, its wall (world side), to spot or 'street', its side, waypoints between]
   const northEdges = [
     ['MW', 'N', 'N1', 'S', [[-22, 23], [-25, 28]]], ['MM', 'N', 'N2', 'S', [[0, 24], [1, 30]]], ['ME', 'N', 'N3', 'S', [[22, 23], [25, 28]]],
-    ['MW', 'W', 'N1', 'W', [[-33, 13.5], [-37, 22], [-37, 34], [-36.5, 40]]], ['ME', 'E', 'N3', 'E', [[33, 13.5], [37, 22], [37, 34], [36.5, 40]]],
+    ['MW', 'W', 'W1', 'E', [[-36, 16], [-40, 21]]], ['W1', 'N', 'N1', 'W', [[-46, 37], [-38, 40]]], ['W1', 'W', 'W3', 'W', [[-63, 26], [-63, 42], [-59, 48]]],
+    ['ME', 'E', 'N3', 'E', [[33, 13.5], [37, 22], [37, 34], [36.5, 40]]],
     ['N1', 'E', 'N2', 'W', [[-13, 41.5]]], ['N2', 'E', 'N3', 'W', [[13, 41.5]]], ['MW', 'E', 'MM', 'W', []], ['MM', 'E', 'ME', 'W', []],
     ['N1', 'N', 'N2', 'N', [[-24, 51], [-13, 53], [-3, 52]]]];
-  const flipSpot = s => ({ MW: 'SW', MM: 'SM', ME: 'SE', N1: 'S1', N2: 'S2', N3: 'S3' })[s] || s, flipSide = d => ({ N: 'S', S: 'N' })[d] || d;
+  const flipSpot = s => ({ MW: 'SW', MM: 'SM', ME: 'SE', N1: 'S1', N2: 'S2', N3: 'S3', W1: 'W2', W3: 'W4' })[s] || s, flipSide = d => ({ N: 'S', S: 'N' })[d] || d;
   const TOWN_EDGES = [...northEdges, ...northEdges.map(([a, da, b, db, w]) => [flipSpot(a), flipSide(da), flipSpot(b), flipSide(db), w.map(([x, z]) => [x, -z])]),
-    ['street', 'E', 'E', 'W', [[38, 0.6]]], ['E', 'N', 'N3', 'N', [[50, 14], [51, 30], [45, 47], [32, 51]]], ['E', 'S', 'S3', 'S', [[50, -14], [51, -30], [45, -47], [32, -51]]]];
+    ['street', 'E', 'E', 'W', [[38, 0.6]]]];   // the vault's only way in (it had back tunnels to N3 and S3 until 2026-11-11)
   const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
   const SIDE_N = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0] };
   // a building's door on one world side: where it is and which way it faces (out of the building)
@@ -749,7 +753,7 @@
       const A = a === 'street' ? { x: TOWN.STREET.x1, z: 0, nx: 1, nz: 0 } : townDoor(at[a], da), B = townDoor(at[b], db);
       const jit = way.map(([x, z]) => [x + (r() - 0.5) * 1.2, z + (r() - 0.5) * 1.2]);
       const pts = [[A.x, A.z], [A.x + A.nx * 2, A.z + A.nz * 2], ...jit, [B.x + B.nx * 2, B.z + B.nz * 2], [B.x, B.z]];
-      const t = { id: tunnels.length, edge: k, pts, crawl: r() < 0.25 ? [0.42, 0.58] : null };
+      const cr = r() < 0.25, t = { id: tunnels.length, edge: k, pts, crawl: cr && a !== 'street' ? [0.42, 0.58] : null };   // the street's tunnel to the vault stays walking height (you carry gold out through it)
       tunnels.push(t);
       if (a !== 'street') at[a].doors[da] = 't' + t.id; at[b].doors[db] = 't' + t.id;
     }
@@ -757,11 +761,11 @@
     // loot: in each building's clear cross (the furniture keeps out of it), in some tunnels, and a couple on the street
     const loot = []; let id = 0;
     for (const b of bldgs) {
-      const n = b.key === 'vault' ? 4 : b.key === 'well' ? 1 : Math.floor(rl() * 3);
+      const n = b.key === 'vault' || b.key === 'well' ? 0 : Math.floor(rl() * 2.2);
       for (let k = 0; k < n; k++) {
         const along = rl() < 0.5, u = (rl() - 0.5) * 1.6, v = (rl() - 0.5) * ((along ? b.W : b.D) - 2.4);
         const [dx, dz] = rotY(along ? v : u, along ? u : v, b.ry);
-        loot.push({ id: id++, type: b.key === 'vault' ? 'goldbar' : TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: b.x + dx, z: b.z + dz, b: b.i });
+        loot.push({ id: id++, type: TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: b.x + dx, z: b.z + dz, b: b.i });
       }
     }
     for (const t of tunnels) if (rl() < 0.4) { const p = townAlong(t.pts, 0.25 + rl() * 0.12); loot.push({ id: id++, type: TOWN_LOOT[Math.floor(rl() * TOWN_LOOT.length)], x: p[0], z: p[1] }); }
@@ -786,6 +790,108 @@
   // does an 8 ft hole at (x,z) break through? Only at the one spot (JT, 2026-09-30: the same place every time, for
   // building the level): the middle of the old town, the coordinates on the Superintendent's note. You always land in the same place.
   const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < TOWN_NOTE_R;
+
+  /* ---- what the crew has done down there, held by the server for the whole run (reset when the crew is let go) ----
+     (public/js/89-town-light.js lanterns, 89-town-story.js finds and the vault, 89-town-map.js the map.) Offline, the page
+     runs the same townApply on its own copy. */
+  // the one-off find in each building (its 'searched' checklist); the vault holds Lil's gold bars instead
+  const TOWN_SIGS = ['saloon', 'church', 'hotel', 'store', 'bank', 'stable', 'school', 'marshal', 'jail', 'post', 'boatshed', 'doctor', 'barber', 'lil', 'cellar', 'well'];
+  const TOWN_BARS = 6, TOWN_BAR_ID0 = 9900;     // Lil's gold bars; up on the lake one becomes heavy prop TOWN_BAR_ID0 + i (type 'ingot')
+  const TOWN_VAULT_STEPS = ['key', 'd1', 'd2', 'lever'];   // the bank manager's key, the two halves of the dial, the cellar's counterweight
+  const TOWN_MAP = { x0: -70, z0: -60, cell: 2, nx: 66, nz: 60 };   // the explored-map grid (town coordinates, 2 m cells)
+  const TOWN_MAP_N = TOWN_MAP.nx * TOWN_MAP.nz;
+  // every old lantern: one inside each building, two by each Main Street porch, and one on the floor in each long tunnel
+  let LAMPS = null;
+  function townLamps() {
+    if (LAMPS) return LAMPS; const L = townLayout(1), out = [];
+    for (const b of L.bldgs) {   // on a wall hook (local x right, z back; the front door is local -z)
+      const hw = b.W / 2 - 0.15, qx = (hw + 1.3) / 2, qy = (b.D / 2 - 0.15 + 1.3) / 2;
+      let lx = -hw + 0.38, lz = b.D / 4, dir = PI / 2, y = 1.55, hook = true;
+      if (b.key === 'well') { lx = -qx; lz = qy; dir = 0; y = 0.92; hook = false; }        // on a barrel (it's a cave: no wall to hang it on)
+      else if (b.key === 'marshal') { lx = hw - 0.38; dir = -PI / 2; }                      // the gun rack has the left wall
+      const [x, z] = rotY(lx, lz, b.ry); out.push({ x: b.x + x, z: b.z + z, y, ry: dir + b.ry, hook, b: b.i });
+    }
+    for (const x of [-22, 0, 22]) for (const s of [1, -1]) out.push({ x: x - 2.3, z: s * 5.75, y: 1.95, ry: s > 0 ? PI : 0, hook: true, b: -1 });   // porch posts
+    for (const t of L.tunnels) {
+      let len = 0; for (let i = 1; i < t.pts.length; i++) len += Math.hypot(t.pts[i][0] - t.pts[i - 1][0], t.pts[i][1] - t.pts[i - 1][1]);
+      if (len < 12) continue;
+      const f = t.crawl ? 0.28 : 0.5, a = townAlong(t.pts, f - 0.02), c = townAlong(t.pts, f + 0.02), dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz) || 1, nx = -dz / l, nz = dx / l, p = townAlong(t.pts, f);
+      out.push({ x: p[0] + nx * 0.85, z: p[1] + nz * 0.85, y: 0, ry: Math.atan2(-nx, -nz), hook: false, b: -1, t: t.id });
+    }
+    return (LAMPS = out);
+  }
+  // the creaky ceilings (public/js/89-town-danger.js): the middle of three long tunnels, the same every run
+  let SAGS = null;
+  function townSags() {
+    if (SAGS) return SAGS; const L = townLayout(1), len = t => { let s = 0; for (let i = 1; i < t.pts.length; i++) s += Math.hypot(t.pts[i][0] - t.pts[i - 1][0], t.pts[i][1] - t.pts[i - 1][1]); return s; };
+    const ok = L.tunnels.filter(t => !t.crawl && TOWN_EDGES[t.edge][0] !== 'street' && len(t) >= 14).sort((a, b) => len(b) - len(a) || a.id - b.id);
+    SAGS = [0, 2, 4].map(k => ok[k]).filter(Boolean).map(t => { const p = townAlong(t.pts, 0.5), a = townAlong(t.pts, 0.47), b = townAlong(t.pts, 0.53); return { x: p[0], z: p[1], ry: Math.atan2(b[0] - a[0], b[1] - a[1]), t: t.id }; });
+    return SAGS;
+  }
+  function townFresh() { return { lit: [], sigs: {}, vault: {}, bars: Array.from({ length: TOWN_BARS }, () => ({ at: 'v', held: null })), map: '', caves: {} }; }
+  // a saved or sent state, checked and filled in (an old save has none)
+  function townClean(t) {
+    const f = townFresh(); if (!t || typeof t !== 'object') return f;
+    const nL = townLamps().length;
+    f.lit = Array.isArray(t.lit) ? [...new Set(t.lit.filter(i => Number.isInteger(i) && i >= 0 && i < nL))] : [];
+    if (t.sigs && typeof t.sigs === 'object') for (const k of TOWN_SIGS) if (typeof t.sigs[k] === 'string') f.sigs[k] = t.sigs[k].slice(0, 24);
+    if (t.vault && typeof t.vault === 'object') { for (const k of TOWN_VAULT_STEPS) if (typeof t.vault[k] === 'string') f.vault[k] = t.vault[k].slice(0, 24); if (t.vault.open) f.vault.open = true; }
+    if (Array.isArray(t.bars)) t.bars.slice(0, TOWN_BARS).forEach((b, i) => { if (b && (b.at === 'v' || b.at === 'up' || (Array.isArray(b.at) && b.at.length === 2))) f.bars[i] = { at: b.at, held: null }; });
+    if (typeof t.map === 'string' && /^[0-9a-f]*$/.test(t.map)) f.map = t.map.slice(0, Math.ceil(TOWN_MAP_N / 8) * 2);
+    if (t.caves && typeof t.caves === 'object') townSags().forEach((s, i) => { if (t.caves[i] === 1 || t.caves[i] === 2) f.caves[i] = t.caves[i]; });
+    return f;
+  }
+  const mapBit = (hex, i) => { const b = parseInt(hex.substr((i >> 3) * 2, 2) || '0', 16); return (b >> (i & 7)) & 1; };
+  function mapSet(hex, cells) {   // -> [new hex, the cells that were new]
+    const n = Math.ceil(TOWN_MAP_N / 8), a = new Array(n).fill(0), fresh = [];
+    for (let i = 0; i < n; i++) a[i] = parseInt(hex.substr(i * 2, 2) || '0', 16) || 0;
+    for (const c of cells) if (Number.isInteger(c) && c >= 0 && c < TOWN_MAP_N && !((a[c >> 3] >> (c & 7)) & 1)) { a[c >> 3] |= 1 << (c & 7); fresh.push(c); }
+    return [a.map(v => v.toString(16).padStart(2, '0')).join(''), fresh];
+  }
+  const townVaultReady = v => TOWN_VAULT_STEPS.every(k => !!v[k]);
+  /* one action (a message from a digger down there) applied to the state: returns what to tell everyone, or null if it
+     doesn't apply (already done, not allowed). who = {id, n}. Pure apart from st, so the server and solo play agree. */
+  function townApply(st, m, who) {
+    if (!m || typeof m !== 'object') return null;
+    const n = String(who.n || 'Someone').slice(0, 24);
+    if (m.t === 'tlamp') {
+      const i = m.i | 0; if (!(i >= 0 && i < townLamps().length) || st.lit.includes(i)) return null;
+      st.lit.push(i); return { t: 'tlamp', i, by: n };
+    }
+    if (m.t === 'tsig') {
+      const k = String(m.k); if (!TOWN_SIGS.includes(k) || st.sigs[k]) return null;
+      st.sigs[k] = n; return { t: 'tsig', k, by: n, byId: who.id };
+    }
+    if (m.t === 'tvault') {
+      const s = String(m.s), v = st.vault; if (!TOWN_VAULT_STEPS.includes(s) || v.open || v[s]) return null;
+      if (s === 'key' && !st.sigs.bank) return null;   // nobody has the key yet
+      v[s] = n; if (townVaultReady(v)) v.open = true;
+      return { t: 'tvault', s, by: n, vault: { ...v } };
+    }
+    if (m.t === 'tbar') {
+      const i = m.i | 0, b = st.bars[i]; if (!b) return null;
+      if (m.op === 'take') { if (b.held != null || b.at === 'up' || (b.at === 'v' && !st.vault.open)) return null; b.held = who.id; }
+      else if (m.op === 'drop') { if (b.held !== who.id) return null; b.held = null; b.at = [clamp(+m.x || 0, -80, 70), clamp(+m.z || 0, -70, 70)].map(v => Math.round(v * 10) / 10); }
+      else if (m.op === 'up') { if (b.held !== who.id) return null; b.held = null; b.at = 'up'; }
+      else return null;
+      return { t: 'tbar', i, at: b.at, held: b.held, by: n };
+    }
+    if (m.t === 'tcave') {   // a creaky ceiling came down (1) or was dug clear (2: settled, it won't come down again)
+      const i = m.i | 0; if (!(i >= 0 && i < townSags().length)) return null;
+      if (m.op === 'fall' && !st.caves[i]) st.caves[i] = 1; else if (m.op === 'clear' && st.caves[i] === 1) st.caves[i] = 2; else return null;
+      return { t: 'tcave', i, v: st.caves[i], by: n };
+    }
+    if (m.t === 'tmap') {
+      if (!Array.isArray(m.c)) return null; const [hex, fresh] = mapSet(st.map, m.c.slice(0, 120)); if (!fresh.length) return null;
+      st.map = hex; return { t: 'tmap', c: fresh };
+    }
+    return null;
+  }
+  // a digger left (or climbed out some other way): drop whatever bar they carried where they were (town coordinates)
+  function townLetGo(st, id, x, z) {
+    const out = []; st.bars.forEach((b, i) => { if (b.held === id) { b.held = null; b.at = [Math.round(clamp(x, -80, 70) * 10) / 10, Math.round(clamp(z, -70, 70) * 10) / 10]; out.push({ t: 'tbar', i, at: b.at, held: null }); } });
+    return out;
+  }
 
   /* ---- the Superintendent's mood and the bad luck (after Greg's branch; public/js/82-mood.js shows and applies them) ----
      One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the bad luck rises). Day 1 is normal.
@@ -858,6 +964,7 @@
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, BADLUCK,
     TOWN, OLD_TOWN, TOWN_BREAK_DEPTH, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
+    TOWN_SIGS, TOWN_BARS, TOWN_BAR_ID0, TOWN_VAULT_STEPS, TOWN_MAP, TOWN_MAP_N, townLamps, townSags, townFresh, townClean, townApply, townLetGo, townVaultReady, mapBit,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;
 })(this);
