@@ -151,8 +151,9 @@ function hlBuild(slot,h){
   slot.h=h;slot.seen=d;slot.seenM=holeVM(h);slot.dirty=false;slot.m.visible=true;
 }
 /* a hole changed (dug, gained or lost its liner): rebuild the liners its bowl or spoil pile can reach */
-function hlDirtyNear(h){
-  for(const s of hlPool)if(s.h&&s.h!==h&&Math.hypot(s.h.x-h.x,s.h.z-h.z)<s.h.r+HL_LIP+h.r+HOLE_REACH)s.dirty=true;
+function hlDirtyNear(h,bowlOnly){   // bowlOnly: just its bowl and rim changed (each scoop), not its spoil heap: a shorter reach
+  const reach=bowlOnly?h.r*1.4+HOLE_BERM:h.r+HOLE_REACH;
+  for(const s of hlPool)if(s.h&&s.h!==h&&Math.hypot(s.h.x-h.x,s.h.z-h.z)<s.h.r+HL_LIP+reach)s.dirty=true;
 }
 /* backstop: dark soil well below the deepest hole (hidden while you're inside a tent room, which sits lower still). Where two liners meet, rounding can leave a hairline between
    them; through it you see this, a dark crease, instead of the sky (the terrain under a lined hole is cut away). */
@@ -179,7 +180,7 @@ function updateHoleLiners(dt){
     for(const h of dropped)hlDirtyNear(h);   // its bowl is now part of its neighbours' liners
     for(const h of added)hlDirtyNear(h);     // and a new liner's bowl comes out of theirs
   }
-  for(const s of hlPool)if(s.h&&(Math.abs(holeVD(s.h)-s.seen)>0.001||Math.abs(holeVM(s.h)-s.seenM)>0.002)){s.dirty=true;hlDirtyNear(s.h)}
+  for(const s of hlPool)if(s.h){const dm=Math.abs(holeVM(s.h)-s.seenM)>0.002;if(dm||Math.abs(holeVD(s.h)-s.seen)>0.001){s.dirty=true;hlDirtyNear(s.h,!dm)}}
   for(let i=0;i<HL_N;i++){
     const s=hlPool[i],u=hlHoleU.value[i];
     if(s.h){const h=s.h;if(s.dirty)hlBuild(s,h);u.set(h.x,h.z,holeReff(h),holeVD(h));hlKU.value[i*2].set(h.k[0],h.k[1],h.k[2],h.k[3]);hlKU.value[i*2+1].set(h.k[4],h.k[5],h.k[6],h.k[7])}else u.set(0,0,0,0);
