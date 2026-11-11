@@ -63,11 +63,14 @@ function updatePlayer(dt){
   const digging=digHeld&&!uiOpen()&&S.carry==null;
   P.moving=false;
   if(digging){
-    P.fa=Math.atan2(fx,fz);P.digT+=dt;const iv=tune('dig.time');P.digPh=(P.digT%iv)/iv;
-    if(P.digT>=iv){P.digT-=iv;scoop()}
+    /* the scoop lands when the blade bites (DIG_BITE: the Scoop clip's plant), not at the top of the lift, so the
+       ground gives as you lever it and the dirt you see on the blade is the dirt you dug (47-digfeel.js) */
+    P.fa=Math.atan2(fx,fz);const iv=tune('dig.time');if(!(P.digT>=0))P.digT=iv*DIG_START;P.digT+=dt;
+    if(P.digT>=iv){P.digT-=iv;P.bit=false}P.digPh=P.digT/iv;
+    if(!P.bit&&P.digPh>=DIG_BITE){P.bit=true;scoop()}
     P.anim=2;
   }else{
-    P.digT=0.3;
+    P.digT=-1;P.bit=false;   // the next press starts at the plant
     if(ml>0.1){
       mx/=Math.max(1,ml);mz/=Math.max(1,ml);let sp=(P.crouch?tune('move.crouch'):sprint?tune('move.sprint'):tune('move.walk'))*Math.min(1,ml);if(GRAB_ST.id!=null||ROPE_ST.taut)sp=grabSpeed(sp);if(S.up.grav)sp*=tune('gear.gravSlow');if(hoverOn())sp*=tune('gear.hoverSpeed');   // holding heavy loot (84-grab.js)
       let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
@@ -137,7 +140,7 @@ function updateCamera(dt){
       const k=tune('fp.bob'),h=me.fpEyeH??1.55,bx=P.x-Math.sin(P.yaw)*FP_EYE_FWD,bz=P.z-Math.cos(P.yaw)*FP_EYE_FWD,by=P.y+(P.crouch?h*0.66:h);
       camera.position.set(lerp(bx,e.x,k),lerp(by,e.y,k),lerp(bz,e.z,k))}
     else camera.position.set(P.x,P.y+(P.crouch?1.0:1.55),P.z);   // (the box camper, before the model loads)
-    camera.rotation.set(-P.pitch,P.yaw,0,'YXZ');return}
+    const dip=digDip();camera.position.y-=dip;camera.rotation.set(-P.pitch-dip*0.6,P.yaw,0,'YXZ');return}   // a few mm down as the blade bites (47-digfeel.js)
   if(me&&me.fpOn)fpBody(false);
   // riding a giant tumbleweed: pull way back so the camera isn't inside the ball and you can see yourself go round
   const cp=Math.cos(P.pitch),dist=inTent()||S.inTown?3.2:tbSt===1?Math.max(5.4,tbRideR*2.6):5.4;

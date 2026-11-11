@@ -41,7 +41,7 @@ const _alWrap=a=>{a%=6.283185307;return a>3.14159265?a-6.283185307:a<-3.14159265
    yaw being a heading like p.g.rotation.y), or the nearest person in front of them, or an idle drift */
 function aliveTarget(p,A,dt){
   const g=p.g,by=g.rotation.y;
-  if(p===me&&S.started){A.ty=_alWrap(Math.atan2(-Math.sin(P.yaw),-Math.cos(P.yaw))-by);A.tp=P.pitch;p.tired=clamp(1-S.stam/35,0,1);return}   // you: where your camera points
+  if(p===me&&S.started){A.ty=_alWrap(Math.atan2(-Math.sin(P.yaw),-Math.cos(P.yaw))-by);A.tp=P.pitch;p.tired=Math.max(clamp(1-S.stam/35,0,1),digEffort()*0.6);return}   // you: where your camera points
   if(p.look){A.ty=_alWrap(p.look.yaw-by);A.tp=p.look.pitch;return}
   let best=null,bd=ALIVE.see;g.getWorldPosition(_alW);
   const consider=(x,y,z)=>{const dx=x-_alW.x,dz=z-_alW.z,d=Math.hypot(dx,dz);if(d<0.4||d>=bd)return;const ry=_alWrap(Math.atan2(dx,dz)-by);if(Math.abs(ry)>1.75)return;bd=d;best=[ry,Math.atan2(y-(_alW.y+1.55),d)]};

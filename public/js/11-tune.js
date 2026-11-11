@@ -144,6 +144,13 @@ const TUNE_DEFS=[
   {key:'fp.bob',tab:'Player',label:'First person: how much your view follows your head (0 steady, 1 all of it)',def:0.5,kind:'lin',span:0.5,min:0,max:1,unit:''},
   {key:'dig.time',tab:'Player',label:'Time per shovel scoop',def:0.42,kind:'mul',range:3,unit:' s'},
   {key:'dig.depth',tab:'Player',label:'How deep each scoop goes',def:1,kind:'mul',range:3,unit:'×'},
+  // ---- how digging feels (47-digfeel.js): looks and sounds only, nothing here changes how fast you dig
+  {key:'dig.dip',tab:'Player',label:'Digging: your view dips this much on each bite (first person; 0 = off)',def:0.008,kind:'lin',span:0.008,min:0,max:0.04,unit:' m'},
+  {key:'dig.dust',tab:'Player',label:'Digging: how much dust each scoop kicks up',def:1,kind:'mul',range:3,zero:true,unit:'×'},
+  {key:'dig.thud',tab:'Player',label:'Digging: the low thud as the blade bites',def:1,kind:'mul',range:3,zero:true,unit:'×'},
+  {key:'dig.clump',tab:'Player',label:'Digging: size of the dirt on the blade',def:1,kind:'mul',range:2,zero:true,unit:'×'},
+  {key:'dig.carve',tab:'Player',label:'Excavator: how long the ground takes to give under the bucket',def:0.5,kind:'mul',range:2.5,unit:' s'},
+  {key:'dig.pour',tab:'Player',label:'Excavator: how long a dumped load takes to pour out',def:1,kind:'mul',range:2.5,unit:' s'},
   // ---- ragdolls (26-ragdoll.js) and what throws you around
   {key:'rag.flop',tab:'Ragdoll',label:'How floppy arms and legs are',def:1,kind:'mul',range:3,unit:'×'},
   {key:'rag.flail',tab:'Ragdoll',label:'Arm flailing in the air',def:1,kind:'mul',range:4,zero:true,unit:'×'},

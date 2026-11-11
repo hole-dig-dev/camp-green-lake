@@ -48,7 +48,7 @@ let bucketWarnT=0;
 function fillBucket(dd,mult){   // dd: metres you just dug; a 5 ft hole is one hole of sand. mult: how rich this sand is (sim.js payMult; 48-paydirt.js mixes it in)
   if(!(dd>0))return;const was=S.bucket,max=bucketMax(),c=carrier();
   if(!c){const now=performance.now();if(now-noCarrierT>25000){noCarrierT=now;toast('That sand\'s just going on the pile. A gold pan from the Company Store (10 gold) lets you take it to the water drums and wash it for gold.','',5500)}return}
-  if(c)sandMix('bucket',Math.min(max-S.bucket,dd/FIVE_FT),mult);   /* what fits goes in at its own richness (48-paydirt.js) */
+  if(c)sandMix('bucket',Math.min(max-S.bucket,dd/FIVE_FT),mult);if(S.bucket<max-1e-6)digFilled();   /* what fits goes in at its own richness (48-paydirt.js) */
   S.bucket=Math.min(max,S.bucket+dd/FIVE_FT);
   if(S.bucket>=max-1e-6&&was<max-1e-6){sfx.coin();toast(c==='pan'?'Your pan\'s full. Wash it at the water drums (F).':`Your bucket's full (${max} holes of sand). Take it back to the sifter in camp.`,'gold',5000)}
   else if(S.bucket>=max-1e-6){const now=performance.now();if(now-bucketWarnT>9000){bucketWarnT=now;toast(c==='pan'?'Your pan\'s full. Wash it at the water drums.':'Your bucket\'s full. The sand\'s just going on the pile. Sift it at camp.','',3000)}}
@@ -107,10 +107,10 @@ function scoop(){
     sfx.thud();return;
   }
   const step=(!S.up.shovel?SIM.HANDS.scoop:S.up.spade?0.15:0.088)*tune('dig.depth')*(S.zachT>0?2:1)*(myLevel()>=2?1.1:1);addXP(0.3);
-  const d0=h.d;h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0,SIM.payMult(h.x,h.z,h.d));payDug(h);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
+  const d0=h.d,v0=holeVD(h);h.d=Math.min(maxD,h.d+step);fillBucket(h.d-d0,SIM.payMult(h.x,h.z,h.d));payDug(h);if(inVein(h.x,h.z))veinPay((h.d-d0)/FIVE_FT);   /* a rich vein (88-vein.js) */
   if(Math.random()<(S.up.shovel?SIM.SHOVEL_FLECK:SIM.HANDS.fleck)*fleckMult(h.x,h.z)){S.seeds+=1;foundGold(1);sfx.coin();const n=performance.now();if(n-(scoop.fleckT||0)>4000){scoop.fleckT=n;toast('A fleck of gold! (+1)','gold',1800)}logEv('fleck',{})}   // the odd fleck you spot as you dig
   touchHole(h);h.mine=true;wsSend({t:'dig',x:h.x,z:h.z,d:+h.d.toFixed(2)});townCheckBreach(h);   // 5 ft at the old town's spot: the floor gives way (89-town.js)
-  const y=groundAt(h.x,h.z)+0.4;puff(h.x+(Math.random()-0.5)*0.6,y,h.z+(Math.random()-0.5)*0.6,h.mx,h.mz,FP?2:6);sfx.scoop();throwClods(h,2);payGlint(h,y);   // clods arc onto the spoil pile (46-holes.js)
+  sfx.scoop();digBite(h,v0,!S.up.shovel);   // the ground gives as the blade levers, the dirt comes up on it and is tossed onto the pile (47-digfeel.js)
   if(h.own&&!h.paid&&h.d>=FIVE_FT){h.paid=true;S.holesDone++;addXP(10);countUp('holes',25,'shovelhead');toast(`Hole #${S.holesDone} finished. Bucket: ${Math.floor(S.bucket*10)/10} of ${bucketMax()} holes of sand.`,'good');sfx.thud()}
   for(const it of items){
     if(it.found)continue;const dx=it.x-h.x,dz=it.z-h.z;

@@ -124,11 +124,12 @@ function excPoseNodes(M){
     if(n.BoomRamA)n.BoomRamA.rotation.x=-th;if(n.BoomRamB)n.BoomRamB.rotation.x=-(th-b)}
   {const[qz,qy]=rot2(EXC_STICK_RAM[0][0],EXC_STICK_RAM[0][1],b),[hz,hy]=rot2(EXC_STICK_RAM[1][0],EXC_STICK_RAM[1][1],b-s),th=Math.atan2(A.ey+hy-EXC_SH[1]-qy,A.ez+hz-EXC_SH[2]-qz);
     if(n.StickRamA)n.StickRamA.rotation.x=-(th-b);if(n.StickRamB)n.StickRamB.rotation.x=-(th-(b-s))}
-  if(n.BucketFill){const f=clamp(M.load/MACH.EXC_BUCKET,0,1);n.BucketFill.visible=f>0.01;n.BucketFill.scale.setScalar(0.4+0.6*Math.sqrt(f))}
+  if(n.BucketFill){const f=clamp((M.fillV??M.load)/MACH.EXC_BUCKET,0,1);   // fillV: the sand you see, rising as it fills (47-digfeel.js)
+   n.BucketFill.visible=f>0.01;n.BucketFill.scale.setScalar(0.4+0.6*Math.sqrt(f))}
   if(n.Cab)n.Cab.visible=!(S.inMach==='exc'&&FP&&machMine(M));   // looking out of it: no cab in the way
 }
 function dumpPoseNodes(M){
-  const n=M.n;if(!n.Bed)return;let tip=0,f=clamp(M.load/MACH.DUMP_CAP,0,1);
+  const n=M.n;if(!n.Bed)return;let tip=0,f=clamp((M.fillV??M.load)/MACH.DUMP_CAP,0,1);
   if(M.tipT>=0){const t=M.tipT,u=t<DUMP_TIP_UP?t/DUMP_TIP_UP:t<DUMP_TIP_UP+DUMP_TIP_HOLD?1:Math.max(0,1-(t-DUMP_TIP_UP-DUMP_TIP_HOLD)/DUMP_TIP_DOWN);
     tip=DUMP_TIP_MAX*u*u*(3-2*u);const go=clamp((t-DUMP_TIP_UP*0.5)/(DUMP_TIP_HOLD+DUMP_TIP_UP*0.5),0,1);f=Math.max(f,clamp(M.tipLoad/MACH.DUMP_CAP,0,1)*(1-go))}   // the load slides out as it goes up
   n.Bed.rotation.x=-tip;
@@ -283,7 +284,7 @@ function excPress(){
   const M=MACHS.exc;
   if(M.load>0.05&&!KEYS.shift){EXCI.phase='carry';return}   // a load aboard: this hold ends in a dump (Shift: add another scoop instead)
   const T=excTeeth(M),why=excPlantWhy(M,T);if(why){EXCI.phase='idle';if(why!=='wait')machWarn(why);return}
-  EXCI.phase='planted';EXCI.pull=0;EXCI.t0=performance.now();EXCI.px=T.x;EXCI.pz=T.z;sfx.thud();puff(T.x,groundAt(T.x,T.z)+0.2,T.z,T.x,T.z,3);
+  EXCI.phase='planted';EXCI.pull=0;EXCI.t0=performance.now();EXCI.px=T.x;EXCI.pz=T.z;sfx.thud();digDust(T.x,groundAt(T.x,T.z)+0.15,T.z,M.x-T.x,M.z-T.z,2,0.35,0.28);   // the teeth go in (47-digfeel.js)
 }
 function excRelease(){
   const M=MACHS.exc;
@@ -306,7 +307,6 @@ function excScooped(m){
   const M=MACHS.exc;if(EXCI.phase==='scooping')EXCI.phase='idle';
   if(!m.ok){const t={full:'The bucket\'s full.',reach:'Too far out.',close:'Too close to the tracks.',camp:'No digging in camp or by the fence.',deep:'That\'s as deep as it goes here (8 feet). Move along.',wait:''}[m.why];if(t)machWarn(t);EXCI.next=0;return}
   M.aim[3]=1;sfx.scoop();setTimeout(()=>sfx.scoop(),120);payDug({x:EXCI.px,z:EXCI.pz});addXP(1);
-  const y=groundAt(EXCI.px,EXCI.pz);for(let i=0;i<3;i++)puff(EXCI.px,y+0.3,EXCI.pz,EXCI.px+(Math.random()-0.5),EXCI.pz+(Math.random()-0.5),5);
   if(!EXCI.told){EXCI.told=true;toast('A bucket of sand. Hold left, swing it over the dump truck\'s bed (or the sifter, or anywhere for a pile), let go. A flick throws it.','good',5000)}
   logEv('excScoop',{v:num(m.v,0,9,0),rich:num(m.rich,0,9,1)});
 }
@@ -340,8 +340,8 @@ function machPay(holes,rich,src){
   logEv('machPay',{src,holes:+holes.toFixed(2),pay:+rich.toFixed(2)});
 }
 /* where the bucket went (everyone): a puff and a thump there */
-function machFx(m){const x=num(m.x,-600,600,0),z=num(m.z,-600,600,0);if(!nearCam(x,z,80))return;const y=groundAt(x,z);
-  for(let i=0;i<4;i++)puff(x,y+(m.to==='dump'?2.6:0.6),z,x+(Math.random()-0.5)*1.5,z+(Math.random()-0.5)*1.5,7);sfx.thud();sfx.scoop()}
+function machFx(m){const x=num(m.x,-600,600,0),z=num(m.z,-600,600,0);if(!nearCam(x,z,80))return;
+  digPour(m);sfx.thud();sfx.scoop();setTimeout(()=>sfx.scoop(),260)}   // a pour from the bucket, not a pop (47-digfeel.js)
 
 /* ---- network (65-net.js) ---- */
 function machMsg(m){
