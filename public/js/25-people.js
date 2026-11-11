@@ -214,6 +214,7 @@ function animModel(p,mode,dt,digPhase,speed){
   else if(a&&(name==='Walk'||name==='Run'))a.timeScale=speed||1;
   stepMixer(p,dt);
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
+  if(p!==me)digClumpPose(p,mode===2?digPhase:-1,mode===2,!!p.noShovel);   // dirt on the blade from the lever to the toss (47-digfeel.js)
   if(p.held||p.heldW)heldPose(p,dt);   // walkie-talkie / tonic / first-aid kit in the left hand (86-walkie.js)
   backsackLook(p);   /* the clear backsack, if they wear one (86-backsack.js) */
   alivePose(p,dt);   /* looking, blinking, breathing, talking: on top of whatever clip just played (27-alive.js) */

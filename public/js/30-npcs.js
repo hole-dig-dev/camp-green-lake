@@ -366,9 +366,10 @@ function updateBots(dt,now){
     }
     if(b.state==='dig'){
       const iv=b.d.rate>0.1?0.7:0.95,prev=b.dph;b.dph+=dt/iv;
-      /* dirt leaves the shovel at the top of the toss and lands on this hole's pile */
-      if(prev<0.72&&b.dph>=0.72&&nearCam(b.hole.x,b.hole.z,35)){const ux=b.hole.mx-g.position.x,uz=b.hole.mz-g.position.z,ul=Math.hypot(ux,uz)||1;puff(g.position.x+ux/ul*0.5,g.position.y+1.3,g.position.z+uz/ul*0.5,b.hole.mx,b.hole.mz,5)}
-      if(b.dph>=1){b.dph-=1;b.hole.d=Math.min(crewDepth(b),b.hole.d+crewMoraleMul(b)*b.d.rate*1.25*(crewHas(b,'shovel')?1:0.35)*(crewHas(b,'spade')?1.6:1)*(b.water<=0||b.stam<15?0.5:1));/* parched or worn out: half speed */touchHole(b.hole)}
+      /* the ground gives as the blade bites, and the dirt leaves the blade in the toss (47-digfeel.js) */
+      if(prev<DIG_TOSS&&b.dph>=DIG_TOSS)digCrewToss(b);
+      if(b.dph>=1)b.dph-=1;
+      if(prev<DIG_BITE&&b.dph>=DIG_BITE){const v0=holeVD(b.hole);b.hole.d=Math.min(crewDepth(b),b.hole.d+crewMoraleMul(b)*b.d.rate*1.25*(crewHas(b,'shovel')?1:0.35)*(crewHas(b,'spade')?1.6:1)*(b.water<=0||b.stam<15?0.5:1));/* parched or worn out: half speed */touchHole(b.hole);digCrewBite(b.hole,v0)}
       /* stand in the hole with the dirt pile on the throwing side, and sink as it gets deeper */
       const ux=b.hole.mx-b.hole.x,uz=b.hole.mz-b.hole.z,ty=Math.atan2(-uz,ux);
       let dr=ty-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*Math.min(1,dt*5);
