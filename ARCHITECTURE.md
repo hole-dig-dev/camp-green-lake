@@ -69,6 +69,10 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/84-coop.js` | levels, team quota, heavy loot, dropped sacks, helping friends, pings/chat, flashlight, co-op tick |
 | `public/js/86-voice.js` | WebRTC proximity voice chat and positional audio |
 | `public/js/87-excavator.js` | the Company's machines: the excavator (tracks, slewing arm on springs, the scoop gesture, dumping) and the dump truck (bed load, tipping at the sifter); server side `machOp`/`excScoopS` in server.js, shared numbers `SIM.MACH` |
+| `public/js/89-town.js` | the buried town of Marlow's Landing: breaking in, building it (merged static pieces), walking it, shafts/well/stairwell, the crew's shared town state (`TST`, sim.js `townApply`) |
+| `public/js/89-town-light.js` | the town's light and air: the flashlight as a soft cone underground, daylight/moonlight down every opening, lanterns the crew lights for good, dust, falling sand, room tone, creaks, footsteps on boards |
+| `public/js/89-town-map.js` | the town map that draws itself as the crew explores (minimap and J field map underground) and the checklist panel |
+| `public/js/89-town-story.js` | a find and a story scrap in every building, Lil's vault (key, dial, counterweight) and her gold bars carried up to the lake |
 | `public/js/90-loop.js` | the requestAnimationFrame main loop |
 | `public/js/95-pause.js` | pause menu, settings, key rebinding; then the final session resume and debug exports (must stay last) |
 

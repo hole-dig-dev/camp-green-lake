@@ -34,14 +34,7 @@ JOBS = {
   'TentRoomSmall': (None, [('rule0', '1. DIG', 0.05, 'Anton', 0.006, 1.0, 1.0), ('rule1', '2. THE COMPANY THANKS YOU', 0.05, 'Anton', 0.006, 1.0, 1.0)]),
   'ShowerBlock': (None, [('signtxt', 'SHOWERS - 10 CENTS', 0.16, 'Anton', 0.006, 1.0, 1.0)]),
  },
- 'town.blend': {
-  'TownBldg_marshal': (None, [('dstxt', "MARSHAL'S OFFICE", 0.2, 'Anton', 0.006, 1.0, 1.0)]),
-  'TownBldg_boatshed': (None, [('dstxt.003', 'BOAT SHED', 0.2, 'Anton', 0.006, 1.0, 1.0), ('boattxt.001', 'ROYAL FLUSH', 0.18, 'Anton', 0.006, 1.0, 1.25)]),
-  'TownBldg_lil': (None, [('dstxt.006', "LIL'S HOUSE", 0.2, 'Anton', 0.006, 1.0, 1.0), ('heart.001', 'L. M.', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
-  'TownBldg_cellar': (None, [('dstxt.007', 'ROOT CELLAR', 0.2, 'Anton', 0.006, 1.0, 1.0)]),
-  'TownBldg_vault': (None, [('dstxt.008', "LIL'S VAULT", 0.2, 'Anton', 0.006, 1.0, 1.0), ('lmtxt', 'LM', 0.5, 'Anton', 0.006, 1.0, 1.1)]),
-  'TownBldg_school': (None, [('chalk2.001', 'NO GAMBLING', 0.2, 'Anton', 0.006, 1.0, 1.25)]),
- },
+ 'town.blend': {},   # done; town.py now builds the new lettering itself (door name boards since 2026-11-11, so the old objects are gone)
  'gear.blend': {
   'SodaMachine': (None, [('brand_drywater', 'DRYWATER', 0.113, 'Anton', 0, 1.0, 1.0)]),
  },
