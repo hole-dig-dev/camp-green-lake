@@ -22,6 +22,13 @@ lights and floor.
 
 | `footwear.blend` | Ten shoes and ten boots, both feet per scene, weighted to the original shin bones; footwear-only exports in `public/models/footwear/` | `footwear_options.py` |
 
+The camp's rooms (`BunkRoomA`..`BunkRoomD`, `SuptRoom2`, 2026-11-11) are built straight to GLB, headless, by `camp.py`
+with its small kit `camp_kit.py` (`~/blender/blender -b --factory-startup --python art/blender/camp.py [-- --only BunkRoomD]`).
+Every number there is the game's room-local coordinate, so it reads straight against `ROOM_LAYOUT` in
+`public/js/20-world.js` (where the bunks, the furniture models, the solid footprints and the room's lights are). They
+replace the old hall-sized `TentRoomSmall` / `TentRoomCrew` / `SuptRoom` rooms (`interiors.py`, kept for the record).
+Materials named `cgl_daylight`, `cgl_lampglow`, `cgl_stoveglow` are lit by the game (`public/js/47-camplight.js`).
+
 The Company's machines (`Excavator.glb`, `DumpTruck.glb`) are built straight to GLB, with no .blend, by `machines.py` (`~/blender/blender -b --factory-startup --python art/blender/machines.py`): one node per moving part, its origin on its hinge, for `public/js/87-excavator.js`.
 
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running

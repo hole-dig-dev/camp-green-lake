@@ -152,7 +152,7 @@ function updateCamera(dt){
   }
   if(S.inTown){[cx,cz]=townCamPull(cx,cz);cy=clamp(cy,TW.Y+0.5,TW.Y+Math.max(0.9,townCeil(cx,cz)-0.35))}   // the buried town: under its ceiling, in front of its walls (89-town.js)
   else cy=Math.max(cy,(inTent()?TENT_FLOOR_Y:groundAt(cx,cz))+0.5);
-  if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+2.7);   // keep the camera under the interior ceiling
+  if(inTent())cy=Math.min(cy,TENT_FLOOR_Y+(TENTS[S.tent].camY||2.7));   // keep the camera under the room's eaves / ceiling
   const k=1-Math.exp(-dt*14);camera.position.x+=(cx-camera.position.x)*k;camera.position.y+=(cy-camera.position.y)*k;camera.position.z+=(cz-camera.position.z)*k;
   camera.lookAt(P.x,P.y+1.35,P.z);
 }

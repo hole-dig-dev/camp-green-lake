@@ -214,7 +214,7 @@ async function main() {
       const c = window.__cgl;
       c.P.x = 0; c.P.z = 47 - c.TENTS[2].hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
       c.use();
-      const d = { inside: c.S.tent === 2, width: c.TENTS[2].roomW * 2, depth: c.TENTS[2].roomD * 2 };
+      const d = { inside: c.S.tent === 2, width: c.TENTS[2].roomW * 2, depth: c.TENTS[2].roomD * 2, outW: c.TENTS[2].hw * 2, outD: c.TENTS[2].hd * 2 };
       c.exitTent();
       c.P.x = -30; c.P.z = 45 - c.TENTS[4].hd - 1.3; c.P.y = c.groundAt(c.P.x, c.P.z);
       c.use();
@@ -225,9 +225,11 @@ async function main() {
       c.P.yaw = 0; // the digging check below faces -z
       return { d, office, outside: c.S.tent === null };
     });
-    assert(rooms.d.inside && rooms.d.width >= 18 && rooms.d.depth >= 16, 'Bunk D must open into a broad walkable room');
+    // the room is the size of the bunkhouse you walked into (2026-11-11: it used to be a hall three times the tent's size),
+    // and still roomy enough to walk round the bunks and the card table
+    assert(rooms.d.inside && rooms.d.width >= 6.5 && rooms.d.depth >= 9.5 && rooms.d.width <= rooms.d.outW + 1 && rooms.d.depth <= rooms.d.outD + 1, 'Bunk D must open into a walkable room the size of the bunkhouse');
     assert(rooms.office.inside && rooms.office.spot === 'office' && rooms.outside, "Superintendent's office must be enterable, usable and exitable");
-    record('large Bunk D and Superintendent office work', true);
+    record('Bunk D and Superintendent office work', true);
 
     const fence = await page1.evaluate(() => {
       const c = window.__cgl;

@@ -14,6 +14,11 @@ for(const t of MESS_TABLES)for(const s of[-1,1])for(const dx of[-0.7,0.7])   // 
   SEATS.push({x:t.x+dx,z:t.z+s*0.8,y:0.47,h:s>0?Math.PI:0,out:[0,s*0.8],tent:null,what:'the bench'});
 for(const[bx,bz]of[[-12,42.3],[-26.5,39.2]])for(const dx of[-0.45,0.45])   // the yard benches (23-models.js CAMP_PROPS), facing the yard
   SEATS.push({x:bx+dx,z:bz,y:0.47,h:Math.PI,out:[0,-0.8],tent:null,what:'the bench'});
+for(const l of FIRE_LOGS)for(const k of[-0.45,0.45]){   // the log benches round the fire pit (24-yard.js), facing the fire
+  const tx=-Math.sin(l.a),tz=Math.cos(l.a);
+  SEATS.push({x:l.x+tx*k,z:l.z+tz*k,y:0.42,h:Math.atan2(-Math.cos(l.a),-Math.sin(l.a)),out:[Math.cos(l.a)*0.8,Math.sin(l.a)*0.8],tent:null,what:'the log'});
+}
+SEATS.push({x:1.85-0.4,z:47-5.2-0.38,y:0.47,h:Math.PI,out:[0,-0.8],tent:null,what:'the bench'},{x:1.85+0.4,z:47-5.2-0.38,y:0.47,h:Math.PI,out:[0,-0.8],tent:null,what:'the bench'});   // Bunk D's porch bench
 {
   const ti=TENTS.indexOf(BUNK_D),cx=BUNK_D.table.x,cz=BUNK_D.table.z+1.75;   // the card table's centre (20-world.js)
   for(const[sx,sz]of[[-1.7,0],[1.7,0],[0,-1.7],[0,1.7]])
