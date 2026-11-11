@@ -220,7 +220,8 @@ let hurtFx=0,hurtHoldT=0;
 const HURT_HOLD=0.18,HURT_DECAY=1/0.5;
 function hurt(n,title,text,kind){
   if(GOD)return;
-  if(S.inTruck&&TRUCK_SEATS[S.inTruck].hide)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
+  if(me&&n>2)aliveFlinch(me,n/35);   /* a wince you and your friends can see (27-alive.js) */
+  if(S.inTruck&&TRUCK_SEATS[S.inTruck].cab)return;   // in the pickup's cab: nothing gets at you (JT); the tailgate is open to the elements
   n*=tune('dmg.all')*tuneOr(title==='Gila hatchling'?'dmg.Lizard hatchling':'dmg.'+title,1);   // the slider's saved key keeps the hatchling's old name   // the tester's damage sliders (11-tune.js); title names the source
   if(!S.started||S.ko||n<=0)return;
   afflict(kind||'injury',n);S.hurtT=0;if(kind==='poison')S.poisonHoldT=tune('aff.poisonHold');hurtFx=Math.min(1,hurtFx+0.35+n/60);hurtHoldT=HURT_HOLD;sfx.hurt(n);   // poison hold: a swarm stacks up, one bite still fades

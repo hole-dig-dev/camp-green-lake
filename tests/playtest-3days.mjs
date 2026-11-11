@@ -21,7 +21,14 @@ page.on('pageerror', e => errs.push('PAGEERR ' + e.message)); page.on('console',
 const ev = (f, a) => page.evaluate(f, a), sleep = ms => page.waitForTimeout(ms);
 const st = () => ev(() => ({ day: RUN.day, hour: hourOf(clockT()), gold: S.seeds, quota: RUN.quota, sand: S.bucket, max: bucketMax(), water: S.water / waterMax(), ko: !!S.ko, x: P.x, z: P.z, inCamp: inCamp(P.x, P.z), shovel: !!S.up.shovel, bucket: !!S.up.bucket, spade: !!S.up.spade, hp: S.hp }));
 const log = async (what, ok = true) => { const s = await st(); console.log(`${ok ? 'ok  ' : 'FAIL'} d${s.day} ${String(Math.floor(s.hour)).padStart(2, '0')}:${String(Math.floor(s.hour % 1 * 60)).padStart(2, '0')} gold ${String(s.gold).padStart(3)}/${s.quota} sand ${s.sand.toFixed(1)}/${s.max} hp ${Math.round(s.hp)}  ${what}`); if (!ok) failed++; };
-async function recover() { let s = await st(); if (!s.ko) return false; kos++; await log('knocked out: waiting to get back up'); for (let i = 0; i < 120 && (await st()).ko; i++) { if (i === 20) await page.keyboard.press('Enter'); await sleep(1000); } return true; }
+async function recover() {                                         // knocked out: say why, wait to be back on your feet; report if it does not happen
+  let s = await st(); if (!s.ko) return false; kos++;
+  const why = await ev(() => `"${(document.querySelector('#koTitle') || {}).textContent}: ${((document.querySelector('#koText') || {}).textContent || '').slice(0, 90)}" ko=${(+S.ko).toFixed(1)} tent=${inTent()} town=${!!S.inTown} ui=${uiOpen()} trapped=${typeof isTrapped === 'function' && isTrapped()} sink=${typeof inSinkhole === 'function' && inSinkhole()} truck=${S.inTruck} others=${typeof othersOnline === 'function' && othersOnline()}`);
+  await log('knocked out ' + why); const t0 = Date.now();
+  while (Date.now() - t0 < 60000 && (await st()).ko) await sleep(1000);
+  if ((await st()).ko) { await log('STILL DOWN after 60 s: ' + await ev(() => `ko=${(+S.ko).toFixed(2)} hp=${S.hp} paused=${typeof PAUSE !== 'undefined' && PAUSE.open} ui=${uiOpen()} started=${S.started} overlay=${!document.querySelector('#ko').hidden}`), false); await ev(() => window.__cgl.runCommand('respawn')); await sleep(1500); }
+  return true;
+}
 async function walkTo(x, z, maxS = 60) {
   const t0 = Date.now(); await page.keyboard.down('w'); await page.keyboard.down('Shift'); let d = 99, lastD = 999, stuck = 0;
   while (Date.now() - t0 < maxS * 1000) {
