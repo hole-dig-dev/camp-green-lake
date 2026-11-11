@@ -108,6 +108,7 @@ for ax in (0,1):
             loc=[x*(C/2-0.05),x*(C/2-0.05),C/2];loc[ax]=sgn*(C/2);size=[0.07,0.07,C];size[ax]=0.05
             box(f'post{ax}{sgn}{x}',tuple(size),tuple(loc),('wood','wood',0.9),bevel=0.008,parent=r)
 text('stencil','DRC',(0,-C/2-0.005,0.5),0.22,('ink','ink',0.9),fontname='BigShouldersStencilDisplay',extrude=0.002,parent=r)
+text('stencil_back','DRC',(0,C/2+0.005,0.5),0.22,('ink','ink',0.9),fontname='BigShouldersStencilDisplay',extrude=0.002,rot=(math.pi/2,0,math.pi),parent=r)   # both faces, so a stacked crate reads either way
 studio(elev=22,azim=-35,lens=50);frame(margin=1.25);print('crate',tris());render()
 
 # ---------- WaterDrum: 55-gallon steel drum with ribs and a bung ----------

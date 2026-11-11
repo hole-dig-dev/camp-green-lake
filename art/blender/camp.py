@@ -537,8 +537,10 @@ def bunkhouse(letter, W, D, crew=False):
     for y in (0.45, 1.1, 1.75): a.box(-0.49, 0.49, H0 + y, H0 + y + 0.12, -Z - 0.05, -Z - 0.03, tim)
     a.box(0.32, 0.4, H0 + 0.98, H0 + 1.06, -Z - 0.08, -Z - 0.03, C['brass'])
     for k, (y, d) in enumerate(((0.15, 0.62), (PLAT, 0.32))): a.box(-0.75, 0.75, 0, y, -Z - d, -Z, boardd if k else board)
-    for sx in (-1, 1): a.tube((sx * 0.85, H0 + 2.55, -Z - 0.95), (sx * 0.85, 0, -Z - 0.95), 0.04, tim, 6)
-    a.boxc(0, H0 + 2.5, -Z - 0.5, 2.0, 0.04, 1.1, fly, rx=-0.18)
+    # the awning drops steeply from the wall (rx -0.35, its wall edge still at H0 + 2.6): flatter, it hid the lower half of the
+    # gable letter from the path in front of the door (Bunk D's above all, the path runs closest to its door)
+    for sx in (-1, 1): a.tube((sx * 0.85, H0 + 2.27, -Z - 0.95), (sx * 0.85, 0, -Z - 0.95), 0.04, tim, 6)
+    a.boxc(0, H0 + 2.41, -Z - 0.5, 2.0, 0.04, 1.1, fly, rx=-0.35)
     a.box(-0.06, 0.06, H0 + 2.2, H0 + 2.32, -Z - 0.25, -Z, C['iron'])
     a.cyl('y', 0, -Z - 0.25, 0.09, H0 + 2.06, H0 + 2.2, C['lamp'], 8); a.cone(0, -Z - 0.25, 0.14, 0.03, H0 + 2.18, H0 + 2.28, C['tin'], 8)
     # the letter, painted big on a board on the front gable, and the Company's stencil on the board wall
