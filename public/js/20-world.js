@@ -21,10 +21,10 @@ function sign(text,x,z,ry,w,h){
    (roomW / roomD: half the inside width / depth), so the inside matches the outside. Only the occupied room is drawn.
    room: its Blender shell (art/blender/camp.py); camY: how high the camera may go in it (under the eaves). */
 const TENTS=[
-  {x:-16,z:47,name:'Bunk A',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomA',camY:2.3},
-  {x:-8,z:47,name:'Bunk B',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomB',camY:2.3},
-  {x:0,z:47,name:'Bunk D',hw:3.6,hd:5.2,roomW:3.6,roomD:5.1,room:'BunkRoomD',camY:2.3,crew:true},
-  {x:8,z:47,name:'Bunk C',hw:3.0,hd:3.6,roomW:3.0,roomD:3.85,room:'BunkRoomC',camY:2.3},
+  {x:-16,z:47,name:'Bunk A',hw:3.1,hd:3.95,roomW:3.0,roomD:3.85,room:'BunkRoomA',camY:2.3},
+  {x:-8,z:47,name:'Bunk B',hw:3.1,hd:3.95,roomW:3.0,roomD:3.85,room:'BunkRoomB',camY:2.3},
+  {x:0,z:47,name:'Bunk D',hw:3.7,hd:5.2,roomW:3.6,roomD:5.1,room:'BunkRoomD',camY:2.3,crew:true},
+  {x:8,z:47,name:'Bunk C',hw:3.1,hd:3.95,roomW:3.0,roomD:3.85,room:'BunkRoomC',camY:2.3},
   {x:-30,z:45,name:"the Super's House",hw:4,hd:3,roomW:4.0,roomD:3.0,room:'SuptRoom2',camY:2.75,house:true},
 ];
 const BUNK_D=TENTS.find(t=>t.crew);
@@ -150,7 +150,10 @@ const porch=box(8,0.2,2.2,0x7a5a3a);porch.position.set(-30,baseH(-30,41)+0.1,40.
   const awning=box(8.8,0.22,2.5,0x493427);awning.position.set(0,2.9,-4);g.add(awning);
   const step=box(3,0.17,0.6,0x877257);step.position.set(0,0.09,-4.35);g.add(step);
   const chimney=box(0.9,2.15,0.9,0x6d5948);chimney.position.set(2.45,4.25,0.9);g.add(chimney);
-  for(const x of[-3.45,3.45])solid(-30+x,45-4.05,0.35,0.35);   // porch pillars
+  // the porch of her house (SuptHouse2.glb): four posts and the rail between them, open at the steps; her water tank out back
+  for(const x of[-4.05,-1.4,1.4,4.05])solid(-30+x,39.94,0.3,0.3);
+  for(const [x0,x1] of [[-4.05,-1.4],[1.4,4.05]])solid(-30+(x0+x1)/2,39.94,x1-x0,0.2);
+  solid(-26.8,49.4,1.5,1.5);solid(-32.3,48.3,1.0,0.7);   // the tank's stand, the chimney
   const plaque=new T.Mesh(new T.PlaneGeometry(3.2,0.58),new T.MeshStandardMaterial({map:signTex('SUPERINTENDENT',512,96,'#d9c396','#302016',39),roughness:1}));
   plaque.position.set(0,2.72,-3.1);plaque.rotation.y=Math.PI;g.add(plaque);
 }
@@ -178,7 +181,7 @@ const FLAG_PROC=[];
 {const p=cyl(0.07,0.09,7,6,0xcfcfcf);p.position.set(-4,baseH(-4,38)+3.5,38);scene.add(p);solid(-4,38,0.4,0.4);
  const f=box(1.6,1,0.03,0x2f5f8a);f.position.set(-3.2,baseH(-4,38)+6.3,38);scene.add(f);FLAG_PROC.push(p,f);}
 const campSign=sign('CAMP DRYWATER',-11,30.5,Math.PI,5,1.3);solid(-11,30.5,5.1,0.35);   // posts + the board overhead, as one wall
-sign('BUNK D\n(cards inside)',2.4,44.2,Math.PI,1.9,0.9);solid(2.4,44.2,1.9,0.3);
+solid(1.85,47-5.2-0.38,1.5,0.4);   // Bunk D's porch bench (the bunkhouse model; the crew's sign is on its front now)
 
 /* ---------- secured perimeter ----------
    Dense steel panels and a solid collision line share the same gate gaps. A player can jump, but the
@@ -234,7 +237,7 @@ const FENCE_POSTS=[],FENCE_SPANS=[],LAMP_POSTS=[];let FENCE_PROC=null,GATE_PROC=
   add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
   add(5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44);
   const lparts=[];   // path lamps: own mesh, replaced by the Blender lamp posts
-  for(const [lx,lz] of [[-5,28],[5,28],[-16,42],[16,37],[-30,36.5],[27,44]]){
+  for(const [lx,lz] of [[-5,28],[5,28],[-12,41.2],[16,37],[-30,36.5],[27,44]]){   // (-12, 41.2): over the bench between Bunks A and B, clear of A's door
     lparts.push([0.12,2.6,0.12,0x4a4a48,lx,baseH(lx,lz)+1.3,lz],[0.4,0.22,0.4,0xffdf8a,lx,baseH(lx,lz)+2.55,lz]);
     LAMP_POSTS.push({x:lx,y:baseH(lx,lz),z:lz,ry:Math.atan2(-lx,40-lz)});   // lamp arm leans toward the middle of camp
     solid(lx,lz,0.35,0.35);

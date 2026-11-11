@@ -18,7 +18,7 @@ FONTS = os.path.abspath(os.path.join(HERE, '..', 'fonts'))
 def lin(c): return ((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92
 def hex_lin(h): return tuple(lin(((h >> s) & 255) / 255) for s in (16, 8, 0)) + (1.0,)
 
-_MATS = {}
+_MATS = {}; _HEX = {}
 def mat(name, hexc, rough=0.85):
     """one material per name (the name is what the game sees, with a cgl_ prefix)"""
     key = 'cgl_' + name
@@ -26,7 +26,7 @@ def mat(name, hexc, rough=0.85):
     m = bpy.data.materials.get(key) or bpy.data.materials.new(key); m.use_nodes = True
     b = next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
     b.inputs['Base Color'].default_value = hex_lin(hexc); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = 0.0
-    _MATS[key] = m; return m
+    _MATS[key] = m; _HEX[key] = hexc; return m
 
 def P(x, y, z): return Vector((x, -z, y))   # game -> Blender
 
@@ -102,10 +102,21 @@ class Asset:
             try: nf = self.bm.faces.new([vmap[v] for v in f.verts]); nf.material_index = k
             except ValueError: pass
         tmp.free(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me); bpy.data.curves.remove(cu)
-    def export(self, extra_print=''):
+    def export(self, extra_print='', keep=('cgl_daylight', 'cgl_lampglow', 'cgl_stoveglow', 'cgl_winlit', 'cgl_slate')):
+        """Paint: every face's colour goes into a vertex colour and all of them share ONE material (one draw call for the
+        whole building), except the materials the game lights (keep), which stay their own."""
         me = bpy.data.meshes.new(self.name + 'Mesh')
         bmesh.ops.remove_doubles(self.bm, verts=self.bm.verts, dist=0.0005)
-        self.bm.to_mesh(me); self.bm.free()
+        paint = mat('paint_' + self.name.lower(), 0xffffff, 0.85)
+        kept = [m for m in self.mats if any(m.name.startswith(k) for k in keep)]
+        final = [paint] + kept; idx = {m: (final.index(m) if m in kept else 0) for m in self.mats}
+        cl = self.bm.loops.layers.float_color.new('Col')
+        for f in self.bm.faces:
+            m = self.mats[f.material_index]; c = hex_lin(_HEX.get(m.name, 0xffffff)) if m not in kept else (1, 1, 1, 1)
+            for l in f.loops: l[cl] = c
+            f.material_index = idx[m]
+        self.bm.to_mesh(me); self.bm.free(); self.mats = final
+        if me.color_attributes.get('Col'): me.color_attributes.active_color = me.color_attributes['Col']; me.color_attributes.render_color_index = me.color_attributes.active_color_index
         for m in self.mats: me.materials.append(m)
         for p in me.polygons: p.use_smooth = False
         ob = bpy.data.objects.new(self.name, me); bpy.context.scene.collection.objects.link(ob)
@@ -113,6 +124,7 @@ class Asset:
         bpy.context.view_layer.objects.active = ob
         path = os.path.join(OUT, self.name + '.glb')
         bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
-                                  export_animations=False, export_normals=False, export_texcoords=False, export_materials='EXPORT')
+                                  export_animations=False, export_normals=False, export_texcoords=False, export_materials='EXPORT',
+                                  export_vertex_color='ACTIVE')
         print('EXPORT %-16s %6d tris %3d mats %7d bytes %s' % (self.name, sum(len(p.vertices) - 2 for p in me.polygons), len(self.mats), os.path.getsize(path), extra_print))
         bpy.data.objects.remove(ob); return path

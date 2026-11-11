@@ -14,7 +14,7 @@
         takes over.
    Loads after 47-searchlight-glow.js (it wraps that file's shader hook) and the camp models (23/24). updateCampLight
    runs from the main loop after the sky and day-night code, so it can have the last word on the light in a room. */
-const CL_N=16;               // fake lamps in the shader at once (the nearest to the camera)
+const CL_N=24;               // fake lamps in the shader at once (the nearest to the camera)
 const CL_WARM=[1.0,0.7,0.38];   // lamplight
 const CL_DAY=[1.0,0.96,0.86];   // daylight through a window
 const CL_U={uCLPos:{value:[...Array(CL_N)].map(()=>new T.Vector4(0,-999,0,0.01))},uCLCol:{value:[...Array(CL_N)].map(()=>new T.Vector3())},uCLOn:{value:0}};
@@ -55,9 +55,9 @@ function clBunkOn(t){const n=lookNightF();if(n<=0)return 0;const ct=lookT();if(c
   for(const p of LAMP_POSTS)clFix(p.x+Math.sin(p.ry)*0.5,p.y+2.35,p.z+Math.cos(p.ry)*0.5,9.5,2.4,clDusk);
   // the yard lanterns (24-dressing.js): small, close pools
   for(const p of DRESS_CAMP)if(p.m==='DressLantern')clFix(p.x,baseH(p.x,p.z)+(p.y||0)+0.45,p.z,4.6,1.5,clDusk);
-  // the Superintendent's porch lanterns and her lit windows' spill on the porch (SuptHouse.glb, turned to face the yard)
+  // the Superintendent's porch lanterns and her lit windows' spill on the porch (SuptHouse2.glb)
   const sh=baseH(-30,45);
-  for(const s of[-1,1]){clFix(-30+s*1.25,sh+2.45,41.6,5.5,1.6,clDusk);clFix(-30+s*2.4,sh+1.3,40.9,3.4,0.8,clDusk)}
+  for(const s of[-1,1]){clFix(-30+s*1.0,sh+2.1,41.6,5.5,1.6,clDusk);clFix(-30+s*2.4,sh+1.3,40.9,3.4,0.8,clDusk)}
   // the Company Store: the bulb in Mr. Abel's booth lights the shelves and the counter, and spills out of the window
   const st=baseH(16,45);clFix(16,st+2.2,43.5,3.2,2.6,clDusk);clFix(16,st+1.1,41.4,4.6,1.2,clDusk);
   // the main gate: its two lanterns, and two lamps on the arch sign (lake side and camp side), so it reads from both
@@ -65,8 +65,9 @@ function clBunkOn(t){const n=lookNightF();if(n<=0)return 0;const ct=lookT();if(c
   for(const s of[-1,1])clFix(s*6.18,gy+4.9,FENCE_Z0+0.9,7,1.6,clDusk);
   clFix(0,gy+5.3,FENCE_Z0-1.3,3.4,1.2,clDusk);clFix(0,gy+5.3,FENCE_Z0+1.5,3.4,0.9,clDusk);
 }
-/* the bunks: light spilling from the doorway onto the step (the door is on the yard side, -z) */
-const CL_BUNK_FIX=TENTS.map(t=>t.house?null:clFix(t.x,baseH(t.x,t.z)+1.0,t.z-t.hd-0.7,4.6,1.3,()=>clBunkOn(t)));
+  for(const[x,y,z,r,k]of CAMP_LIGHTS)clFix(x,y,z,r,k,clDusk);   // the store's sign lamps, the string lights, the sifter's floods, the notice board (24-campfront.js)
+/* the bunks: each porch light pools on the step (the door is on the yard side, -z) */
+const CL_BUNK_FIX=TENTS.map(t=>t.house?null:clFix(t.x,baseH(t.x,t.z)+2.3,t.z-t.hd-0.45,5,1.5,()=>clBunkOn(t)));   // the porch light over each bunkhouse door
 
 /* ---- lit glass: emissive materials in the models, driven by a schedule ---- */
 const CL_GLOW=[];   // {mat, on(), k, col}
@@ -91,15 +92,17 @@ function clGlow(model,prefixes,k,fn,col=CL_WARM,per=false){
   };
   return loadModel(model).then(()=>new Promise(res=>{let n=0;const tick=()=>{if(bind()||++n>40)res();else setTimeout(tick,250)};setTimeout(tick,50)})).catch(()=>{});
 }
-const clTentAt=pos=>pos?TENTS.find(t=>!t.house&&Math.abs(t.x-pos.x)<0.5&&Math.abs(t.z-pos.z)<0.5):null;
 clGlow('LampPost',['cgl_bulb'],3.2,clDusk);
-clGlow('SuptHouse',['cgl_glass'],1.6,clDusk);
-clGlow('SuptHouse',['cgl_lantern'],2.6,clDusk);
+clGlow('SuptHouse2',['cgl_winlit'],1.7,clDusk);   // her windows: lit all night
+clGlow('SuptHouse2',['cgl_lampglow'],2.8,clDusk);
 clGlow('CompanyStore',['cgl_bulb'],3.5,clDusk);
 clGlow('CompanyStore',['cgl_glass'],1.1,clDusk);
 clGlow('MainGate',['cgl_lantern'],2.8,clDusk);
 clGlow('WatchtowerBody',['cgl_glass'],0.9,clDusk);   // a guard's lamp in each tower cab
-for(const m of['TentSmall','TentCrew'])clGlow(m,['cgl_c25251d'],1.0,pos=>{const t=clTentAt(pos);return t?clBunkOn(t):0},CL_WARM,true);   // the doorway glows while the bunk's lamp is lit
+clGlow('StoreFront',['cgl_lampglow'],3.0,clDusk);
+clGlow('FloodMast',['cgl_lampglow'],4.0,clDusk);
+for(const t of TENTS)if(!t.house){const m='Bunkhouse'+t.name.slice(-1);   // a bunk's windows and porch light, on the bunk's own schedule
+  clGlow(m,['cgl_winlit'],1.5,()=>clBunkOn(t));clGlow(m,['cgl_lampglow'],2.8,()=>Math.min(1,clBunkOn(t)*1.5))}
 
 /* ---- rooms: each room's fixtures come from its layout (20-world.js t.lights). A lamp is lit while the bunk's lamp is
    (dim by day: the windows do the work then), the stove always glows (more at night), a window is daylight by day. ---- */
@@ -117,6 +120,7 @@ const CL_ROOM_HEMI=[0.34,0.1];   // the sky light in a room: by day (through the
 let clT=0;
 function updateCampLight(dt){
   const room=typeof S!=='undefined'&&S.tent!=null?S.tent:null,night=lookNightF();
+  updateFestoon(night);updateCutBoard();   // 24-campfront.js
   // lit glass (cheap: only touched when the value moves)
   for(const g of CL_GLOW){const v=g.on()*g.k;if(Math.abs(v-g.w)>0.01){g.w=v;g.mat.emissive.setRGB(g.col[0]*v,g.col[1]*v,g.col[2]*v)}}
   if(room!=null){   // the room you're in: its windows, lamp glass, stove fire and its one real light
@@ -137,7 +141,7 @@ function updateCampLight(dt){
   const cut=live.length>CL_N?live[CL_N].d:1e9,P4=CL_U.uCLPos.value,C3=CL_U.uCLCol.value;
   for(let i=0;i<CL_N;i++){const f=live[i];
     if(!f){P4[i].set(0,-999,0,0.01);C3[i].set(0,0,0);continue}
-    const fade=Math.min(1,(cut-f.d)/8),v=f.w*f.k*fade;   // the last few in the list fade out before they drop off it
+    const fade=Math.min(1,(cut-f.d)/4),v=f.w*f.k*fade;   // the last few in the list fade out before they drop off it
     P4[i].set(f.x,f.y,f.z,f.r);C3[i].set(f.col[0]*v,f.col[1]*v,f.col[2]*v);
   }
   CL_U.uCLOn.value=live.length?1:0;

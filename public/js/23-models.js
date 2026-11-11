@@ -105,11 +105,11 @@ function towerLampMount(parts){
 
 /* ---- the swaps ---- */
 {
-  const TENT_MODEL=t=>t.crew?'TentCrew':'TentSmall';
+  // the bunkhouses (art/blender/camp.py: built facing the yard, -z), one model each: A, B, C and the crew's D
   for(const t of TENTS)if(!t.house)
-    placeModel(TENT_MODEL(t),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:Math.PI}).then(()=>hideProc(t.ext)).catch(()=>{});   // door faces the yard (-z)
+    placeModel('Bunkhouse'+t.name.slice(-1),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:0}).then(()=>hideProc(t.ext)).catch(()=>{});
   placeModel('CompanyStore',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(storeCabin)).catch(()=>{});
-  placeModel('SuptHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
+  placeModel('SuptHouse2',{x:-30,y:baseH(-30,45),z:45,ry:0}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
   // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
   // model and mounted on each tower's swivelling head (22-security.js), so it points where its beam goes
