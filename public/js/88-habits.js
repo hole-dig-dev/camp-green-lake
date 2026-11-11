@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-habits.js -- the D Tent crew's habits (JT 2026-10-02: in-depth crew pathing and habits).
+/* public/js/88-habits.js -- the Bunk D crew's habits (JT 2026-10-02: in-depth crew pathing and habits).
    - Chatter that fits what's going on (crewChatter, from 30-npcs.js's idle talk): his own lines, plus the gold rush:
      a nearly full bucket, a long sifter queue, low morale, a rich vein glittering, an empty soda machine, a crewmate
      taken by the UFO, or one who's come back... different.
@@ -26,7 +26,7 @@ function crewChatter(b){
 const lunchSeat=b=>{const L=SEATS.filter(s=>s.tent==null&&s.what==='the bench');return L.length?L[bots.indexOf(b)%L.length]:null};
 function crewLunchStep(b,dt){   /* 30-npcs.js, while b.state==='lunch' */
   const s=lunchSeat(b),g=b.p.g;
-  if(!s||curfewSoon()){b.state='gotent';b.tx=D_TENT_DOOR.x;b.tz=D_TENT_DOOR.z;b.errand=null;return}
+  if(!s||curfewSoon()){b.state='gotent';b.tx=BUNK_D_DOOR.x;b.tz=BUNK_D_DOOR.z;b.errand=null;return}
   if(b.t==null){const fx=s.x+s.out[0],fz=s.z+s.out[1];if(!walkTo(b,fx,fz,dt,2.2))return;b.t=LUNCH_T;if(nearCam(fx,fz,30))say(b.L,pick(['Lunch!','Mystery meat again.','Finally, a seat.']),2400)}
   sitPose(b.p,s.x,groundAt(s.x,s.z)+s.y,s.z,s.h,dt);
   b.t-=dt;if(b.t<=0){b.t=null;b.errand=null;if(typeof moraleOf==='function')b.morale=Math.min(100,moraleOf(b)+15);b.water=crewWaterMax(b);

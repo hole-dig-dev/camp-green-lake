@@ -1,6 +1,6 @@
 # DRYWATER: instructions for Claude
 
-DRYWATER ("The water's gone. The gold isn't."): a multiplayer browser co-op digging game set at Camp Drywater, a Company work camp on a dried-up lake with gold under it. The setting is original; all visible text follows [docs/STORY.md](docs/STORY.md), while identifiers, file names and old docs still say Camp Green Lake / warden / sploosh / onions (do not rename those). JT (repo owner, `jth458`) directs the work; Greg (`buissong`) collaborates. Read `docs/HANDOFF.md` for the full history, current state and backlog, and `ARCHITECTURE.md` for how the code is laid out.
+DRYWATER ("The water's gone. The gold isn't."): a multiplayer browser co-op digging game set at Camp Drywater, a Company work camp on a dried-up lake with gold under it. The setting is original: visible text, identifiers, file names, message types and save keys all follow [docs/STORY.md](docs/STORY.md) (renamed 2026-11-10; old saves are carried over by `public/js/09-migrate.js` and `migrateOldNames()` in `server.js`, the only code that still spells the old ids). Dated documents under `docs/` keep the old setting's names on purpose; do not bring those names back into code or text. JT (repo owner, `jth458`) directs the work; Greg (`buissong`) collaborates. Read `docs/HANDOFF.md` for the full history, current state and backlog, and `ARCHITECTURE.md` for how the code is laid out.
 
 **Characters / animation / ragdoll work: read [CHARACTER-HANDOFF.md](CHARACTER-HANDOFF.md) first.** It identifies
 JT's approved continuously skinned camper, the smooth elbow update, all asset/runtime paths and the player/NPC
@@ -37,7 +37,7 @@ every remote branch, then answer anything unanswered. Never change Greg's branch
 
 ## Code layout in one paragraph
 
-`server.js` (Node `http` + `ws`) serves `public/` and runs the shared world, monsters (via `public/sim.js`), logging (`logger.js`) and security limits. The client is **ordered classic scripts** in `public/js/NN-name.js` (plus `public/css/game.css` and a thin `public/index.html`): top-level names are shared across files, but a file's *load-time* code can only use names from earlier files (a violation crashes the whole page = black screen). `95-pause.js` must stay last: it ends with the saved-session resume and the `#dbg` debug export. New features get a new `public/js/NN-feature.js` file registered in `index.html` (and in `scripts/split-client.mjs`'s MANIFEST notes if relevant), not more code in `index.html`.
+`server.js` (Node `http` + `ws`) serves `public/` and runs the shared world, monsters (via `public/sim.js`), logging (`logger.js`) and security limits. The client is **ordered classic scripts** in `public/js/NN-name.js` (plus `public/css/game.css` and a thin `public/index.html`): top-level names are shared across files, but a file's *load-time* code can only use names from earlier files (a violation crashes the whole page = black screen). `09-migrate.js` must stay first (it renames an old browser save before anything reads it) and `95-pause.js` must stay last: it ends with the saved-session resume and the `#dbg` debug export. New features get a new `public/js/NN-feature.js` file registered in `index.html` (and in `scripts/split-client.mjs`'s MANIFEST notes if relevant), not more code in `index.html`.
 
 ## Art and models
 
@@ -50,5 +50,5 @@ Match the surrounding code: compact JS, `const`, short helpers, named tuning con
 ## Handy in-game tools (for testing)
 
 - Open the page with `#dbg` (e.g. `http://localhost:PORT/?r=1#dbg`) to get `window.__cgl` (includes `runCommand`, `P` player, `S` state, `TW_LIVE`, tents, pause, voice, landslide internals).
-- Developer console: press **`** in game. `help`, `twister [dist]`, `landslide [dist]`, `time hh:mm`, `heal`, `hurt [n]`, `tp x z` / `tp camp`, `where`, `clear`. On a server started with `DEV_MODE=1` everyone is host, so the console and the hidden `sploosh` admin panel work.
+- Developer console: press **`** in game. `help`, `twister [dist]`, `landslide [dist]`, `time hh:mm`, `heal`, `hurt [n]`, `tp x z` / `tp camp`, `where`, `clear`. On a server started with `DEV_MODE=1` everyone is host, so the console and the hidden `peachshine` admin panel work.
 - Headless tests run ~2 fps with software rendering; the game clamps dt to 0.05 s, so game time runs ~10x slower than wall-clock. Judge by game state, not wall time.

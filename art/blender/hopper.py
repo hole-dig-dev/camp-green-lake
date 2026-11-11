@@ -1,7 +1,7 @@
 # blend: gear.blend
 # Sifter hopper upgrades (JT 2026-10-01: "add upgrades to sifter, sifts over time, holds volumes of sand to dump so
 # player can keep digging"). You dump your bucket into the hopper and go back to digging; the sifter works through it
-# on its own (public/js/86-hopper.js). Three tiers, bought at the Supply Depot:
+# on its own (public/js/86-hopper.js). Three tiers, bought at the Company Store:
 #   HopperSand1..3   the sand in the hopper, full (origin at its bottom, centred on the hopper; the game scales it up
 #                    as it fills). Tier 1 fits the sifter's own hopper; 2 and 3 rise into the add-ons below.
 #   HopperExt2       tier 2: a plank collar on top of the hopper (50 holes)

@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-morale.js -- crew morale (JT 2026-10-01). Each D Tent crew member has a mood, 0-100 (b.morale, starts at
+/* public/js/88-morale.js -- crew morale (JT 2026-10-01). Each Bunk D crew member has a mood, 0-100 (b.morale, starts at
    MORALE_START). Getting blown up, tossed by a twister or a tumbleweed, knocked out, bitten: it drops (moraleHit, from
    30-npcs.js crewToss / crewKO). It creeps back over time (MORALE_REGEN a minute) and he's fresh again after a night's
    sleep (a new day). Below MORALE_LOW he digs slower (down to MORALE_MIN_RATE at 0) and grumbles. A soda from the

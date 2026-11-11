@@ -8,7 +8,7 @@ const hw={hpWarn:$('#hpWarn'),waterWarn:$('#waterWarn'),battRow:$('#battRow'),de
 /* bottom-right tool glyphs: icon + a visually-hidden accessible label, per spec 4 ("hide tool
    names behind icons plus accessible labels"). Falls back to a small text badge for anything not
    in this table rather than silently dropping it. */
-const TOOL_ICON={'Spade':'shovel','Camp shovel':'shovel','Bare hands':'teammate','1.5 ft reach':'depth','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','LM card case':'lock','Zach is helping':'teammate',onion:'onion'};
+const TOOL_ICON={'Spade':'shovel','Camp shovel':'shovel','Bare hands':'teammate','1.5 ft reach':'depth','8 ft reach':'depth','5 ft reach':'depth','Detector':'detector','Big canteen':'canteen','LM card case':'lock','Zach is helping':'teammate',bitterroot:'bitterroot'};
 const COOP_TXT={
   revive:s=>`Hold to pick up ${s.R.name}`+(S.revT>0?`… ${Math.round(S.revT/3*100)}%`:''),
   pull:s=>`Pull ${s.R.name} out of the hole`,
@@ -28,13 +28,13 @@ function updateHUD(){
   if(S.inBed!=null){sleepEl.style.display='block';sleepEl.textContent=`Sleeping… ${SLEEP.asleep}/${Math.max(SLEEP.total,1)} diggers asleep`}
   else sleepEl.style.display='none';
   hud.seeds.textContent=S.seeds;
-  hq.quota.textContent=`/ ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);   // the crew bank / the Warden's quota (84-coop.js)
+  hq.quota.textContent=`/ ${RUN.quota}`;hq.quota.classList.toggle('warn',RUN.bank<RUN.quota&&clockT()>DAYMS-120000&&clockT()<DAYMS);   // the crew bank / the Superintendent's quota (84-coop.js)
   {const lv=levelOf(PROG.xp);hq.lvK.textContent='LV '+lv.l;hq.xp.style.width=(lv.l>=20?100:lv.into/lv.need*100).toFixed(1)+'%'}
   hq.batt.textContent=Math.round(S.batt)+'%'+(S.light?' · on':'');
   let curWarn=false;
   {const t=clockT();hc.clock.textContent=clockText();
    if(t<DAYMS){const left=(DAYMS-t)/1000;hc.curK.textContent='Lights-out in';hc.cur.textContent=fmtT(left);curWarn=left<60}
-   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='zeroni'?'THE BRIDE!':'Lights out';curWarn=!!CUR.hunter}
+   else{hc.curK.textContent='Night';hc.cur.textContent=CUR.hunter==='police'?'Police out':CUR.hunter==='bride'?'THE BRIDE!':'Lights out';curWarn=!!CUR.hunter}
    hc.cur.classList.toggle('warn',curWarn);hc.curIcon.hidden=!curWarn;   // icon backs up the color so curfew warnings aren't color-only
    const walk=campDist(P.x,P.z)/4.3;hc.backRow.hidden=walk<=0;hc.back.textContent=fmtT(walk);hc.back.classList.toggle('warn',t<DAYMS&&walk>(DAYMS-t)/1000*0.85)}
   {const pc=v=>(v/HP_MAX*100).toFixed(1)+'%',st=Math.min(S.stam,S.hp);hq.stam.style.width=pc(st);hq.room.style.width=pc(S.hp-st);
@@ -51,13 +51,13 @@ function updateHUD(){
   const h=holeNear(P.x,P.z,HOLE_R*0.8);const dep=h?Math.max(0,baseH(P.x,P.z)-P.y):0;
   hud.depth.textContent=(dep*FT).toFixed(1)+' ft';
   hw.depthChip.hidden=!(h||digHeld);   // bottom-center: only while digging or standing in/over a hole
-  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} gold`:(S.hasKB?'Gold tube':'empty');
+  const val=S.sack.reduce((s,t)=>s+LOOT[t].val,0);hud.sack.textContent=S.sack.length?`${S.sack.length}/${sackMax()} · ${val} gold`:(S.hasLM?'LM card case':'empty');
   hw.battRow.hidden=!(S.light||S.batt<30);
-  const tools=[!S.up.shovel?'Bare hands':S.up.spade?'Spade':'Camp shovel',!S.up.shovel?'1.5 ft reach':S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasKB?'LM card case':''].filter(Boolean).join('|')+(S.onionT>0?'|onion':'')+(S.zeroT>0?'|Zach is helping':'');
+  const tools=[!S.up.shovel?'Bare hands':S.up.spade?'Spade':'Camp shovel',!S.up.shovel?'1.5 ft reach':S.up.long?'8 ft reach':'5 ft reach',S.up.detector?'Detector':'',S.up.canteen?'Big canteen':'',S.hasLM?'LM card case':''].filter(Boolean).join('|')+(S.bitterrootT>0?'|bitterroot':'')+(S.zachT>0?'|Zach is helping':'');
   if(tools!==lastTools){lastTools=tools;hud.tools.textContent='';for(const t of tools.split('|')){
-    const label=t==='onion'?'Bitterroot breath':t,icon=TOOL_ICON[t];
+    const label=t==='bitterroot'?'Bitterroot breath':t,icon=TOOL_ICON[t];
     const s=document.createElement('span');s.setAttribute('title',label);
-    if(icon){s.className='tool-badge'+(t==='onion'?' onion':'');s.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-${icon}"></use></svg><span class="ui-sr-only">${label}</span>`}
+    if(icon){s.className='tool-badge'+(t==='bitterroot'?' bitterroot':'');s.innerHTML=`<svg class="ui-icon" aria-hidden="true"><use href="#icon-${icon}"></use></svg><span class="ui-sr-only">${label}</span>`}
     else{s.className='tool-badge--text';s.textContent=label}
     hud.tools.appendChild(s);
   }}
@@ -66,13 +66,13 @@ function updateHUD(){
   const s=nearSpot();
   const sinkSh=inSinkhole();
   if(sinkSh&&!uiOpen()){hud.prompt.innerHTML='';hud.prompt.append(document.createTextNode(sinkTrappedText(sinkSh)));hud.prompt.hidden=false}
-  else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent='Space';const need=S.up.rope?1.5:8;
-    hud.prompt.append(kb,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kb=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kb.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':s.id==='drop'&&!grabByUse?'R':'F');hud.prompt.append(kb,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
-  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='water'?(carrier()==='pan'&&S.bucket>0.05?'Wash your pan for gold (and fill your canteen)':S.water>=waterMax()-1?'The water drums (your canteen\'s full)':'Fill your canteen'):s.id==='sift'?(hopperTier()&&carrier()==='bucket'?(S.bucket>0.05?`Dump your ${backsackOn()?'backsack':'bucket'} into the hopper (${Math.floor(S.hopper)}/${hopperCap()} holes in it)`:`The sifter hopper: ${Math.floor(S.hopper)}/${hopperCap()} holes, sifting (go dig)`):S.bucket>0.05?`Sift your bucket for gold (${Math.floor(S.bucket*10)/10} holes of sand)`:'The sifter (your bucket\'s empty: go dig)'):s.id==='store'?(S.sack.length?'Trade with Mr. Abel (sell your finds, buy gear)':'Trade with Mr. Abel at the Company Store window'):s.id==='cards'?'Play blackjack in Bunk D':s.id==='bot'?'Talk to '+s.bot.d.n+' · hold R to grab him':(S.hasKB?'Give the gold card case to the Superintendent':'Talk to the Superintendent (the crew bank)');
-    hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Use':'F';hud.prompt.append(kb,document.createTextNode(txt));hud.prompt.hidden=false}
+  else if(isTrapped()&&!uiOpen()){hud.prompt.innerHTML='';const kbdEl=document.createElement('kbd');kbdEl.textContent='Space';const need=S.up.rope?1.5:8;
+    hud.prompt.append(kbdEl,document.createTextNode(S.climbT>0?`Climbing out… ${Math.round(S.climbT/need*100)}%`:`Too deep to jump out. Hold to climb (${need}s), or get a friend to pull you out.`));hud.prompt.hidden=false}
+  else if(s&&!S.ko&&!uiOpen()&&s.id in COOP_TXT){hud.prompt.innerHTML='';const kbdEl=document.createElement('kbd');const tentKey=s.id==='tentdoor'||s.id==='exit'||s.id==='bunk';kbdEl.textContent=isTouch?'Use':(tentKey?'E':s.id==='sinkRescue'?'E / F':s.id==='drop'&&!grabByUse?'R':'F');hud.prompt.append(kbdEl,document.createTextNode(COOP_TXT[s.id](s)));hud.prompt.hidden=false}
+  else if(s&&!S.ko&&!uiOpen()){const txt=s.label?s.label:s.id==='water'?(carrier()==='pan'&&S.bucket>0.05?'Wash your pan for gold (and fill your canteen)':S.water>=waterMax()-1?'The water drums (your canteen\'s full)':'Fill your canteen'):s.id==='sift'?(hopperTier()&&carrier()==='bucket'?(S.bucket>0.05?`Dump your ${backsackOn()?'backsack':'bucket'} into the hopper (${Math.floor(S.hopper)}/${hopperCap()} holes in it)`:`The sifter hopper: ${Math.floor(S.hopper)}/${hopperCap()} holes, sifting (go dig)`):S.bucket>0.05?`Sift your bucket for gold (${Math.floor(S.bucket*10)/10} holes of sand)`:'The sifter (your bucket\'s empty: go dig)'):s.id==='store'?(S.sack.length?'Trade with Mr. Abel (sell your finds, buy gear)':'Trade with Mr. Abel at the Company Store window'):s.id==='cards'?'Play blackjack in Bunk D':s.id==='bot'?'Talk to '+s.bot.d.n+' · hold R to grab him':(S.hasLM?'Give the gold card case to the Superintendent':'Talk to the Superintendent (the crew bank)');
+    hud.prompt.innerHTML='';const kbdEl=document.createElement('kbd');kbdEl.textContent=isTouch?'Use':'F';hud.prompt.append(kbdEl,document.createTextNode(txt));hud.prompt.hidden=false}
   else{const gh=!uiOpen()&&grabHint();   // what R would grab (84-grab.js)
-    if(gh){hud.prompt.innerHTML='';const kb=document.createElement('kbd');kb.textContent=isTouch?'Grab':'R';hud.prompt.append(kb,document.createTextNode(gh+' · hold'));hud.prompt.hidden=false}
+    if(gh){hud.prompt.innerHTML='';const kbdEl=document.createElement('kbd');kbdEl.textContent=isTouch?'Grab':'R';hud.prompt.append(kbdEl,document.createTextNode(gh+' · hold'));hud.prompt.hidden=false}
     else hud.prompt.hidden=true}
 }
 /* static four-stroke reticle: never moves or redraws, just toggles hidden/active (docs/ui-redesign-
@@ -129,7 +129,7 @@ function buildMapCache(night){
   g.fillStyle=night?'#3a463d':'#c4955f';g.fillRect(ccx(-40),ccz(27),ccs(70),ccs(29));
   g.strokeStyle=night?'rgba(237,226,200,.5)':'rgba(43,29,18,.55)';g.lineWidth=2;g.strokeRect(ccx(-40),ccz(27),ccs(70),ccs(29));
   g.fillStyle=night?'#4f5c4f':'#8d8f69';for(const t of TENTS)g.fillRect(ccx(t.x-t.hw),ccz(t.z-t.hd),ccs(t.hw*2),ccs(t.hd*2));
-  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Warden's cabin
+  g.fillStyle=night?'#5c4a3a':'#9b7b58';g.fillRect(ccx(12.5),ccz(42.5),ccs(7),ccs(5));   // Superintendent's cabin
   g.fillStyle=night?'#6a4a38':'#b07650';g.fillRect(ccx(-34),ccz(42),ccs(8),ccs(6));   // store
   if(WATER_TRUCK_ON){g.fillStyle=night?'#2c5570':'#4f8fb8';g.fillRect(ccx(2.5),ccz(35),ccs(5),ccs(2.4))}   // water truck (out for now: 20-world.js)
 }
@@ -140,10 +140,10 @@ function readableOn(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 function initialsOf(name){const s=String(name||'').trim();if(!s)return'?';const parts=s.split(/\s+/);if(parts.length>=2)return(parts[0][0]+parts[1][0]).toUpperCase();return s.slice(0,2).toUpperCase()}
 
 /* ---------- minimap edge indicators (docs/ui-redesign-spec.md section 3) ----------
-   Camp, the revealed search area (or, before reveal, a pointer toward the Warden once you're
-   carrying the KB tube -- never the tube's own hidden position), the most recent active ping, and
+   Camp, the revealed search area (or, before reveal, a pointer toward the Superintendent once you're
+   carrying the LM card case -- never the case's own hidden position), the most recent active ping, and
    remote friends get a clamped arrow marker when they're outside the visible square. Threats
-   (police/twister/Zeroni) get the same treatment. NPCs and holes never do. Collisions (two
+   (police/twister/the Bride) get the same treatment. NPCs and holes never do. Collisions (two
    indicators landing in roughly the same direction) resolve by priority -- active threat first,
    then objective, ping, camp, friend last -- except overlapping FRIENDS collapse into one "+N"
    marker instead of dropping the lower one. */
@@ -170,10 +170,10 @@ function drawMapEdgeIndicators(W,night){
   let bestThreat=null,bestThreatD=Infinity;
   for(const tk of trucks)if(tk.active){const d=(tk.x-mcx)**2+(tk.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tk.x,z:tk.z,color:'#d12a2a'}}}
   for(const tw of TW_LIVE.values())if(tw.s>0.05){const d=(tw.x-mcx)**2+(tw.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:tw.x,z:tw.z,color:'#5a4a3a'}}}
-  if(ZER.active){const d=(ZER.x-mcx)**2+(ZER.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:ZER.x,z:ZER.z,color:'#3aa53a'}}}
+  if(BRIDE.active){const d=(BRIDE.x-mcx)**2+(BRIDE.z-mcz)**2;if(d<bestThreatD){bestThreatD=d;bestThreat={x:BRIDE.x,z:BRIDE.z,color:'#3aa53a'}}}
   if(bestThreat)cands.push({kind:'threat',...bestThreat});
   if(S.revealed)cands.push({kind:'objective',x:SEARCH.x,z:SEARCH.z,color:night?'#ff6a5a':'#d12a2a',dist:true});
-  else if(S.hasKB)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Warden, never the tube's real spot
+  else if(S.hasLM)cands.push({kind:'objective',x:-30,z:39.2,color:'#B48A3B',dist:true});   // points at the Superintendent, never the case's real spot
   if(PINGS.length){const p=PINGS[PINGS.length-1];cands.push({kind:'ping',x:p.x,z:p.z,color:'#'+p.color.toString(16).padStart(6,'0')})}
   cands.push({kind:'camp',x:-5,z:41,color:night?'#EDE2C8':'#2b1d12',dist:true});
   for(const R of remotes.values())cands.push({kind:'friend',x:R.p.g.position.x,z:R.p.g.position.z,color:playerColorHex(R.ci)});
@@ -269,7 +269,7 @@ function drawMap(){
   for(const p of PINGS){mx.strokeStyle='#'+p.color.toString(16).padStart(6,'0');mx.lineWidth=3;mx.beginPath();mx.arc(wx(p.x),wz(p.z),8+Math.sin(p.t*6)*3,0,6.3);mx.stroke()}
   mx.fillStyle='#7a5f38';for(const b of BAGS.values())mx.fillRect(wx(b.x)-4,wz(b.z)-4,8,8);
   mx.fillStyle='#2b2f35';for(const pr of PROPS.values()){mx.fillRect(wx(pr.x)-6,wz(pr.z)-6,12,12)}
-  if(ZER.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(ZER.x),wz(ZER.z),7,0,6.3);mx.fill()}
+  if(BRIDE.active){mx.fillStyle=Math.floor(performance.now()/250)%2?'#7dff6a':'#1d4a14';mx.beginPath();mx.arc(wx(BRIDE.x),wz(BRIDE.z),7,0,6.3);mx.fill()}
   /* lizards: only within 25 m of the player (48 exist across the whole lake bed -- drawing them all
      would clutter the map and reveal distant threats), small yellow hazard triangles */
   if(S.started)for(const L of lizards){const dx=L.x-P.x,dz=L.z-P.z;if(dx*dx+dz*dz>625)continue;
@@ -282,7 +282,7 @@ function drawMap(){
   drawMapEdgeIndicators(W,night);
 }
 
-/* ---- your coordinates, above the Field map button: X east, Y north (the map's up), whole metres. The Warden's note on
+/* ---- your coordinates, above the Field map button: X east, Y north (the map's up), whole metres. The Superintendent's note on
    the old town uses the same numbers (89-town.js). Down in the buried town there's no lake to measure from. ---- */
 const mapCoordsEl=$('#mapCoords');let mapCoordsTxt='';
 const coordXY=(x,z)=>[Math.round(x),Math.round(-z)];
@@ -292,7 +292,7 @@ function updateCoords(){
   if(t!==mapCoordsTxt){mapCoordsTxt=t;mapCoordsEl.textContent=t}
 }
 
-/* ---- the crew panel (JT 2026-10-01): what each of the D Tent crew is up to, with their health, stamina and water and
+/* ---- the crew panel (JT 2026-10-01): what each of the Bunk D crew is up to, with their health, stamina and water and
    how full their bucket is, so you can keep an eye on them while you get on with your own digging. Under the map;
    K hides / shows it (remembered). Hidden by default on a phone, where the screen's already full. ---- */
 let crewPanelOn=true,crewPanelT=0;const crewRowEls=[];

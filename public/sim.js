@@ -1,12 +1,12 @@
-/* Shared rules for Camp Green Lake. The server runs these for everyone; solo play runs the same code in the page,
+/* Shared rules for Camp Drywater. The server runs these for everyone; solo play runs the same code in the page,
    so the clock, the quota, heavy loot and the monsters behave the same either way. Positions are x/z only. */
 (function (root) {
   const CYCLE = 12 * 60 * 1000, DAYMS = 9.5 * 60 * 1000, NIGHT_SPLIT = DAYMS + (CYCLE - DAYMS) / 2, EDGE = 595;
-  const SELL = { x: 16, z: 39, r: 5 }; // Mr. Pendanski's Supply Depot window (the gold rush, 2026-09-30): bring heavy loot here
+  const SELL = { x: 16, z: 39, r: 5 }; // Mr. Abel's Company Store window (the gold rush, 2026-09-30): bring heavy loot here
   /* ---- the gold rush (JT + Greg, 2026-09-30): dig sand into your bucket, sift it at camp for gold ----
      A bucket holds so many holes' worth of sand (a hole = 5 ft deep); the sifter turns a full one into about
      GOLD.perHole gold a hole, give or take luck (siftGold). Gold you carry is yours; deposit it in the crew bank (the
-     Warden's) for the big stuff everyone shares. */
+     Superintendent's) for the big stuff everyone shares. */
   /* the crew's upgrades (JT 2026-10-01: the store's "The crew" side): bought with your own gold, one crew member at a
      time, kept by the server for the whole camp (world.crew). public/js/30-npcs.js applies them, 50-tents.js sells them. */
   const CREW = ['Jim Bob', 'Randy', 'Stan', 'Pete', 'Larry', 'Zach'];
@@ -23,7 +23,7 @@
     { id: 'canteen3', name: 'Water jug', desc: 'He hardly ever stops for water.', cost: 90, needs: 'canteen' },
     { id: 'soda', name: 'Soda', desc: 'Cheers him right up (+45 morale). Drunk on the spot.', cost: 15, use: true },
     { id: 'disarm', name: 'Mine disarm kit', desc: 'He spots landmines in his way and stops to disarm them, instead of walking into them.', cost: 50 },
-    { id: 'onions', name: 'Sack of bitterroot', desc: 'He chews it all day. Gilas leave him alone.', cost: 45 },
+    { id: 'bitterroots', name: 'Sack of bitterroot', desc: 'He chews it all day. Gilas leave him alone.', cost: 45 },
   ];
   /* starting with nothing (JT 2026-10-01): bare hands dig slowly and only so deep, and now and then turn up a fleck;
      a gold pan carries PAN holes of sand to wash at the water drums; a bucket takes sand to the sifter. */
@@ -46,7 +46,7 @@
   }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   /* PAY DIRT (2026-11-10, from Greg's gold-dig "paystreaks" and Gold Fever's deposits): where you dig, and how deep,
-     now decides how much gold is in your sand. Green Lake was a lake, so its gold settled along old creek channels
+     now decides how much gold is in your sand. Lake Drywater was a lake, so its gold settled along old creek channels
      that wind across the bed, plus a few rich pockets; away from them the sand is poor.
        richAt(x,z)        0 (barren) .. 1 (the middle of a paystreak). A pure function of the spot: the same for every
                           camper and the server, no randomness, nothing on the wire.
@@ -98,8 +98,8 @@
     return { x: clamp(x, cx - w, cx + w), z };
   };
   // the day's roster in maps other than the lake: camp staff stay home (Greg's Claude + JT, 2026-09-29), the rest follow the crew
-  const RO_LAKE_ONLY = ['sir', 'warden'];
-  /* the Warden's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
+  const RO_LAKE_ONLY = ['dutch', 'supt'];
+  /* the Superintendent's quota (JT 2026-10-01, after Greg's gold-dig: "tiny on day 1 and growing every day"): gold she takes out
      of the crew bank at curfew. Short of it, the whole crew's fired and the run starts over from nothing.
      15, 37, 63, 93, 127 ... 357 on day 10; more campers, more gold (x1.6 for each extra). */
   /* 2026-11-10: gentler first days, steeper later (was 15 + 20d + 2d^2: a bare-handed camper could not make day 2).
@@ -167,7 +167,7 @@
 
   /* ---- heavy loot: one camper drags it slowly, two or more carry it at a walk ---- */
   function carrySpeed(n) { return n >= 2 ? 3.5 : 1.2; }
-  // props: {id:{type,x,z,n}}; players: [{id,x,z,cy,dn}]. Returns ids that reached Mr. Sir's truck.
+  // props: {id:{type,x,z,n}}; players: [{id,x,z,cy,dn}]. Returns ids that reached Foreman Dutch's truck.
   function stepProps(props, players, dt) {
     const sold = [];
     for (const id in props) {
@@ -184,8 +184,8 @@
     return sold;
   }
 
-  /* ---- monsters: police trucks until 01:00, then Madame Zeroni until dawn ---- */
-  // M: {trucks:[], zer:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
+  /* ---- monsters: police trucks until 01:00, then the Drowned Bride until dawn ---- */
+  // M: {trucks:[], bride:null}. players: [{id,x,z,fa,cr,hd,dn,nz}]. t: clock. ev: events out.
   /* ---- the night patrol: four police officers on foot with flashlights (JT, 2026-09-27: no more cop cars, which
      only appeared around whoever was outside and "just teleport in") ----
      At curfew they walk out of the main gate one by one, then patrol a loop around the camp just outside the watchtower
@@ -208,8 +208,8 @@
   }
   function copLit(c, p) { return inBeam(p.x, p.z, c.x, c.z, c.h + Math.PI, CURFEW.copRange, CURFEW.copHalf); }
   function stepMonsters(M, players, t, dt, ev, opt) {
-    const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: Zeroni all night, no police
-    const night = t >= DAYMS, half = fm ? 'zeroni' : t < NIGHT_SPLIT ? 'police' : 'zeroni';
+    const fm = !!(opt && opt.mood === 'fullmoon');   // full moon: the Bride all night, no police
+    const night = t >= DAYMS, half = fm ? 'bride' : t < NIGHT_SPLIT ? 'police' : 'bride';
     if (!night) M.appeased = false;   // sung away: gone until the next night
     const outs = players.filter(p => !inCamp(p.x, p.z));
     if (night && !fm) {   // keep CURFEW.copN officers out: more walk out of the gate, spares head home (the slider works mid-night)
@@ -220,11 +220,11 @@
     else for (const c of M.trucks) if (c.mode !== 'home') { c.mode = 'home'; c.tgt = null; c.delay = 0; }
     for (const c of M.trucks) stepCop(c, M.trucks, outs, t, dt, ev);
     M.trucks = M.trucks.filter(c => !c.gone);
-    // Madame Zeroni: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
-    if (!(night && half === 'zeroni' && outs.length) || M.appeased) M.zer = null;
+    // the Drowned Bride: out on the lake after 01:00, only while somebody is out there (the officers keep patrolling too)
+    if (!(night && half === 'bride' && outs.length) || M.appeased) M.bride = null;
     else {
-      if (!M.zer) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.zer = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.zer, p, 45, false); ev.push({ k: 'zspawn' }); }
-      stepZeroni(M.zer, outs, t, dt, ev);
+      if (!M.bride) { const p = nearest(outs.filter(p => !p.dn), 0, 40) || outs[0]; M.bride = { x: 0, z: -40, tgt: null, blink: 10, talk: 1.5, drag: null }; place(M.bride, p, 45, false); ev.push({ k: 'bridespawn' }); }
+      stepBride(M.bride, outs, t, dt, ev);
     }
   }
   function nearest(list, x, z) { let b = null, bd = 1e9; for (const p of list) { const d = Math.hypot(p.x - x, p.z - z); if (d < bd) { bd = d; b = p; } } return b; }
@@ -266,7 +266,7 @@
     }
     if (c.mode !== 'home') for (const p of outs) { if (p.dn || p.hd) continue; const pd = Math.hypot(p.x - c.x, p.z - c.z); if (pd < CURFEW.copCatch && (copLit(c, p) || towerSees(p, t))) ev.push({ k: 'down', id: p.id, by: 'police' }); }
   }
-  // put Zeroni near player p: behind them, or (front=true) right in front of them
+  // put the Bride near player p: behind them, or (front=true) right in front of them
   function place(z, p, dist, front) {
     if (!p) return false;
     for (let k = 0; k < 24; k++) {
@@ -276,7 +276,7 @@
     }
     return false;
   }
-  function stepZeroni(z, outs, t, dt, ev) {
+  function stepBride(z, outs, t, dt, ev) {
     // dragging someone off toward the edge of the lake; a friend reviving them makes her let go
     if (z.drag != null) {
       const v = outs.find(p => p.id === z.drag);
@@ -301,7 +301,7 @@
     const nx = z.x + dx / d * 5.4 * dt, nz = z.z + dz / d * 5.4 * dt;
     if (!inCamp(nx, nz)) { z.x = nx; z.z = nz; }
     z.talk -= dt; if (z.talk <= 0) { z.talk = 6.5 + Math.random() * 2.5; ev.push({ k: 'talk' }); }
-    if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'zeroni' }); z.drag = tgt.id; }
+    if (d < 1.8) { ev.push({ k: 'down', id: tgt.id, by: 'bride' }); z.drag = tgt.id; }
   }
 
   /* ---- javelina herd: a swarm event out on the lake. Self-contained (doesn't touch MON/stepMonsters above) so it
@@ -431,7 +431,7 @@
   const LION_STALK_SPD = 3.2, LION_CIRCLE_SPD = 5.6, LION_BURST_SPD = 8.8, LION_POUNCE_SPD = 13.5, LION_LEAVE_SPD = 8;
   const LION_POUNCE_MIN = 6, LION_POUNCE_MAX = 9;   // it only lunges from this range, and only when unseen
   const LION_BITE_R = 1.7;          // contact distance for the lunge to land
-  const LION_DMG = 35;              // one pounce's damage; hurt() is called by the victim's own client (like Zeroni's 'down')
+  const LION_DMG = 35;              // one pounce's damage; hurt() is called by the victim's own client (like the Bride's 'down')
   const LION_PIN_TIME = 1.6;        // seconds pinned in place after a pounce lands
   const LION_COOLDOWN = 10;         // seconds before it will try another pounce on the same stalk
   const LION_GIVEUP = 14;           // seconds waiting near a hole rim before giving up on a target it can't reach
@@ -546,18 +546,18 @@
      Which kinds show up is picked each day (same pick on every client: seeded by the day), and it grows as the days go by:
        small  (from day 1)  hatch: lizard hatchlings in swarms, snake: rattlesnakes that rattle then strike,
                             scorp: scorpions that come up where you dig
-       medium (from day 2)  sir: Mr. Sir walks the lake and takes your sack if you stand around,
-                            sheriff: the Sheriff's ghost, near curfew, hunts whoever carries Kate Barlow's loot
-       big    (from day 3)  warden: the Warden knocks out whoever she catches idle, kate: Kate Barlow's ghost at night,
+       medium (from day 2)  dutch: Foreman Dutch walks the lake and takes your sack if you stand around,
+                            marshal: the Marshal's ghost, near curfew, hunts whoever carries Lil Marlow's loot
+       big    (from day 3)  supt: the Superintendent knocks out whoever she catches idle, lil: Lil Marlow's ghost at night,
                             who only moves while nobody is looking at her
      Our vultures, javelinas and lion stay their own systems. R: {mobs:[], pm:{}, nid, sp, roster, rkey, force:[]}.
-     players: simPlayers() on the server / meSim() solo, plus kt (holding Kate's loot), on (onion active), vy (camera yaw). */
+     players: simPlayers() on the server / meSim() solo, plus ml (holding Lil's loot), on (bitterroot active), vy (camera yaw). */
   const RO_OFF = new Set(['hatch']);   // JT 2026-10-01: hatchlings are off for now ("they're OP"); console 'roster hatch' still spawns them for testing
-  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['sir', 'sheriff'], RO_BIG = ['warden', 'kate'];
-  const RO_KINDS = ['hatch', 'snake', 'scorp', 'sir', 'sheriff', 'warden', 'kate'];   // wire format: index into this
+  const RO_SMALL = ['hatch', 'snake', 'scorp'], RO_MEDIUM = ['dutch', 'marshal'], RO_BIG = ['supt', 'lil'];
+  const RO_KINDS = ['hatch', 'snake', 'scorp', 'dutch', 'marshal', 'supt', 'lil'];   // wire format: index into this
   function roRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  function rosterFor(day, curse) {
-    const c = clamp(curse || 0, 0, 100);
+  function rosterFor(day, badluck) {
+    const c = clamp(badluck || 0, 0, 100);
     const r = roRnd(day * 131 + 7), take = (list, n) => { const a = list.slice(), out = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(r() * a.length), 1)[0]); return out; };
     const ns = Math.min(3, 1 + Math.floor(day / 2) + Math.floor(c / 40)), nm = day >= 2 || c >= 40 ? (day >= 4 || c >= 70 ? 2 : 1) : 0, nb = day >= 3 || c >= 60 ? (day >= 5 || c >= 80 ? 2 : 1) : 0;
     return [...take(RO_SMALL, ns), ...take(RO_MEDIUM, nm), ...take(RO_BIG, nb)];
@@ -578,31 +578,31 @@
   }
   function stepRoster(R, players, t, dt, ev, o) {
     o = o || {}; R.mobs = R.mobs || []; R.pm = R.pm || {}; R.nid = R.nid || 1; R.sp = R.sp || {}; R.force = R.force || [];
-    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.curse || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
+    const day = Math.max(1, o.day | 0), night = t >= DAYMS, cur = DAYMS, cz = clamp(o.badluck || 0, 0, 100), key = day + ':' + Math.floor(cz / 20);
     if (R.rkey !== key) { R.rkey = key; R.roster = rosterFor(day, cz); }
-    const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'warden' : null;   // the day's mood can force a kind in
+    const moodK = o.mood === 'breeding' ? 'hatch' : o.mood === 'inspection' ? 'supt' : null;   // the day's mood can force a kind in
     const has = k => (R.all || R.roster.includes(k) || R.force.includes(k) || k === moodK) && !(R.off || []).includes(k) && !(ZONE_NOW !== 'lake' && RO_LAKE_ONLY.includes(k));
-    const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the curse (and the tester's rate slider): everything spawns faster
+    const cmul = (1 + cz / 100) * (o.rate == null ? 1 : Math.max(0.001, o.rate));   // the bad luck (and the tester's rate slider): everything spawns faster
     if (o.rate === 0) { R.mobs = R.mobs.filter(m => !roSmall(m.k)); }
     if (ZONE_NOW !== 'lake') R.mobs = R.mobs.filter(m => !RO_LAKE_ONLY.includes(m.k));   // camp staff don't follow the crew off the lake
     const outs = players.filter(p => !inCamp(p.x, p.z)), live = outs.filter(p => !p.dn), count = k => R.mobs.filter(m => m.k === k).length;
     const tick = (k, every) => { if (R.sp[k] == null) R.sp[k] = every * Math.random(); R.sp[k] -= dt; if (R.sp[k] <= 0) { R.sp[k] = every; return true; } return false; };
     const pickP = () => live[Math.floor(Math.random() * live.length)];
-    // who's been standing around out on the lake (for Mr. Sir and the Warden)
+    // who's been standing around out on the lake (for Foreman Dutch and the Superintendent)
     for (const p of players) { const m = R.pm[p.id] || (R.pm[p.id] = { idle: 0, warned: 0 }); if (p.an === 0 && p.cy < 0 && !p.dn && !inCamp(p.x, p.z)) m.idle += dt; else { m.idle = 0; m.warned = 0; } }
     if (live.length) {
       if (has('hatch') && !RO_OFF.has('hatch') && count('hatch') < 26 && tick('hatch', 50 / Math.sqrt(live.length) / cmul / (o.mood === 'breeding' ? 2 : 1))) { const p = pickP(), g = roSpawn(R, 'hatch', p, 10, 16, { life: 30 }); if (g) for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: g.x + (Math.random() - 0.5) * 2, z: g.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 }); }
       if (has('snake') && count('snake') < 3 + 2 * live.length && tick('snake', 22 / cmul)) roSpawn(R, 'snake', pickP(), 14, 34, { life: 150 });
       if (has('scorp')) for (const p of live) if (p.an === 2 && count('scorp') < 6 + live.length && Math.random() < 0.15 * cmul * dt) roSpawn(R, 'scorp', p, 1.4, 2.2, { life: 25 });
-      if (has('sir') && !night && !count('sir')) roSpawn(R, 'sir', pickP(), 40, 60, {});
-      if (has('warden') && !night && !count('warden')) roSpawn(R, 'warden', pickP(), 50, 70, {});
-      const kt = live.filter(p => p.kt);
-      if (has('sheriff') && (t > cur - DAYMS * (o.sheriffWin == null ? 0.15 : o.sheriffWin) || R.force.includes('sheriff')) && kt.length && !count('sheriff')) { if (roSpawn(R, 'sheriff', kt[0], 45, 55, {})) ev.push({ k: 'sheriff' }); }
-      if (has('kate') && (night || R.force.includes('kate')) && !count('kate')) { if (roSpawn(R, 'kate', pickP(), 35, 45, {})) ev.push({ k: 'kate' }); }
+      if (has('dutch') && !night && !count('dutch')) roSpawn(R, 'dutch', pickP(), 40, 60, {});
+      if (has('supt') && !night && !count('supt')) roSpawn(R, 'supt', pickP(), 50, 70, {});
+      const ml = live.filter(p => p.ml);
+      if (has('marshal') && (t > cur - DAYMS * (o.marshalWin == null ? 0.15 : o.marshalWin) || R.force.includes('marshal')) && ml.length && !count('marshal')) { if (roSpawn(R, 'marshal', ml[0], 45, 55, {})) ev.push({ k: 'marshal' }); }
+      if (has('lil') && (night || R.force.includes('lil')) && !count('lil')) { if (roSpawn(R, 'lil', pickP(), 35, 45, {})) ev.push({ k: 'lil' }); }
     }
     for (const m of R.mobs) {
       m.t += dt; m.cd = Math.max(0, m.cd - dt);
-      const pool = roSmall(m.k) ? live.filter(p => !p.on) : live;   // an onion keeps the small ones off you
+      const pool = roSmall(m.k) ? live.filter(p => !p.on) : live;   // a bitterroot keeps the small ones off you
       const tg = nearest(pool, m.x, m.z), d = tg ? Math.hypot(tg.x - m.x, tg.z - m.z) : 1e9;
       if (m.life != null && (m.life -= dt) <= 0) m.dead = true;
       switch (m.k) {
@@ -618,34 +618,34 @@
         case 'scorp':
           if (tg && d < 7) { roChase(m, tg, 2.6, dt); if (d < 0.7 && !m.cd) { m.cd = 3; ev.push({ k: 'sting', id: tg.id }); } }
           break;
-        case 'sir': case 'warden': {
+        case 'dutch': case 'supt': {
           if ((night && !R.force.includes(m.k)) || !live.length) { m.dead = true; break; }
           // they go after whoever is standing around; otherwise they wander between campers
           let lazy = null, li = 0; for (const p of live) { const im = R.pm[p.id]; if (im && im.idle > li && Math.hypot(p.x - m.x, p.z - m.z) < 70) { li = im.idle; lazy = p; } }
-          const warnAt = m.k === 'sir' ? 6 : 5, near = m.k === 'sir' ? 18 : 25;
+          const warnAt = m.k === 'dutch' ? 6 : 5, near = m.k === 'dutch' ? 18 : 25;
           m.st = 0;
           if (lazy && li > warnAt) {
             m.st = 1;
-            const dd = roChase(m, lazy, m.k === 'sir' ? 3.4 : 2.8, dt, m.k === 'sir' ? 2 : 1.1), im = R.pm[lazy.id];
-            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'sir' ? 'sirWarn' : 'wardenWarn', id: lazy.id }); }
-            if (m.k === 'sir' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
-            if (m.k === 'warden' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'warden' }); im.idle = 0; im.warned = 0; }
+            const dd = roChase(m, lazy, m.k === 'dutch' ? 3.4 : 2.8, dt, m.k === 'dutch' ? 2 : 1.1), im = R.pm[lazy.id];
+            if (dd < near && !im.warned) { im.warned = 1; ev.push({ k: m.k === 'dutch' ? 'dutchWarn' : 'suptWarn', id: lazy.id }); }
+            if (m.k === 'dutch' && dd < near && li > 11) { ev.push({ k: 'confiscate', id: lazy.id }); im.idle = 0; im.warned = 0; }
+            if (m.k === 'supt' && dd < 1.4) { ev.push({ k: 'down', id: lazy.id, by: 'supt' }); im.idle = 0; im.warned = 0; }
           } else { if (!m.goal || Math.hypot(m.goal.x - m.x, m.goal.z - m.z) < 3) { const p = pickP(); m.goal = { x: p.x + (Math.random() - 0.5) * 30, z: p.z + (Math.random() - 0.5) * 30 }; } roChase(m, m.goal, 2.4, dt); }
           break;
         }
-        case 'sheriff': {
-          const p = nearest(live.filter(q => q.kt), m.x, m.z);
+        case 'marshal': {
+          const p = nearest(live.filter(q => q.ml), m.x, m.z);
           if (!p) { if (m.life == null) m.life = 4; m.st = 1; break; }
           m.st = 0; m.life = null;
-          if (roChase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'sheriff' }); m.dead = true; }
+          if (roChase(m, p, 5.2, dt) < 1.3) { ev.push({ k: 'down', id: p.id, by: 'marshal' }); m.dead = true; }
           break;
         }
-        case 'kate': {
-          if ((!night && !R.force.includes('kate')) || !live.length) { m.dead = true; break; }
+        case 'lil': {
+          if ((!night && !R.force.includes('lil')) || !live.length) { m.dead = true; break; }
           // she only moves while nobody is looking at her (vy: where each camper's camera points)
           const watched = players.some(p => { if (p.dn || inCamp(p.x, p.z)) return false; const dx = m.x - p.x, dz = m.z - p.z, dd = Math.hypot(dx, dz); if (dd > 45) return false; const vx = -Math.sin(p.vy || 0), vz = -Math.cos(p.vy || 0); return (dx * vx + dz * vz) / (dd || 1) > 0.72; });
           m.st = watched ? 1 : 0;
-          if (!watched && tg && roChase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'kate' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
+          if (!watched && tg && roChase(m, tg, 8, dt) < 1.3) { ev.push({ k: 'down', id: tg.id, by: 'lil' }); const p2 = pickP(); if (p2) { const a = Math.random() * 6.3; m.x = p2.x + Math.cos(a) * 45; m.z = p2.z + Math.sin(a) * 45; } }
           break;
         }
       }
@@ -666,7 +666,7 @@
   // console/testing: put one of kind k near camper p right now (the natural spawn distances, a bit closer)
   function rosterSpawnNow(R, k, p) {
     R.mobs = R.mobs || []; R.nid = R.nid || 1;
-    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], sir: [20, 30, {}], sheriff: [25, 30, {}], warden: [20, 30, {}], kate: [25, 30, {}] }[k];
+    const D = { hatch: [8, 12, { life: 30 }], snake: [6, 10, { life: 150 }], scorp: [3, 5, { life: 25 }], dutch: [20, 30, {}], marshal: [25, 30, {}], supt: [20, 30, {}], lil: [25, 30, {}] }[k];
     if (!D) return null;
     const m = roSpawn(R, k, p, D[0], D[1], Object.assign({}, D[2]));
     if (m && k === 'hatch') for (let i = 0; i < 3; i++) R.mobs.push({ id: R.nid++, k: 'hatch', x: m.x + (Math.random() - 0.5) * 2, z: m.z + (Math.random() - 0.5) * 2, h: 0, y: 0, st: 0, t: 0, cd: 0, life: 30 });
@@ -674,7 +674,7 @@
   }
   const packRoster = R => (R.mobs || []).map(m => [m.id, RO_KINDS.indexOf(m.k), Math.round(m.x * 100) / 100, Math.round(m.z * 100) / 100, Math.round(m.h * 100) / 100, m.st | 0]);
 
-  /* ---- the buried town of Green Lake (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
+  /* ---- the buried town of Marlow's Landing (public/js/89-town.js; after Greg's branch, claude/intense-change-1-test-2026-09-27-1829) ----
      The old town, a hundred-odd years under the lake bed. You get in by digging an 8 ft hole that breaks through (always
      inside OLD_TOWN on the lake, sometimes elsewhere), and out by climbing a shaft or the old well (you need help: a friend
      boosting you, a hand from the top, or a staked rope ladder) or walking up the collapsed stairwell at the west end of
@@ -692,16 +692,16 @@
   const TOWN = { X: 2000, Z: 0, Y: -30, H: 3.6, STREET: { x0: -34, x1: 34, z0: -7.5, z1: 7.5, h: 5.5 }, TUN_R: 1.3, TUN_H: 2.6 };
   const OLD_TOWN = { x: -230, z: -250, r: 70 };
   const TOWN_BREAK_DEPTH = 1.45;   // JT: much easier -- an ordinary 5 ft hole (no long shovel) at the spot breaks through
-  const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Warden's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
+  const TOWN_NOTE_R = 6;   // the way in: an 8 ft hole this close to the middle of the old town (the Superintendent's note, 89-town.js)   // where the old town sits under the lake: every 8 ft hole in here breaks through
   // every building: key (its Blender model TownBldg_<key>), name, and size (L 14 x 12, M 11 x 10, S 9 x 8)
   const TOWN_BLDGS = [
     ['saloon', 'Saloon', 'L'], ['church', 'Church', 'L'], ['hotel', 'Hotel', 'L'], ['store', 'General store', 'L'], ['bank', 'Bank', 'L'],
-    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['sheriff', "Marshal's office", 'M'], ['jail', 'Jail', 'M'],
+    ['stable', 'Stable', 'L'], ['school', 'Schoolhouse', 'L'], ['marshal', "Marshal's office", 'M'], ['jail', 'Jail', 'M'],
     ['post', 'Post office', 'M'], ['boatshed', 'Boat shed', 'M'], ['doctor', "Doctor's office", 'M'], ['barber', 'Barbershop', 'S'],
-    ['kate', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
+    ['lil', "Lil's house", 'S'], ['cellar', 'Root cellar', 'S'], ['vault', "Lil's vault", 'S'], ['well', 'Old well', 'S']];
   const TOWN_SIZE = { L: [14, 12], M: [11, 10], S: [9, 8] };
   const TOWN_ROOMS = TOWN_BLDGS.map(b => b[1]);
-  const TOWN_LOOT = ['lipstick', 'locket', 'pistol', 'sploosh', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
+  const TOWN_LOOT = ['matchsafe', 'locket', 'pistol', 'shine', 'goldbar', 'jar', 'fossil', 'shoe', 'spoon'];
   const PI = Math.PI;
   // where buildings stand: the six on Main Street (always the big ones, fronts on the street) and the seven off it
   const TOWN_SPOTS = {
@@ -710,7 +710,7 @@
   // who stands where (JT: the town doesn't reshuffle). Stable, doctor, barbershop and post office are built (art/blender/town.py)
   // but not placed; swap one in here.
   const TOWN_PLAN = { MW: 'saloon', MM: 'store', ME: 'hotel', SW: 'church', SM: 'school', SE: 'bank',
-    N1: 'sheriff', N2: 'jail', N3: 'boatshed', S1: 'kate', S2: 'well', S3: 'cellar', E: 'vault' };
+    N1: 'marshal', N2: 'jail', N3: 'boatshed', S1: 'lil', S2: 'well', S3: 'cellar', E: 'vault' };
   // the tunnels that can be dug: [from spot, its wall (world side), to spot or 'street', its side, waypoints between]
   const northEdges = [
     ['MW', 'N', 'N1', 'S', [[-22, 23], [-25, 28]]], ['MM', 'N', 'N2', 'S', [[0, 24], [1, 30]]], ['ME', 'N', 'N3', 'S', [[22, 23], [25, 28]]],
@@ -784,35 +784,35 @@
   }
   const inTownXZ = x => x > TOWN.X - 70;
   // does an 8 ft hole at (x,z) break through? Only at the one spot (JT, 2026-09-30: the same place every time, for
-  // building the level): the middle of the old town, the coordinates on the Warden's note. You always land in the same place.
+  // building the level): the middle of the old town, the coordinates on the Superintendent's note. You always land in the same place.
   const townBreaks = (x, z, day) => Math.hypot(x - OLD_TOWN.x, z - OLD_TOWN.z) < TOWN_NOTE_R;
 
-  /* ---- the Warden's mood and the curse (after Greg's branch; public/js/82-mood.js shows and applies them) ----
-     One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the curse rises). Day 1 is normal.
-     The curse (0-100) is the crew's: it rises when campers are out past curfew or get knocked out, eases each dawn, when
-     the quota's met, and when someone sings Madame Zeroni away. It spawns more monsters and hazards. */
+  /* ---- the Superintendent's mood and the bad luck (after Greg's branch; public/js/82-mood.js shows and applies them) ----
+     One mood per day, the same for everyone (seeded by the day; bad moods get likelier as the bad luck rises). Day 1 is normal.
+     The bad luck (0-100) is the crew's: it rises when campers are out past curfew or get knocked out, eases each dawn, when
+     the quota's met, and when someone sings the Drowned Bride away. It spawns more monsters and hazards. */
   const MOODS = {
     normal: { name: 'A regular day', desc: 'Nothing special. Dig.' },
     heatwave: { name: 'Heatwave', desc: 'Water drains faster and the sun burns twice as fast.' },
     sandstorm: { name: 'Sandstorm', desc: 'You can barely see, and the map only works in camp.' },
     breeding: { name: 'Gila breeding season', desc: 'Gila hatchlings everywhere, twice as many.' }, // never rolled while hatchlings are off (RO_OFF)
-    stingy: { name: 'Dutch is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Mr. Sir (gold rush): never rolled
+    stingy: { name: 'Dutch is in a mood', desc: 'Only 3 water refills each today.' }, // retired with Foreman Dutch (gold rush): never rolled
     fullmoon: { name: 'Full moon', desc: 'The Drowned Bride is out all night. No police.' },
     digday: { name: 'Dig day', desc: 'The sifter pays double today.' },
     inspection: { name: 'Inspection day', desc: 'The Superintendent walks the lake all day. Look busy.' },
   };
-  function rollMood(day, curse) {
+  function rollMood(day, badluck) {
     if (day <= 1) return 'normal';
-    const r = roRnd(day * 977 + 31), c = clamp(curse || 0, 0, 100) / 100;
+    const r = roRnd(day * 977 + 31), c = clamp(badluck || 0, 0, 100) / 100;
     const w = { normal: 3 - 2 * c, heatwave: 1 + c, sandstorm: 1 + c, breeding: 0, stingy: 0, fullmoon: 0.6 + c, digday: 0.8, inspection: day >= 3 ? 1 + c : 0 };
     let s = 0; for (const k in w) s += w[k]; let x = r() * s; for (const k in w) { if ((x -= w[k]) < 0) return k; } return 'normal';
   }
-  const CURSE = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
+  const BADLUCK = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
   const SIM = { PAY, richAt, payMult, gradeOf, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
-    MOODS, rollMood, CURSE,
+    MOODS, rollMood, BADLUCK,
     TOWN, OLD_TOWN, TOWN_BREAK_DEPTH, TOWN_BLDGS, TOWN_SPOTS, TOWN_PLAN, TOWN_EDGES, townLayout, townDoor, townAlong, townBreachSpot, inTownXZ, townBreaks,
     RO_KINDS, rosterFor, stepRoster, rosterSwat, rosterSpawnNow, packRoster };
   if (typeof module === 'object' && module.exports) module.exports = SIM; else root.SIM = SIM;

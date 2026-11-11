@@ -15,7 +15,7 @@ font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 19)
 small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 15)
 sheet = Image.new('RGB', (1440, 1008), '#282520')
 draw = ImageDraw.Draw(sheet)
-draw.text((20, 14), 'CAMP GREEN LAKE  /  SAND PIPELINE', font=font, fill='#f4dfb9')
+draw.text((20, 14), 'CAMP DRYWATER  /  SAND PIPELINE', font=font, fill='#f4dfb9')
 for i, (name, caption) in enumerate(assets):
     x, y = i % 3 * 480, 50 + i // 3 * 479
     im = Image.open(folder / (name + '.png')).convert('RGB')

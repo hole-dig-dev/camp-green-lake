@@ -1,5 +1,5 @@
 # blend: town.blend
-# The buried town of Green Lake: a hundred-odd years under the lake bed. public/sim.js (townLayout) picks the day's
+# The buried town of Marlow's Landing: a hundred-odd years under the lake bed. public/sim.js (townLayout) picks the day's
 # layout: Main Street, a buried street cavern with three big buildings on each side, and seven more buildings off it,
 # reached by timber-shored tunnels. public/js/89-town.js puts these pieces where the layout says and digs the tunnels
 # (their cave walls are generated there along each day's path; the timber sets and debris in them come from here).
@@ -325,7 +325,7 @@ def _(r,k,W,D):
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
     counter('desk',-qx,qy-1.0,math.pi,r,w=3.6);col(k,-qx,qy-1.0,3.6,0.8)
-    g=grp('keyboard',(-qx,hd-0.05,1.8),(0,0,math.pi),r);B('kb',(1.8,0.05,0.9),(0,0,0),mTIM,p=g)
+    g=grp('keyboard',(-qx,hd-0.05,1.8),(0,0,math.pi),r);B('keys',(1.8,0.05,0.9),(0,0,0),mTIM,p=g)
     for i in range(6):
         for j in range(2):
             if rnd.random()<0.5:B(f'fob{i}{j}',(0.05,0.02,0.12),(-0.75+i*0.3,-0.07,0.1-j*0.4),mBRASS,p=g)
@@ -391,7 +391,7 @@ def _(r,k,W,D):
     shelf('bookshelf',-hw+0.3,qy,math.pi/2,r,w=1.6,rows=4,fill=books,lean=0.05);col(k,-hw+0.3,qy,0.5,1.6)
     Cy('globestand',0.03,0.8,(-qx,qy+0.5,0.4),mBRASS,p=r);blob('globeball',(-qx,qy+0.5,0.95),(0.2,0.2,0.2),M_('globe',(0x5a,0x6a,0x5a)),r)
     for j in range(6):B(f'paper{j}',(0.21,0.28,0.004),(rnd.uniform(-hw+1,-1.6),rnd.uniform(-hd+1,-1.6),0.01),mPAPER,rot=(0,0,J(3)),p=r)
-@bldg('sheriff',"Marshal's office",'M')
+@bldg('marshal',"Marshal's office",'M')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
     table('desk',qx,qy-0.3,0.1,r,w=2.0,d=1.0);col(k,qx,qy-0.3,2.0,1.0);chair('dchair',qx,qy-1.2,0,r,fallen=True)
@@ -432,14 +432,14 @@ def _(r,k,W,D):
 @bldg('boatshed',"Boat shed",'M','timber')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
-    g=grp('boat',(-qx,-qy+0.3,0.55),(0,math.pi,0.2),r)   # the Mary Lou, upside down on sawhorses
+    g=grp('boat',(-qx,-qy+0.3,0.55),(0,math.pi,0.2),r)   # a rowing boat, upside down on sawhorses
     blob('hull',(0,0,0),(0.85,2.2,0.5),M_('hull',(0x6a,0x7a,0x7a),0.9),g,seg=12,rings=6);B('keel',(0.08,4.2,0.1),(0,0,0.5),mTIM,p=g)
     col(k,-qx,-qy+0.3,2.0,4.2)
-    text('maryloutxt','ROYAL FLUSH',(-qx+0.9,-qy+0.3,0.35),0.18,M_('paintred',(0x8a,0x2a,0x1c)),rot=(math.pi/2,0,math.pi/2+0.2),parent=r)
+    text('boattxt','ROYAL FLUSH',(-qx+0.9,-qy+0.3,0.35),0.18,M_('paintred',(0x8a,0x2a,0x1c)),rot=(math.pi/2,0,math.pi/2+0.2),parent=r)
     for j in range(2):tube(f'oar{j}',(hw-0.3,-qy+j*0.4,0.1),(hw-0.4,-qy+j*0.5,2.6),0.03,mGREY,r,v=5)
     for j in range(4):
         x,y=qx+(j%2)*0.75-0.4,qy+(j//2)*0.75-0.4;crate(f'onc{j}',x,y,J(0.2),r,s=0.65)
-        for i in range(4):blob(f'onion{j}{i}',(x+J(0.2),y+J(0.2),0.7),(0.07,0.07,0.06),M_('onion',(0xb8,0x8a,0x4a)),r,seg=6,rings=4)
+        for i in range(4):blob(f'bitterroot{j}{i}',(x+J(0.2),y+J(0.2),0.7),(0.07,0.07,0.06),M_('bitterroot',(0xb8,0x8a,0x4a)),r,seg=6,rings=4)
     col(k,qx,qy,1.5,1.5)
     B('workbench',(2.2,0.7,0.85),(-qx,hd-0.5,0.42),mTIM,p=r);col(k,-qx,hd-0.5,2.2,0.7)
     for j in range(6):Cy(f'peach{j}',0.05,0.14,(qx+J(0.4),-qy+j*0.18-0.4,0.07),M_('peachjar',(0xc8,0x8a,0x3a),0.3),v=8,p=r)
@@ -473,14 +473,14 @@ def _(r,k,W,D):
     for j in range(4):Cy(f'stripe{j}',0.102,0.1,(0,0,0.35+j*0.35),M_('polered',(0x8a,0x2a,0x1c)),v=10,rot=(0.3,0,0),p=g)
     chair('wchair1',-qx,qy,math.pi,r);chair('wchair2',-qx+0.8,qy,math.pi,r,fallen=True)
     for j in range(8):blob(f'hair{j}',(rnd.uniform(-hw+0.5,hw-0.5),rnd.uniform(-hd+0.8,-1.4),0.02),(0.12,0.08,0.02),M_('hair',(0x3a,0x2a,0x1e)),r,seg=6,rings=3)
-@bldg('kate',"Lil's house",'S')
+@bldg('lil',"Lil's house",'S')
 def _(r,k,W,D):
     hw,hd,qx,qy=A(W,D)
     bed('bed',-qx,-qy+0.2,0,r);col(k,-qx,-qy+0.2,1.2,2.2)
     g=grp('dresser',(qx,-hd+0.35,0),(0,0,math.pi),r);B('dres',(1.6,0.5,1.0),(0,0,0.5),mTIM,p=g)
     for j in range(3):B(f'dd{j}',(1.5,0.04,0.26),(0,-0.26,0.2+j*0.3),mTIM2,p=g)
     B('dmirror',(0.9,0.04,1.1),(0,0.1,1.6),M_('mirror',(0x5a,0x6a,0x6a),0.1,0.6),rot=(0.08,0,0),p=g);col(k,qx,-hd+0.35,1.6,0.5)
-    B('lipstickbox',(0.2,0.14,0.08),(qx+0.3,-hd+0.4,1.04),M_('velvet',(0x6a,0x1a,0x2a)),p=r)
+    B('velvetbox',(0.2,0.14,0.08),(qx+0.3,-hd+0.4,1.04),M_('velvet',(0x6a,0x1a,0x2a)),p=r)
     g=grp('rocker',(qx,qy,0),(0,0,2.4),r)
     for s in (-1,1):tube(f'rock{s}',(s*0.22,-0.45,0.08),(s*0.22,0.45,0.02),0.03,mTIM,g,v=5)
     chair('rockchair',0,0,0,g);col(k,qx,qy,0.8,0.9)
@@ -495,7 +495,7 @@ def _(r,k,W,D):
         g=grp(f'bin{i}',(x,y,0),(0,0,0),r);bw,bd=hw-1.6,hd-1.6
         for s in (-1,1):B(f'bw{i}{s}',(bw,0.06,0.8),(0,s*bd/2,0.4),rnd.choice(WOODS),p=g);B(f'bs{i}{s}',(0.06,bd,0.8),(s*bw/2,0,0.4),rnd.choice(WOODS),p=g)
         blob(f'pile{i}',(0,0,0.35),(bw/2-0.1,bd/2-0.1,0.5),M_('husk',(0x9a,0x7a,0x4a)),g,seg=10,rings=5)
-        for j in range(8):blob(f'on{i}{j}',(J(bw/2-0.2),J(bd/2-0.2),0.72+J(0.08)),(0.08,0.08,0.07),M_('onion',(0xb8,0x8a,0x4a)),g,seg=6,rings=4)
+        for j in range(8):blob(f'on{i}{j}',(J(bw/2-0.2),J(bd/2-0.2),0.72+J(0.08)),(0.08,0.08,0.07),M_('bitterroot',(0xb8,0x8a,0x4a)),g,seg=6,rings=4)
         col(k,x,y,bw+0.1,bd+0.1)
     for j in range(4):tube(f'hang{j}',(J(hw-1),J(hd-1),H),(J(hw-1),J(hd-1),H-0.6),0.01,mROOT,r,v=4)
 @bldg('vault',"Lil's vault",'S','stone')
@@ -511,7 +511,7 @@ def _(r,k,W,D):
     col(k,qx,-qy,1.4,0.6)
     for j in range(3):B(f'strongbox{j}',(0.5,0.35,0.3),(qx,qy-0.4+j*0.5,0.15),mRUST,rot=(0,0,J(0.3)),p=r)
     col(k,qx,qy,0.7,1.6)
-    Cy('lamp',0.12,0.35,(-qx,qy,0.18),mGLASS,v=8,p=r);text('kb','LM',(0,-hd+0.04,2.3),0.5,mGOLD,parent=r,rot=(math.pi/2,0,math.pi))
+    Cy('lamp',0.12,0.35,(-qx,qy,0.18),mGLASS,v=8,p=r);text('lmtxt','LM',(0,-hd+0.04,2.3),0.5,mGOLD,parent=r,rot=(math.pi/2,0,math.pi))
     skeleton('digger',-qx,-qy,J(3),r)
     for j in range(4):B(f'pick{j}',(0.9,0.05,0.05),(rnd.uniform(-hw+0.6,hw-0.6),rnd.uniform(1.4,hd-0.4),0.03),mTIM,rot=(0,0,J(3)),p=r)
 @bldg('well','Old well','S','cave')

@@ -28,7 +28,7 @@ Status meanings and rules are in the [README](README.md). Verdicts come from JT'
 | Menu sounds: open, close, hover, press, "can't afford" | In game: not reviewed | `public/audio/ui-open.mp3`, `ui-close.mp3`, `ui-hover.mp3`, `ui-click.mp3`, `ui-deny.mp3` | New; there were none. `audio ui old` turns them off |
 | Hurt and knocked out | In game: not reviewed | `public/audio/hit-1.mp3`, `hit-2.mp3`, `bodyfall.mp3` | Replace the sine thud for damage; the knockout was silent. `audio danger old|new` |
 | Curfew siren, lizard hiss (synthesized, redesigned), title start sting | In game: not reviewed | code in `public/js/41-cues.js` | Still Web Audio synthesis: no fitting CC0 recording |
-| Other hazards, wildlife, patrol, Zeroni, remaining game cues, disco | In game: not reviewed | code in `public/js/` | JT: most still sound code-generated; not a priority yet |
+| Other hazards, wildlife, patrol, the Bride, remaining game cues, disco | In game: not reviewed | code in `public/js/` | JT: most still sound code-generated; not a priority yet |
 
 ## Digging variants (liked)
 

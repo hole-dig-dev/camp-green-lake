@@ -50,7 +50,7 @@ cyl('lock',0.035,0.03,(0,-0.26,0.3),('brass','brass',0.4,0.8),verts=8,rot=(math.
 for x in (-0.47,0.47):box(f'handle{x}',(0.03,0.16,0.04),(x,0,0.27),('steel','steel',0.5,0.7),bevel=0.005,parent=r)
 studio(elev=25,azim=-35,lens=50);frame(margin=1.2);print('locker',tris());render()
 
-# ---------- CardTable: D Tent's square wooden table (2.3 m, top at 0.8) with a felt inset ----------
+# ---------- CardTable: Bunk D's square wooden table (2.3 m, top at 0.8) with a felt inset ----------
 scene('CardTable');r=root('CardTable');S=2.3
 box('top',(S,S,0.08),(0,0,0.78),('wood','wood',0.8),bevel=0.02,parent=r)
 box('felt',(S-0.5,S-0.5,0.012),(0,0,0.825),((0x3f,0x5a,0x3a),(0x3f,0x5a,0x3a),0.95),bevel=0,parent=r)
@@ -63,7 +63,7 @@ for i in range(14):
     cyl(f'seed{i}',0.012,0.01,(0.45+rnd.uniform(-0.08,0.08),-0.4+rnd.uniform(-0.08,0.08),0.836),(( 0x3a,0x33,0x2a),(0x3a,0x33,0x2a),0.9),verts=5,bevel=0,parent=r)
 studio(elev=28,azim=-35,lens=45);frame(margin=1.1);print('cardtable',tris());render()
 
-# ---------- Stool: wooden camp stool (0.46 tall, as in D Tent) ----------
+# ---------- Stool: wooden camp stool (0.46 tall, as in Bunk D) ----------
 scene('Stool');r=root('Stool')
 cyl('seat',0.24,0.06,(0,0,0.43),('wood','wood',0.85),verts=12,bevel=0.012,parent=r)
 for k in range(3):
@@ -71,8 +71,8 @@ for k in range(3):
     b=a+math.pi/3;tube(f'brace{k}',(math.cos(a)*0.215,math.sin(a)*0.215,0.16),(math.cos(a+2*math.pi/3)*0.215,math.sin(a+2*math.pi/3)*0.215,0.16),0.012,m=('wood_dark','wood_dark',0.85),parent=r)
 studio(elev=22,azim=-35,lens=50);frame(margin=1.3);print('stool',tris());render()
 
-# ---------- WardenDesk: heavy desk (3.1 x 1.7, top 0.83) with lamp, papers, ashtray and a chair ----------
-scene('WardenDesk');r=root('WardenDesk')
+# ---------- SuptDesk: heavy desk (3.1 x 1.7, top 0.83) with lamp, papers, ashtray and a chair ----------
+scene('SuptDesk');r=root('SuptDesk')
 box('top',(3.1,1.7,0.08),(0,0,0.8),('wood_dark','wood_dark',0.6),bevel=0.02,parent=r)
 for x in (-1.1,1.1):box(f'pedestal{x}',(0.8,1.5,0.76),(x,0,0.38),('wood_dark','wood_dark',0.7),bevel=0.015,parent=r)
 for x in (-1.1,1.1):
@@ -85,7 +85,7 @@ cyl('lampbase',0.09,0.03,(1.0,0.35,0.855),('brass','brass',0.4,0.8),verts=12,bev
 tube('lamparm',(1.0,0.35,0.86),(0.95,0.25,1.25),0.012,m=('brass','brass',0.4,0.8),parent=r)
 cyl('lampshade',0.06,0.18,(0.9,0.18,1.22),('paint_green','paint_green',0.6,0.3),verts=12,r2=0.14,rot=(math.radians(-60),0,0),bevel=0,parent=r)
 cyl('ashtray',0.07,0.025,(0.55,-0.35,0.855),('steel','steel',0.4,0.7),verts=10,bevel=0.005,parent=r)
-# swivel chair behind the desk (+Y side is the Warden's)
+# swivel chair behind the desk (+Y side is the Superintendent's)
 c=root('chair');c.parent=r;c.location=(0,1.25,0);c.rotation_euler=(0,0,math.pi)
 cyl('cbase',0.05,0.4,(0,0,0.25),MET,verts=8,parent=c)
 for k in range(5):

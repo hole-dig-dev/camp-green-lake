@@ -4,11 +4,11 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const SIM = require('../public/sim.js');
 const policeTime = SIM.DAYMS + 1000;
-const zeroniTime = SIM.NIGHT_SPLIT + 1000;
+const brideTime = SIM.NIGHT_SPLIT + 1000;
 const camper = (x, z, hd = false) => ({ id: 1, x, z, fa: 0, cr: false, hd, dn: false, nz: 0 });
 
 function policeAt(x, z, h = 0) {
-  return { trucks: [{ x, z, h, mode: 'patrol', lost: 0, tx: x, tz: z - 30, tgt: null }], zer: null };
+  return { trucks: [{ x, z, h, mode: 'patrol', lost: 0, tx: x, tz: z - 30, tgt: null }], bride: null };
 }
 
 test('tower spotting follows the rendered sweep, range, and hole cover', () => {
@@ -34,9 +34,9 @@ test('a police officer cannot catch a camper behind their flashlight, even at to
   assert.deepEqual(hidden, []);
 });
 
-test('Zeroni hunts a camper out on the lake whether or not a searchlight is on them', () => {
-  // The searchlights are a police mechanic only; Madame Zeroni ignores light and goes after whoever is out there.
-  const M = { trucks: [], zer: { x: 0, z: -95, tgt: null, blink: 10, talk: 10, drag: null } }, ev = [];
-  SIM.stepMonsters(M, [camper(0, -100)], zeroniTime, 0.1, ev);
-  assert.equal(M.zer.tgt, 1);
+test('the Drowned Bride hunts a camper out on the lake whether or not a searchlight is on them', () => {
+  // The searchlights are a police mechanic only; the Drowned Bride ignores light and goes after whoever is out there.
+  const M = { trucks: [], bride: { x: 0, z: -95, tgt: null, blink: 10, talk: 10, drag: null } }, ev = [];
+  SIM.stepMonsters(M, [camper(0, -100)], brideTime, 0.1, ev);
+  assert.equal(M.bride.tgt, 1);
 });

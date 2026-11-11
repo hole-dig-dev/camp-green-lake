@@ -21,7 +21,7 @@ const VULTURE_ORBIT_MIN=18,VULTURE_ORBIT_MAX=32;   // each bird's own orbit radi
 const VULTURE_TIGHT_MIN=0.35;       // how much the orbit shrinks when circling tight over someone hurt/warned
 // health lines (circle below / target below / give up above) are tester sliders: tune('vulture.attract'|'vulture.thresh'|'vulture.clear'), defaults 0.55/0.30/0.40 in 11-tune.js
 const VULTURE_GRACE=4;              // seconds under threshold before the warning fires - a beat to notice your own health bar
-const VULTURE_WARN_TIME=5;          // seconds of tightening circling before the dive - JT's window to heal/onion/run
+const VULTURE_WARN_TIME=5;          // seconds of tightening circling before the dive - JT's window to heal/bitterroot/run
 const VULTURE_DIVE_TIME=1.3;        // swoop-in duration, timed to be readable (and shoo-able)
 const VULTURE_GRAB_TIME=0.35;       // the snatch, before it starts hauling you
 const VULTURE_CARRY_TIME=2.6;       // how long it carries you before letting go

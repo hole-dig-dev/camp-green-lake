@@ -7,7 +7,7 @@ const esc=async()=>{await A.keyboard.press('Escape');await A.waitForTimeout(300)
 await A.evaluate(()=>{tuneSet('haz.all',0);runCommand('time 10:30');runCommand('crew hire all');GOD=true});await A.waitForTimeout(800);
 await A.evaluate(()=>{runCommand('crew kit all shovel bucket2');runCommand('crew kit Zach spade bucket3 pack3 canteen');runCommand('kit shovel bucket2 pack canteen hopper dog disarm hoverShoes');
   runCommand('campup goldScale sodaMachine pipeTee');runCommand('bank 640');runCommand('pipe 3,36 0,31 0,20');
-  const L=Object.keys(LOOT).filter(k=>k!=='kb'&&!SIM.HEAVY[k]).slice(0,5);S.sack=[L[0],L[0],L[1],L[2],L[3]];S.onions=3;S.soda=2;S.medkit=1;S.dynamite=2;S.pipe=4;S.bucket=6.4;
+  const L=Object.keys(LOOT).filter(k=>k!=='lmcase'&&!SIM.HEAVY[k]).slice(0,5);S.sack=[L[0],L[0],L[1],L[2],L[3]];S.bitterroots=3;S.soda=2;S.medkit=1;S.dynamite=2;S.pipe=4;S.bucket=6.4;
   P.x=4;P.z=10;P.y=groundAt(4,10);if(FP)toggleView();P.yaw=Math.PI;P.pitch=0.3});
 await A.waitForTimeout(3000);
 await shot('hud',1200);

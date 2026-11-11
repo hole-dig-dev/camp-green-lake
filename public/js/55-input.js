@@ -73,7 +73,7 @@ addEventListener('keydown',e=>{
   if(pk==='escape'){e.preventDefault();if(PAUSE.open)closePause();else if(S.started&&!overlayBlocking())openPause();return}
   if(PAUSE.open)return;
   if(!S.started)return;
-  if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('sploosh')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
+  if(pk.length===1){net.typed=(net.typed+pk).slice(-8);if(net.typed.endsWith('peachshine')){net.typed='';toggleAdmin()}if(net.typed.endsWith('disco')){net.typed='';if(net.ws&&net.ws.readyState===1)wsSend({t:'disco'});else startParty(net.id,S.name,60)}}
   if(pk==='j'&&!e.repeat&&!uiOpen()){e.preventDefault();openFieldMap();return}
   if(pk==='tab'&&!e.repeat&&!uiOpen()){e.preventDefault();openInventory();return}   // Tab: fixed second key for the inventory (81-inventory.js)
   const k=remapKey(pk);if(!k)return;   // pause menu: translate the physical key to the default key name the checks below expect
@@ -93,7 +93,7 @@ addEventListener('keydown',e=>{
   if(k==='u')plantScarecrow();   /* 88-gear.js */
   if(k==='z')toggleHover();   /* 88-hover.js */
   if(k==='n')toggleHoverShoes();   /* 88-hover.js */
-  if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise an onion (81-badges.js)
+  if(k==='q')useSupply();   // first-aid kit / tonic when you need one, otherwise a bitterroot (81-badges.js)
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();
@@ -109,7 +109,7 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{const k=remapKey(e.key.toLowerCase());if(!k)return;KEYS[k]=false;if(k==='e')digHeld=false;if(k==='p'&&VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 addEventListener('blur',()=>{for(const k in KEYS)KEYS[k]=false;digHeld=false;if(VOX.enabled&&VOX.mode==='ptt')setMicTransmitting(false)});
 function shout(i){if(S.ko)return;say(meL,SHOUTS[i]);sfx.shout();S.noise=1;wsSend({t:'say',i});if(me)me.waveT=1.4}   // the camper waves while shouting
-function eatOnion(){if(S.onions<=0){toast('No bitterroot. The Company Store sells it for 8 gold.','bad',2200);return}S.onions--;S.onionT=45;countUp('onions',10,'onion');AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You chew a bitterroot. Gilas hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
+function eatBitterroot(){if(S.bitterroots<=0){toast('No bitterroot. The Company Store sells it for 8 gold.','bad',2200);return}S.bitterroots--;S.bitterrootT=45;countUp('bitterroots',10,'bitterroot');AFF.hunger=Math.max(0,AFF.hunger-15);syncHp();toast('You chew a bitterroot. Gilas hate that smell. 45 seconds.','good');tone(220,0.3,'triangle',0.1,160)}
 
 /* touch */
 const touch={id:null,ox:0,oy:0,ix:0,iz:0,lookId:null,lx:0,ly:0};
@@ -122,7 +122,7 @@ if(isTouch){
   const hold=(id,on,off)=>{const b=$(id);b.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});b.addEventListener('touchend',e=>{e.preventDefault();off&&off()},{passive:false})};
   hold('#tDig',()=>{digHeld=true},()=>{digHeld=false});
   hold('#tJump',()=>{KEYS[' ']=true},()=>{KEYS[' ']=false});
-  hold('#tUse',()=>use());hold('#tInv',()=>{if(invOpen)closeInventory();else if(!uiOpen())openInventory()});hold('#tOnion',()=>eatOnion());
+  hold('#tUse',()=>use());hold('#tInv',()=>{if(invOpen)closeInventory();else if(!uiOpen())openInventory()});hold('#tBitterroot',()=>eatBitterroot());
   let si=0;hold('#tShout',()=>{shout(si);si=(si+1)%SHOUTS.length});
 }
 

@@ -20,7 +20,7 @@ const BIND_DEFS=[
   {id:'left',label:'Move left',def:'a'},{id:'right',label:'Move right',def:'d'},
   {id:'sprint',label:'Sprint',def:'shift'},{id:'jump',label:'Jump / climb out of a hole',def:' '},
   {id:'dig',label:'Dig (hold)',def:'e'},{id:'use',label:'Use / talk / buy / sell',def:'f'},
-  {id:'onion',label:'Chew bitterroot',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'place',label:'Plant a scarecrow',def:'u'},{id:'hover',label:'Hop on / off your hoverboard',def:'z'},{id:'hoverShoes',label:'Hover shoes off / on',def:'n'},{id:'detector',label:'Toggle the detector',def:'t'},
+  {id:'bitterroot',label:'Chew bitterroot',def:'q'},{id:'dynamite',label:'Light and throw dynamite',def:'y'},{id:'place',label:'Plant a scarecrow',def:'u'},{id:'hover',label:'Hop on / off your hoverboard',def:'z'},{id:'hoverShoes',label:'Hover shoes off / on',def:'n'},{id:'detector',label:'Toggle the detector',def:'t'},
   {id:'sound',label:'Mute sound',def:'m'},{id:'firstPerson',label:'First / third person',def:'v'},
   {id:'crouch',label:'Crouch',def:'c'},{id:'ping',label:'Ping the map',def:'g'},
   {id:'flashlight',label:'Flashlight',def:'l'},{id:'chat',label:'Open chat',def:'enter'},
@@ -257,7 +257,7 @@ maybeResume(); // covers the offline/solo-copy case (no socket, net.needPass nev
 if(location.hash.startsWith('#shot')){const h=location.hash;if(!S.started)startGame();
   if(h.includes('far')){P.x=140;P.z=-180}
   if(h.includes('night')){CLK.off=DAYMS+15000-Date.now();P.x=12;P.z=-25;P.yaw=Math.PI}
-  if(h.includes('zeroni')){CLK.off=NIGHT_SPLIT+15000-Date.now();P.x=12;P.z=-25;P.yaw=0;CLK.pt=NIGHT_SPLIT+15000;CLK.paused=true;setTimeout(()=>{ZER.x=P.x;ZER.z=P.z-12},300)}
+  if(h.includes('bride')){CLK.off=NIGHT_SPLIT+15000-Date.now();P.x=12;P.z=-25;P.yaw=0;CLK.pt=NIGHT_SPLIT+15000;CLK.paused=true;setTimeout(()=>{BRIDE.x=P.x;BRIDE.z=P.z-12},300)}
   P.y=groundAt(P.x,P.z);if(h.includes('fp'))toggleView()}
 /* more test hooks: #shot-carry (a safe next to you, grabbed), #shot-ping, #shot-dark (night, flashlight on), #shot-trap (stuck in a deep hole) */
 if(location.hash.startsWith('#shot')){const h=location.hash;

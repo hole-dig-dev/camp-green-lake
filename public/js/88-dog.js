@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/88-dog.js -- the mine-sniffing dog (JT 2026-10-01). Buy one at the Supply Depot (S.up.dog): it trots along
+/* public/js/88-dog.js -- the mine-sniffing dog (JT 2026-10-01). Buy one at the Company Store (S.up.dog): it trots along
    at your heel, and when there's a landmine within DOG_SNIFF m of you it runs over, sits beside it and barks, and marks it
    for everyone ('mineMark': marked mines show clearly to all from MARK_SEE m, 88-mines.js). Friends' dogs follow them
    (pos flag dg) and point at marked mines near them. Model: art/blender (Sol) Dog.glb, rigged, clips Idle/Walk/Run/

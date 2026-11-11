@@ -6,7 +6,7 @@
    ragdoll tumble a twister uses (twSt 2 airborne -> 3 down -> 4 get up, see 72-twisters.js), just a short hop instead of
    a 30 m throw, and they take NO damage. The server checks you're actually standing next to them (see 'bonk' in
    server.js) and passes it on, so the victim's own client plays the tumble and everyone else sees it through normal
-   position sync. The D Tent crew can be bonked too (they just complain), which also makes this testable solo.
+   position sync. The Bunk D crew can be bonked too (they just complain), which also makes this testable solo.
    No bonk while either of you is inside a tent (the tumble uses outdoor ground), and a camper down in a hole just
    gets their bell rung instead of a launch, so a bonk can never pop anyone out of a deep hole (or a sinkhole). */
 const BONK_REACH=2.3;        // how far in front of you (m) the shovel connects

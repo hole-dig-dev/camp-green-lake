@@ -7,7 +7,7 @@
      ignored by the server too.
    - quotaShort(cost): how far a spend would leave the wallet under tonight's quota (0: it doesn't). The store's confirm
      panel, the crew tab's "Sure?" and the blackjack table say so before you spend the crew's quota.
-   - foundGold(v): gold you brought in (dug, panned, sifted, hopper, pipeline, sold, hauled, the gold tube). Tallied per
+   - foundGold(v): gold you brought in (dug, panned, sifted, hopper, pipeline, sold, hauled, the LM card case). Tallied per
      camper (and per crew member, from their deposits) on the server and read out at curfew: "Found today". */
 const SPEND={rid:0,pending:new Map()};
 function walletSpend(cost,undo,label){

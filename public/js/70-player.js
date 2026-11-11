@@ -5,7 +5,7 @@ const fwd=new T.Vector3();
 function nearCam(x,z,d){return (camera.position.x-x)**2+(camera.position.z-z)**2<d*d}
 /* Inside a tent: a small, separate movement update. No gravity, no digging, no outdoor colliders (the room has its
    own tiny furniture colliders instead) - just walk around a flat floor bounded by the room's own walls. Twisters,
-   police, Madame Zeroni and lizards all already leave you alone (see inTent() in twPush, and inCamp() elsewhere:
+   police, the Drowned Bride and lizards all already leave you alone (see inTent() in twPush, and inCamp() elsewhere:
    your x/z never actually change, so every check that already asks "is this in camp?" still says yes). */
 function updatePlayerTent(dt){
   const t=TENTS[S.tent];
@@ -32,8 +32,8 @@ function updatePlayerTent(dt){
   // shelter: water drains slowly just standing around inside, and resting in a bunk restores health and water
   if(S.inBed!=null){S.water=Math.min(waterMax(),S.water+6*dt);setHp(S.hp+8*dt)}
   else S.water=Math.max(0,S.water-0.15*dt/tune('water.last'));
-  if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
-  if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
+  if(S.bitterrootT>0)S.bitterrootT=Math.max(0,S.bitterrootT-dt);
+  if(S.zachT>0)S.zachT=Math.max(0,S.zachT-dt);
 }
 function updatePlayer(dt){
   if(S.inTruck&&(S.ko||twSt||tbSt||vSt>=3||lionPinT>0))truckEject(0,2,0);   // something's got you: out of the pickup first (87-truck.js)
@@ -47,7 +47,7 @@ function updatePlayer(dt){
   if(vSt>=3){vStep(dt);return}  // a vulture has grabbed/is carrying/just dropped you (see 83-vultures.js) - same idea
   if(lionPinT>0){lionPinStep(dt);return}   // pinned by a mountain lion's pounce: no movement for a moment (see 85-lion.js)
   if(S.sit!=null){sitStep(dt);return}   // sitting on a bench or stool (86-sit.js)
-  if(S.inTruck){truckPlayer(dt);return}   // driving or riding Mr. Sir's pickup (87-truck.js)
+  if(S.inTruck){truckPlayer(dt);return}   // driving or riding Foreman Dutch's pickup (87-truck.js)
   if(S.inTown)return updatePlayerTown(dt);   // down in the buried town (89-town.js)
   if(inTent())return updatePlayerTent(dt);
   const trap=isTrapped()||!!inSinkhole();   // a sinkhole's walls are too steep for the same "can't walk/jump out" rule
@@ -94,8 +94,8 @@ function updatePlayer(dt){
   const drain=P.anim===2?1.05:P.anim===4?1.7:0.5;
   S.water=Math.max(0,S.water-drain*dt/tune('water.last')*(RUN.mood==='heatwave'?tune('mood.heat'):1)*(S.won?0.2:1)*(uiOpen()||PARTY.on?0:1)*(1+haboobF()*HB_DRAIN_MULT));   // a haboob is thirsty work: up to 1.5x drain
   // Out of water used to knock you out on the spot; now it drains health instead (see updateHealth).
-  if(S.onionT>0)S.onionT=Math.max(0,S.onionT-dt);
-  if(S.zeroT>0)S.zeroT=Math.max(0,S.zeroT-dt);
+  if(S.bitterrootT>0)S.bitterrootT=Math.max(0,S.bitterrootT-dt);
+  if(S.zachT>0)S.zachT=Math.max(0,S.zachT-dt);
 }
 /* first person with a real body (JT: "just drop in the third person animation shown through 1st person"): you look out
    of your own camper's eyes, so digging, the walkie and the tonic are the very same Blender clips friends see. Only
@@ -167,13 +167,13 @@ function updateLizards(dt,t){
     let dp=Math.hypot(px-L.x,pz-L.z);
     let gx,gz,sp;
     // a crew member out on the lake is fair game too (30-npcs.js crewKO), when he's nearer than you
-    let cb=null;{let cd=L.mode==='chase'?11:6.5;for(const b of bots){if(!OUTDOOR.has(b.state)||b.state==='siftq'||b.state==='sifting'||crewHas(b,'onions'))continue;const g=b.p.g.position;if(inCamp(g.x,g.z))continue;const d=Math.hypot(g.x-L.x,g.z-L.z);if(d<cd&&(!alive||d<dp)){cd=d;cb=b}}}
-    if(cb&&!(alive&&S.onionT>0&&dp<7)){const g=cb.p.g.position,d=Math.hypot(g.x-L.x,g.z-L.z);L.mode='chase';
+    let cb=null;{let cd=L.mode==='chase'?11:6.5;for(const b of bots){if(!OUTDOOR.has(b.state)||b.state==='siftq'||b.state==='sifting'||crewHas(b,'bitterroots'))continue;const g=b.p.g.position;if(inCamp(g.x,g.z))continue;const d=Math.hypot(g.x-L.x,g.z-L.z);if(d<cd&&(!alive||d<dp)){cd=d;cb=b}}}
+    if(cb&&!(alive&&S.bitterrootT>0&&dp<7)){const g=cb.p.g.position,d=Math.hypot(g.x-L.x,g.z-L.z);L.mode='chase';
       const dx=g.x-L.x,dz=g.z-L.z;if(d>0.05){const s2=Math.min(d,4.7*dt);L.x+=dx/d*s2;L.z+=dz/d*s2;L.yaw=Math.atan2(dx,dz)}
       if(d<0.75){crewKO(cb,'liz');L.mode='wander'}
       const g2=L.m.g;g2.position.set(L.x,groundAt(L.x,L.z)+0.02,L.z);g2.visible=nearCam(L.x,L.z,LIZARD_DRAW_R);let dr=L.yaw-g2.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g2.rotation.y+=dr*Math.min(1,dt*10);
       L.m.tail.rotation.y=Math.sin(t*14+L.ph)*0.5;if(L.m.rig&&g2.visible)creatureAnim(L.m.rig,'Run',dt,1.3);continue}
-    if(alive&&S.onionT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
+    if(alive&&S.bitterrootT>0&&dp<7){L.mode='flee';gx=L.x-(px-L.x);gz=L.z-(pz-L.z);sp=4.4}
     // +haboobF()*HB_LIZ_BOOST: bolder in a haboob, bigger detection radius (75-haboob.js)
     else if(alive&&!(L.calmT>0)&&dp<(L.mode==='chase'?11:6.5)+haboobF()*HB_LIZ_BOOST&&!inCamp(px,pz)){if(L.mode!=='chase'){L.mode='chase';logEv('lizChase',{liz:lizards.indexOf(L),x:+L.x.toFixed(1),z:+L.z.toFixed(1),dist:+dp.toFixed(1)});if(dp<12&&t-(updateLizards.hissT||-99)>1.5){updateLizards.hissT=t;sfx.lizard();if(Math.random()<0.6)toast('A gold-eyed gila is coming for you. Run, or chew bitterroot.','bad',2600)}}gx=px;gz=pz;sp=4.7}
     else{L.mode='wander';gx=tx;gz=tz;sp=2.3}
@@ -196,9 +196,9 @@ function updateLizards(dt,t){
    Stamina lives inside that: sprinting, jumping and hauling spend it, standing still gets it back, and it can never
    be more than your health. So a sunburnt, hungry camper tires fast, and friends notice.
    Recovery: injury heals by itself after hp.healDelay s at hp.healRate/s; heat goes once you've got water again;
-   sunburn fades in shade (camp, a tent, 4+ ft down a hole); poison wears off; hunger needs food (Q eats an onion,
-   and the inventory lets you eat a jar of peaches or Sploosh from your sack). Every rate is a slider in F2.
-   Lizard bites, the police and Madame Zeroni still knock you out outright. */
+   sunburn fades in shade (camp, a tent, 4+ ft down a hole); poison wears off; hunger needs food (Q eats a bitterroot,
+   and the inventory lets you eat a jar of peaches or peach shine from your sack). Every rate is a slider in F2.
+   Lizard bites, the police and the Drowned Bride still knock you out outright. */
 const HP_MAX=100,REVIVE_HP=40;
 const AFF={injury:0,heat:0,burn:0,poison:0,hunger:0};
 const AFF_INFO={injury:'Injured',heat:'Heatstroke',burn:'Sunburn',poison:'Poisoned',hunger:'Hungry'};
@@ -260,10 +260,10 @@ function updateHealth(dt){
   S.stamT=(S.stamT||0)+dt;
   if(S.stamT>0.9)S.stam=Math.min(S.hp,S.stam+(P.moving?tune('stam.regenMove'):tune('stam.regen'))*dt);
 }
-/* food from your sack (the inventory's Eat button): peaches and Sploosh cure hunger and give some stamina back */
+/* food from your sack (the inventory's Eat button): peaches and peach shine cure hunger and give some stamina back */
 function eatFood(type){
   const i=S.sack.indexOf(type);if(i<0||S.ko)return false;
-  countUp('eat',5,'sploosh');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
-  toast(type==='sploosh'?'You drink the hundred-year-old peach shine. It\'s delicious. Hunger gone.':'You eat the brandied peaches. Hunger gone.','good',3500);
+  countUp('eat',5,'shine');S.sack.splice(i,1);AFF.hunger=0;syncHp();S.stam=Math.min(S.hp,S.stam+40);sfx.splash();
+  toast(type==='shine'?'You drink the hundred-year-old peach shine. It\'s delicious. Hunger gone.':'You eat the brandied peaches. Hunger gone.','good',3500);
   logEv('eat',{type});return true;
 }

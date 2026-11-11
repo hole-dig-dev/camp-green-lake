@@ -63,5 +63,5 @@ function northMsg(m){
   placeModel('NorthRamp',{x:R.x,y:at(R.x,t0+R.len+0.5),z:t0+R.len,ry:0}).catch(()=>{});        // camp side, rising north to the lip
   placeModel('NorthRamp',{x:R.x,y:at(R.x,t1-R.len-0.5),z:t1-R.len,ry:Math.PI}).catch(()=>{});  // far side, for the way back
   placeModel('SignTrench',{x:R.x+5,y:at(R.x+5,t0+30),z:t0+30,ry:0}).catch(()=>{});
-  placeModel('SignBigThumb',{x:R.x,y:NORTH_TOP_Y,z:NORTH_TOP_Z-5,ry:0}).catch(()=>{});
+  placeModel('SignChimney',{x:R.x,y:NORTH_TOP_Y,z:NORTH_TOP_Z-5,ry:0}).catch(()=>{});
 }

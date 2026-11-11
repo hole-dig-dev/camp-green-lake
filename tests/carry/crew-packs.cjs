@@ -1,4 +1,4 @@
-// the D Tent crew's backsacks, bought in the crew store like the players' (86-backsack.js crewPack). bash tests/carry/run.sh PORT OUT crew-packs.cjs
+// the Bunk D crew's backsacks, bought in the crew store like the players' (86-backsack.js crewPack). bash tests/carry/run.sh PORT OUT crew-packs.cjs
 const {browser,player}=require('./lib2.cjs');const PORT=process.argv[2],SP=process.argv[3];
 const R=[];const check=(n,ok,i)=>{R.push(!!ok);console.log((ok?'PASS ':'FAIL ')+n+(i?'  -- '+i:''))};
 (async()=>{const b=await browser(),errs=[];const A=await player(b,PORT,'Alpha',errs),B=await player(b,PORT,'Bravo',errs);

@@ -1,5 +1,5 @@
 'use strict';
-/* public/js/24-creatures.js -- the rigged Blender creatures: yellow-spotted lizard, javelina, mountain lion, vulture.
+/* public/js/24-creatures.js -- the rigged Blender creatures: gold-eyed gila, javelina, mountain lion, vulture.
    Each is one skinned mesh (a Skin-modifier body with its face and markings joined on) with a small armature and
    looping clips, exported as models/Creature*.glb (sources: art/blender/beasts.py + rig.py on the art branch).
    Like the camp models, the old box creatures stay until a model has loaded, then get swapped: each creature file

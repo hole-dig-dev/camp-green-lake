@@ -6,7 +6,7 @@
    mines for everyone. You only see one when you're within haz.mineSee metres (it fades in from twice that), and even
    then it's a dusty lid in the sand (art/blender/landmine.py: Landmine.glb).
    Step on one: you report it ('mineHit'), the server takes it out and tells everyone ('mineBoom'), and everyone inside
-   the blast (haz.mineBlast m, you and anyone near you, and the D Tent crew) goes flying: the twister's tumble
+   the blast (haz.mineBlast m, you and anyone near you, and the Bunk D crew) goes flying: the twister's tumble
    (72-twisters.js twSt 2 -> 3 -> 4), only much, much further. No extra damage; landing is landing.
    The crew sets them off too: the client that runs the crew's bank (30-npcs.js crewPaysHere) reports their steps.
    Dig into one (the ground under it drops) and it goes off just the same. Never spawned in a hole.
@@ -32,7 +32,7 @@ function mineBoom(id,x,z,by){
   const R=tune('haz.mineBlast'),L=tune('haz.mineLaunch');pipeBlast(x,z,R);   /* cracks the sand pipeline (88-pipeline.js) */
   blastLaunch(x,z,R,L,'mn',by===S.name?'BOOM! You stepped on a landmine.':`BOOM! ${by||'Someone'} set off a landmine right next to you.`);
 }
-/* everyone inside a blast flies: you (the twister's tumble, 72-twisters.js) and the D Tent crew (crewToss). k: the
+/* everyone inside a blast flies: you (the twister's tumble, 72-twisters.js) and the Bunk D crew (crewToss). k: the
    centre throws full, the edge half. Shared by landmines and dynamite (88-dynamite.js). */
 function blastLaunch(x,z,R,L,why,msg){
   const near=Math.hypot(P.x-x,P.z-z);

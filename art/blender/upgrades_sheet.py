@@ -7,7 +7,7 @@ small=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',14)
 def sheet(assets,name,cols=4):
     rows=(len(assets)+cols-1)//cols
     out=Image.new('RGB',(cols*400,rows*380+52),'#292821');d=ImageDraw.Draw(out)
-    d.text((18,14),'CAMP GREEN LAKE / UPGRADE ASSETS',font=font,fill='#efddb7')
+    d.text((18,14),'CAMP DRYWATER / UPGRADE ASSETS',font=font,fill='#efddb7')
     for i,(asset,caption) in enumerate(assets):
         x=i%cols*400;y=52+i//cols*380
         im=Image.open(folder/(asset+'.png')).convert('RGB');im.thumbnail((400,320),Image.Resampling.LANCZOS)

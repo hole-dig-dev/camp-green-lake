@@ -40,10 +40,10 @@ const ARCH_PATH = path.join(ROOT, 'ARCHITECTURE.md');
 const MANIFEST = [
   { file: '10-core.js', match: /deterministic randomness/i, note: 'seeded RNG, world constants, renderer/scene/camera, sky' },
   { file: '15-terrain.js', match: /^holes$/i, note: 'dug holes, buried-loot seeding, streaming terrain chunks (near/far detail levels)' },
-  { file: '20-world.js', match: /camp buildings/i, note: 'static camp geometry: fenced compound, tents and their interiors, cabins, signs, Big Thumb' },
+  { file: '20-world.js', match: /camp buildings/i, note: 'static camp geometry: fenced compound, tents and their interiors, cabins, signs, Chimney Rock' },
   { file: '25-people.js', match: /^people$/i, note: 'camper avatars, name/speech labels' },
-  { file: '30-npcs.js', match: /^npcs$/i, note: 'Mr. Sir, the Warden, the D Tent crew (including tent breaks)' },
-  { file: '35-lizards.js', match: /yellow-spotted lizards/i, note: 'yellow-spotted lizards' },
+  { file: '30-npcs.js', match: /^npcs$/i, note: 'Foreman Dutch, the Superintendent, the Bunk D crew (including tent breaks)' },
+  { file: '35-lizards.js', match: /gold-eyed gilas/i, note: 'gold-eyed gilas' },
   { file: '40-fx.js', match: /dirt particles/i, note: 'dirt particles, item pops, rain, WebAudio sound effects' },
   { file: '45-state.js', match: /^game state$/i, note: 'player/session state, digging, world interactions (use/F)' },
   { file: '50-tents.js', match: /^tent interiors/i, note: 'entering/leaving tents, bunks, sleeping' },
@@ -55,8 +55,8 @@ const MANIFEST = [
   { file: '74-landslide.js', match: /^landslide/i, note: 'landslides: deterministic boulder physics, hits, warnings' },
   { file: '76-console.js', match: /^environmental hazards/i, note: 'ENV hazard registry + the developer console and its commands' },
   { file: '78-hud.js', match: /hud \+ minimap/i, note: 'HUD panel and minimap' },
-  { file: '80-ui.js', match: /^conversations/i, note: 'NPC dialogue, D Tent blackjack, the disco easter egg' },
-  { file: '82-patrol.js', match: /curfew \+ police/i, note: 'shared clock/curfew, police patrols, Madame Zeroni' },
+  { file: '80-ui.js', match: /^conversations/i, note: 'NPC dialogue, Bunk D blackjack, the disco easter egg' },
+  { file: '82-patrol.js', match: /curfew \+ police/i, note: 'shared clock/curfew, police patrols, the Drowned Bride' },
   { file: '84-coop.js', match: /^levels:/i, note: 'levels, team quota, heavy loot, dropped sacks, helping friends, pings/chat, flashlight, co-op tick' },
   { file: '86-voice.js', match: /^proximity voice chat$/i, note: 'WebRTC proximity voice chat and positional audio' },
   { file: '90-loop.js', match: /^main loop$/i, note: 'the requestAnimationFrame main loop' },
@@ -274,7 +274,7 @@ function reportSplit(split) {
 
 function writeArchitectureDoc(split) {
   const moduleRows = ['| File | Responsibility |', '|---|---|', ...split.modules.map(m => `| \`public/js/${m.file}\` | ${m.note} |`)].join('\n');
-  const doc = `# Camp Green Lake -- architecture
+  const doc = `# Camp Drywater -- architecture
 
 This file is generated (and kept up to date) by \`scripts/split-client.mjs\` -- see that file for
 the mechanics. It exists so a human or an AI agent picking up a feature branch can find where code
@@ -297,7 +297,7 @@ the console), then one big \`<script>\` whose body was an IIFE. It's now split i
   here; anything only the client needs (rendering, input, UI) belongs in \`public/js/\`.
 - \`server.js\` -- a small Node + \`ws\` server. It serves the client files (see below), relays
   player positions/digs/chat/hazards over WebSocket, and keeps the one shared world (dug holes,
-  found items, the KB tube, the suitcase, heavy props) so late joiners see the same camp. It does
+  found items, the LM card case, Lil's strongbox, heavy props) so late joiners see the same camp. It does
   NOT run the renderer or any Three.js code -- only \`public/sim.js\`'s pure functions.
 
 ## Load order, and why it matters

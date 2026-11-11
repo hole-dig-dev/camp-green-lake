@@ -2,7 +2,7 @@
 /* public/js/85-lion.js -- the mountain lion: one apex predator that stalks, circles and pounces on whoever looks
    most exposed outside the fence, and never sets foot inside it. The rules (target scoring, stalk/circle/pounce,
    deterrence, retreat) live in sim.js's stepLion/lionSwat -- pure functions of shared state, run on the server
-   when online and right here for solo play (see stepSoloLion below), exactly like stepMonsters/showTruck/showZeroni
+   when online and right here for solo play (see stepSoloLion below), exactly like stepMonsters/showTruck/showBride
    in 82-patrol.js. This file only draws the animal, plays its sounds, and turns a shovel swing or the console
    command into the messages that drive it.
    Left off the minimap and the HUD on purpose: it's a stalking predator, not a police truck on patrol -- a dot on
@@ -109,7 +109,7 @@ function updateLionSound(dt,d,canSee,mode){
 }
 
 /* ---------- events (tuning lives in sim.js): a warning the first time you're targeted, deterrence feedback,
-   the pounce itself -- damage applied by the victim's own client, same pattern as Zeroni's 'down' -- and the
+   the pounce itself -- damage applied by the victim's own client, same pattern as the Bride's 'down' -- and the
    roar when it finally gives up. Reached from monEvent()'s default case in 82-patrol.js. ---------- */
 function lionEvent(e){
   const mine=e.id===myId(),near=LIONV.active&&Math.hypot(LIONV.x-P.x,LIONV.z-P.z)<90;

@@ -1,20 +1,20 @@
 'use strict';
-/* public/js/89-town.js -- the buried town of Green Lake (after Greg's branch, claude/intense-change-1-test-2026-09-27-1829).
+/* public/js/89-town.js -- the buried town of Marlow's Landing (after Greg's branch, claude/intense-change-1-test-2026-09-27-1829).
    The layout is in public/sim.js (TOWN, townLayout): Main Street, a buried street cavern with three big buildings on each
    side, and seven more buildings off it, joined by timber-shored tunnels. The town is the same every day; only the loot
    is new. It's built off the lake map at x 2000, the way the tent rooms sit underground, so nothing on the lake reaches you.
    Getting in:  dig a 5 ft hole (any shovel) at the middle of the old town (SIM.OLD_TOWN, the cracked ground with old
-                timbers sticking out; the X/Y on the Warden's note). Only there, and you always land in the same place
+                timbers sticking out; the X/Y on the Superintendent's note). Only there, and you always land in the same place
                 (JT: fixed while we build the level). The floor gives way: press F by the hole to climb down.
    Down there:  it's dark (bring the flashlight). Some tunnels are crawlspaces (crouch, C). Finds lie around (F picks them
-                up); Kate's vault has gold bars. Everyone who breaks through shares the same town.
+                up); Lil's vault has gold bars. Everyone who breaks through shares the same town.
    Getting out: climb a shaft (F under it) or the old well. You can't alone: a friend down here crouching next to you boosts
                 you, someone up top holding F at the hole lowers a hand, or you stake your rope ladder in it for good.
                 The collapsed stairwell at the west end of Main Street you can just walk up; it comes out at the old town.
    The pieces (street, buildings, door plugs, tunnel timber and debris) are Blender models from art/blender/town.py; the
    tunnels' cave walls are dug here along each tunnel's path. Where you can walk: Main Street, inside the buildings, through
    their open doors and along the tunnels, minus the furniture (public/data/TownColliders.json).
-   Not yet: the lizard queen and Trout Walker's mob, heavy loot down here, a town minimap. */
+   Not yet: the gila queen and Cobb's mob, heavy loot down here, a town minimap. */
 let TLAY=null,TLAY_DAY=-1,townGroup=null,townRoom=null;
 const TLOOTM=new Map(),TGOT=new Set(),BREACH=new Map(),breachDisc=new Map();
 const TW=SIM.TOWN;
@@ -125,10 +125,10 @@ function shaftMark(k,b){
   if(b.ladder){const l=box(0.5,TW.H,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2,p.z);townGroup.add(l)}
 }
 
-/* ---- the Warden's note (on her desk: 20-world.js, art/blender/wardennote.py): where to dig. The coordinates are the
+/* ---- the Superintendent's note (on her desk: 20-world.js, art/blender/suptnote.py): where to dig. The coordinates are the
    ones the map shows (78-hud.js coordXY); that's the only spot that breaks through, and you land on Main Street by the
    stairwell (sim.js townBreaks, townBreachSpot). ---- */
-function readWardenNote(){
+function readSuptNote(){
   const[X,Y]=coordXY(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z);
   toast(`The Superintendent's ledgers, and a note in her hand: "OLD TOWN. X ${X}, Y ${Y}. Dig 5 ft. Floor gives. Don't tell Dutch." (Your coordinates are above the Field map button.)`,'gold',9000);
   logEv('note',{});

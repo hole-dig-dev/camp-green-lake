@@ -103,9 +103,9 @@ command('tp',{usage:'tp <x> <y> | tp camp',help:'Teleport to the X and Y shown a
 command('time',{usage:'time <hh:mm>',help:'Set the camp clock for everyone (e.g. time 13:00, time 21:30).',
   run([t]){const m=/^(\d{1,2})(?::(\d{2}))?$/.exec(t||'');if(!m)throw new Error('Usage: time <hh:mm>, e.g. time 13:00');const h=+m[1]+(+m[2]||0)/60;if(h>=24)throw new Error('Hours go 0-23.');jumpTo(tAtHour(h));return`Clock set to ${clockText()}.`}});
 command('where',{usage:'where',help:'Print your position.',run(){return`x ${P.x.toFixed(1)}  z ${P.z.toFixed(1)}  (camp is around 0, 39)`}});
-command('tent',{usage:'tent <A|B|D|C|W|out>',help:'Teleport into a bunk tent or the Super\'s house, for testing.',
-  run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|W|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a room.';exitTent();return'Stepped outside.'}
-    const ti=TENTS.findIndex(t=>t.name[0].toLowerCase()===a[0].toLowerCase());if(ti<0)throw new Error('No such room. Try A, B, D, C or W.');
+command('tent',{usage:'tent <A|B|D|C|S|out>',help:'Teleport into a bunk (A, B, D, C) or the Super\'s house (S), for testing.',
+  run([a]){if(!a)throw new Error('Usage: tent <A|B|D|C|S|out>');if(a.toLowerCase()==='out'){if(!inTent())return'Not in a room.';exitTent();return'Stepped outside.'}
+    const ti=TENTS.findIndex(t=>(t.house?'s':t.name.slice(-1).toLowerCase())===a[0].toLowerCase());if(ti<0)throw new Error('No such room. Try A, B, D, C or S.');   // a bunk goes by its letter ("Bunk D"), the house by S
     if(inTent())exitTent();if(S.inTown)exitTown(SIM.OLD_TOWN.x,SIM.OLD_TOWN.z,'');enterTent(ti);return`Inside ${TENTS[ti].name}.`}});
 
 /* ---------- event director commands (see public/director.js) ---------- */

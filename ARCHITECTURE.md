@@ -1,4 +1,4 @@
-# Camp Green Lake -- architecture
+# Camp Drywater -- architecture
 
 This file is generated (and kept up to date) by `scripts/split-client.mjs` -- see that file for
 the mechanics. It exists so a human or an AI agent picking up a feature branch can find where code
@@ -27,7 +27,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
   `public/js/82-patrol.js`). See "Adding an event to the director" below.
 - `server.js` -- a small Node + `ws` server. It serves the client files (see below), relays
   player positions/digs/chat/hazards over WebSocket, and keeps the one shared world (dug holes,
-  found items, the KB tube, the suitcase, heavy props) so late joiners see the same camp. It does
+  found items, the LM card case, Lil's strongbox, heavy props) so late joiners see the same camp. It does
   NOT run the renderer or any Three.js code -- only `public/sim.js`'s pure functions.
 
 ## Load order, and why it matters
@@ -43,10 +43,10 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 |---|---|
 | `public/js/10-core.js` | seeded RNG, world constants, renderer/scene/camera, sky |
 | `public/js/15-terrain.js` | dug holes, buried-loot seeding, streaming terrain chunks (near/far detail levels) |
-| `public/js/20-world.js` | static camp geometry: fenced compound, tents and their interiors, cabins, signs, Big Thumb |
+| `public/js/20-world.js` | static camp geometry: fenced compound, tents and their interiors, cabins, signs, Chimney Rock |
 | `public/js/25-people.js` | camper avatars, name/speech labels |
-| `public/js/30-npcs.js` | Mr. Sir, the Warden, the D Tent crew (including tent breaks) |
-| `public/js/35-lizards.js` | yellow-spotted lizards |
+| `public/js/30-npcs.js` | Foreman Dutch, the Superintendent, the Bunk D crew (including tent breaks) |
+| `public/js/35-lizards.js` | gold-eyed gilas |
 | `public/js/40-fx.js` | dirt particles, item pops, rain, WebAudio sound effects |
 | `public/js/41-cues.js` | core-loop sound cues from CC0 recordings: gold rewards, assay sting, menu sounds, hurt/knockout, siren, lizard hiss (A/B: `audio rewards|ui|danger old|new`) |
 | `public/js/45-state.js` | player/session state, digging, world interactions (use/F) |
@@ -63,8 +63,8 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/75-haboob.js` | haboob dust storm: deterministic schedule, wall visuals, fog/light blend, sound |
 | `public/js/76-console.js` | ENV hazard registry + the developer console and its commands |
 | `public/js/78-hud.js` | HUD panel and minimap |
-| `public/js/80-ui.js` | NPC dialogue, D Tent blackjack, the disco easter egg |
-| `public/js/82-patrol.js` | shared clock/curfew, police patrols, Madame Zeroni |
+| `public/js/80-ui.js` | NPC dialogue, Bunk D blackjack, the disco easter egg |
+| `public/js/82-patrol.js` | shared clock/curfew, police patrols, the Drowned Bride |
 | `public/js/84-coop.js` | levels, team quota, heavy loot, dropped sacks, helping friends, pings/chat, flashlight, co-op tick |
 | `public/js/86-voice.js` | WebRTC proximity voice chat and positional audio |
 | `public/js/90-loop.js` | the requestAnimationFrame main loop |
@@ -136,7 +136,7 @@ creature). `tumbleweed`, `sinkhole`, `javelinas`, `lion` and `haboob` already ha
    through the same `env` relay every console-spawned hazard uses.
 3. For a `mode: 'monster'` kind (`javelinas`, `lion`): it isn't an `env` spawn, it's a living, chasing thing the
    *server* has to start and step every tick, the way `sim.js`'s `stepMonsters()` already does for police trucks
-   and Madame Zeroni. Add that start/step logic, and read `d.mode === 'monster'` decisions in the `TODO` spot in
+   and the Drowned Bride. Add that start/step logic, and read `d.mode === 'monster'` decisions in the `TODO` spot in
    server.js's tick handler (and the matching spot in the `'dir'` force-event case) instead of broadcasting `env`.
 4. If the new kind has a real lifetime and a spawn function that accepts a start time (like `spawnLandslide`'s
    `t0`, not `addTwister`'s always-now), leave `supportsLateJoin: true` so a joining camper replays it instead of

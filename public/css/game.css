@@ -138,7 +138,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 .row.big .v{font:900 26px/1 var(--display);color:var(--jump-deep)}
 .hud-warn{margin:0;font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--danger)}
 .hud-warn-icon{color:var(--danger);width:1em;height:1em}
-/* bottom-left: seeds/sack always, onion/flashlight/detector contextual (hidden via JS) */
+/* bottom-left: seeds/sack always, bitterroot/flashlight/detector contextual (hidden via JS) */
 .hud-strip--supplies{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));width:196px}
 .hud-strip--supplies .row.big .v small{font-size:.55em;margin-left:3px;color:var(--ink-soft)}   /* tonight's quota, next to the wallet */
 /* bottom-right: current shovel/reach glyphs, above the touch buttons */
@@ -194,7 +194,7 @@ body{margin:0;background:#c9a06a;color:var(--ink);font-family:var(--ui);overflow
 #tools{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 #tools .tool-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:var(--ink);color:var(--canvas);border-radius:var(--r-control)}
 #tools .tool-badge svg{width:18px;height:18px}
-#tools .tool-badge.onion{background:var(--leaf)}
+#tools .tool-badge.bitterroot{background:var(--leaf)}
 #tools span.tool-badge--text{width:auto;height:auto;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 7px}
 
 /* ---- minimap: shallow metal survey frame (docs/ui-redesign-spec.md section 3) ---- */
@@ -382,7 +382,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .seedline strong{font:900 30px/1 var(--display);color:var(--jump-deep);font-variant-numeric:tabular-nums}
 
 /* =====================================================================
-   Wreck Room store (docs/ui-redesign-spec.md section 2)
+   Company Store (docs/ui-redesign-spec.md section 2)
    ===================================================================== */
 #shop{padding-inline:16px}
 .shop-frame{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden;padding:0}
@@ -547,7 +547,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .seedpill{font-size:16px;display:inline-flex;align-items:center;gap:5px}.seedpill strong{font:900 26px/1 var(--display);color:#ffd27a;font-variant-numeric:tabular-nums}
 .bet-pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:var(--r-pill);padding:3px 10px}
 .bj-status{margin:0;font:700 12px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:#a8c9a8}
-.xray{margin:0;font-size:17px;min-height:2.6em;font-style:italic;color:#e6dcc0}
+.dealer-say{margin:0;font-size:17px;min-height:2.6em;font-style:italic;color:#e6dcc0}
 .hand .lbl{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#cfe3cf;margin-bottom:6px}
 .hand .lbl b{font:900 20px/1 var(--display);color:#fff;margin-left:6px;letter-spacing:.02em}
 .row-cards{display:flex;gap:8px;min-height:88px;flex-wrap:wrap}
@@ -649,12 +649,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 /* another map (88-zones.js): the lake's curfew clock and walk-to-camp don't apply */
 #hud.zone-away #backRow,#hud.zone-away #curK,#hud.zone-away #curK+.v-wrap{display:none}
 
-/* the curse (81-mood.js) and a sandstorm blanking the minimap */
-#curseRow .v{color:#8a3a8a}
-#curseRow.hot .v{color:var(--danger);font-weight:700}
+/* the bad luck (81-mood.js) and a sandstorm blanking the minimap */
+#badluckRow .v{color:#8a3a8a}
+#badluckRow.hot .v{color:var(--danger);font-weight:700}
 #mapbox.sand canvas{filter:blur(6px) sepia(1) brightness(.8)}
 
-/* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Warden's note */
+/* where you are, above the Field map button (78-hud.js): X east, Y north, the same numbers as the Superintendent's note */
 .map-coords{position:absolute;left:3px;top:3px;z-index:3;font:700 9px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:0.02em;color:var(--ink);background:rgba(242,231,205,.82);padding:2px 4px;border-radius:3px;pointer-events:none}   /* over the minimap's corner (JT) */
 
 /* the Wardrobe (81-wardrobe.js): a panel on the left; your camper faces you on the right */
@@ -672,7 +672,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 .ward-btns button{flex:1;padding:0 8px}
 .ward-btns button.primary{background:var(--jump);color:#fff;border-color:var(--jump-deep)}
 @media (max-width:600px){.wardrobe{top:auto;bottom:12px;transform:none;max-height:55vh}}
-/* the one crew wallet (84-spend.js): what you can spend and still have the Warden's quota at curfew */
+/* the one crew wallet (84-spend.js): what you can spend and still have the Superintendent's quota at curfew */
 .shop-confirm__warn{color:var(--danger)}
 .shop-safe{margin-left:8px;font-size:13px;color:var(--ink-soft);font-weight:600}
 /* spectator mode (96-spectate.js) */

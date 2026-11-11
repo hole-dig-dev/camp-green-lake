@@ -1,10 +1,10 @@
 'use strict';
 /* public/js/81-inventory.js -- the inventory screen (I or Tab; tap the supplies panel / Bag button on touch).
-   One place to see everything you're carrying: the finds in your sack, supplies (onions, flashlight,
-   water), the gear you've bought, and special items (the KB tube, heavy loot you're hauling).
-   It reuses the Supply Depot store's layout and card styles (.shop-*), so it looks like part of the same
-   UI, and it only *reads* the existing state (S.sack, S.onions, S.batt, S.up...) and calls the existing
-   actions (eatOnion, toggleLight, dropBag): no new save format, nothing new on the wire.
+   One place to see everything you're carrying: the finds in your sack, supplies (bitterroots, flashlight,
+   water), the gear you've bought, and special items (the LM card case, heavy loot you're hauling).
+   It reuses the Company Store's layout and card styles (.shop-*), so it looks like part of the same
+   UI, and it only *reads* the existing state (S.sack, S.bitterroots, S.batt, S.up...) and calls the existing
+   actions (eatBitterroot, toggleLight, dropBag): no new save format, nothing new on the wire.
    The game keeps running while it's open, same as the store. */
 
 const INV_CATS=[{id:'all',label:'All'},{id:'sack',label:'Sack'},{id:'supplies',label:'Supplies'},{id:'gear',label:'Gear'}];
@@ -24,15 +24,15 @@ function invEntries(){
       loot:t,swatch:L.color,meta:`${L.val*n} gold`,state:n>1?`× ${n}`:'In sack',count:n,val:L.val});
   }
   if(!types.length)out.push({id:'sack:empty',cat:'sack',name:'Empty sack',desc:`Nothing dug up yet. Room for ${sackMax()} finds.`,icon:'sack',meta:'',state:`0 / ${sackMax()}`,dim:true});
-  // special items: the KB tube, and heavy loot you're dragging
-  if(S.hasKB)out.push({id:'kb',cat:'sack',name:LOOT.kb.name,desc:'Key item. The Superintendent will want this. Take it to her cabin.',loot:'kb',swatch:LOOT.kb.color,meta:'Key item',state:'Carried'});
+  // special items: the LM card case, and heavy loot you're dragging
+  if(S.hasLM)out.push({id:'lmcase',cat:'sack',name:LOOT.lmcase.name,desc:'Key item. The Superintendent will want this. Take it to her cabin.',loot:'lmcase',swatch:LOOT.lmcase.color,meta:'Key item',state:'Carried'});
   const pr=S.carry!=null&&typeof PROPS!=='undefined'?PROPS.get(S.carry):null;
   if(pr&&pr.type==='cart')out.push({id:'haul',cat:'sack',name:'Wheelbarrow',desc:`The crew's wheelbarrow${(pr.load||[]).length?`, with ${(pr.load||[]).length} thing(s) in it`:''}. Push it to Dutch's pickup to sell what's inside.`,icon:'sack',meta:'',state:'Pushing'});
   else if(pr)out.push({id:'haul',cat:'sack',name:LOOT[pr.type].name,desc:`Too heavy for the sack. Drag it to Mr. Abel's window at the Company Store: worth ${LOOT[pr.type].val} gold.`,loot:pr.type,swatch:LOOT[pr.type].color,meta:`${LOOT[pr.type].val} gold`,state:'Hauling'});
   // supplies
-  out.push({id:'onion',cat:'supplies',name:'Bitterroot',icon:'onion',art:'gear/onion',desc:'Chew one (Q) and gilas won\'t come near you for 45 seconds.',
-    meta:S.onionT>0?`Working: ${Math.ceil(S.onionT)} s left`:'',state:`${S.onions} on hand`,dim:S.onions<=0&&!(S.onionT>0)});
-  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Bitterroot tonic',icon:'onion',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and gilas stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
+  out.push({id:'bitterroot',cat:'supplies',name:'Bitterroot',icon:'bitterroot',art:'gear/bitterroot',desc:'Chew one (Q) and gilas won\'t come near you for 45 seconds.',
+    meta:S.bitterrootT>0?`Working: ${Math.ceil(S.bitterrootT)} s left`:'',state:`${S.bitterroots} on hand`,dim:S.bitterroots<=0&&!(S.bitterrootT>0)});
+  if(S.tonic>0)out.push({id:'tonic',cat:'supplies',name:'Bitterroot tonic',icon:'bitterroot',art:'gear/tonic',desc:'Q when you\'re poisoned, sunburnt or overheated: cures the poison, soothes the rest, and gilas stay off you for 30 s.',meta:'',state:`${S.tonic} on hand`});
   if(S.medkit>0)out.push({id:'medkit',cat:'supplies',name:'First-aid kit',icon:'heart',art:'gear/medkit',desc:'Q when you\'re hurt: patches your injuries. Or hold F on a downed friend: they\'re up in 1 second instead of 3.',meta:'',state:`${S.medkit} on hand`});
   out.push({id:'light',cat:'supplies',name:'Flashlight',icon:'flashlight',art:'gear/flashlight',desc:'Toggle with L. A full battery lasts about 3 minutes; the Company Store sells refills.',
     meta:`${Math.round(S.batt)}% battery`,state:S.light?'On':'Off',dim:S.batt<=0});
@@ -42,7 +42,7 @@ function invEntries(){
   const gear=SHOP.filter(it=>!it.stack);
   for(const it of [...gear.filter(g=>S.up[g.id]),...gear.filter(g=>!S.up[g.id])]){
     const own=!!S.up[it.id];
-    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} seeds`,state:own?'In use':'Not owned',dim:!own});
+    out.push({id:'gear:'+it.id,cat:'gear',shop:it,name:it.name,icon:it.icon,art:GEAR_ART.has(it.id)?'gear/'+it.id:null,desc:it.desc,meta:own?'':`${it.cost} gold`,state:own?'In use':'Not owned',dim:!own});
   }
   if(!S.up.shovel)out.push({id:'hands',cat:'gear',name:'Bare hands',icon:'teammate',desc:'All you start with. Slow, and only 1.5 feet down. A camp shovel is 25 gold at the Company Store.',meta:'',state:'In use'});   // bought shovels show as their own gear cards
   return out;
@@ -110,14 +110,14 @@ function renderInvDetail(e){
     row('Sack',`${S.sack.length} / ${sackMax()} finds · worth ${sum} gold`);
     if(S.sack.length)acts.append(invButton('Drop the whole sack',()=>{dropBag();toast('You set your sack down. Anyone can pick it up with F.','',2200);sfx.thud();renderInventory(true)},false));
   }
-  if(e.type==='jar'||e.type==='sploosh'){   // food: cures hunger (70-player.js eatFood), but then you can't sell it
+  if(e.type==='jar'||e.type==='shine'){   // food: cures hunger (70-player.js eatFood), but then you can't sell it
     const b=invButton(AFF.hunger>4?'Eat it':'Eat it (not hungry)',()=>{eatFood(e.type);renderInventory(true)},AFF.hunger>4);acts.append(b);
     if(AFF.hunger>0)row('Hunger',`${Math.round(AFF.hunger)} of your health bar`);
   }
   if(e.id==='haul')acts.append(invButton('Let go of it',()=>{S.carry=null;toast('You let go.','',1200);renderInventory(true)},false));
-  if(e.id==='onion'){
-    row('On hand',`${S.onions} bitterroot${S.onions===1?'':'s'}`);
-    const b=invButton(S.onions>0?'Chew one now':'No bitterroot left',()=>{eatOnion();renderInventory(true)},true);b.disabled=S.onions<=0;acts.append(b);
+  if(e.id==='bitterroot'){
+    row('On hand',`${S.bitterroots} bitterroot${S.bitterroots===1?'':'s'}`);
+    const b=invButton(S.bitterroots>0?'Chew one now':'No bitterroot left',()=>{eatBitterroot();renderInventory(true)},true);b.disabled=S.bitterroots<=0;acts.append(b);
   }
   if(e.id==='tonic'||e.id==='medkit'){const need=e.id==='tonic'?(AFF.poison>3||AFF.burn>5||AFF.heat>5):AFF.injury>10;
     const b=invButton(need?'Use one now':'Not needed right now',()=>{useSupply();renderInventory(true)},true);b.disabled=!need;acts.append(b)}
@@ -155,7 +155,7 @@ function renderInventory(full){
   renderInvDetail(list.find(e=>e.id===invSel));
   invSig=invSignature();
 }
-function invSignature(){return[S.sack.join(','),S.onions,Math.ceil(S.onionT),Math.round(S.batt),S.light,Math.round(S.water),S.seeds,S.hasKB,S.carry,JSON.stringify(S.up)].join('|')}
+function invSignature(){return[S.sack.join(','),S.bitterroots,Math.ceil(S.bitterrootT),Math.round(S.batt),S.light,Math.round(S.water),S.seeds,S.hasLM,S.carry,JSON.stringify(S.up)].join('|')}
 function invTick(){if(invOpen&&invSignature()!==invSig){const inDetail=$('#invDetail').contains(document.activeElement);renderInventory(false);if(inDetail){const b=$('#invDetail button');if(b)b.focus()}}}
 
 function openInventory(){
@@ -179,11 +179,11 @@ function invMove(key){
   invSel=ids[next];renderInventory(false);const el=invCard(invSel);if(el)el.focus();
 }
 /* keyboard while the inventory is open (called from 55-input.js): I, Tab or Escape close it; arrows move;
-   Q still eats an onion. Everything else is swallowed so you don't walk off while reading. */
+   Q still eats a bitterroot. Everything else is swallowed so you don't walk off while reading. */
 function invKeydown(e){
   const k=e.key.toLowerCase();
   if(k==='escape'||k==='tab'||k===SETTINGS.binds.inventory){e.preventDefault();closeInventory();return}
-  if(k===SETTINGS.binds.onion){e.preventDefault();eatOnion();return}
+  if(k===SETTINGS.binds.bitterroot){e.preventDefault();eatBitterroot();return}
   if(document.activeElement&&document.activeElement.closest('#invTabs')&&(k==='arrowleft'||k==='arrowright')){
     e.preventDefault();const i=INV_CATS.findIndex(c=>c.id===invCat),n=INV_CATS.length;invCat=INV_CATS[(i+(k==='arrowright'?1:-1)+n)%n].id;renderInventory(true);$('#invtab-'+invCat).focus();return}
   if(document.activeElement&&document.activeElement.classList.contains('shop-item')&&k.startsWith('arrow')){e.preventDefault();invMove(e.key)}

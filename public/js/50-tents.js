@@ -36,11 +36,11 @@ function toggleBunk(bi){
 }
 function reveal(who){if(S.revealed)return;S.revealed=true;flags.visible=true;if(who!=='You')toast(`${who} gave the gold card case to the Superintendent. Red flags mark the search area.`,'gold',6000)}
 
-/* ---------- Supply Depot store (was the Wreck Room) (docs/ui-redesign-spec.md section 2) ---------- */
+/* ---------- Company Store (docs/ui-redesign-spec.md section 2) ---------- */
 // NOTE: the spec was written pre-split and points at 45-state.js for this; the actual store code
 // (and its `openShop`/`closeShop`/`renderShop`/`SHOP` symbols) lives here, in 50-tents.js -- this
 // file already owned the tent/shop/KO/win block before the split. Item IDs and the save format
-// (S.up[id], S.onions, S.batt) are unchanged from before.
+// (S.up[id], S.bitterroots, S.batt) are unchanged from before.
 const SHOP=[
   {id:'spade',name:'Sharpened spade',desc:'Every scoop goes about 70% deeper.',cost:45,cat:'dig',icon:'shovel',needs:'shovel'},
   {id:'long',name:'Long-handled shovel',desc:'Dig down to 8 feet instead of 5.',cost:110,cat:'dig',icon:'shovel-long',needs:'shovel'},
@@ -66,7 +66,7 @@ const SHOP=[
   {id:'hover',name:'Hoverboard',desc:'Late game, straight out of the future: Z hops on. You glide an inch above the ground, a bit quicker, and holes and sinkholes pass right under you. No digging on it; a twister or a vulture knocks you off.',cost:400,cat:'survival',icon:'rope'},
   {id:'hoverShoes',name:'Hover shoes',desc:'Late game: sneakers that float you an inch above the ground, so holes and sinkholes pass under you. Start digging and they switch off quietly so you settle in; back on when you walk out. N switches them off whenever you like.',cost:450,cat:'survival',icon:'rope'},
   {id:'goldShovel',name:'Gold-plated shovel',desc:'Pure flex. Your shovel\'s steel goes polished gold, and everyone can see it.',cost:500,cat:'dig',icon:'shovel',needs:'shovel'},
-  {id:'soda',name:'Soda',desc:'For the crew: talk to a crew member (F) and hand him one. +45 morale, drunk on the spot. Buy a few.',cost:15,stack:'soda',cat:'supplies',icon:'onion'},
+  {id:'soda',name:'Soda',desc:'For the crew: talk to a crew member (F) and hand him one. +45 morale, drunk on the spot. Buy a few.',cost:15,stack:'soda',cat:'supplies',icon:'bitterroot'},
   {id:'sodaMachine',name:'Soda vending machine',desc:'For the whole camp, by the water drums: a fed-up crew member takes himself off for a soda break and comes back at full morale. Stock it: F at the machine loads your sodas, or 5 at a time from the crew wallet (15 each). Each break takes one.',cost:300,cat:'camp',camp:true,icon:'bucket'},
   {id:'jeepKeys',name:'Keys to the jeep',desc:'For the whole camp: the foreman\'s jeep, yours to drive. It waits inside the service gate, seats four, and its tub hauls 30 holes of sand: tip your bucket in at the back, drive to the sifter, shovel it out. The far paystreaks are worth the trip now.',cost:1500,cat:'camp',camp:true,icon:'bucket'},
   {id:'washRocker',name:'Rocker box',desc:'For the whole camp: a cradle that rocks the sand over riffles. The bare sifter and the pan lose a quarter of the gold in your sand; the rocker keeps 88% of it. Every sift pays about 17% more.',cost:600,cat:'camp',camp:true,icon:'bucket'},
@@ -80,15 +80,15 @@ const SHOP=[
   {id:'canteen3',name:'Water jug',desc:'Tier 3 canteen: holds more than twice the camp-issue canteen.',cost:90,cat:'survival',icon:'canteen',needs:'canteen'},
   {id:'rope',name:'Rope ladder',desc:'Climb out of deep holes in 1.5 seconds instead of 8.',cost:35,cat:'survival',icon:'rope'},
   {id:'bigsack',name:'Bigger sack',desc:'Carry 3 more finds before you have to walk back.',cost:60,cat:'supplies',icon:'sack'},
-  {id:'onion',name:'Bitterroot',desc:'Chew with Q. Gilas won\'t come near you for 45 seconds.',cost:8,stack:'onions',cat:'supplies',icon:'onion'},
-  {id:'tonic',name:'Bitterroot tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and gilas stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'onion'},
+  {id:'bitterroot',name:'Bitterroot',desc:'Chew with Q. Gilas won\'t come near you for 45 seconds.',cost:8,stack:'bitterroots',cat:'supplies',icon:'bitterroot'},
+  {id:'tonic',name:'Bitterroot tonic',desc:'Q: cures snake and scorpion poison, soothes sunburn and heatstroke, and gilas stay off you for 30 seconds.',cost:20,stack:'tonic',cat:'supplies',icon:'bitterroot'},
   {id:'medkit',name:'First-aid kit',desc:'Q: patches your injuries. Or pick up a downed friend in 1 second instead of 3 (uses one).',cost:30,stack:'medkit',cat:'survival',icon:'heart'},
   {id:'walkie',name:'Walkie-talkie',desc:'Your voice (P) and chat (Enter) reach anyone else with a walkie-talkie, anywhere on the lake, even in a tent. You hold it up to talk, so everyone can see who\'s on the radio.',cost:60,cat:'survival',icon:'ping'},
   {id:'battery',name:'Flashlight batteries',desc:'Fills your flashlight (L). It lasts about 3 minutes.',cost:6,stack:'batt',cat:'supplies',icon:'battery'},
 ];
 // painted item art (ChatGPT sheets in docs/art/, cut out to 128 px in public/icons/): used by the store
 // and inventory cards in place of the SVG line icons, which stay as the fallback for anything without art
-const GEAR_ART=new Set(['onion','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','seeds','tonic','medkit','walkie']);
+const GEAR_ART=new Set(['bitterroot','flashlight','water','canteen','shovel','spade','long','detector','rope','bigsack','battery','tonic','medkit','walkie']);
 function itemArtHTML(path,big){return `<img class="item-art${big?' item-art--lg':''}" src="icons/${path}.png" alt="">`}
 function shopIconHTML(it,big){return GEAR_ART.has(it.id)?itemArtHTML('gear/'+it.id,big):`<svg class="ui-icon ui-icon--lg"><use href="#icon-${it.icon}"></use></svg>`}
 const SHOP_CATS=[{id:'all',label:'All'},{id:'dig',label:'Digging'},{id:'survival',label:'Survival'},{id:'supplies',label:'Supplies'},{id:'camp',label:'Camp'}];
@@ -115,7 +115,7 @@ function shopEffect(it){
     case 'pack': case 'pack2': case 'pack3':{const t=it.id==='pack'?1:it.id==='pack2'?2:3;return {label:'You carry',from:bucketMax()+' holes of sand',to:Math.max(bucketMax(),BACKSACK_HOLES[t-1])+' holes, on your back'}}   /* 86-backsack.js */
     case 'rope': return {label:'Climb-out time',from:'8 s',to:'1.5 s'};
     case 'bigsack': {const cur=sackMax();return {label:'Sack capacity',from:cur+' finds',to:(cur+3)+' finds'}}
-    case 'onion': return {label:'Gila ward',from:`${S.onions} on hand`,to:'45 s protection per root'};
+    case 'bitterroot': return {label:'Gila ward',from:`${S.bitterroots} on hand`,to:'45 s protection per root'};
     case 'battery': return {label:'Flashlight charge',from:Math.round(S.batt)+'%',to:'100%'};
   }
   return null;
@@ -182,7 +182,7 @@ function updateShopCardStates(){
   for(const b of $('#shopList').children){
     const it=SHOP.find(s=>s.id===b.dataset.item);if(!it)continue;const st=shopStatus(it);
     const stateEl=b.querySelector('.shop-item__state');
-    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='onions'?`${S.onions} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'||it.stack==='scarecrow'||it.stack==='soda'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
+    stateEl.textContent=st.kind==='owned'?'In use':st.kind==='full'?'Full':it.stack==='bitterroots'?`${S.bitterroots} on hand`:it.stack==='tonic'||it.stack==='medkit'||it.stack==='pipe'||it.stack==='dynamite'||it.stack==='scarecrow'||it.stack==='soda'?`${S[it.stack]||0} on hand`:it.stack==='batt'?`${Math.round(S.batt)}%`:st.kind==='short'?`Need ${st.need} more`:st.kind==='locked'?`Needs the ${st.need}`:'Available';
     b.classList.toggle('is-owned',st.kind==='owned');
     const sel=b.dataset.item===shopSel;
     b.setAttribute('aria-pressed',String(sel));b.classList.toggle('is-selected',sel);
@@ -238,9 +238,9 @@ function hideShopConfirm(){
 function buyShopItem(id){
   const it=SHOP.find(s=>s.id===id);if(!it)return;const st=shopStatus(it);if(st.kind!=='available')return;
   if(it.camp){campBuy(it);sfx.buy();hideShopConfirm();it.justBought=performance.now();toast(`Bought for the camp: ${it.name}`,'good',2400);$('#shopFeedback').textContent=`${it.name}: the whole camp has it now. ${S.seeds} gold left.`;animateShopSeeds();renderShop();setTimeout(()=>{it.justBought=0;if(shopSel===it.id&&shopOpen)renderShopDetail()},1600);return}
-  const undo=()=>{if(it.stack==='onions')S.onions=Math.max(0,S.onions-1);else if(it.stack&&it.stack!=='batt')S[it.stack]=Math.max(0,(S[it.stack]||0)-1);else if(!it.stack)delete S.up[it.id]};
+  const undo=()=>{if(it.stack==='bitterroots')S.bitterroots=Math.max(0,S.bitterroots-1);else if(it.stack&&it.stack!=='batt')S[it.stack]=Math.max(0,(S[it.stack]||0)-1);else if(!it.stack)delete S.up[it.id]};
   walletSpend(it.cost,undo,it.name);   /* the crew wallet, checked by the server (84-spend.js) */
-  if(it.stack==='onions')S.onions++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}
+  if(it.stack==='bitterroots')S.bitterroots++;else if(it.stack==='batt')S.batt=100;else if(it.stack)S[it.stack]=(S[it.stack]||0)+1;else{S.up[it.id]=true;if(it.id==='canteen'||it.id==='canteen3')S.water=waterMax()}
   sfx.buy();hideShopConfirm();it.justBought=performance.now();
   toast(`Bought: ${it.name}`,'good',2000);
   $('#shopFeedback').textContent=`${it.name} issued. ${S.seeds} gold left.`;
@@ -294,7 +294,7 @@ function pollShopGamepad(){
 function startShopGamepad(){stopShopGamepad();shopGpTimer=setInterval(pollShopGamepad,100)}
 function stopShopGamepad(){if(shopGpTimer){clearInterval(shopGpTimer);shopGpTimer=null}}
 
-/* ---- Me | The crew (JT 2026-10-01): the crew side is a table, one column for each of the D Tent crew, one row for each
+/* ---- Me | The crew (JT 2026-10-01): the crew side is a table, one column for each of the Bunk D crew, one row for each
    upgrade (sim.js CREW_SHOP). Paid from your own gold; the server keeps who has what for the whole camp ('crewBuy').
    First click on a price asks "Sure?", the second buys. ---- */
 let shopMode='me',crewConfirm=null,crewConfirmT=0;const crewPending=new Map();
@@ -351,7 +351,7 @@ function crewMsg(m){
 try{const o=JSON.parse(localStorage.getItem('cgl-crew')||'null');if(o)crewMsg({up:o})}catch(e){}   // playing alone: kept in this browser (online, the server's 'crew' replaces it)
 function renderShop(){$('#shopSeeds').textContent=S.seeds;{const el=$('#shopSafe');if(el)el.textContent=`· safe to spend ${safeToSpend()} (cut ${RUN.quota})`}updateShopCardStates();renderShopDetail();renderCrewShop();
   const sum=sackValue(),b=$('#shopSell');b.hidden=!S.sack.length;b.textContent=`Sell ${S.sack.length} find${S.sack.length===1?'':'s'} for ${sum} gold`}
-/* Mr. Pendanski buys what's in your sack (the gold rush: he took the job over from Mr. Sir). Heavy finds you carry to
+/* Mr. Abel buys what's in your sack (the gold rush: he took the job over from Foreman Dutch). Heavy finds you carry to
    his window instead (sim.js SELL, 84-grab.js). */
 function sackValue(){return S.sack.reduce((s,t)=>s+LOOT[t].val,0)}
 function sellSack(){
@@ -382,7 +382,7 @@ function knockOut(title,text){
   if(S.ko)return;S.hp=0;P.kx=P.kz=0;S.ko=othersOnline()?25:4;digHeld=false;S.carry=null;S.light=false;lionPinT=0;   // a KO from any source (including a pounce) ends any lion pin -- downed already means "can't move"
   logEv('ko',{title,text,x:+P.x.toFixed(1),z:+P.z.toFixed(1)});sfx.ko();
   twSt=0;twStT=0;tbSt=0;vSt=0;vStT=0;me.g.rotation.z=0;   // clears any twister/tumbleweed/vulture takeover state so it can't fight the KO pose or get stuck
-  countUp('kos',5,'squid');curseKo();   // the curse grows a little (81-mood.js)
+  countUp('kos',5,'punchingbag');badluckKo();   // the bad luck grows a little (81-mood.js)
   const lost=S.sack.length;dropBag();
   const sand=S.bucket>0.05;S.bucket=0;   // the gold rush: your bucket spills when you go down (the crew's too, 30-npcs.js crewKO)
   $('#koTitle').textContent=title;$('#koText').textContent=text+(lost?' Your sack fell where you went down. Anyone can pick it up.':'')+(sand?' Your bucket spilled.':'');$('#ko').hidden=false;

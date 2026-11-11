@@ -1,6 +1,6 @@
 'use strict';
 /* public/js/88-dynamite.js -- dynamite (JT 2026-10-01): "the sand gets blown loose, and anyone who walks by auto-fills
-   their bucket / pack". Buy sticks at the Supply Depot (S.dynamite); Y (remappable: 'dynamite') lights one and tosses
+   their bucket / pack". Buy sticks at the Company Store (S.dynamite); Y (remappable: 'dynamite') lights one and tosses
    it ~4 m ahead (never inside the camp or its no-dig strip). The server runs the fuse (3 s) so everyone sees the same
    thing, then ('dynBoom'): a crater (holes, server-side), everyone within dyn.blast m flies (blastLaunch, 88-mines.js,
    the crew too), the pipeline cracks if it's close, and landmines nearby go off with it. It leaves a mound of LOOSE
