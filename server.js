@@ -237,7 +237,8 @@ if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew'
 // One-way, and a no-op on a file that is already in the new names. (The browser's side is public/js/09-migrate.js.)
 function migrateOldNames(w) {
   const ITEM = { sploosh: 'shine', lipstick: 'matchsafe', sneakers: 'oldboots', kb: 'lmcase', suitcase: 'lilstrongbox' };
-  const move = (o, from, to) => { if (o && typeof o === 'object' && from in o) { if (!(to in o)) o[to] = o[from]; delete o[from]; } };
+  // a null/undefined new key counts as unset: freshWorld() puts lm: null in before the saved file is laid over it
+  const move = (o, from, to) => { if (o && typeof o === 'object' && from in o) { if (o[to] == null) o[to] = o[from]; delete o[from]; } };
   const bags = b => { if (b && typeof b === 'object') for (const k of Object.keys(b)) if (b[k] && Array.isArray(b[k].items)) b[k].items = b[k].items.map(t => ITEM[t] || t); };
   const props = p => { if (p && typeof p === 'object') for (const k of Object.keys(p)) if (p[k] && ITEM[p[k].type]) p[k].type = ITEM[p[k].type]; };
   move(w, 'kb', 'lm');                                   // who handed in the LM card case
