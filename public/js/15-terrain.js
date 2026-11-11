@@ -26,7 +26,7 @@ const HOLE_DISH=0.07;                      // the floor dips this much (fraction
 const HOLE_SLUMP=1.6;                      // where the outline bulges out, the wall starts this much further in (it slumped)
 const HOLE_BERM=0.42,HOLE_BERM_H=0.045;    // the lip of kicked-up sand: width outside the rim (m; inside the terrain cut), height per m dug
 const HOLE_MOUND_FADE=0.3;                 // m: a spoil heap fades out over this much depth where another hole cuts into it
-const HOLE_UNION=0.14,HOLE_UNION_W=0.22,HOLE_UNION_G=0.15;   // overlapping holes blend into one pit: where two bowls meet at about the same
+const HOLE_UNION=0.08,HOLE_UNION_W=0.35,HOLE_UNION_G=0.15;   // overlapping holes blend into one pit: where two bowls meet at about the same
                                            // depth (within ~W m) the ridge between them is worn down by up to HOLE_UNION m, less near the surface
 const HOLE_OLD=r=>r>HOLE_R*1.5;            // sinkhole craters: the old round profile
 const holeVD=h=>h.vd!=null?h.vd:h.d;       // the depth the ground shows (47-digfeel.js eases it toward h.d)

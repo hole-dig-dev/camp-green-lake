@@ -77,7 +77,7 @@ function hlGeometry(){
    ground (sim.js richAt), warmer, redder sand with thin streaks of black sand, the old prospector's sign. The lip
    gets the dry-lake-bed plates (15-terrain.js groundDetail) like the ground round it, except on dug or spilled sand. */
 function hlMakeMat(slot){
-  const m=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0}),self={value:slot},rich={value:0};
+  const m=new T.MeshStandardMaterial({vertexColors:true,flatShading:false,roughness:1,metalness:0}),self={value:slot},rich={value:0};
   m.onBeforeCompile=sh=>{
   sh.uniforms.uHoles=hlHoleU;sh.uniforms.uHoleK=hlKU;sh.uniforms.uSelf=self;sh.uniforms.uRich=rich;
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aDepth;attribute float aWall;attribute float aSpill;varying float vDepth;varying float vWall;varying float vSpill;varying vec2 vHW;')

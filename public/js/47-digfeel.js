@@ -192,12 +192,13 @@ function updatePours(dt){
     if(q.t>fall+0.4&&Math.random()<dt*4)digDust(q.tx,q.ty+0.25,q.tz,Math.random()-0.5,Math.random()-0.5,1,0.7,0.3);
     if(q.t>q.dur+fall){DIGF.pours[i]=DIGF.pours[DIGF.pours.length-1];DIGF.pours.pop()}}
 }
+function machFillStep(M,dt){if(!M.on){M.fillV=M.load;return}
+  const cap=M.k==='exc'?MACH.EXC_BUCKET:MACH.DUMP_CAP,v=M.fillV??M.load;
+  M.fillV=M.load>v?Math.min(M.load,v+cap*dt/(M.k==='exc'?tune('dig.carve')*1.4:tune('dig.pour'))):Math.max(M.load,v-cap*dt/tune('dig.pour'))}
 /* the machines' loads as you see them: the bucket's sand rises as it fills, the truck's grows as it's poured in */
 function updateMachFill(dt){
   if(typeof MACHS==='undefined')return;
-  for(const M of Object.values(MACHS)){if(!M.on){M.fillV=M.load;continue}
-    const cap=M.k==='exc'?MACH.EXC_BUCKET:MACH.DUMP_CAP,v=M.fillV??M.load;
-    M.fillV=M.load>v?Math.min(M.load,v+cap*dt/(M.k==='exc'?tune('dig.carve')*1.4:tune('dig.pour'))):Math.max(M.load,v-cap*dt/tune('dig.pour'))}
+  machFillStep(MACHS.exc,dt);machFillStep(MACHS.dump,dt);
   const E=MACHS.exc;
   // a loaded bucket sheds a little sand off its lip: just after the bite, and while it swings
   if(E.on&&E.load>0.05&&nearCam(E.x,E.z,60)){

@@ -50,6 +50,7 @@ the console), then one big `<script>` whose body was an IIFE. It's now split int
 | `public/js/40-fx.js` | dirt particles, item pops, rain, WebAudio sound effects |
 | `public/js/41-cues.js` | core-loop sound cues from CC0 recordings: gold rewards, assay sting, menu sounds, hurt/knockout, siren, lizard hiss (A/B: `audio rewards|ui|danger old|new`) |
 | `public/js/45-state.js` | player/session state, digging, world interactions (use/F) |
+| `public/js/47-digfeel.js` | how digging looks and sounds: the ground giving as the blade bites, dirt on the blade, the toss, dust, the excavator's carve and pour (hole shapes: `15-terrain.js` holeDepthAt, `46-holes.js` liners) |
 | `public/js/50-tents.js` | entering/leaving tents, bunks, sleeping |
 | `public/js/55-input.js` | keyboard/mouse/touch input (with the key-remap layer) |
 | `public/js/60-title.js` | title screen, camp password, session save/resume, start-game flow |
