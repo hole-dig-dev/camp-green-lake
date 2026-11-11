@@ -14,9 +14,14 @@
    The pieces (street, buildings, door plugs, tunnel timber and debris) are Blender models from art/blender/town.py; the
    tunnels' cave walls are dug here along each tunnel's path. Where you can walk: Main Street, inside the buildings, through
    their open doors and along the tunnels, minus the furniture (public/data/TownColliders.json).
-   Not yet: the gila queen and Cobb's mob, heavy loot down here, a town minimap. */
+   2026-11-11, the town as the game's dungeon: 89-town-light.js (a real flashlight, daylight down the shafts, lanterns the crew
+   lights for good, dust and falling sand, its sounds), 89-town-map.js (the map that draws itself as you explore, the
+   checklist), 89-town-story.js (a find and a scrap of the story in every building, Lil's vault and her gold bars). What the
+   crew has done down there is the server's (sim.js townApply; TST here), kept for the whole run.
+   Not yet: the gila queen and Cobb's mob. */
 let TLAY=null,TLAY_DAY=-1,townGroup=null,townRoom=null;
 const TLOOTM=new Map(),TGOT=new Set(),BREACH=new Map(),breachDisc=new Map();
+let TST=SIM.townFresh();   // what the crew has done down here this run (lanterns, finds, the vault, the map): the server's copy, or solo's own
 const TW=SIM.TOWN;
 const TOWN_DW=1.8;   // door width in the Blender buildings (art/blender/town.py DW)
 function townLay(){const d=RUN.day||1;if(TLAY_DAY!==d){TLAY_DAY=d;TLAY=SIM.townLayout(d);TGOT.clear();if(townGroup)buildTown()}return TLAY}
@@ -31,9 +36,12 @@ function townWalkBuild(L,J){
   W.rects.push({x0:tx(S_.x0)+m,x1:tx(S_.x1)-m,z0:tz(S_.z0)+m,z1:tz(S_.z1)-m,h:S_.h,name:'Main Street'});
   for(const b of L.bldgs){
     const q=Math.abs(Math.sin(b.ry))>0.5,w=(q?b.D:b.W)/2-0.15-m,d=(q?b.W:b.D)/2-0.15-m;
-    W.rects.push({x0:tx(b.x)-w,x1:tx(b.x)+w,z0:tz(b.z)-d,z1:tz(b.z)+d,h:TW.H,name:b.name,b});
-    for(const[side,v]of Object.entries(b.doors)){if(!v)continue;const D=SIM.townDoor(b,side),hw=TOWN_DW/2-m;   // through the open doorway
-      W.rects.push(D.nx?{x0:tx(D.x)-1.2,x1:tx(D.x)+1.2,z0:tz(D.z)-hw,z1:tz(D.z)+hw,h:2.4}:{x0:tx(D.x)-hw,x1:tx(D.x)+hw,z0:tz(D.z)-1.2,z1:tz(D.z)+1.2,h:2.4})}
+    const vault=b.key==='vault';   // Lil's vault: shut until the crew opens it (89-town-story.js)
+    W.rects.push({x0:tx(b.x)-w,x1:tx(b.x)+w,z0:tz(b.z)-d,z1:tz(b.z)+d,h:TW.H,name:b.name,b,vault});
+    for(const[side,v]of Object.entries(b.doors)){if(!v)continue;const D=SIM.townDoor(b,side),hw=TOWN_DW/2-m;   // through the open doorway (the vault's: only its outer half while it's shut)
+      // s: how far out of the building along the door's normal. The vault's door stands at s 0: outside it (s 0.3..1.2) is always open
+      const span=(a,b,v)=>{const p=[D.x+D.nx*a,D.x+D.nx*b],q=[D.z+D.nz*a,D.z+D.nz*b];return D.nx?{x0:tx(Math.min(...p)),x1:tx(Math.max(...p)),z0:tz(D.z)-hw,z1:tz(D.z)+hw,h:2.4,vault:v}:{x0:tx(D.x)-hw,x1:tx(D.x)+hw,z0:tz(Math.min(...q)),z1:tz(Math.max(...q)),h:2.4,vault:v}};
+      if(vault){W.rects.push(span(0.3,1.25,false),span(-1.2,0.3,true))}else W.rects.push(span(-1.2,1.2,false))}
     townColAdd(J.cols[b.key],tx(b.x),tz(b.z),b.ry);
   }
   townColAdd(J.cols.street,tx(0),tz(0),0);
@@ -50,11 +58,11 @@ const inR=(r,x,z,m=0)=>x>r.x0-m&&x<r.x1+m&&z>r.z0-m&&z<r.z1+m;
 function segD(x,z,c){const dx=c.bx-c.ax,dz=c.bz-c.az,L=dx*dx+dz*dz;let t=L?((x-c.ax)*dx+(z-c.az)*dz)/L:0;t=t<0?0:t>1?1:t;return Math.hypot(x-c.ax-t*dx,z-c.az-t*dz)}
 /* where you are: a room ({name,h}), or null if that's solid ground. crouch lets you into crawlspaces */
 function townWhere(x,z,crouch){
-  for(const r of TWALK.rects)if(inR(r,x,z))return r;
+  for(const r of TWALK.rects)if(inR(r,x,z)&&!(r.vault&&!TST.vault.open))return r;
   let best=null;for(const c of TWALK.caps)if((!c.crawl||crouch)&&segD(x,z,c)<c.r){if(!c.crawl)return{name:'tunnel',h:c.h};best={name:'crawl',h:c.h}}
   return best;
 }
-function townWalk(x,z,crouch){return!!townWhere(x,z,crouch)&&!TWALK.obst.some(o=>inR(o,x,z,0.3))}
+function townWalk(x,z,crouch){return!!townWhere(x,z,crouch)&&!TWALK.obst.some(o=>inR(o,x,z,0.3))&&!townCaveBlocks(x,z)}   // (a ceiling that came down: 89-town-danger.js)
 function townCeil(x,z){const w=townWhere(x,z,true);return w?w.h:2.4}
 
 /* ---- the tunnels: a path sampled every ~0.7 m, and which samples are the crawlspace ---- */
@@ -92,10 +100,12 @@ function buildTown(){
   const grp=townGroup=new T.Group();grp.visible=!!S.inTown;scene.add(grp);TLOOTM.clear();
   const own=m=>{m.userData.own=true;grp.add(m);return m};
   const ground=own(new T.Mesh(new T.PlaneGeometry(150,130),new T.MeshStandardMaterial({color:0x3a2c1e,roughness:1})));ground.rotation.x=-Math.PI/2;ground.position.set(tx(0),TW.Y-0.01,tz(0));
-  for(const t of L.tunnels)own(tunnelMesh(t));
+  {const ms=L.tunnels.map(tunnelMesh),pos=[],col=[],nor=[],idx=[];let o=0;   // all the tunnels' cave walls as one mesh (one draw call, not sixteen)
+    for(const m of ms){const g=m.geometry;pos.push(...g.attributes.position.array);col.push(...g.attributes.color.array);nor.push(...g.attributes.normal.array);for(const i of g.index.array)idx.push(i+o);o+=g.attributes.position.count;g.dispose()}
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setIndex(idx);
+    const m=own(new T.Mesh(g,TUN_MAT));m.receiveShadow=true}
   for(const Lt of L.loot){if(TGOT.has(Lt.id))continue;const m=itemMesh(Lt.type);m.scale.multiplyScalar(1.6);m.position.set(tx(Lt.x),TW.Y+0.25,tz(Lt.z));grp.add(m);TLOOTM.set(Lt.id,{L:{...Lt,x:tx(Lt.x),z:tz(Lt.z)},m})}
-  for(const[k,b]of BREACH)shaftMark(k,b);
-  const P_={},put=(name,x,z,ry)=>(P_[name]=P_[name]||[]).push({x:tx(x),y:TW.Y,z:tz(z),ry:ry||0});
+  const P_={},put=(name,x,z,ry,y)=>(P_[name]=P_[name]||[]).push({x:tx(x),y:TW.Y+(y||0),z:tz(z),ry:ry||0});   // y: above the floor (a lantern on its hook)
   put('TownStreet',0,0,0);
   for(const b of L.bldgs){
     put('TownBldg_'+b.key,b.x,b.z,b.ry);
@@ -111,19 +121,38 @@ function buildTown(){
       if(h<0.07){const s=h<0.035?1:-1,nx=-(b[1]-a[1])/l,nz=(b[0]-a[0])/l;put('TownJunk'+'ABC'[k%3],a[0]+nx*0.75*s,a[1]+nz*0.75*s,k)}
     });
   }
+  townStoryPlace(L,put);townLightPlace(L,put);townDangerPlace(L,put);   // lanterns and their hooks, notes, finds, the vault door and the cellar lever
   // the models and the floor load separately, so a missing colliders file can't leave you in a black void
-  Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp))).catch(e=>console.warn('town',e&&e.message));
+  Promise.all(Object.entries(P_).map(([n,pl])=>instanceModel(n,pl,grp).then(g=>{g.userData.piece=n;return g})))
+    .then(gs=>{if(grp===townGroup){townMerge(grp,gs);townStoryBuilt(grp,gs)}}).catch(e=>console.warn('town',e&&e.message));
+  townLightBuild(grp,L);townStoryBuild(grp,L);townDangerBuild(grp,L);
   townCols().then(J=>{if(grp===townGroup)townWalkBuild(L,J)})
     .catch(e=>{console.warn('town colliders',e&&e.message);if(grp===townGroup)townWalkBuild(L,{cols:{}})});
 }
 const TOWN_STREET_EDGE=SIM.TOWN_EDGES.findIndex(e=>e[0]==='street');
 function shaftPos(b){const L=townLay(),p=SIM.townBreachSpot(b.x,b.z,L);return{x:tx(p[0]),z:tz(p[1])}}
-function shaftMark(k,b){
-  if(!townGroup)return;const p=shaftPos(b);
-  const s=new T.Mesh(new T.CylinderGeometry(0.9,0.9,TW.H,10,1,true),new T.MeshBasicMaterial({color:0xfff0cc,transparent:true,opacity:0.16,depthWrite:false,side:T.DoubleSide}));
-  s.position.set(p.x,TW.Y+TW.H/2,p.z);s.name='shaft'+k;s.userData.own=true;townGroup.add(s);
-  if(b.ladder){const l=box(0.5,TW.H,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2,p.z);townGroup.add(l)}
+function shaftMark(k,b){   // a staked rope ladder hangs in the shaft (the daylight itself: 89-town-light.js)
+  if(!townGroup||!b.ladder)return;const p=shaftPos(b);
+  const l=box(0.5,TW.H+2,0.08,0x8a6440);l.position.set(p.x+0.7,TW.Y+TW.H/2+1,p.z);l.name='shaft'+k;townGroup.add(l);
 }
+/* PERF: every building and the street is its own model with a dozen-odd flat-colour materials, ~300 draw calls in all.
+   They never move, so once loaded they're baked into one mesh per colour (positions only: the materials are flat
+   shaded). The pieces placed many times (timber sets, plugs, lanterns) stay instanced. */
+function townMerge(grp,gs){
+  const by=new Map();let n=0;
+  for(const g of gs){if(!/^Town(Bldg_|Street)/.test(g.userData.piece))continue;
+    for(const m of g.children){if(!m.isMesh||m.isInstancedMesh)continue;const mt=m.material,k=mt.name+'|'+mt.color.getHex()+'|'+mt.roughness+'|'+(mt.transparent?1:0);
+      let e=by.get(k);if(!e)by.set(k,e={mat:mt,list:[]});e.list.push(m)}}
+  for(const{mat,list}of by.values()){
+    let tot=0;const parts=list.map(m=>{const g=m.geometry.index!==null?m.geometry.toNonIndexed():m.geometry.clone();g.applyMatrix4(m.matrix);tot+=g.attributes.position.count;return g});
+    const pos=new Float32Array(tot*3);let o=0;for(const g of parts){pos.set(g.attributes.position.array,o);o+=g.attributes.position.array.length;g.dispose()}
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));geo.computeBoundingSphere();
+    const mm=new T.Mesh(geo,mat);mm.userData.own=true;mm.receiveShadow=false;mm.castShadow=false;grp.add(mm);n++;
+    for(const m of list)m.parent.remove(m);
+  }
+  TOWN_PERF.merged=n;
+}
+const TOWN_PERF={merged:0};
 
 /* ---- the Superintendent's note (on her desk: 20-world.js, art/blender/suptnote.py): where to dig. The coordinates are the
    ones the map shows (78-hud.js coordXY); that's the only spot that breaks through, and you land on Main Street by the
@@ -164,15 +193,26 @@ function enterTown(k){
   if(!townGroup)buildTown();
   const p=shaftPos(b);S.inTown=true;S.townBreach=k;P.x=p.x;P.z=p.z;P.y=TW.Y;P.vy=0;
   if(typeof releaseGrab==='function'){releaseGrab(false);untieRope(false)}S.carry=null;
-  townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();
+  townGroup.visible=true;townRoom=null;camera.far=70;camera.updateProjectionMatrix();townHideLake(true);
   hurt(4,'Fall','You dropped into the buried town.');sfx.thud();logEv('townIn',{k});
   toast('You drop into the dark: the drowned town of Marlow\'s Landing. Grab what you can. To get out, press F under the shaft you came down, or at the collapsed stairwell at the end of Main Street.','gold',9000);
 }
 function exitTown(x,z,why){
-  S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;
+  townBarOut(x,z);townLightOff();   // a gold bar you were carrying: up with you (shaft, stairwell) or dropped (89-town-story.js)
+  S.inTown=false;S.townBreach=null;if(townGroup)townGroup.visible=false;townHideLake(false);
   P.x=x;P.z=z;P.y=groundAt(x,z);P.vy=0;townRoom=null;camera.far=3000;camera.updateProjectionMatrix();
   streamChunks(P.x,P.z,999);farU.uFocus.value.set(P.x,P.z);logEv('townOut',{why});
   if(why)toast(why,'good',3500);
+}
+/* PERF: the lake's big always-drawn pieces (the north cliffs, the far terrain, the fence: instanced or uncullable, ~1.2M
+   triangles) kept drawing behind the town's walls. Down here they're hidden; climbing out puts back exactly those. */
+const TOWN_HIDDEN=[];
+function townHideLake(hide){
+  if(!hide){for(const o of TOWN_HIDDEN.splice(0))o.visible=true;return}
+  const keep=new Set([townGroup,me&&me.g,...[...remotes.values()].map(R=>R.p&&R.p.g)]);
+  for(const c of scene.children){if(!c.visible||keep.has(c)||c.isLight||c.isCamera)continue;let t=0;
+    c.traverse(o=>{const g=o.geometry;if(g&&g.attributes&&g.attributes.position)t+=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1)});
+    if(t>3000){c.visible=false;TOWN_HIDDEN.push(c)}}
 }
 /* who can help you up a shaft or a well: a staked ladder, a friend down here crouching next to you, or a hand from the top */
 function climbHelp(b){
@@ -184,6 +224,7 @@ function climbHelp(b){
 }
 function townSpot(){
   if(!S.inTown)return null;const L=townLay();
+  const ss=townDangerSpot()||townStorySpot()||townLightSpot();if(ss)return ss;   // a find, a note, the vault, a lantern (closest first within each)
   for(const e of TLOOTM.values())if(Math.hypot(P.x-e.L.x,P.z-e.L.z)<2)return{id:'townLoot',e};
   for(const[k,b]of BREACH){const p=shaftPos(b);if(Math.hypot(P.x-p.x,P.z-p.z)<1.8)return{id:'townShaft',k,b}}
   const w=L.bldgs[L.well];if(Math.hypot(P.x-tx(w.x),P.z-tz(w.z))<2.2)return{id:'townWell',i:w.i};
@@ -193,13 +234,15 @@ function townSpot(){
 function townUse(s){
   if(s.id==='townDown'){enterTown(s.k);return true}
   if(s.id==='townLoot'){townTake(s.e);return true}
-  if(s.id==='townStair'){const O=SIM.OLD_TOWN;exitTown(O.x+4,O.z+3,'You climb the broken stairwell and come out by the hole in the old town.');return true}
+  if(townStoryUse(s)||townLightUse(s)||townDangerUse(s))return true;
+  if(s.id==='townStair'){const O=SIM.OLD_TOWN;exitTown(O.x+4,O.z+3,'You climb the broken stairwell and come out by the hole in the old town.'+(townCarrying()?' With the gold bar.':''));return true}
   if(s.id==='townShaft'||s.id==='townWell'){
     const help=climbHelp(s.id==='townShaft'?s.b:null);
     if(!help){
       if(s.id==='townShaft'&&S.up.rope){S.up.rope=false;if(online())wsSend({t:'ladder',k:s.k});else{s.b.ladder=true;addBreach(s.k,s.b)}toast('You stake your rope ladder in the shaft. Now anyone can climb it alone.','good',4000);sfx.clank();return true}
       toast(s.id==='townWell'?'The well is too high to climb alone. A friend down here has to crouch (C) next to you and boost you.':'Too high to climb alone. A friend down here can crouch (C) and boost you, someone up top can hold F at the hole, or stake a rope ladder (Company Store).','bad',5000);return true}
     if(!spendStam(20)){toast('Too tired to climb. Catch your breath first.','bad',2500);return true}
+    if(s.id==='townWell'&&townCarrying()){toast('The well is too narrow for a gold bar. Take it up the shaft or the stairwell.','bad',4000);return true}
     if(s.id==='townWell'){const a=s.i*2.39;exitTown(Math.cos(a)*250,Math.sin(a)*250-60,`You climb up the old well (${help}) and come out somewhere on the lake.`);return true}
     exitTown(s.b.x+1.8,s.b.z,`You climb out (${help}).`);countUp('helps',10,'ladder');return true;
   }
@@ -220,10 +263,10 @@ function updatePlayerTown(dt){
   if(uiOpen()){ix=0;iz=0}
   const fx=-Math.sin(P.yaw),fz=-Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
   let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;const ml=Math.hypot(mx,mz);
-  const sprint=KEYS['shift']&&S.stam>2&&!P.crouch;
+  const sprint=KEYS['shift']&&S.stam>2&&!P.crouch&&!townCarrying();
   P.moving=false;P.anim=0;
   if(ml>0.1){
-    mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:sprint?6.5:4.3)*Math.min(1,ml);
+    mx/=Math.max(1,ml);mz/=Math.max(1,ml);const sp=(P.crouch?2:townCarrying()?tune('town.barSpeed'):sprint?6.5:4.3)*Math.min(1,ml);   // a gold bar in your arms: a slow walk, no running
     let nx=P.x+mx*sp*dt,nz=P.z+mz*sp*dt;
     if(!townWalk(nx,nz,P.crouch)){if(townWalk(nx,P.z,P.crouch))nz=P.z;else if(townWalk(P.x,nz,P.crouch))nx=P.x;else{nx=P.x;nz=P.z}}   // slide along walls and furniture
     P.x=nx;P.z=nz;P.fa=FP?Math.atan2(fx,fz):Math.atan2(mx,mz);P.moving=true;P.anim=sprint?4:1;if(sprint)drainStam(tune('stam.sprint')*dt);
@@ -236,7 +279,8 @@ function updatePlayerTown(dt){
   const w=townWhere(P.x,P.z,true),nm=w?w.name:null;
   if(nm&&nm!==townRoom){townRoom=nm;const b=w.b;
     if(nm==='crawl')toast('The roof came down here. Crouch (C) to crawl through.','',2400);
-    else if(nm!=='tunnel')toast(nm+(b&&b.key==='vault'?'. Gold glints in the dark.':b&&b.key==='well'?'. Daylight, far up the shaft.':nm==='Main Street'?'. The old town\'s street, buried under the lake.':''),'',2400)}
+    else if(nm!=='tunnel')toast(nm+(b&&b.key==='vault'?'. Gold glints in the dark.':b&&b.key==='well'?'. Daylight, far up the shaft.':nm==='Main Street'?'. The old town\'s street, buried under the lake.':''),'',2400);
+    if(b)townEntered(b)}   // the map learns its name (89-town-map.js)
 }
 /* the third-person camera down here: pulled in toward you so it never ends up in the earth or furniture */
 function townCamPull(cx,cz){
@@ -246,19 +290,43 @@ function townCamPull(cx,cz){
 }
 /* every frame, after the sky: it's dark down there */
 function updateTown(dt){
-  if(S.inTown){scene.fog.color.setRGB(0.02,0.015,0.01);scene.fog.near=2;scene.fog.far=S.light?tune('light.townSee'):12;sun.intensity=0.04;hemi.intensity=S.light?0.1:0.05}   // no daylight down here (the day/night code eases it back once you're out)
+  if(S.inTown){   // no daylight down here (the day/night code eases it back once you're out): a little cold bounce so shapes still read as silhouettes; the light comes from the flashlight, the shafts and the lanterns (89-town-light.js)
+    scene.fog.color.setRGB(0.012,0.011,0.01);scene.fog.near=3;scene.fog.far=tune('light.townSee');sun.intensity=0;hemi.intensity=tune('town.ambient');
+    townLightUpdate(dt);townStoryUpdate(dt);townMapUpdate(dt);townDangerUpdate(dt)}
+  else townCheckDraw(false);   // (hides the checklist once you're out)
   S.handDown=!S.inTown&&!S.ko&&KEYS['f']&&(!!breachNear(3.6)&&holeDepthHere()<1.2||northClimb(P.x,P.z));   // (or on the north wall: a hand down to a friend on the ledge below, 88-north.js)   // on the rim (not down in the hole), holding F   // lowering a hand to a friend climbing a shaft (their climbHelp sees flag 256)
 }
 
 /* ---- network ---- */
 function townMsg(m){
+  if(m.t==='town'){TST=SIM.townClean(m.town);townStateChanged(null);return}   // a new run: the town's dark again
+  if(m.t==='tlamp'||m.t==='tsig'||m.t==='tvault'||m.t==='tbar'||m.t==='tmap'||m.t==='tcave'){townApplied(m);return}
   if(m.t==='breach'){const k=String(m.k||'');if(k)addBreach(k,{x:num(m.x,-600,600,0),z:num(m.z,-600,600,0),at:m.at||0,ladder:m.ladder===true})}
   else if(m.t==='tgot')townGone(num(m.id,0,999,-1)|0);
 }
 function townHello(m){
   if(m.breaches&&typeof m.breaches==='object')for(const k of Object.keys(m.breaches).slice(0,200)){const b=m.breaches[k];if(b)addBreach(k,{x:num(b.x,-600,600,0),z:num(b.z,-600,600,0),at:b.at||0,ladder:b.ladder===true})}
   if(Array.isArray(m.tgot)){townLay();for(const id of m.tgot.slice(0,999))townGone(num(id,0,999,-1)|0)}
+  if(m.town){TST=SIM.townClean(m.town);townStateChanged(null)}
 }
+/* ---- doing something down here that the crew shares: the server applies it (sim.js townApply) and tells everyone; solo
+   applies it here and keeps it for the run (sessionStorage, dropped with the run when the crew's let go) ---- */
+function townAct(m){
+  if(online()){wsSend(m);return}
+  const out=SIM.townApply(TST,m,{id:myId(),n:S.name||'You'});if(!out)return;
+  townApplied(out);try{sessionStorage.setItem('cgl-town',JSON.stringify(TST))}catch(e){}
+}
+function townApplied(m){   // a change to the shared state, from the server or solo
+  if(m.t==='tlamp'){if(!TST.lit.includes(m.i))TST.lit.push(m.i)}
+  else if(m.t==='tsig')TST.sigs[m.k]=m.by;
+  else if(m.t==='tvault')TST.vault=Object.assign({},m.vault);
+  else if(m.t==='tbar'){const b=TST.bars[m.i];if(b){b.at=m.at;b.held=m.held}}
+  else if(m.t==='tmap'){if(online())TST.map=townMapOr(TST.map,m.c)}
+  else if(m.t==='tcave')TST.caves[m.i]=m.v;
+  townStateChanged(m);
+}
+function townStateChanged(m){townLightState(m);townStoryState(m);townMapState(m);townDangerState(m)}
+if(!online())try{const o=JSON.parse(sessionStorage.getItem('cgl-town')||'null');if(o)TST=SIM.townClean(o)}catch(e){}
 
 command('town',{usage:'town [in|out]',help:'Buried town: break through right where you stand and drop in, or climb straight out (testing).',
   run([a]){a=(a||'in').toLowerCase();

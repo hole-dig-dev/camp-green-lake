@@ -360,6 +360,7 @@ if (!world.director || typeof world.director !== 'object') world.director = { on
 if (!world.players || typeof world.players !== 'object') world.players = {};
 if (!world.bags || typeof world.bags !== 'object') world.bags = {};
 if (!world.props || typeof world.props !== 'object') world.props = {};
+world.town = SIM.townClean(world.town); // the buried town: lanterns lit, finds taken, the vault, the map (sim.js townApply); an old save has none
 if (!world.crew || typeof world.crew !== 'object') world.crew = {}; // the crew's upgrades: { name: { id: true } } (sim.js CREW_SHOP)
 // 2026-11 identifier rename (docs/STORY.md): a world.json saved before it still has the old setting's keys and item ids.
 // Rename them once, here; this and the crew map below are the only places in the server that spell the old names.
@@ -769,6 +770,7 @@ wss.on('connection', (ws, req) => {
       truck: truckMsg(true).st, // Foreman Dutch's pickup (87-truck.js)
       mach: machMsg(true), // the excavator and the dump truck, if the crew owns them (87-excavator.js)
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
+      town: world.town, // and what the crew has done down there this run (sim.js townApply)
       rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.badluck || 0), // and the day's roster
     });
   }
@@ -1062,6 +1064,21 @@ wss.on('connection', (ws, req) => {
         world.tgot = world.tgot && world.tgot.day === world.run.day ? world.tgot : { day: world.run.day, ids: [] };
         if (world.tgot.ids.includes(id)) return;
         world.tgot.ids.push(id); dirty = true; broadcast({ t: 'tgot', id }, c.id);
+        break;
+      }
+      case 'tlamp': case 'tsig': case 'tvault': case 'tbar': case 'tmap': case 'tcave': { // the buried town (public/js/89-town-*.js): only from down there
+        if (!c.town) return;
+        if (m.t === 'tbar' && m.op === 'up') { // a gold bar carried up the shaft or the stairwell: it comes out by the old town as heavy loot
+          const i = num(m.i, 0, SIM.TOWN_BARS - 1, -1) | 0, b = world.town.bars[i]; if (!b || b.held !== c.id) return;
+          const O = SIM.OLD_TOWN, x = r2(num(m.x, O.x - 20, O.x + 20, O.x)), z = r2(num(m.z, O.z - 20, O.z + 20, O.z)), id = SIM.TOWN_BAR_ID0 + i;
+          const out = SIM.townApply(world.town, m, { id: c.id, n: c.n }); if (!out) return;
+          world.props[id] = { type: 'ingot', x, z, val: SIM.HEAVY.ingot, v0: SIM.HEAVY.ingot }; dirty = true;
+          LOG.log('townBar', { id: c.id, n: c.n, bar: i }); broadcast(out); broadcast({ t: 'prop', id, ...world.props[id] });
+          return;
+        }
+        const out = SIM.townApply(world.town, m, { id: c.id, n: c.n }); if (!out) return;
+        dirty = true; if (m.t !== 'tmap') LOG.log('town', { id: c.id, n: c.n, t: m.t, i: m.i, k: m.k, s: m.s, op: m.op });
+        broadcast(out);
         break;
       }
       case 'pslip': { // the rope slipped (the owner's physics says so): everyone's rope on it comes loose
@@ -1524,6 +1541,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     clearTimeout(joinTimer);
     clients.delete(c.id);
+    for (const o of SIM.townLetGo(world.town, c.id, c.x - SIM.TOWN.X, c.z - SIM.TOWN.Z)) { dirty = true; broadcast(o); } // a gold bar they were carrying down there stays where they were
     for (const [pid, p] of Object.entries(world.props)) { // let go of anything they were holding; what they were running passes on
       const held = (p.grab || []).includes(c.id) || (p.ropes || []).includes(c.id);
       if (!held && p.owner !== c.id) continue;
@@ -1651,9 +1669,9 @@ function endOfDay() {
     const foundWas = world.run.found || {};
     LOG.log('fired', { bank: got, quota, day: world.run.day });
     const wasZone = world.zone || 'lake';
-    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun(), crew: {}, director: world.director }); ensureCart();
+    world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun(), crew: {}, director: world.director, town: SIM.townFresh() }); ensureCart(); // the buried town starts dark again too
     gotSet = new Set(); lmHolder = null; MSEAT.exc = MSEAT.dump = null; dirty = true; save();
-    broadcast({ t: 'fired', bank: got, quota, found: foundWas }); broadcast(machMsg(true)); // the machines went with the camp
+    broadcast({ t: 'fired', bank: got, quota, found: foundWas }); broadcast(machMsg(true)); broadcast({ t: 'town', town: world.town }); // the machines went with the camp
     broadcast({ t: 'crew', up: world.crew }); broadcast(runInfo());
     if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
   }
@@ -1729,7 +1747,7 @@ setInterval(() => {
     c.alive = false; try { c.ws.ping(); } catch (e) { /* closing */ }
   }
   if (world.won && Date.now() - world.wonAt > NEW_DAY_AFTER_WIN_MS) {
-    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players }); ensureCart(); gotSet = new Set(); lmHolder = null; dirty = true; save();
+    world = Object.assign(freshWorld(world.day + 1), { recent: world.recent, hostNames: world.hostNames, clock: world.clock, run: world.run, players: world.players, town: world.town }); ensureCart(); gotSet = new Set(); lmHolder = null; dirty = true; save(); // the run goes on: so does what the crew did in the buried town
     broadcast({ t: 'reset' });
   }
 }, 30000);
