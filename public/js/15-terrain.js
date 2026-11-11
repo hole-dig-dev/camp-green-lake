@@ -67,9 +67,9 @@ function holeMound(h,x,z){
   const ex=x-h.mx,ez=z-h.mz,gr=MR*(0.7+0.5*Math.min(1,dm/1.2));if(ex*ex+ez*ez>gr*gr*2.6)return v;
   const al=ex*h.ax+ez*h.az,ac=-ex*h.az+ez*h.ax,el=Math.hypot(al/1.3,ac/0.88),c=el>1e-5?al/1.3/el:1,s=el>1e-5?ac/0.88/el:0;
   const q=el/(gr*(1+1.4*holeLobe(h.k,s,c)));   // stretched along the throw, lumpy round its edge
-  if(q<1)v+=dm*0.42*(0.5+0.5*Math.cos(Math.PI*q));   // (a hole's worth of sand makes a real heap: about 0.6 m high off a 5 ft hole)
+  if(q<1)v+=dm*0.3*(0.5+0.5*Math.cos(Math.PI*q));   // (kept under the machines' MACH_DROP with the lump: about 0.55 m high off a 5 ft hole)
   const bx=al+0.15*gr,bz=ac-h.ms*0.62*gr,q2=Math.hypot(bx,bz)/(gr*0.55);   // a second, smaller lump off to one side
-  if(q2<1)v+=dm*0.15*(0.5+0.5*Math.cos(Math.PI*q2));
+  if(q2<1)v+=dm*0.08*(0.5+0.5*Math.cos(Math.PI*q2));
   return v;
 }
 /* where a hole's spoil heap goes: h.hp, one of 16 compass directions (HEAP_DIRS), decided by whoever dug it first from
