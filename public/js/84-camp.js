@@ -17,7 +17,8 @@ const campHas=k=>!!CAMP[k];
 const WASHERS=[{id:'washRocker',rec:0.88},{id:'washSluice',rec:1.0},{id:'washPlant',rec:1.18}],WASH_BASE=0.75;
 const washRecovery=()=>{let r=WASH_BASE;for(const w of WASHERS)if(campHas(w.id))r=w.rec;return r};
 const goldScale=()=>(campHas('goldScale')?1.1:1)*washRecovery();
-let CAMP_SCALE=null,CAMP_SODA=null;const SODA_AT={x:5.6,z:34.2,ry:Math.PI};   /* by the water drums, facing the yard */
+let CAMP_SCALE=null,CAMP_SODA=null;const SODA_AT={x:5.6,z:34.2,ry:0};   /* by the water drums, its front (the model's +z) facing the yard */
+const SODA_FRONT=0.2;   // you work the machine from in front of it: at least this far ahead of its middle, toward the yard
 function campSet(c){for(const k of Object.keys(CAMP))delete CAMP[k];if(c&&typeof c==='object')for(const k in c)if(c[k]===true||(typeof c[k]==='number'&&Number.isFinite(c[k])))CAMP[k]=c[k];   /* numbers: the soda machine's stock */
   if(typeof PIPE!=='undefined')PIPE.dirty=true;campLook();if(typeof renderShop==='function'&&shopOpen)renderShop()}
 function campLook(){
@@ -37,6 +38,7 @@ const sodaStock=()=>CAMP.sodaStock|0;
 function sodaSpot(){
   if(!campHas('sodaMachine')||!S.started||inTent()||S.inTown)return null;
   if((P.x-SODA_AT.x)**2+(P.z-SODA_AT.z)**2>2.2*2.2)return null;
+  if((P.x-SODA_AT.x)*Math.sin(SODA_AT.ry)+(P.z-SODA_AT.z)*Math.cos(SODA_AT.ry)<SODA_FRONT)return null;   // not from behind it
   const mine=S.soda|0,cost=SODA_LOAD*15,n=sodaStock();
   return{id:'soda',label:mine>0?`Stock the soda machine with your ${mine} soda${mine>1?'s':''} (${n} in it)`:`Stock the soda machine: ${SODA_LOAD} sodas for ${cost} gold (${n} in it)`,use:sodaStockUp};
 }

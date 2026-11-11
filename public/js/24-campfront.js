@@ -24,6 +24,7 @@ const STORE_AT={x:16,z:45};   // the store's centre (20-world.js storeCabin); it
    InstancedMesh for the bulbs (their colour goes above 1 at night, so the bloom picks them up). ---- */
 const FESTOON_POLES=[[-20.6,41.3],[-4.4,40.9],[4.4,40.9]];      // the row's poles; the run ends on the store's west porch post
 const FESTOON_STEP=0.85,FESTOON_SAG=0.055;                        // sag: metres of droop per metre of span
+const FESTOON_CLEAR=0.75;   // no bulb this close (along x) to a bunkhouse's painted gable letter: from the path a bulb hid it
 const FESTOON={bulbs:null,mat:null,on:-1};
 {
   instanceModel('FestoonPole',FESTOON_POLES.map(([x,z])=>({x,y:baseH(x,z),z,ry:0}))).catch(()=>{});
@@ -33,7 +34,7 @@ const FESTOON={bulbs:null,mat:null,on:-1};
   for(let i=0;i<tops.length-1;i++){
     const[a,b]=[tops[i],tops[i+1]],L=Math.hypot(b[0]-a[0],b[2]-a[2]),n=Math.max(2,Math.round(L/FESTOON_STEP)),sag=L*FESTOON_SAG;
     const at=u=>[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u-4*sag*u*(1-u),a[2]+(b[2]-a[2])*u];
-    for(let k=0;k<n;k++){const p=at(k/n),q=at((k+1)/n);wire.push([p,q]);if(k)bulbs.push(at(k/n));if(k%7===3)CAMP_LIGHTS.push([p[0],p[1]-0.3,p[2],3.2,0.55])}
+    for(let k=0;k<n;k++){const p=at(k/n),q=at((k+1)/n);wire.push([p,q]);if(k&&!TENTS.some(t=>!t.house&&Math.abs(p[0]-t.x)<FESTOON_CLEAR))bulbs.push(at(k/n));if(k%7===3)CAMP_LIGHTS.push([p[0],p[1]-0.3,p[2],3.2,0.55])}
   }
   // the wire: two crossed thin ribbons along each little piece (reads as a line from any side), one mesh
   const pos=[],W2=0.014;

@@ -52,7 +52,9 @@ studio(elev=8,azim=-22,lens=50);frame(margin=1.2);print('warn tris',tris());rend
 scene('SignDirections');r=root('SignDirections')
 cyl('post',0.07,3.0,(0,0,1.5),'wood_dark',verts=8,parent=r)
 cyl('cap',0.075,0.1,(0,0,3.03),'wood_dark',verts=8,r2=0.02,parent=r)
-arrows=[('MESS HALL',35,2.65,'wood_pale'),('COMPANY STORE',-20,2.3,'wood'),('BUNK D',160,1.95,'wood_pale'),('THE LAKE',-150,1.6,'wood')]
+# each arrow points at what it names from the post at game (-8.2, 33.6) (23-models.js): angle = atan2(-dz, dx), Blender y = game -z
+# (mess tables (16, 32), the store window (16, 42.47), Bunk D's door (0, 41.82), the main gate (0, 27.2))
+arrows=[('MESS HALL',3.8,2.65,'wood_pale'),('COMPANY STORE',-20.1,2.3,'wood'),('BUNK D',-45.1,1.95,'wood_pale'),('THE LAKE',38.0,1.6,'wood')]
 for label,ang,z,m in arrows:
     g=root('arrow_'+label.replace(' ','_'));g.parent=r;g.location=(0,0,z);g.rotation_euler=(0,0,math.radians(ang))
     L=0.2+0.105*len(label);box('board',(L,0.045,0.3),(L/2+0.02,0,0),(m,m,0.9),bevel=0.01,parent=g)

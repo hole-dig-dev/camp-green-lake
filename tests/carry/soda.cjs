@@ -15,7 +15,7 @@ await A.evaluate(()=>buyShopItem('sodaMachine'));await A.waitForTimeout(800);
 check('the soda machine: a camp upgrade everyone has',await A.evaluate(()=>campHas('sodaMachine'))&&await B.evaluate(()=>campHas('sodaMachine')));
 await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');bt.morale=20;bt.state='dig';bt.errand=null});await A.waitForTimeout(800);
 check('an empty machine: no soda break, he says so',await A.evaluate(()=>{const bt=bots.find(b=>b.d.n==='Zach');return bt.errand!=='water'&&__ev.some(e=>e[0]==='toast')||bt.toldEmpty}));
-await A.evaluate(()=>{P.x=SODA_AT.x;P.z=SODA_AT.z-1.5;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(400);
+await A.evaluate(()=>{P.x=SODA_AT.x+Math.sin(SODA_AT.ry)*1.5;P.z=SODA_AT.z+Math.cos(SODA_AT.ry)*1.5;P.y=groundAt(P.x,P.z)});await A.waitForTimeout(400);
 check('at the machine: F stocks it (your own soda first)',await A.evaluate(()=>{const s=nearSpot();return s&&s.id==='soda'&&/your 1 soda/.test(s.label)}),await A.evaluate(()=>nearSpot()&&nearSpot().label));
 await A.keyboard.press('f');await A.waitForTimeout(600);const w0=await A.evaluate(()=>RUN.bank);
 await A.keyboard.press('f');await A.waitForTimeout(900);
