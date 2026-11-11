@@ -24,6 +24,7 @@ const _alQ=new T.Quaternion(),_alE=new T.Euler(0,0,0,'YXZ'),_alV=new T.Vector3()
 function aliveInit(p){
   const A={head:null,spine:null,eyes:[],brows:[],mouth:null,yaw:0,pitch:0,ty:0,tp:0,blinkAt:1+Math.random()*4,blink:0,ph:Math.random()*6.28,talk:0,talkT:0,flinch:0,drift:Math.random()*10,ok:false};
   if(!p.model)return A;
+  if(p.g)p.g.userData.person=p;   // so a speech bubble can find whose mouth to move (25-people.js say)
   p.model.traverse(n=>{const nm=n.name||'';
     if(n.isBone&&/^head$/i.test(nm))A.head=n;else if(n.isBone&&/^spine$/i.test(nm))A.spine=n;
     else if(/_Eye-?1$/.test(nm))A.eyes.push({n,p:n.position.clone(),s:n.scale.clone()});
@@ -40,6 +41,7 @@ const _alWrap=a=>{a%=6.283185307;return a>3.14159265?a-6.283185307:a<-3.14159265
    yaw being a heading like p.g.rotation.y), or the nearest person in front of them, or an idle drift */
 function aliveTarget(p,A,dt){
   const g=p.g,by=g.rotation.y;
+  if(p===me&&S.started){A.ty=_alWrap(Math.atan2(-Math.sin(P.yaw),-Math.cos(P.yaw))-by);A.tp=P.pitch;p.tired=clamp(1-S.stam/35,0,1);return}   // you: where your camera points
   if(p.look){A.ty=_alWrap(p.look.yaw-by);A.tp=p.look.pitch;return}
   let best=null,bd=ALIVE.see;g.getWorldPosition(_alW);
   const consider=(x,y,z)=>{const dx=x-_alW.x,dz=z-_alW.z,d=Math.hypot(dx,dz);if(d<0.4||d>=bd)return;const ry=_alWrap(Math.atan2(dx,dz)-by);if(Math.abs(ry)>1.75)return;bd=d;best=[ry,Math.atan2(y-(_alW.y+1.55),d)]};
@@ -59,7 +61,8 @@ function alivePose(p,dt){
   A.yaw+=(ty-A.yaw)*k;A.pitch+=(tp-A.pitch)*k;
   const tired=clamp(p.tired||0,0,1),chestYaw=clamp(A.yaw*0.3,-ALIVE.chest,ALIVE.chest),headYaw=clamp(A.yaw-chestYaw,-ALIVE.headYaw,ALIVE.headYaw);
   if(A.spine){_alE.set(0,chestYaw,0);A.spine.quaternion.multiply(_alQ.setFromEuler(_alE))}
-  _alE.set(A.pitch+tired*0.22+A.flinch*0.25,headYaw,0);A.head.quaternion.multiply(_alQ.setFromEuler(_alE));
+  _alE.set((A.pitch+tired*0.22+A.flinch*0.25)*(1-0.45*Math.abs(headYaw)/ALIVE.headYaw),headYaw,0);   // less nod when turned far to the side: the two together read as a broken neck
+A.head.quaternion.multiply(_alQ.setFromEuler(_alE));
   /* --- breath --- */
   if(A.spine){const rate=1.5+tired*2.6,amp=ALIVE.breath*(1+tired*2.2),b=Math.sin(A.ph*rate);A.spine.scale.set(1+b*amp*0.6,1+b*amp,1+b*amp*1.4)}
   /* --- blink --- */
@@ -68,6 +71,7 @@ function alivePose(p,dt){
   const shut=ko?1:A.blink>0?1:tired>0.75?0.35:0,ex=(ty-A.yaw),ey=(tp-A.pitch);
   for(const e of A.eyes){e.n.scale.set(e.s.x,e.s.y*(1-shut*0.88),e.s.z);e.n.position.set(e.p.x+clamp(ex,-1,1)*ALIVE.eyeLead,e.p.y-clamp(ey,-1,1)*ALIVE.eyeLead*0.7,e.p.z)}   // eyes lead the head toward the target
   /* --- talk --- */
+  if(A.sayUntil&&performance.now()<A.sayUntil){A.talk=Math.max(A.talk,0.55+0.45*Math.abs(Math.sin(A.ph*9.3)));A.talkT=0.1}   // an NPC line: flap along with the bubble
   if(A.talkT>0)A.talkT-=dt;else A.talk*=Math.max(0,1-dt*14);
   if(A.mouth){const open=ko?0.25:A.talk*(0.65+0.35*Math.abs(Math.sin(A.ph*17)));A.mouth.n.scale.set(A.mouth.s.x*(1-open*0.18),A.mouth.s.y*(1+open*ALIVE.mouthOpen),A.mouth.s.z);A.mouth.n.position.y=A.mouth.y-open*0.012}
   /* --- mood --- */

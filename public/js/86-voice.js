@@ -222,7 +222,7 @@ function updateVoice(now){
       }
       lv.set(id,Math.max(lv.get(id)||0,peer.level));
     }
-    for(const[id,l]of lv){const R=remotes.get(id);if(R)R.L.el.classList.toggle('speaking',l>SPEAK_LVL)}
+    for(const[id,l]of lv){const R=remotes.get(id);if(R){R.L.el.classList.toggle('speaking',l>SPEAK_LVL);if(l>SPEAK_LVL*0.6)aliveTalk(R.p,l*8)}}   /* and their mouth moves with their voice (27-alive.js) */
   }
   if(VOX.selfAnalyser){
     const track=VOX.localStream&&VOX.localStream.getAudioTracks()[0];
@@ -230,7 +230,7 @@ function updateVoice(now){
     if(track&&track.enabled){
       VOX.selfAnalyser.getByteTimeDomainData(VOX.selfBuf);
       let sum=0;for(const v of VOX.selfBuf){const d=v-128;sum+=d*d}
-      speaking=Math.sqrt(sum/VOX.selfBuf.length)/128>SPEAK_LVL;
+      const selfLvl=Math.sqrt(sum/VOX.selfBuf.length)/128;speaking=selfLvl>SPEAK_LVL;if(speaking&&typeof me!=='undefined'&&me)aliveTalk(me,selfLvl*8);
     }
     $('#voiceBtn').classList.toggle('speaking',speaking);VOX.selfSpeaking=speaking;   // open mic: the walkie comes up while you speak (86-walkie.js)
   }

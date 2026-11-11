@@ -216,6 +216,7 @@ function animModel(p,mode,dt,digPhase,speed){
   if(p.emote)emotePose(p,dt);   // twerk / sing, layered on top of the clip (73-emotes.js)
   if(p.held||p.heldW)heldPose(p,dt);   // walkie-talkie / tonic / first-aid kit in the left hand (86-walkie.js)
   backsackLook(p);   /* the clear backsack, if they wear one (86-backsack.js) */
+  alivePose(p,dt);   /* looking, blinking, breathing, talking: on top of whatever clip just played (27-alive.js) */
 }
 function loadCamperModel(){
   if(!T.GLTFLoader||!/^https?:$/.test(location.protocol))return;
@@ -241,7 +242,7 @@ function makeLabel(obj,name,cls,h){
   el.append(b,n);labelLayer.appendChild(el);
   const L={obj,el,b,n,h:h||2.25,sayUntil:0};labeled.push(L);return L;
 }
-function say(L,text,secs){L.b.textContent=text;L.sayUntil=performance.now()+(secs||4200)}
+function say(L,text,secs){L.b.textContent=text;L.sayUntil=performance.now()+(secs||4200);const pp=L.obj&&L.obj.userData&&L.obj.userData.person;if(pp&&pp.alive)pp.alive.sayUntil=L.sayUntil-900}   /* their mouth moves while the bubble is fresh (27-alive.js) */
 const projV=new T.Vector3();
 function updateLabels(now){
   const w=innerWidth,h=innerHeight;
