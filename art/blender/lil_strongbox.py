@@ -83,8 +83,8 @@ box('lock', (0.085, 0.03, 0.075), (0, -D / 2 - 0.03, HB - 0.115), BRASS, bevel=0
 torus('shackle', 0.026, 0.007, (0, -D / 2 - 0.03, HB - 0.072), IRON_L, rot=(math.pi / 2, 0, 0), seg=12)
 cyl('keyhole', 0.009, 0.004, (0, -D / 2 - 0.046, HB - 0.118), IRON, rot=(math.pi / 2, 0, 0), verts=8)
 # her initials in brass, one each side of the lock
-text('L', 'L', (-0.12, -D / 2 - 0.001, 0.165), 0.13, BRASS, 0.004)
-text('M', 'M', (0.12, -D / 2 - 0.001, 0.165), 0.13, BRASS, 0.004)
+text('L', 'L', (-0.12, -D / 2 - 0.001, 0.16), 0.24, BRASS, 0.005)
+text('M', 'M', (0.12, -D / 2 - 0.001, 0.16), 0.24, BRASS, 0.005)
 
 for x in bpy.context.selected_objects: x.select_set(False)
 for p in parts: p.select_set(True)

@@ -55,10 +55,10 @@ PALE = mat('lm_gold_pale', 0xe8cc6a, 0.3, 0.45); INK = mat('lm_engrave', 0x4a341
 body = box('body', (W, D, H), (0, 0, H / 2), GOLD, bevel=0.003)
 # LM, cut into the front of the lower half, with a dark floor to the cut so it reads at game distance
 LZ = 0.036
-cutter = text('cutter', 'LM', (0, -D / 2, LZ), 0.03, INK, CUT)
+cutter = text('cutter', 'LM', (0, -D / 2, LZ), 0.046, INK, CUT)
 b = body.modifiers.new('engrave', 'BOOLEAN'); b.operation = 'DIFFERENCE'; b.object = cutter; b.solver = 'EXACT'
 only(body); bpy.ops.object.modifier_apply(modifier='engrave'); bpy.data.objects.remove(cutter, do_unlink=True)
-parts = [body, text('inlay', 'LM', (0, -D / 2 + CUT, LZ), 0.03, INK, 0.0003)]
+parts = [body, text('inlay', 'LM', (0, -D / 2 + CUT, LZ), 0.046, INK, 0.0003)]
 # the lid: a seam all the way round, hinge knuckles on the back, a thumb catch on the front
 parts.append(box('seam', (W + 0.0012, D + 0.0012, 0.0016), (0, 0, SEAM), DEEP))
 for x in (-0.018, 0, 0.018):
