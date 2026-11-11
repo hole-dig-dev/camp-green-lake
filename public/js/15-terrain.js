@@ -5,23 +5,104 @@ const TERRAIN_ROCKS=[];   // the little rocks around camp (see the loop near Chi
 const holes=[];const grid=new Map();
 const gkey=(cx,cz)=>(cx+64)*512+(cz+64);
 const cellOf=v=>Math.floor((v+HALF)/CELL);
+/* HAND-DUG SHAPES (2026-11-10). A hole used to be an exact circle with a flat floor, the same everywhere. Now each one
+   has its own outline, wall and floor, all seeded from where it is (so every client and the server agree with nothing
+   new on the wire), and the gameplay side (holeNear, falling in, the crew, the server) still treats it as the plain circle:
+     - the outline: the radius pushed in and out by three low lobes (1, 2 and 3 bumps round), about +-15% in all;
+     - where it bulges the wall has slumped (leans back further); the floor is dished, deepest off to one side;
+     - a new hole is a small divot where the blade bites and widens as it deepens (HOLE_GROW), not a full-size dish;
+     - a low lip of kicked-up sand round the rim, higher on the spoil side, and a lumpy spoil heap stretched the way
+       the dirt is thrown, instead of a neat cone.
+   The same numbers drive the ground (here), the hole liners' rings and the shader that cuts the terrain away and
+   decides which liner draws where (46-holes.js holeShapeGLSL), so rims meet without gaps.
+   What you see is the hole's *visual* depth (holeVD: 47-digfeel.js eases it as each scoop comes up); the gameplay
+   depth h.d is unchanged. Sinkhole craters (big r) keep the old round profile: they draw themselves. */
+const HOLE_LOBES=[0.09,0.06,0.035];       // most each lobe moves the outline (fraction of the radius): 1, 2 and 3 bumps round
+const HOLE_TILT=0.12;                      // the floor is up to this much (fraction of the depth) shallower on one side
+const HOLE_GROW=0.6,HOLE_GROW0=0.4;        // a new hole is HOLE_GROW0 of its radius wide and reaches full width at HOLE_GROW m deep
+const HOLE_FLOOR=[0.2,0.62];               // where the wall meets the floor (fraction of the radius): a scrape is all bowl, a deep hole has a floor
+const HOLE_FLOOR_D=1.2;                    // m deep before the floor is its full width
+const HOLE_DISH=0.07;                      // the floor dips this much (fraction of the depth) toward the middle
+const HOLE_SLUMP=1.6;                      // where the outline bulges out, the wall starts this much further in (it slumped)
+const HOLE_BERM=0.42,HOLE_BERM_H=0.045;    // the lip of kicked-up sand: width outside the rim (m; inside the terrain cut), height per m dug
+const HOLE_MOUND_FADE=0.3;                 // m: a spoil heap fades out over this much depth where another hole cuts into it
+const HOLE_UNION=0.14,HOLE_UNION_W=0.22,HOLE_UNION_G=0.15;   // overlapping holes blend into one pit: where two bowls meet at about the same
+                                           // depth (within ~W m) the ridge between them is worn down by up to HOLE_UNION m, less near the surface
+const HOLE_OLD=r=>r>HOLE_R*1.5;            // sinkhole craters: the old round profile
+const holeVD=h=>h.vd!=null?h.vd:h.d;       // the depth the ground shows (47-digfeel.js eases it toward h.d)
+const holeVM=h=>h.vm!=null?h.vm:holeVD(h); // the depth the spoil heap shows (grows as the thrown dirt lands)
+function holeGrow(d){const u=Math.min(1,Math.max(0,d)/HOLE_GROW);return HOLE_GROW0+(1-HOLE_GROW0)*(1-(1-u)*(1-u))}
+const holeFloorAt=d=>HOLE_FLOOR[0]+(HOLE_FLOOR[1]-HOLE_FLOOR[0])*Math.min(1,Math.max(0,d)/HOLE_FLOOR_D);
+const holeReff=h=>HOLE_OLD(h.r)?h.r:h.r*holeGrow(holeVD(h));
+/* the outline's push in or out toward the unit direction (c, s), as a fraction of the radius (no trig: the 2 and 3
+   lobes come from the double/triple-angle forms, which the shader repeats exactly) */
+function holeLobe(k,c,s){const c2=c*c-s*s,s2=2*c*s,c3=c*c2-s*s2,s3=s*c2+c*s2;return k[0]*c+k[1]*s+k[2]*c2+k[3]*s2+k[4]*c3+k[5]*s3}
+function holeShape(h){
+  const ix=Math.round(h.x*10),iz=Math.round(h.z*10),k=h.k=new Float32Array(8);
+  for(let i=0;i<3;i++){const a=HOLE_LOBES[i]*(0.5+0.5*hash2(ix+31*i+5,iz-17*i+11)),p=hash2(ix-13*i+3,iz+29*i+7)*Math.PI*2;k[i*2]=a*Math.cos(p);k[i*2+1]=a*Math.sin(p)}
+  const tp=hash2(ix+77,iz-91)*Math.PI*2,tm=HOLE_TILT*(0.5+0.5*hash2(ix-5,iz+55));k[6]=tm*Math.cos(tp);k[7]=tm*Math.sin(tp);
+  if(HOLE_OLD(h.r))k.fill(0);
+  const ax=h.mx-h.x,az=h.mz-h.z,al=Math.hypot(ax,az)||1;h.ax=ax/al;h.az=az/al;h.ms=hash2(ix+3,iz+3)<0.5?-1:1;   // the spoil heap's axis, and which side its second lump is on
+}
+/* one hole's depth at an offset from its centre (HD.dep, 0 outside) and how far down its wall it is (HD.w: 1 floor, 0 rim) */
+const HD={dep:0,w:0,rr:0,lob:0};
+function holeDepthAt(h,dx,dz){
+  HD.dep=0;HD.w=0;const d=holeVD(h);if(d<=0)return HD;
+  const l=Math.sqrt(dx*dx+dz*dz);
+  if(HOLE_OLD(h.r)){HD.rr=h.r;if(l<h.r){const t=l/h.r,p=t<0.72?1:1-sm((t-0.72)/0.28);HD.dep=d*p;HD.w=p}return HD}
+  const R=h.r*holeGrow(d),c=l>1e-5?dx/l:1,s=l>1e-5?dz/l:0,lob=holeLobe(h.k,c,s),rr=R*(1+lob);HD.rr=rr;HD.lob=lob;
+  const t=l/rr;if(t>=1)return HD;
+  const f=Math.max(0.05,holeFloorAt(d)-HOLE_SLUMP*Math.max(0,lob));
+  const p=t<f?1-HOLE_DISH*(t/f)*(t/f):(1-HOLE_DISH)*(1-sm((t-f)/(1-f)));
+  const m=1+(h.k[6]*dx+h.k[7]*dz)/R-Math.hypot(h.k[6],h.k[7]);
+  HD.dep=d*p*m;HD.w=p;return HD;
+}
+/* the spoil heap and the rim's lip of thrown sand at (x, z), for one hole (metres above the lake bed) */
+function holeMound(h,x,z){
+  let v=0;const dm=Math.min(holeVM(h),FIVE_FT);if(dm<=0)return 0;
+  const dx=x-h.x,dz=z-h.z,l2=dx*dx+dz*dz;
+  if(!HOLE_OLD(h.r)&&l2<(h.r*1.4)**2){   // the lip, just outside the rim (inside the terrain cut: liners draw it)
+    const l=Math.sqrt(l2),c=l>1e-5?dx/l:1,s=l>1e-5?dz/l:0,rr=h.r*holeGrow(holeVD(h))*(1+holeLobe(h.k,c,s)),u=(l-rr)/HOLE_BERM;
+    if(u>0&&u<1){const sp=0.35+0.65*Math.max(0,c*h.ax+s*h.az),w=Math.sin(Math.PI*u);v+=HOLE_BERM_H*dm*sp*w*w}
+  }
+  if(h.noMound)return v;
+  const ex=x-h.mx,ez=z-h.mz,gr=MR*(0.62+0.38*Math.min(1,dm/1.2));if(ex*ex+ez*ez>gr*gr*2.6)return v;
+  const al=ex*h.ax+ez*h.az,ac=-ex*h.az+ez*h.ax,el=Math.hypot(al/1.3,ac/0.88),c=el>1e-5?al/1.3/el:1,s=el>1e-5?ac/0.88/el:0;
+  const q=el/(gr*(1+1.4*holeLobe(h.k,s,c)));   // stretched along the throw, lumpy round its edge
+  if(q<1)v+=dm*0.27*(0.5+0.5*Math.cos(Math.PI*q));
+  const bx=al+0.15*gr,bz=ac-h.ms*0.62*gr,q2=Math.hypot(bx,bz)/(gr*0.55);   // a second, smaller lump off to one side
+  if(q2<1)v+=dm*0.1*(0.5+0.5*Math.cos(Math.PI*q2));
+  return v;
+}
 function addHole(h){
   const a=hash2(Math.round(h.x*10)+7,Math.round(h.z*10)-3)*Math.PI*2;
-  h.r=h.r||HOLE_R;h.mx=h.x+Math.cos(a)*(h.r+1.0);h.mz=h.z+Math.sin(a)*(h.r+1.0);
+  h.r=h.r||HOLE_R;h.mx=h.x+Math.cos(a)*(h.r+1.0);h.mz=h.z+Math.sin(a)*(h.r+1.0);holeShape(h);
   holes.push(h);const k=gkey(cellOf(h.x),cellOf(h.z));let L=grid.get(k);if(!L){L=[];grid.set(k,L)}L.push(h);return h;
 }
 function forNearHoles(x,z,fn){const cx=cellOf(x),cz=cellOf(z);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=grid.get(gkey(cx+i,cz+j));if(L)for(const h of L)fn(h)}}
 /* skip (optional): holes whose dug-out bowl to leave out -- their spoil mound still counts. The hole liners use
-   it to draw one hole's own bowl and let a shader decide where a deeper neighbour takes over (46-holes.js). */
+   it to draw one hole's own bowl and let a shader decide where a deeper neighbour takes over (46-holes.js).
+   The ground is the deepest hole's bowl, plus the heaps and lips, which fade out where a hole cuts into them (by depth
+   alone, so two liners meeting at the same depth sample the same height). */
+/* two holes' depths at one spot, blended: the deeper wins, and where they're close the ridge between them is worn down */
+function holeUnion(a,b){   // (symmetric and smooth, so two liners meeting where a = b agree and neither has a crease to miss)
+  const q=(a-b)/HOLE_UNION_W;return Math.max(a,b)+HOLE_UNION*Math.exp(-q*q)*Math.min(1,Math.min(a,b)/HOLE_UNION_G)}
+let _sfDep=0,_sfAll=0,_sfMound=0,_sfX=0,_sfZ=0,_sfSkip=null;
+function _sfHole(h){
+  if(h.d<=0&&!(h.vd>0))return;
+  const dx=_sfX-h.x,dz=_sfZ-h.z,R=h.r*1.3;
+  if(dx*dx+dz*dz<R*R){const q=holeDepthAt(h,dx,dz);if(q.dep>0){
+    _sfAll=_sfAll>0?holeUnion(_sfAll,q.dep):q.dep;
+    if(!(_sfSkip&&_sfSkip(h)))_sfDep=_sfDep>0?holeUnion(_sfDep,q.dep):q.dep}}
+  _sfMound+=holeMound(h,_sfX,_sfZ);
+}
 function surfaceAt(x,z,b,skip){
-  let dep=0,mound=0;
-  forNearHoles(x,z,h=>{
-    if(h.d<=0)return;
-    const dx=x-h.x,dz=z-h.z,d2=dx*dx+dz*dz;
-    if(d2<h.r*h.r&&!(skip&&skip(h))){const t=Math.sqrt(d2)/h.r;const p=t<0.72?1:1-sm((t-0.72)/0.28);const v=h.d*p;if(v>dep)dep=v}
-    if(!h.noMound){const ex=x-h.mx,ez=z-h.mz,e2=ex*ex+ez*ez;if(e2<MR*MR){const t=Math.sqrt(e2)/MR;mound+=Math.min(h.d,FIVE_FT)*0.3*(0.5+0.5*Math.cos(Math.PI*t))}}
-  });
-  return dep>0.001?b-dep:b+mound;
+  _sfDep=0;_sfAll=0;_sfMound=0;_sfX=x;_sfZ=z;_sfSkip=skip||null;forNearHoles(x,z,_sfHole);
+  /* with skip (a liner): the true ground where its own hole is about as deep as the rest (so where two liners meet
+     both sample the same smooth surface), its own bowl alone where a skipped neighbour is much deeper (that part is
+     the neighbour's to draw, and following it down would drag this liner's edge triangles with it) */
+  if(skip)_sfDep=_sfAll+(_sfDep-_sfAll)*sm((_sfAll-_sfDep-0.12)/0.28);else _sfDep=_sfAll;
+  return b-_sfDep+_sfMound*(1-Math.min(1,_sfDep/HOLE_MOUND_FADE));
 }
 function holeNear(x,z,maxDist){let best=null,bd=maxDist*maxDist;forNearHoles(x,z,h=>{const dx=x-h.x,dz=z-h.z,d2=dx*dx+dz*dz;if(d2<bd){bd=d2;best=h}});return best}
 
@@ -95,7 +176,7 @@ function shade(col,i,x,z,b,h,tn){
    - fading out with distance, and softer inside camp where the ground is trampled.
    Both the near chunks and the far terrain use it, so there is no visible seam where they meet. */
 const GROUND_DETAIL={plate:1.15,crack:0.29,tint:0.06,far:120};   // plate size (m), how dark the cracks are, plate-to-plate shade difference, fade-out distance (m)
-function groundDetail(mat,wVar){
+function groundDetail(mat,wVar,mask,key){   // mask: an optional GLSL float (0..1) that fades the plates out (the hole liners: none on dug sand)
   const prev=mat.onBeforeCompile;
   mat.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);
     sh.uniforms.uGD={value:new T.Vector4(GROUND_DETAIL.plate,GROUND_DETAIL.crack,GROUND_DETAIL.tint,GROUND_DETAIL.far)};
@@ -109,7 +190,7 @@ function groundDetail(mat,wVar){
         md=8.;for(int j=-2;j<=2;j++)for(int i=-2;i<=2;i++){vec2 g=mg+vec2(float(i),float(j)),o=gdH(n+g)*0.82+0.09,r=g+o-f;if(dot(mr-r,mr-r)>1e-5)md=min(md,dot(0.5*(mr+r),normalize(r-mr)));}
         return vec2(md,gdH(n+mg).x);}`)
       .replace('#include <color_fragment>',`#include <color_fragment>
-      {vec3 gn=normalize(cross(dFdx(${W}),dFdy(${W})));float up=smoothstep(0.80,0.96,abs(gn.y)),gd=distance(${W},cameraPosition),fade=up*(1.-smoothstep(uGD.w*0.35,uGD.w,gd));
+      {vec3 gn=normalize(cross(dFdx(${W}),dFdy(${W})));float up=smoothstep(0.80,0.96,abs(gn.y)),gd=distance(${W},cameraPosition),fade=up*(1.-smoothstep(uGD.w*0.35,uGD.w,gd))${mask?'*('+mask+')':''};
        if(fade>0.01){vec2 q=${W}.xz/uGD.x;q+=0.18*vec2(sin(q.y*1.7),cos(q.x*1.3));     /* a little wobble so the plates aren't a grid */
          vec2 c=gdCell(q);float w=max(fwidth(q.x),fwidth(q.y))*0.9+0.016,line=1.-smoothstep(w*0.5,w*1.15,c.x);
          #ifndef GD_LOW
@@ -120,7 +201,7 @@ function groundDetail(mat,wVar){
          diffuseColor.rgb*=1.-line*uGD.y*fade*camp*(0.6+0.4*smoothstep(0.,40.,gd)*0.+0.4);
          diffuseColor.rgb*=1.-0.05*fade*smoothstep(0.10,0.,c.x);}}                        /* plates dip slightly toward their edges */`);
   };
-  mat.customProgramCacheKey=()=>'gd'+(wVar||'');
+  mat.customProgramCacheKey=()=>'gd'+(wVar||'')+(key||'');
 }
 const chunks=new Map(),chunkMat=new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1,metalness:0});
 groundDetail(chunkMat);
@@ -145,7 +226,8 @@ function rebuildRegion(x0,z0,x1,z1){
     C.dirty=true;
   }
 }
-function touchHole(h){const e=h.r+2.4;rebuildRegion(h.x-e,h.z-e,h.x+e,h.z+e)}
+const HOLE_REACH=3.0;   // m past a hole's radius that its lip and spoil heap can reach
+function touchHole(h){const e=h.r+HOLE_REACH;rebuildRegion(h.x-e,h.z-e,h.x+e,h.z+e)}
 function flushTerrain(){for(const C of chunks.values())if(C.dirty){C.dirty=false;C.g.attributes.position.needsUpdate=true;C.g.attributes.color.needsUpdate=true}}
 function streamChunks(fx,fz,budget){
   const R=Math.ceil(LOAD_R/CH)+1,ci=Math.floor(fx/CH),cj=Math.floor(fz/CH),want=[];
