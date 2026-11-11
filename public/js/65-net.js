@@ -46,9 +46,9 @@ function removeRemote(id){const R=remotes.get(id);if(!R)return null;scene.remove
 function applyDig(x,z,d,rebuild){
   x=r1(num(x,-EDGE,EDGE,0));z=r1(num(z,-EDGE,EDGE,0));d=num(d,0,EIGHT_FT,0);
   if(nearCampNoDig(x,z))return;   // old saves (and old clients) can still have holes against the fence: don't draw them
-  let h=holeNear(x,z,0.06);
-  if(h){if(d<=h.d+0.001)return;h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true});
-  if(rebuild){touchHole(h);if(nearCam(x,z,40)){puff(x,groundAt(x,z)+0.4,z,h.mx,h.mz,4);throwClods(h,1)}}
+  let h=holeNear(x,z,0.06),v0=0;
+  if(h){if(d<=h.d+0.001)return;v0=holeVD(h);h.d=d;if(!h.mine)h.remote=true}else h=addHole({x,z,d,remote:true});
+  if(rebuild){touchHole(h);digRemote(h,v0)}   // the ground gives under their shovel (or the excavator's bucket) instead of popping (47-digfeel.js)
 }
 function renderOnline(){
   const names=[...remotes.values()].map(R=>R.name);

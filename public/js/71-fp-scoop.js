@@ -24,7 +24,8 @@ function fpScoopHands(hide){   // the body's hands and shovel: out of the camera
 function updateFpScoop(dt){
   if(!FPS.g)return;
   const on=!!(FP&&me&&me.model&&me.fpOn&&S.started&&!S.ko&&P.anim===2&&!me.noShovel&&tune('fp.scoopfp')>0);
-  if(on!==FPS.on){FPS.on=on;FPS.g.visible=on;fpScoopHands(on)}
+  if(on!==FPS.on){FPS.on=on;FPS.g.visible=on;fpScoopHands(on);if(!on)digClumpPose(FPS,-1,false,false)}
   if(!on)return;
   FPS.act.time=scoopTime(P.digPh);FPS.mixer.update(0);
+  digClumpPose(FPS,P.digPh,!!(DIGF.bite&&!DIGF.bite.tossed),false);   // the scoop's dirt on the arms' blade (47-digfeel.js)
 }

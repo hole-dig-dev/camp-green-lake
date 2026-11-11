@@ -703,3 +703,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-
 #hud .hud-strip .row.big .v{font-size:24px}
 #hud .crew-panel.crew-panel--none{display:none}          /* nobody hired yet: the next-task line says how to hire */
 #hud #mapbox{transform:scale(.9);transform-origin:top right}
+/* a scoop of sand going into your pan / bucket (47-digfeel.js digFilled): the meter brightens for a moment */
+@keyframes digTick{0%{filter:brightness(1.55) saturate(1.2)}100%{filter:none}}
+#bucketWrap.dig-tick{animation:digTick .45s ease-out}
