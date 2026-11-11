@@ -85,9 +85,9 @@ def tent_room(name,W,D,crew=False):
         box(f'blade{k}',(0.26,0.04,0.34),(x+0.06,ry-0.3,0.2),('shovelblade',(0x70,0x74,0x72),0.6),rot=(math.radians(-20),0,0),bevel=0.01,parent=r)
     box('rules',(1.2,0.04,0.9),(3.1,ry+0.05,1.65),('corkboard',(0xb8,0x8f,0x5c),0.95),bevel=0.01,parent=r)
     box('rulespaper',(0.9,0.02,0.66),(3.1,ry,1.65),('paint_white','paint_white',0.85),bevel=0,parent=r)
-    text('rulestitle','CAMP RULES',(3.1,ry-0.02,1.9),0.1,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
+    text('rulestitle','CAMP RULES',(3.1,ry-0.02,1.9),0.1,('ink','ink',0.85),rot=(math.pi/2,0,0),parent=r)   # faces -y, into the room (a z turn of pi faced the wall: bunk_board.py)
     for k,l in enumerate(('1. DIG','2. THE COMPANY THANKS YOU','3. NO ONE LEAVES CAMP')):
-        text(f'rule{k}',l,(3.1,ry-0.02,1.72-k*0.12),0.05,('ink','ink',0.85),rot=(math.pi/2,0,math.pi),parent=r)
+        text(f'rule{k}',l,(3.1,ry-0.02,1.72-k*0.12),0.05,('ink','ink',0.85),rot=(math.pi/2,0,0),parent=r)
     # orange jumpsuits and caps on hooks along the back wall
     for k in range(4 if not crew else 6):
         x=-W+1.2+k*(2*W-2.4)/((4 if not crew else 6)-1)
@@ -184,10 +184,11 @@ for k in range(2):
 box('coolerbase',(0.45,0.45,0.95),(W-0.35,-0.6,0.475),('ac',(0xd8,0xd2,0xc2),0.7),bevel=0.02,parent=r)
 cyl('bottle',0.17,0.45,(W-0.35,-0.6,1.18),('water_blue',(0x6f,0xa3,0xc4),0.2),verts=14,bevel=0.01,parent=r)
 box('poster',(0.03,0.75,1.0),(W-0.07,0.6,1.9),('poster',(0xe0,0xcf,0xa3),0.95),bevel=0,parent=r)
-text('wanted','WANTED',(W-0.1,0.6,2.25),0.14,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
+# the poster's lettering faces -x, into the room (+x faced the wall and the room saw it mirrored)
+text('wanted','WANTED',(W-0.1,0.6,2.25),0.14,('ink','ink',0.85),rot=(math.pi/2,0,-math.pi/2),parent=r)
 box('mugshot',(0.02,0.4,0.36),(W-0.1,0.6,1.93),('mugshot',(0x6a,0x55,0x44),0.9),bevel=0,parent=r)
-text('lil1','"LUCKY" LIL',(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,math.pi/2),parent=r)
-text('lil2','MARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,math.pi/2),parent=r)
+text('lil1','"LUCKY" LIL',(W-0.1,0.6,1.66),0.07,('ink','ink',0.85),rot=(math.pi/2,0,-math.pi/2),parent=r)
+text('lil2','MARLOW',(W-0.1,0.6,1.56),0.08,('paint_red','paint_red',0.8),rot=(math.pi/2,0,-math.pi/2),parent=r)
 rx,ryy=-3.0,D-0.5
 tube('coatpole',(rx,ryy,0.05),(rx,ryy,1.9),0.03,m=TRIM,parent=r)
 for k in range(3):

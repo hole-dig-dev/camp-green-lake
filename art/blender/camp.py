@@ -395,7 +395,8 @@ def supt_room():
     a.cyl('z', 3.05, 1.2, 0.16, 0.5, 0.56, C['tin'], 12)
     for k in range(3):
         ang = k * 2.094; a.boxc(3.05 + 0.1 * math.cos(ang), 1.2 + 0.1 * math.sin(ang), 0.48, 0.07, 0.17, 0.008, C['brass'], rz=ang)
-    a.box(2.1, 2.3, 0.845, 0.88, 0.25, 0.4, C['brass']); a.cyl('y', 2.15, 0.33, 0.03, 0.88, 0.95, C['ink'], 6); a.tube((2.25, 0.9, 0.33), (2.32, 1.08, 0.36), 0.006, mat('quill', 0xe8e0cc, 0.8), 4)
+    # the ink stand stands beside her note (the game's SuptNote, 0.30 x 0.22 at (2.1, 0.55)), not in front of its last line
+    a.box(2.45, 2.65, 0.845, 0.88, 0.25, 0.4, C['brass']); a.cyl('y', 2.5, 0.33, 0.03, 0.88, 0.95, C['ink'], 6); a.tube((2.6, 0.9, 0.33), (2.67, 1.08, 0.36), 0.006, mat('quill', 0xe8e0cc, 0.8), 4)
     # the fireplace on the back wall, west half; a log fire
     fx = -2.3
     a.box(fx - 0.95, fx + 0.95, 0, 0.1, D - 0.85, D, stone)
@@ -456,9 +457,11 @@ def supt_room():
     a.box(W - 0.5, W - 0.1, 0, 0.95, -2.0, -1.6, mat('ac', 0xd8d2c2, 0.7)); a.cyl('y', W - 0.3, -1.8, 0.16, 0.95, 1.4, C['water'], 12)
     for k in range(3): a.cyl('y', W - 0.2 - k * 0.0, -1.45 + k * 0.0, 0.03, 0.95 + k * 0.05, 1.02 + k * 0.05, C['white'], 6)
     # pictures: the Company certificate, a portrait of a man in a hat (the founder? nobody asks), a clock
-    a.box(-1.0, -0.2, 1.5, 2.1, D - 0.03, D, trim); a.box(-0.95, -0.25, 1.55, 2.05, D - 0.035, D - 0.03, C['paper'])
-    a.text('DRC', -0.6, 1.92, D - 0.04, 0.09, C['brass'], face='-z', depth=0.001, font='BigShouldersStencilDisplay')
-    a.text('25 YEARS', -0.6, 1.72, D - 0.04, 0.06, C['ink'], face='-z')
+    # (east of the lake map: at x -1.0..-0.2 the map's frame, which starts at x -0.65 and stands 6 cm off the wall, buried it)
+    cx_ = 1.75
+    a.box(cx_ - 0.4, cx_ + 0.4, 1.5, 2.1, D - 0.03, D, trim); a.box(cx_ - 0.35, cx_ + 0.35, 1.55, 2.05, D - 0.035, D - 0.03, C['paper'])
+    a.text('DRC', cx_, 1.92, D - 0.04, 0.09, C['brass'], face='-z', depth=0.001, font='BigShouldersStencilDisplay')
+    a.text('25 YEARS', cx_, 1.72, D - 0.04, 0.06, C['ink'], face='-z')
     a.box(W - 0.03, W, 1.35, 2.15, -0.9, -0.3, trim); a.box(W - 0.035, W - 0.03, 1.42, 2.08, -0.84, -0.36, mat('portrait', 0x6a5544, 0.9))
     a.cyl('x', -0.6, 1.8, 0.1, W - 0.04, W - 0.035, mat('portrait_face', 0xd6a077, 0.9), 8)
     a.cyl('z', -2.9, 2.55, 0.17, -D, -D + 0.05, trim, 12); a.cyl('z', -2.9, 2.55, 0.14, -D + 0.05, -D + 0.055, C['paper'], 12)
@@ -651,8 +654,10 @@ def supt_house():
     for sx in (-1, 1): a.box(sx * 0.6 - 0.07, sx * 0.6 + 0.07, F, F + 2.55, -Z - 0.06, -Z, whitet)
     a.box(-0.75, 0.75, F + 2.5, F + 2.62, -Z - 0.06, -Z, whitet)
     a.cyl('z', 0.42, F + 1.05, 0.045, -Z - 0.1, -Z - 0.03, C['brass'], 8)
-    a.box(-1.1, 1.1, F + 2.72, F + 2.98, -Z - 0.05, -Z - 0.02, green)
-    a.text('SUPERINTENDENT', 0, F + 2.85, -Z - 0.07, 0.16, mat('gilt', 0xd8b25a, 0.5), face='-z', font='BigShouldersStencilDisplay')
+    # the plaque stands proud of the eave trim (whose front is at -Z - 0.06) and under the porch roof (which meets the wall
+    # about F + 2.95): set back at -Z - 0.05 the trim swallowed its top half and the letters sat on the trim instead
+    a.box(-1.1, 1.1, F + 2.66, F + 2.9, -Z - 0.09, -Z - 0.065, green)
+    a.text('SUPERINTENDENT', 0, F + 2.78, -Z - 0.1, 0.18, mat('gilt', 0xd8b25a, 0.5), face='-z', font='BigShouldersStencilDisplay')
     # porch: deck, posts, rail, a shed roof; two lanterns either side of the door (lit by the game)
     PZ = Z + 2.15; PH = 0.25
     a.box(-X - 0.2, X + 0.2, 0, PH, -PZ, -Z, deck)
@@ -726,7 +731,7 @@ def store_front():
     # west of the window: feed sacks, a barrel of shovels, a stack of buckets, a crate
     for r in range(3):
         for c_ in range(3 - r): a.boxc(-3.25 + c_ * 0.52 + r * 0.26, 0.15 + r * 0.26, F - 0.4, 0.5, 0.28, 0.36, C['sack'], ry=0.05 * c_)
-    a.text('FEED', -2.74, 0.17, F - 0.585, 0.09, C['ink'], face='-z', font='BigShouldersStencilDisplay')
+    a.text('FEED', -2.73, 0.67, F - 0.585, 0.09, C['ink'], face='-z', font='BigShouldersStencilDisplay')   # on the top sack: the bottom row is hidden behind the crate, buckets and barrel
     a.cyl('y', -1.95, F - 0.4, 0.27, 0, 0.75, mat('barrel', 0x7a5638, 0.85), 10); a.cyl('y', -1.95, F - 0.4, 0.28, 0.6, 0.66, C['iron'], 10)
     for k in range(5):
         ang = k * 1.256; x0, z0 = -1.95 + 0.12 * math.cos(ang), F - 0.4 + 0.12 * math.sin(ang)
