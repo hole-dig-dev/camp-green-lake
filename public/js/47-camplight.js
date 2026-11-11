@@ -66,6 +66,9 @@ function clBunkOn(t){const n=lookNightF();if(n<=0)return 0;const ct=lookT();if(c
   clFix(0,gy+5.3,FENCE_Z0-1.3,3.4,1.2,clDusk);clFix(0,gy+5.3,FENCE_Z0+1.5,3.4,0.9,clDusk);
 }
   for(const[x,y,z,r,k]of CAMP_LIGHTS)clFix(x,y,z,r,k,clDusk);   // the store's sign lamps, the string lights, the sifter's floods, the notice board (24-campfront.js)
+/* the fire pit (24-yard.js): a flickering orange pool round the logs, from dusk */
+const clFlick=()=>0.82+0.1*Math.sin(performance.now()*0.011)+0.08*Math.sin(performance.now()*0.027+1.3);
+clFix(FIRE_AT.x,baseH(FIRE_AT.x,FIRE_AT.z)+0.7,FIRE_AT.z,6.5,2.2,()=>clDusk()*clFlick(),null,[1.0,0.5,0.2]);
 /* the bunks: each porch light pools on the step (the door is on the yard side, -z) */
 const CL_BUNK_FIX=TENTS.map(t=>t.house?null:clFix(t.x,baseH(t.x,t.z)+2.3,t.z-t.hd-0.45,5,1.5,()=>clBunkOn(t)));   // the porch light over each bunkhouse door
 
@@ -101,6 +104,7 @@ clGlow('MainGate',['cgl_lantern'],2.8,clDusk);
 clGlow('WatchtowerBody',['cgl_glass'],0.9,clDusk);   // a guard's lamp in each tower cab
 clGlow('StoreFront',['cgl_lampglow'],3.0,clDusk);
 clGlow('FloodMast',['cgl_lampglow'],4.0,clDusk);
+clGlow('FirePitFlame',['cgl_stoveglow'],3.2,()=>1,[1.0,0.55,0.2]);clGlow('FirePit',['cgl_stoveglow'],1.6,()=>0.25+0.75*clDusk(),[1.0,0.45,0.15]);   // flames, and coals that glow a little by day
 for(const t of TENTS)if(!t.house){const m='Bunkhouse'+t.name.slice(-1);   // a bunk's windows and porch light, on the bunk's own schedule
   clGlow(m,['cgl_winlit'],1.5,()=>clBunkOn(t));clGlow(m,['cgl_lampglow'],2.8,()=>Math.min(1,clBunkOn(t)*1.5))}
 
@@ -121,6 +125,7 @@ let clT=0;
 function updateCampLight(dt){
   const room=typeof S!=='undefined'&&S.tent!=null?S.tent:null,night=lookNightF();
   updateFestoon(night);updateCutBoard();   // 24-campfront.js
+  if(FIRE.flame)FIRE.flame.visible=night>0.05;   // the fire (24-yard.js) burns from dusk
   // lit glass (cheap: only touched when the value moves)
   for(const g of CL_GLOW){const v=g.on()*g.k;if(Math.abs(v-g.w)>0.01){g.w=v;g.mat.emissive.setRGB(g.col[0]*v,g.col[1]*v,g.col[2]*v)}}
   if(room!=null){   // the room you're in: its windows, lamp glass, stove fire and its one real light

@@ -232,9 +232,7 @@ const FENCE_POSTS=[],FENCE_SPANS=[],LAMP_POSTS=[];let FENCE_PROC=null,GATE_PROC=
   const fillX=(a,b)=>solid((a+b)/2,FENCE_Z0,b-a,0.4),fillZ=(a,b)=>solid(FENCE_X1,(a+b)/2,0.4,b-a);
   fillX(-7.5,GATE_X0+0.2);fillX(GATE_X1-0.2,7.5);
   fillZ(FENCE_Z0+2.4*3,EAST_GATE_Z0+0.2);fillZ(EAST_GATE_Z1-0.2,FENCE_Z0+2.4*7);
-  // Camp paths visually lead to the two openings.
-  add(8,0.025,7,0xb5a079,0,baseH(0,27)+0.02,27);
-  add(8,0.025,4.5,0xb5a079,29,baseH(29,39)+0.02,39);
+  // (the paths to the two openings are worn paths now: 24-yard.js)
   add(5,0.2,2,0x7a5a3a,20.2,baseH(20.2,44)+0.1,44);
   const lparts=[];   // path lamps: own mesh, replaced by the Blender lamp posts
   for(const [lx,lz] of [[-5,28],[5,28],[-12,41.2],[16,37],[-30,36.5],[27,44]]){   // (-12, 41.2): over the bench between Bunks A and B, clear of A's door
