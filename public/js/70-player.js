@@ -65,8 +65,8 @@ function updatePlayer(dt){
   if(digging){
     /* the scoop lands when the blade bites (DIG_BITE: the Scoop clip's plant), not at the top of the lift, so the
        ground gives as you lever it and the dirt you see on the blade is the dirt you dug (47-digfeel.js) */
-    P.fa=Math.atan2(fx,fz);const iv=tune('dig.time');if(!(P.digT>=0))P.digT=iv*DIG_START;P.digT+=dt;
-    if(P.digT>=iv){P.digT-=iv;P.bit=false}P.digPh=P.digT/iv;
+    P.fa=Math.atan2(fx,fz);const iv=tune('dig.time');if(!(P.digT>=0)){P.digT=iv*DIG_START;digPickSide()}P.digT+=dt;
+    if(P.digT>=iv){P.digT-=iv;P.bit=false;digPickSide()}P.digPh=P.digT/iv;   // each scoop picks its throwing side (47-digfeel.js)
     if(!P.bit&&P.digPh>=DIG_BITE){P.bit=true;scoop()}
     P.anim=2;
   }else{
