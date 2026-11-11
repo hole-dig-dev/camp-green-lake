@@ -809,7 +809,51 @@
   }
   const BADLUCK = { KO: 4, CURFEW_OUT: 5, DAWN: -3, QUOTA: -10, LULLABY: -20, SONG: 8 };
 
-  const SIM = { PAY, richAt, payMult, gradeOf, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
+  /* ---- the Company's machines (2026-11-10, ported from Gold Fever's excavator and dump truck; public/js/87-excavator.js
+     drives and draws them, server.js holds the seats, the loads and every dig). The numbers both sides must agree on.
+     A load is {holes, rich}: holes of sand (a 5 ft hole's worth, as in your bucket) at an average richness (payMult),
+     folded together by volume exactly like sandMix in 48-paydirt.js. ---- */
+  const MACH = {
+    EXC_PARK: { x: 39, z: 50.5, h: Math.PI / 2 },   // just outside the east fence, north of the service gate's lane, arm toward the lake
+    DUMP_PARK: { x: 39, z: 29.5, h: Math.PI / 2 },  // the same, south of the lane
+    EXC_BUCKET: 4.5,      // holes of sand the excavator's bucket holds: about four scoops
+    EXC_COOLDOWN: 2.3,    // s between two scoops (Gold Fever's digSeconds)
+    EXC_SLACK: 0.8,       // the server accepts a scoop this fraction of the cooldown after the last (network jitter)
+    EXC_REACH: 9.6,       // m from the hull's middle the server accepts the teeth at (the arm reaches ~8.3, plus lag)
+    EXC_MIN_REACH: 3.4,   // m: teeth closer than this would dig the ground out from under its own tracks
+    EXC_SCOOP: [[0, 0, 0.45], [1, 0, 0.2], [0.5, 0.87, 0.2], [-0.5, 0.87, 0.2], [-1, 0, 0.2], [-0.5, -0.87, 0.2], [0.5, -0.87, 0.2]], // one scoop: a 1.25 m hole at the teeth (+0.45 m) and six round it 1 m out (+0.2 m), so the pit is a real bowl (holes don't add up: the deepest wins)
+    DEPTH_MAX: 2.6,       // m: as deep as any hole goes (EIGHT_FT; the server's dig clamp)
+    EXC_DROP_R: 9.6,      // m from the hull's middle the teeth may be when it tips its bucket
+    EXC_SIFT_R: 4.2,      // m: teeth this close to the sifter tip the bucket into it (the hopper first)
+    EXC_FLING: 6,         // m: a full-speed flick of the mouse throws the load this far past the teeth
+    DUMP_CAP: 60,         // holes of sand the dump truck's bed holds
+    DUMP_BED: [0, -0.8], DUMP_BED_R: 2.6,   // the bed's middle (truck coordinates: art/blender/machines.py) and how close to it the teeth must tip
+    DUMP_TAIL: [0, -4.3], DUMP_TAIL_R: 2.4,  // where a digger stands to tip a bucket in (and shovel the load out), and how close
+    DUMP_UNLOAD_R: 22,    // m from the sifter the truck can unload: inside the service gate or standing in it
+    DUMP_TIP_MAX: 20,     // holes one digger's bucket (or backsack) can tip in at once
+    PILE_MERGE: 1.6,      // m: dumped sand lands on a pile already this close, mixed in by volume
+    PILE_MAX: 40,         // loose-sand piles kept on the lake (dynamite mounds and dumped loads together)
+  };
+  /* one scoop at (x, z): the holes it digs [[x, z, newDepth]], the sand it lifts (holes) and how rich that sand is.
+     depthAt(x, z): the hole there now (0 for none); okAt(x, z): digging allowed there (not in camp, its strip, the edge) */
+  function excScoopPlan(x, z, depthAt, okAt) {
+    const out = []; let vol = 0, pay = 0;
+    for (const [ox, oz, add] of MACH.EXC_SCOOP) {
+      const hx = Math.round((x + ox) * 10) / 10, hz = Math.round((z + oz) * 10) / 10; if (!okAt(hx, hz)) continue;
+      const d0 = depthAt(hx, hz) || 0, d1 = Math.min(MACH.DEPTH_MAX, Math.round((d0 + add) * 100) / 100); if (d1 <= d0 + 0.005) continue;
+      const v = (d1 - d0) / 1.5; vol += v; pay += v * payMult(hx, hz, d1); out.push([hx, hz, d1]);
+    }
+    return { holes: out, vol, rich: vol > 0 ? pay / vol : 1 };
+  }
+  /* `add` holes of sand worth `rich` into load L (by volume, like sandMix) */
+  function loadMix(L, add, rich) {
+    if (!(add > 0)) return; const r = rich > 0 ? rich : 1, h = Math.max(0, L.holes || 0);
+    L.rich = h < 1e-4 ? r : (h * (L.rich > 0 ? L.rich : 1) + add * r) / (h + add); L.holes = h + add;
+  }
+  /* a machine's own coordinates (x: its left, z: forward) -> world; M = {x, z, h} (heading h faces (sin h, cos h)) */
+  const machAt = (M, lx, lz) => { const c = Math.cos(M.h), s = Math.sin(M.h); return { x: M.x + lx * c + lz * s, z: M.z - lx * s + lz * c }; };
+
+  const SIM = { MACH, excScoopPlan, loadMix, machAt, PAY, richAt, payMult, gradeOf, CANYON, toFloor, CYCLE, DAYMS, NIGHT_SPLIT, EDGE, SELL, GOLD, siftGold, CREW, CREW_SHOP, crewHirePrice, HANDS, PAN, SHOVEL_FLECK, HEAVY, TOWERS, TOWER_RANGE, TOWER_HALF_ANGLE, COP_RANGE, COP_HALF_ANGLE, TOWER_LAMP_Y, CURFEW, CURFEW_DEF, CURFEW_LIM, setCurfew, towerTilt, towerLit, towerHeading, inBeam, towerSees, clamp, wrapT, clockT, inCamp, nearCampZone, setZone, quotaFor, carrySpeed, stepProps, stepMonsters, PHYS, GRAB, DMG, ROPE, CART,
     JAV_COUNT, JAV_HP, spawnJavHerd, stepJavelinas, whackJavelina,
     LION_HP, LION_DMG, LION_BITE_R, LION_PIN_TIME, LION_MODES, stepLion, lionSwat,
     MOODS, rollMood, BADLUCK,

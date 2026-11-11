@@ -165,6 +165,7 @@ function zoneSwitch(id, why) {
   LOG.log('zone', { from: cur, to: id, why });
   broadcast(zoneMsg());
   if (typeof truckPark === 'function') truckPark();   // back in its spot by the main gate (and nobody's in it)
+  if (typeof machPark === 'function') machPark();     // the machines are the lake's: everyone out, back by the service gate
 }
 /* Like Peak's campfires: the next map only opens once every joined camper is standing at this one's. */
 /* grab physics ownership: when the camper running a thing's physics lets go or leaves, it passes to someone still
@@ -209,6 +210,125 @@ function truckRams(now, jev) {
 }
 function truckPark() { TRUCK.parkAt = Date.now(); TRUCK.wreck = 0; Object.assign(TRUCK, truckOn() ? TRUCK_GATE_PARK : TRUCK_PARK, { seats: {}, vx: 0, vz: 0 }); broadcast(truckMsg(true)); }
 function truckLeave(id) { const k = truckSeatOf(id); if (!k) return; delete TRUCK.seats[k]; broadcast(truckMsg()); }
+/* The Company's machines (public/js/87-excavator.js): an excavator and a dump truck, crew purchases at the Company Store
+   (world.camp.excavator / dumpTruck). They live in world.machines, so they stay where they were left and keep their loads
+   through a restart, and go with the rest of the camp when the crew's let go. Like the jeep, the driver's page drives and
+   reports where it is (and where the arm is aimed); the server owns the one seat in each, the loads (holes of sand and how
+   rich they are, sim.js MACH/loadMix) and every scoop, which it digs into world.holes itself ('excScoop'). */
+const MACH = SIM.MACH;
+const MACH_IN_R = 7;           // m: how close you must be to climb in (the cab door is ~2 m from the middle, plus lag)
+const MACH_POS_MS = 40;        // ms: the fastest a driver's position reports count (it sends ~12 a second)
+const MACH_JUMP = 8;           // m: a reported move longer than this in one report is a teleport, ignored
+const EXC_ARM_LIM = [[-0.6, 1.0], [0.35, 2.1], [-2.6, 2.6], [0, 1]]; // boom, stick, slew, curl (87-excavator.js EXC_LIM)
+const EXC_ARM_DEF = [0.35, 1.9, 0, 1];                                 // parked: bucket curled, resting on the ground
+const MACH_TIP_RATE = 4, MACH_TIP_MS = 5000;                           // buckets tipped into the truck per digger per window
+const MSEAT = { exc: null, dump: null };                               // who drives each (nobody, after a restart)
+const MACH_ID = { exc: 'excavator', dump: 'dumpTruck' };
+/* the camp upgrades the store may sell ('campBuy', public/js/50-tents.js camp:true), and the one each needs first */
+const CAMP_IDS = ['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant', 'jeepKeys', 'excavator', 'dumpTruck'];
+const CAMP_NEEDS = { excavator: 'washSluice', dumpTruck: 'excavator' }; // the machines are a late-game goal: the long tom first, then the excavator
+const machW = () => world.machines || (world.machines = {});
+const machSeatOf = id => (MSEAT.exc === id ? 'exc' : MSEAT.dump === id ? 'dump' : null);
+const machOn = () => (world.zone || 'lake') === 'lake';
+/* a bought machine exists (parked by the service gate); one the camp no longer owns is gone */
+function machEnsure() {
+  const W = machW(), camp = world.camp || {};
+  for (const k of ['exc', 'dump']) {
+    const park = k === 'exc' ? MACH.EXC_PARK : MACH.DUMP_PARK;
+    if (camp[MACH_ID[k]] && !W[k]) { W[k] = { x: park.x, z: park.z, h: park.h, load: { holes: 0, rich: 1 } }; if (k === 'exc') W[k].arm = EXC_ARM_DEF.slice(); else W[k].tip = 0; dirty = true; }
+    if (!camp[MACH_ID[k]] && W[k]) { delete W[k]; dirty = true; }
+    if (!W[k]) MSEAT[k] = null;
+  }
+}
+function machSt() {
+  const W = machW(), o = {};
+  for (const k of ['exc', 'dump']) { const m = W[k]; if (!m) continue;
+    o[k] = { x: r2(m.x), z: r2(m.z), h: Math.round(m.h * 1000) / 1000, drv: MSEAT[k], load: Math.round(m.load.holes * 1000) / 1000, rich: Math.round(m.load.rich * 1000) / 1000 };
+    if (k === 'exc') o[k].arm = m.arm; else o[k].tip = m.tip || 0; }
+  return o;
+}
+const machMsg = park => ({ t: 'mach', st: machSt(), park: !!park, on: machOn() });
+function machLeave(id) { const k = machSeatOf(id); if (!k) return; MSEAT[k] = null; broadcast(machMsg()); }
+function machPark() { const W = machW(); MSEAT.exc = MSEAT.dump = null; for (const k of ['exc', 'dump']) if (W[k]) Object.assign(W[k], k === 'exc' ? MACH.EXC_PARK : MACH.DUMP_PARK); dirty = true; broadcast(machMsg(true)); }
+const noDigS = (x, z) => SIM.inCamp(x, z) || Math.hypot(Math.max(-40 - x, 0, x - 30), Math.max(27 - z, 0, z - 56)) < CAMP_NODIG || Math.max(Math.abs(x), Math.abs(z)) > SIM.EDGE - 2;
+/* loose sand on the lake (dynamite mounds and dumped loads, public/js/88-dynamite.js): `pay` is how rich it is (1 if unset) */
+function pileAddS(x, z, holes, pay) {
+  const piles = world.piles || (world.piles = {});
+  let q = Object.values(piles).find(p => Math.hypot(p.x - x, p.z - z) < MACH.PILE_MERGE);
+  if (q) { const L = { holes: q.sand, rich: q.pay > 0 ? q.pay : 1 }; SIM.loadMix(L, holes, pay); q.sand = Math.round(L.holes * 1000) / 1000; q.pay = Math.round(L.rich * 1000) / 1000; }
+  else { const ids = Object.keys(piles); if (ids.length >= MACH.PILE_MAX) delete piles[ids[0]];
+    let id = DYN_SEQ++; while (piles[id]) id = DYN_SEQ++; q = piles[id] = { id, x: r2(x), z: r2(z), sand: Math.round(holes * 1000) / 1000, pay: Math.round(pay * 1000) / 1000, rich: false }; }
+  dirty = true; broadcast({ t: 'pile', p: q });
+}
+/* everything a client says about the machines: 'exc' / 'dump' {op: in, out, pos, drop, tip, unload} and 'excScoop' */
+function machOp(c, k, m) {
+  const W = machW(), M = W[k], op = m.op;
+  if (op === 'out') { if (MSEAT[k] === c.id) { MSEAT[k] = null; broadcast(machMsg()); } return; }
+  if (op === 'park') { if (c.host) { LOG.log('machPark', { n: c.n }); machPark(); } return; } // console 'machines park': everyone out, back by the service gate
+  if (!M || !machOn()) return;
+  if (op === 'in') {
+    if (machSeatOf(c.id) || truckSeatOf(c.id) || Math.hypot(c.x - M.x, c.z - M.z) > MACH_IN_R) return;
+    if (MSEAT[k] != null && clients.has(MSEAT[k])) return; // one seat: taken
+    MSEAT[k] = c.id; LOG.log('machIn', { id: c.id, n: c.n, k }); broadcast(machMsg()); return;
+  }
+  if (op === 'tip' && k === 'dump') { // a digger tips a bucket into the bed from the tail (the bucket's sand is the page's, like the jeep's)
+    if (!withinRate(c.tipTimes || (c.tipTimes = []), MACH_TIP_RATE, MACH_TIP_MS)) return;
+    const t = SIM.machAt(M, MACH.DUMP_TAIL[0], MACH.DUMP_TAIL[1]); if (Math.hypot(c.x - t.x, c.z - t.z) > MACH.DUMP_TAIL_R + 1.5) return;
+    const v = Math.min(num(m.v, 0, MACH.DUMP_TIP_MAX, 0), MACH.DUMP_CAP - M.load.holes); if (!(v > 0.01)) return;
+    SIM.loadMix(M.load, v, num(m.rich, 0.2, 6, 1)); dirty = true; LOG.log('dumpTip', { n: c.n, v: r2(v), load: r2(M.load.holes) }); broadcast(machMsg()); return;
+  }
+  if (op === 'unload' && k === 'dump') { // shovel it out at the sifter: the load goes through that digger's hopper / sifter
+    const G = SIM.GOLD.SIFTER; if (Math.hypot(M.x - G.x, M.z - G.z) > MACH.DUMP_UNLOAD_R || !(M.load.holes > 0.05)) return;
+    if (MSEAT.dump !== c.id && Math.hypot(c.x - M.x, c.z - M.z) > 6) return;
+    send(c, { t: 'machPay', src: 'dump', holes: Math.round(M.load.holes * 1000) / 1000, rich: Math.round(M.load.rich * 1000) / 1000 });
+    LOG.log('dumpUnload', { n: c.n, holes: r2(M.load.holes), rich: r2(M.load.rich) });
+    M.load = { holes: 0, rich: 1 }; M.tip = (M.tip || 0) + 1; dirty = true; broadcast(machMsg()); return;
+  }
+  if (MSEAT[k] !== c.id) return; // the rest is the driver's
+  if (op === 'pos') {
+    const now = Date.now(); if (now - (c.machPosT || 0) < MACH_POS_MS) return; c.machPosT = now;
+    const x = num(m.x, -SIM.EDGE, SIM.EDGE, M.x), z = num(m.z, -SIM.EDGE, SIM.EDGE, M.z); if (Math.hypot(x - M.x, z - M.z) > MACH_JUMP) return;
+    M.x = x; M.z = z; M.h = num(m.h, -100, 100, M.h); dirty = true;
+    const p = [r2(M.x), r2(M.z), Math.round(M.h * 1000) / 1000];
+    if (k === 'exc' && Array.isArray(m.a)) { M.arm = EXC_ARM_LIM.map(([a, b], i) => Math.round(num(m.a[i], a, b, M.arm[i]) * 1000) / 1000); p.push(...M.arm); }
+    broadcast({ t: 'mpos', k, p }, c.id); return;
+  }
+  if (op === 'drop' && k === 'exc') { // the bucket tipped: into the truck's bed, the sifter, or a pile on the ground
+    const L = M.load; if (!(L.holes > 0.01)) return;
+    const x = num(m.x, -SIM.EDGE, SIM.EDGE, NaN), z = num(m.z, -SIM.EDGE, SIM.EDGE, NaN), pw = num(m.power, 0, 1, 0);
+    if (!Number.isFinite(x) || !Number.isFinite(z) || Math.hypot(x - M.x, z - M.z) > MACH.EXC_DROP_R) return;
+    const D = W.dump, G = SIM.GOLD.SIFTER; let to = 'ground', rest = L.holes;
+    if (D) { const b = SIM.machAt(D, MACH.DUMP_BED[0], MACH.DUMP_BED[1]); if (Math.hypot(x - b.x, z - b.z) < MACH.DUMP_BED_R) {
+      const v = Math.min(rest, MACH.DUMP_CAP - D.load.holes); if (v > 0) { SIM.loadMix(D.load, v, L.rich); rest -= v; to = 'dump'; } } }
+    if (to === 'ground' && Math.hypot(x - G.x, z - G.z) < MACH.EXC_SIFT_R) { send(c, { t: 'machPay', src: 'exc', holes: Math.round(rest * 1000) / 1000, rich: Math.round(L.rich * 1000) / 1000 }); rest = 0; to = 'sifter'; }
+    if (rest > 0.01) { // on the ground (or what didn't fit in the bed): a flick throws it along the arm
+      const yaw = M.h + (M.arm ? M.arm[2] : 0), f = to === 'ground' ? pw * MACH.EXC_FLING : 0;
+      let gx = clamp(x + Math.sin(yaw) * f, -SIM.EDGE, SIM.EDGE), gz = clamp(z + Math.cos(yaw) * f, -SIM.EDGE, SIM.EDGE);
+      if (SIM.inCamp(gx, gz) && !SIM.inCamp(x, z)) { gx = x; gz = z; } // never flung over the fence into camp
+      pileAddS(gx, gz, rest, L.rich);
+    }
+    LOG.log('excDrop', { n: c.n, to, holes: r2(L.holes), rich: r2(L.rich), power: r2(pw) });
+    M.load = { holes: 0, rich: 1 }; dirty = true; broadcast({ t: 'mfx', k: 'drop', to, x: r2(x), z: r2(z) }); broadcast(machMsg()); return;
+  }
+}
+/* one scoop of the excavator's bucket: the server digs the holes itself (sim.js excScoopPlan), like dynamite's crater.
+   Not 'dig': its 8-a-second rate and 6 m from the digger can't cover an arm reaching 8 m from the cab. */
+function excScoopS(c, m) {
+  const M = machW().exc, now = Date.now(), no = why => send(c, { t: 'excScoop', ok: false, why });
+  if (!M || !machOn() || MSEAT.exc !== c.id) return;
+  if (now - (M.scoopAt || 0) < MACH.EXC_COOLDOWN * MACH.EXC_SLACK * 1000) return no('wait');
+  const x = num(m.x, -SIM.EDGE, SIM.EDGE, NaN), z = num(m.z, -SIM.EDGE, SIM.EDGE, NaN); if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+  const d = Math.hypot(x - M.x, z - M.z); if (d > MACH.EXC_REACH) return no('reach'); if (d < MACH.EXC_MIN_REACH) return no('close');
+  if (noDigS(x, z)) return no('camp');
+  const room = MACH.EXC_BUCKET - M.load.holes; if (room < 0.05) return no('full');
+  const plan = SIM.excScoopPlan(x, z, (hx, hz) => world.holes[hx + '|' + hz] || 0, (hx, hz) => !noDigS(hx, hz) && ((hx + '|' + hz) in world.holes || Object.keys(world.holes).length < MAX_HOLES));
+  if (!plan.holes.length) return no('deep');
+  M.scoopAt = now;
+  for (const [hx, hz, hd] of plan.holes) { world.holes[hx + '|' + hz] = hd; broadcast({ t: 'dig', id: 0, x: hx, z: hz, d: hd }); }
+  const v = Math.min(plan.vol, room); SIM.loadMix(M.load, v, plan.rich); dirty = true;
+  send(c, { t: 'excScoop', ok: true, v: Math.round(v * 1000) / 1000, rich: Math.round(plan.rich * 1000) / 1000 });
+  broadcast(machMsg());
+}
 /* The end of Act 1: the whole crew on top of the wall past the trench (88-north.js). Like the campfire: everyone joined
    (and not down in the buried town) has to be up there. */
 function checkSummit() {
@@ -367,6 +487,7 @@ try {
   TUNE_S = migrateOldTune(saved);
   if (JSON.stringify(TUNE_S) !== before) fs.writeFileSync(TUNE_FILE, JSON.stringify(TUNE_S, null, 1)); // the page reads this file as it is (sendTune)
 } catch (e) { /* none saved yet */ }
+machEnsure(); // a world.json from before the machines, or one where the crew already owns them
 truckWasOn = truckOn(); if (truckWasOn) Object.assign(TRUCK, TRUCK_GATE_PARK); // the pickup's flag was on at startup: it waits by the service gate
 /* Landmines (JT 2026-10-01; public/js/88-mines.js): every ~haz.mineEvery seconds one goes down on the lakebed outside
    the fence, 8-45 m from a camper who's out there (so they turn up where people dig), up to haz.mineMax at once. Not
@@ -432,7 +553,7 @@ function veinTick(now) {
 let DYN_SEQ = 1;
 function dynBoomS(id, x, z) {
   const piles = world.piles || (world.piles = {});
-  const ids = Object.keys(piles); if (ids.length >= 20) delete piles[ids[0]]; // the oldest mound goes
+  const ids = Object.keys(piles); if (ids.length >= MACH.PILE_MAX) delete piles[ids[0]]; // the oldest mound goes (dumped loads count too)
   const pile = { id, x, z, sand: tuneS('dyn.sand', 8), rich: !!(VEIN && Date.now() < VEIN.until && Math.hypot(x - VEIN.x, z - VEIN.z) < VEIN.r) }; piles[id] = pile; dirty = true;
   broadcast({ t: 'dynBoom', id, x, z, pile });
   for (const [ox, oz, d] of [[0, 0, 1.3], [0.9, 0, 0.9], [-0.9, 0, 0.9], [0, 0.9, 0.9], [0, -0.9, 0.9]]) { // the crater
@@ -636,6 +757,7 @@ wss.on('connection', (ws, req) => {
       dirEvents: DIRECTOR.activeEvents(dirState, Date.now()).map(e => ({ k: e.kind, x: e.x, z: e.z, t0: e.t0 })),
       jav: javSnapshot(), // ditto for the javelina herd, if one's out there right now
       truck: truckMsg(true).st, // Foreman Dutch's pickup (87-truck.js)
+      mach: machMsg(true), // the excavator and the dump truck, if the crew owns them (87-excavator.js)
       breaches: world.breaches || {}, tgot: world.tgot && world.tgot.day === world.run.day ? world.tgot.ids : [], // the buried town (89-town.js)
       rost: SIM.packRoster(ROSTER), rostToday: ROSTER.roster || SIM.rosterFor(world.run.day, world.run.badluck || 0), // and the day's roster
     });
@@ -876,13 +998,15 @@ wss.on('connection', (ws, req) => {
         }
         break;
       }
+      case 'exc': case 'dump': machOp(c, m.t, m); return; // the Company's machines (public/js/87-excavator.js)
+      case 'excScoop': excScoopS(c, m); return;
       case 'truck': { // Foreman Dutch's pickup (87-truck.js): get in/out, the driver's position, driving out the service gate
         const op = m.op;
         if (op === 'out') { truckLeave(c.id); return; }
         if (!truckOn()) { if (Object.keys(TRUCK.seats).length) truckPark(); return; }
         if (op === 'in') {
           const k = TRUCK_SEATS.includes(m.seat) ? m.seat : null;
-          if (!k || Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) > 6 || truckSeatOf(c.id)) return;
+          if (!k || Math.hypot(c.x - TRUCK.x, c.z - TRUCK.z) > 6 || truckSeatOf(c.id) || machSeatOf(c.id)) return;
           if (TRUCK.seats[k] != null && clients.has(TRUCK.seats[k])) return;   // taken
           TRUCK.seats[k] = c.id;
           LOG.log('truck', { id: c.id, n: c.n, seat: k });
@@ -1024,10 +1148,12 @@ wss.on('connection', (ws, req) => {
       case 'pipeFlow': broadcast({ t: 'pipeFlow', leaf: num(m.leaf, 1, 1e4, 1) | 0 }, c.id); break;
       case 'campBuy': { // a camp upgrade (public/js/84-camp.js), paid from the crew wallet by walletSpend just before this
         if (m.rid != null && c.walletNo && c.walletNo.has(num(m.rid, 0, 1e9, -1) | 0)) return;
-        const id = String(m.id || ''); if (!['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant', 'jeepKeys'].includes(id)) return;
+        const id = String(m.id || ''); if (!CAMP_IDS.includes(id)) return;
         const camp = world.camp || (world.camp = {});
-        if (camp[id]) { world.run.bank += num(m.cost, 0, 10000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it: the wallet gets it back
-        camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp }); break;
+        if (camp[id] || (CAMP_NEEDS[id] && !camp[CAMP_NEEDS[id]])) { world.run.bank += num(m.cost, 0, 10000, 0) | 0; broadcast(runInfo()); send(c, { t: 'camp', camp }); return; } // someone beat them to it (or it needs the one before): the wallet gets it back
+        camp[id] = true; dirty = true; LOG.log('campBuy', { id, by: c.n }); broadcast({ t: 'camp', camp });
+        if (MACH_ID.exc === id || MACH_ID.dump === id) { machEnsure(); broadcast(machMsg(true)); } // the Company's machines: parked by the service gate
+        break;
       }   // someone sent sand down it: everyone sees the plug go
       case 'dyn': { // a lit stick of dynamite (public/js/88-dynamite.js): the server runs the fuse so everyone sees the same boom
         if (!withinRate(c.dynTimes || (c.dynTimes = []), 3, 5000)) return;
@@ -1040,7 +1166,7 @@ wss.on('connection', (ws, req) => {
         const q = (world.piles || {})[num(m.id, 0, 1e9, -1) | 0]; if (!q) return; const v = num(m.v, 0, 2, 0); if (!v) return;
         q.sand = Math.max(0, Math.round((q.sand - v) * 1000) / 1000); dirty = true;
         if (q.sand <= 0.01) delete world.piles[q.id];
-        broadcast({ t: 'pile', p: { id: q.id, x: q.x, z: q.z, sand: q.sand } }); break;
+        broadcast({ t: 'pile', p: { id: q.id, x: q.x, z: q.z, sand: q.sand, pay: q.pay } }); break;
       }
       case 'scare': { // a scarecrow planted on the lake bed (public/js/88-gear.js): vultures keep off everyone near it
         if (!withinRate(c.dynTimes || (c.dynTimes = []), 3, 5000)) return;
@@ -1200,7 +1326,7 @@ wss.on('connection', (ws, req) => {
             if (m.what === 'hire') k.hired = true; else if (m.what === 'fire') world.crew[n] = {};
             else if (m.what === 'kit') { const keep = { hired: !!k.hired }; world.crew[n] = keep; const add = id => { const it = SIM.CREW_SHOP.find(i => i.id === id); if (!it) return; keep[id] = true; if (it.needs) add(it.needs); }; for (const it of items) add(it); } }
           broadcast({ t: 'crew', up: world.crew });
-        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (['goldScale', 'pipeTee', 'pipePump', 'pipeSteel', 'sodaMachine', 'washRocker', 'washSluice', 'washPlant', 'jeepKeys'].includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); }
+        } else if (m.op === 'camp') { const camp = world.camp || (world.camp = {}); for (const it of items) { if (it === 'none') { world.camp = {}; } else if (CAMP_IDS.includes(it)) (world.camp || (world.camp = {}))[it] = true; } broadcast({ t: 'camp', camp: world.camp }); machEnsure(); broadcast(machMsg(true)); }
         else if (m.op === 'pipe') { const p = pipeW();   // lay pipe without walking it (the client checked nothing solid is in the way)
           if (m.clear) { p.nodes = []; p.broken = {}; }
           for (const a of (Array.isArray(m.add) ? m.add.slice(0, 200) : [])) {
@@ -1398,7 +1524,7 @@ wss.on('connection', (ws, req) => {
       lmHolder = null;
       if (gotSet.delete(lmItem)) { dirty = true; broadcast({ t: 'ungot', item: lmItem }); }
     }
-    truckLeave(c.id);
+    truckLeave(c.id); machLeave(c.id);
     if (c.joined && !c.spectator) { LOG.log('leave', { id: c.id, n: c.n }); broadcast({ t: 'leave', id: c.id }); broadcastSleep(); maybeSkipNight(); if ((world.zone || 'lake') !== 'lake') checkCampfire(); else checkSummit(); }
   });
 });
@@ -1486,7 +1612,7 @@ function tickJavelinas(t, dt, players) {
 let lastT = SIM.clockT(world.clock, Date.now()), lastTick = Date.now(), monOn = false;
 let policeOn = false, brideOn = false, lionOn = false, lastMonLogT = 0;
 function simPlayers(now) {
-  const cab = [TRUCK.seats.drive, TRUCK.seats.shotgun];   // inside Foreman Dutch's pickup's cab (87-truck.js): out of reach too
+  const cab = [TRUCK.seats.drive, TRUCK.seats.shotgun, MSEAT.exc, MSEAT.dump];   // inside Foreman Dutch's pickup's cab (87-truck.js) or a machine's (87-excavator.js): out of reach too
   return joined().filter(c => !c.town && !cab.includes(c.id)).map(c => ({   // campers down in the buried town (89-town.js) are out of reach of the lake
     id: c.id, x: c.x, z: c.z, fa: c.r, cy: c.cy, hp: c.hp,
     hd: !!(c.f & 1), cr: !!(c.f & 8), lt: !!(c.f & 4), an: c.a,
@@ -1515,8 +1641,8 @@ function endOfDay() {
     LOG.log('fired', { bank: got, quota, day: world.run.day });
     const wasZone = world.zone || 'lake';
     world = Object.assign(freshWorld(1), { hostNames: world.hostNames, clock: world.clock, players: world.players, run: freshRun(), crew: {}, director: world.director }); ensureCart();
-    gotSet = new Set(); lmHolder = null; dirty = true; save();
-    broadcast({ t: 'fired', bank: got, quota, found: foundWas });
+    gotSet = new Set(); lmHolder = null; MSEAT.exc = MSEAT.dump = null; dirty = true; save();
+    broadcast({ t: 'fired', bank: got, quota, found: foundWas }); broadcast(machMsg(true)); // the machines went with the camp
     broadcast({ t: 'crew', up: world.crew }); broadcast(runInfo());
     if (wasZone !== 'lake') broadcast(zoneMsg()); // a fresh run starts back at camp
   }

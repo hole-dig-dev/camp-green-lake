@@ -50,6 +50,13 @@ const TUNE_DEFS=[
   // ---- vehicles: Foreman Dutch's pickup (87-truck.js). The flag is shared: the play-test server reads it too.
   {key:'veh.drivable',tab:'Vehicles',label:'Make drivable: Dutch\'s jeep (F at the driver\'s door; back it out of the service gate and drive the lake)',def:0,kind:'flag'},
   {key:'veh.respawn',tab:'Vehicles',label:'Put Dutch\'s pickup back where you drive it from (upright, everyone out)',kind:'action',run:()=>truckRespawn()},
+  // ---- the Company's machines (87-excavator.js): how they drive. Capacities, the scoop and the reach are the server's (sim.js MACH).
+  {key:'mach.excSpeed',tab:'Vehicles',label:'Excavator: top speed (slow on purpose)',def:3.2,kind:'mul',range:2.5,unit:' m/s'},
+  {key:'mach.excTurn',tab:'Vehicles',label:'Excavator: turning speed',def:0.85,kind:'mul',range:2.5,unit:' rad/s'},
+  {key:'mach.dumpSpeed',tab:'Vehicles',label:'Dump truck: top speed',def:9,kind:'mul',range:2.5,unit:' m/s'},
+  {key:'mach.dumpTurn',tab:'Vehicles',label:'Dump truck: turning speed (rolling)',def:0.85,kind:'mul',range:2.5,unit:' rad/s'},
+  {key:'mach.loadSlow',tab:'Vehicles',label:'Machines: how much a full load slows them (0 none, 0.5 half)',def:0.18,kind:'lin',span:0.18,min:0,max:0.6},
+  {key:'mach.armSens',tab:'Vehicles',label:'Excavator arm: mouse sensitivity',def:1,kind:'mul',range:3,unit:'×'},
   {key:'veh.speed',tab:'Vehicles',label:'Top speed (you sprint at 7.2)',def:14,kind:'mul',range:2.5,unit:' m/s'},
   {key:'veh.accel',tab:'Vehicles',label:'Acceleration',def:6,kind:'mul',range:3,unit:' m/s²'},
   {key:'veh.steer',tab:'Vehicles',label:'Steering lock (sharper = tighter turns)',def:0.7,kind:'mul',range:2,fmt:v=>tuneDeg(v)},

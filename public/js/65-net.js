@@ -87,6 +87,7 @@ function onMsg(m){
       javFromServer(m.jav||[]); // ditto for the javelina herd, if one's out there right now
       rosterSnapshot(m.rost||[],m.rostToday); // and the day's roster (83-roster.js)
       truckHello(m.truck); // Foreman Dutch's pickup (87-truck.js)
+      machMsg(m.mach); // the excavator and the dump truck (87-excavator.js)
       townHello(m); // breaches into the buried town, and what's been taken down there today (89-town.js)
       lionFromServer(m.mon||{});   // same ground-truth-on-(re)connect reasoning as monFromServer, for the mountain lion
       net.passOk=true;campWrap.hidden=true;hideCampErr();startBtn.disabled=false;
@@ -112,6 +113,8 @@ function onMsg(m){
     case 'pos':{const R=remotes.get(m.id);if(!R)break;if(m.ly!=null&&R.p)R.p.look={yaw:num(m.ly,-7,7,0),pitch:num(m.lp,-1.6,1.6,0)};R.tn=m.tn===true;R.tx=num(m.x,-HALF-20,R.tn?SIM.TOWN.X+60:HALF+20,R.tx);R.ty=num(m.y,R.tn?SIM.TOWN.Y-5:-5,ZONE_MAX_Y,R.ty);   /* tn: down in the buried town (89-town.js), off the map at x ~2000 */R.tz=num(m.z,-HALF-20,HALF+20,R.tz);R.tr=num(m.r,-10,10,R.tr);R.anim=num(m.a,0,10,0)|0;R.f=num(m.f,0,8191,0)|0;R.hp=num(m.hp,0,100,R.hp);R.sp=m.sp===true;R.p.longShovel=m.lg===true;R.p.noShovel=m.sh===false;R.p.bk=num(m.bk,-1,1,-1);R.p.bt=num(m.bt,1,3,1)|0;R.dog=m.dg===true;R.gv=m.gv===true;R.gs=m.gs===true;R.hv=m.hv===true;R.hs=m.hs===true;   /* on a hoverboard (88-hover.js) */   /* gravity boots, gold shovel (88-gear.js) */   /* their mine-sniffing dog (88-dog.js) */   /* the clear backsack's fill, -1 none (86-backsack.js) */R.room=Number.isInteger(m.room)?m.room:null;setRemoteLv(R,m.lv);break}
     case 'dig':applyDig(m.x,m.z,m.d,true);break;
     case 'truck':truckMsg(m);break;
+    case 'mach':machMsg(m);break;case 'mpos':machPos(m);break;case 'excScoop':excScooped(m);break;case 'mfx':machFx(m);break;   // the Company's machines (87-excavator.js)
+    case 'machPay':machPay(num(m.holes,0,200,0),num(m.rich,0.05,20,1),m.src==='dump'?'dump':'exc');break;
     case 'sumstat':northMsg(m);break;   // the crew on top of the north wall (88-north.js)   // Foreman Dutch's pickup (87-truck.js)
     case 'zone':case 'cpstat':case 'zev':if(typeof zoneMsg==='function')zoneMsg(m);break;   // Peak-style maps (88-zones.js)
     case 'got':{const it=items[m.item|0];if(it)it.found=true;break}
@@ -223,6 +226,7 @@ function updateRemotes(dt){
     let dr=R.tr-g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));g.rotation.y+=dr*k;
     R.dph=(R.dph+dt/0.42)%1;
     if(truckRemoteSeat(id,R,dt))continue;   // sitting in Foreman Dutch's pickup (87-truck.js)
+    if(machRemoteSeat(id,R,dt))continue;   // at the controls of a machine (87-excavator.js)
     if(R.anim===3&&R.room!=null){   // lying down inside a tent = asleep in a bunk: snap onto the nearest one in that room
       let bk=null,bd=9;for(const u of BUNKS)if(u.tent===R.room){const d=(u.x-R.tx)**2+(u.z-R.tz)**2;if(d<bd){bd=d;bk=u}}
       if(bk){animPerson(R.p,0,dt);sleepPose(R.p,bk);continue}

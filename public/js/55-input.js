@@ -37,6 +37,7 @@ let dragLook=null;
 addEventListener('mousemove',e=>{
   if(SPECON()&&!S.started){if(lockOk())specMouse(e.movementX,e.movementY);return}   /* 96-spectate.js */
   if(!S.started)return;
+  if(machMouse(e))return;   /* at the excavator's controls the mouse works the arm (87-excavator.js) */
   const iv=SETTINGS.invertY?-1:1;   // pause menu: sensitivity + invert-Y settings
   if(lockOk()){if(!lookDelta(e.movementX,e.movementY))return;P.yaw-=e.movementX*0.0026*SETTINGS.sens;P.pitch=pc(P.pitch+e.movementY*0.0022*SETTINGS.sens*iv)}
   else if(dragLook&&!isTouch){P.yaw-=(e.clientX-dragLook.x)*0.005*SETTINGS.sens;P.pitch=pc(P.pitch+(e.clientY-dragLook.y)*0.004*SETTINGS.sens*iv);dragLook={x:e.clientX,y:e.clientY}}
@@ -97,7 +98,7 @@ addEventListener('keydown',e=>{
   if(k==='g'&&!e.repeat)doPing();
   if(k==='l'&&!e.repeat)toggleLight();
   if(k==='v')toggleView();
-  if(k==='c'){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
+  if(k==='c'&&!S.inMach){P.crouch=!P.crouch;toast(P.crouch?'Crouching. In a deep hole, the police can\'t see you.':'Standing up','',1600)}
   if(k==='m'){muted=!muted;if(master)master.gain.value=muted?0:SETTINGS.volMaster;toast(muted?'Sound off':'Sound on','',1200)}
   if(k==='e'&&!e.repeat&&GRAB_ST.id!=null){releaseGrab(true);return}   // E while holding something: throw it (84-grab.js)
   if(k==='x'&&!e.repeat&&!uiOpen()){tieRope();return}   // the rope (84-grab.js)
