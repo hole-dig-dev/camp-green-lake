@@ -147,7 +147,7 @@ function towerLampMount(parts){
 const CAMP_PROPS=[
   {m:'SignLizardWarning',x:-8.5,z:24.6,ry:0,w:0.3,d:0.3},      // outside the main gate, facing campers on their way out
   {m:'SignLizardWarning',x:8.5,z:24.6,ry:0,w:0.3,d:0.3},
-  {m:'SignDirections',x:-7.5,z:32.5,ry:0,w:0.3,d:0.3},         // just inside the gate
+  {m:'SignDirections',x:-8.2,z:33.6,ry:0,w:0.3,d:0.3},         // just inside the gate; its arrows are aimed from here (art/blender/signs.py), clear of the Employee of the Day board
   {m:'WaterDrum',x:8.6,z:33.4,ry:0,w:0.65,d:0.65},             // by the water truck
   {m:'WaterDrum',x:9.3,z:34.2,ry:1.1,w:0.65,d:0.65},
   {m:'WaterDrum',x:8.5,z:34.9,ry:2.3,w:0.65,d:0.65},
