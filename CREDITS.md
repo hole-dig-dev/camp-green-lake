@@ -10,6 +10,8 @@ Third-party assets used in the game, with their licences. CC-BY assets must stay
 | UI Audio | `public/audio/ui-hover.mp3`, `ui-click.mp3` (button sounds) | Kenney | https://kenney.nl/assets/ui-audio | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Same conversion. |
 | 40 CC0 water / splash / slime SFX | `public/audio/water-swirl-1..3.mp3`, `water-dunk.mp3` (washing the gold pan) | rubberduck | https://opengameart.org/content/40-cc0-water-splash-slime-sfx | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Same conversion. |
 
+The Company's excavator and dump truck (`public/models/Excavator.glb`, `DumpTruck.glb`) are original: modelled from scratch in `art/blender/machines.py` (2026-11-10), no outside assets. Poly Pizza had no excavator, and a moving arm and a tipping bed need every moving part as its own node with its pivot on the hinge, which is easiest to get right by building them.
+
 Earlier sound recordings (wind, rain, digging, footsteps, desert calls and so on, all CC0) are credited in [docs/audio-inventory.md](docs/audio-inventory.md#recording-sources-and-license).
 
 ## Lake and camp dressing (scatter, landmarks, yard props)

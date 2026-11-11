@@ -22,6 +22,8 @@ lights and floor.
 
 | `footwear.blend` | Ten shoes and ten boots, both feet per scene, weighted to the original shin bones; footwear-only exports in `public/models/footwear/` | `footwear_options.py` |
 
+The Company's machines (`Excavator.glb`, `DumpTruck.glb`) are built straight to GLB, with no .blend, by `machines.py` (`~/blender/blender -b --factory-startup --python art/blender/machines.py`): one node per moving part, its origin on its hinge, for `public/js/87-excavator.js`.
+
 Each build script's first line names its file (`# blend: buildings.blend`) and `bx.py` opens that file before running
 it. The files are saved **compressed** (Blender keeps compression on every later save): the old single
 `camp-green-lake-art.blend` was 53 MB uncompressed and grew the repo by that much on every commit; the files together are
