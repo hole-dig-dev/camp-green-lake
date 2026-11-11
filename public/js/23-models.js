@@ -105,11 +105,11 @@ function towerLampMount(parts){
 
 /* ---- the swaps ---- */
 {
-  const TENT_MODEL=t=>t.crew?'TentCrew':'TentSmall';
+  // the bunkhouses (art/blender/camp.py: built facing the yard, -z), one model each: A, B, C and the crew's D
   for(const t of TENTS)if(!t.house)
-    placeModel(TENT_MODEL(t),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:Math.PI}).then(()=>hideProc(t.ext)).catch(()=>{});   // door faces the yard (-z)
+    placeModel('Bunkhouse'+t.name.slice(-1),{x:t.x,y:baseH(t.x,t.z),z:t.z,ry:0}).then(()=>hideProc(t.ext)).catch(()=>{});
   placeModel('CompanyStore',{x:16,y:baseH(16,45),z:45,ry:Math.PI}).then(()=>hideProc(storeCabin)).catch(()=>{});
-  placeModel('SuptHouse',{x:-30,y:baseH(-30,45),z:45,ry:Math.PI}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
+  placeModel('SuptHouse2',{x:-30,y:baseH(-30,45),z:45,ry:0}).then(()=>{hideProc(suptCabin);hideProc(porch)}).catch(()=>{});
   placeModel('WaterTower',{x:25,y:baseH(25,49),z:49,ry:Math.PI}).then(()=>hideProc(WATER_TOWER_PROC)).catch(()=>{});
   // the tower goes up without its searchlight (square to the fence, ladder facing the yard); the lamp is cut out of the
   // model and mounted on each tower's swivelling head (22-security.js), so it points where its beam goes
@@ -133,7 +133,7 @@ function towerLampMount(parts){
   instanceModel('OakTree',OAKS.map(o=>({x:o.x,y:baseH(o.x,o.z),z:o.z,ry:o.x*0.7,s:o.s}))).then(()=>OAKS.forEach(o=>hideProc(o.g))).catch(()=>{});
   Promise.all([instanceModel('SupplyCrate',YARD_CRATES),instanceModel('MessTable',MESS_TABLES)]).then(()=>hideProc(YARD_PROC)).catch(()=>{});
   // room shells: floor, walls, roof/ceiling, windows, door and wall dressing, one per room type
-  TENTS.forEach((t,ti)=>placeModel(t.house?'SuptRoom':t.crew?'TentRoomCrew':'TentRoomSmall',{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
+  TENTS.forEach((t,ti)=>placeModel(t.room,{x:t.x,y:TENT_FLOOR_Y,z:t.z,ry:0},ROOM_MESHES[ti])
     .then(()=>hideProc(ROOM_SHELL[ti])).catch(()=>{}));
   // furniture: models become children of each room mesh, so they show/hide with the room like the boxes did
   ROOM_FURN_SPOTS.forEach((spots,ti)=>{
@@ -170,18 +170,6 @@ const CAMP_PROPS=[
   }
   for(const n in byModel)instanceModel(n,byModel[n]).catch(()=>{});
 }
-
-/* ---- colliders for the new room dressing (added up front, like the props above; offsets from the room centre) ---- */
-TENTS.forEach((t,ti)=>{
-  const L=TENT_COLLIDERS[ti],at=(dx,dz,w,d)=>tentSolid(L,t.x+dx,t.z+dz,w,d);
-  if(t.house){
-    at(-2,t.roomD-0.5,2.8,1.0);                         // fireplace + hearth on the back wall
-    at(t.roomW-0.35,5.5,0.65,1.25);                     // filing cabinets
-    at(t.roomW-0.35,0.6,0.5,0.5);                       // water cooler
-    at(t.roomW-0.4,-4.5,0.65,0.5);                      // nail-polish table
-    at(-3,-(t.roomD-0.5),0.6,0.6);                      // coat rack by the door
-  }else at(-3.2,-(t.roomD-0.35),2.3,0.6);              // shovel rack by the door
-});
 
 /* ---- lakebed rocks: the 30 pebbles from 15-terrain.js become three Blender rock shapes, plus a wider scatter
    across the lakebed (fixed seed so everyone sees the same rocks). Pebbles you can step over; bigger rocks are solid. ---- */

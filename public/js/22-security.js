@@ -12,10 +12,7 @@ function towerRy(o){
   const pieces=[],metal=0x485350,deck=0x77634c,rail=0x9a8e71,glass=0x263840;
   const add=(w,h,d,c,x,y,z)=>pieces.push([w,h,d,c,x,y,z]);
   const towerPieces=[],addT=(w,h,d,c,x,y,z)=>towerPieces.push([w,h,d,c,x,y,z]);   // tower boxes: own mesh, hidden once the Blender tower loads
-  // Packed walkways tie the gate, barracks, office and mess building into one compound.
-  for(const [x,z,w,d] of [[0,35,5,14],[-29,36.5,4,11],[-12,36,24,3],[17,37,4,11]]){
-    add(w,0.045,d,0xb69b72,x,baseH(x,z)+0.018,z);
-  }
+  // (the walkways are worn paths now: 24-yard.js)
   // Supply stacks and a pair of shaded mess benches break up the open yard (both solid, but clear of the paths).
   // (these two go in their own mesh, YARD_PROC, so the Blender crates and mess tables can replace them)
   const yard=[],addY=(w,h,d,c,x,y,z)=>yard.push([w,h,d,c,x,y,z]);

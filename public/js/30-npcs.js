@@ -146,7 +146,7 @@ const D_ENTRY={x:BUNK_D.x,z:D_ROOM_Z0+2.6},D_EXIT={x:BUNK_D.x,z:D_ROOM_Z0+0.85};
 /* the rack: six slots on the door wall, left of the doorway (the room model has the board, art/blender/interiors.py).
    Each crew member owns a slot; its shovel shows there while that shovel is racked. */
 const RACK=BOTDEF.map((d,k)=>{
-  const x=BUNK_D.x-4.0+k*0.45,g=new T.Group(),F=TENT_FLOOR_Y;
+  const x=BUNK_D.x-BUNK_D.roomW+0.3+k*0.45,g=new T.Group(),F=TENT_FLOOR_Y;
   const hMat=new T.MeshStandardMaterial({color:0x8a6a44,roughness:0.85}),bMat=new T.MeshStandardMaterial({color:0x707472,roughness:0.6,metalness:0.2});
   const a=new T.Vector3(x,F+1.6,D_ROOM_Z0+0.28),b=new T.Vector3(x+0.05,F+0.35,D_ROOM_Z0+0.48),len=a.distanceTo(b);
   const handle=new T.Mesh(new T.CylinderGeometry(0.025,0.025,len,6),hMat);handle.position.copy(a).add(b).multiplyScalar(0.5);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());
@@ -155,7 +155,7 @@ const RACK=BOTDEF.map((d,k)=>{
   return{x,front:{x,z:D_ROOM_Z0+1.3},mesh:g};
 });
 function botBedPath(b){   // walk to beside your bunk (they run along the west wall), or round the table to the dealer's seat
-  if(b.d.n==='Jim Bob'&&!b.dealerSleeps){const s=BUNK_D.dealerSeat;return[{x:s.x+2.5,z:s.z-4.75},{x:s.x+2.5,z:s.z},{x:s.x,z:s.z}]}   // round the east side of the card table
+  if(b.d.n==='Jim Bob'&&!b.dealerSleeps)return BUNK_D.dealerPath.slice();   // up the aisle and round behind the card table (20-world.js)
   const k=BUNKS[BOT_BUNK[b.d.n]];return[{x:k.x+1.4,z:k.z}];
 }
 function botIndoorSpot(b){return b.d.n==='Jim Bob'&&!b.dealerSleeps?BUNK_D.dealerSeat:BUNKS[BOT_BUNK[b.d.n]]}
@@ -350,7 +350,7 @@ function updateBots(dt,now){
       if(b.d.n==='Jim Bob'&&!b.dealerSleeps){
         const st=SEATS.find(q=>q.tent===D_TI&&q.z>BUNK_D.table.z+3);   // Jim Bob deals sitting on the far stool (86-sit.js)
         if(st)sitPose(b.p,st.x,TENT_FLOOR_Y+st.y,st.z,st.h,dt);else{g.position.y=TENT_FLOOR_Y;animPerson(b.p,0,dt)}
-        if(dealerBedtime()){b.dealerSleeps=true;goIndoor(b,[{x:BUNK_D.dealerSeat.x+2.5,z:BUNK_D.dealerSeat.z},{x:BUNK_D.dealerSeat.x+2.5,z:BUNK_D.dealerSeat.z-4.75},...botBedPath(b)],'settle')}
+        if(dealerBedtime()){b.dealerSleeps=true;goIndoor(b,[...BUNK_D.dealerPath.slice(0,-1).reverse(),...botBedPath(b)],'settle')}
         else if(!siren&&b.t==null)b.t=0;   // a daytime visit's dealing ends when the day timer does
       }else{animPerson(b.p,0,dt);sleepPose(b.p,botIndoorSpot(b))}
       if(!siren){
@@ -359,7 +359,7 @@ function updateBots(dt,now){
         if(b.t<=0){   // up: stand beside the bunk (or leave the dealer's seat), fetch your shovel and head out
           const seated=b.d.n==='Jim Bob'&&!b.dealerSleeps,k=BUNKS[BOT_BUNK[b.d.n]];b.dealerSleeps=false;
           if(!seated)g.position.set(k.x+1.4,TENT_FLOOR_Y,k.z);
-          const s=BUNK_D.dealerSeat;goIndoor(b,[...(seated?[{x:s.x+2.5,z:s.z},{x:s.x+2.5,z:s.z-4.75}]:[]),RACK[bots.indexOf(b)].front],'unrack');
+          goIndoor(b,[...(seated?BUNK_D.dealerPath.slice(0,-1).reverse():[]),RACK[bots.indexOf(b)].front],'unrack');
         }
       }
       continue;
